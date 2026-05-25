@@ -1,0 +1,155 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ========== Linky design tokens (light) ========== */
+:root {
+  /* Brand */
+  --primary: #0e6e55;
+  --primary-deep: #0a5240;
+  --primary-soft: #e8f2ee;
+  --accent: #e8a53d;
+  --accent-soft: #fcf1dc;
+  --accent-text: #8b5a0a;
+  --success: #1fa971;
+  --danger: #d14f3c;
+  --info: #3a7ca8;
+
+  /* Surfaces */
+  --bg: #f7f3ec;
+  --bg-elev: #ffffff;
+  --bg-sunken: #efe8da;
+  --card: #ffffff;
+  --text: #0e1311;
+  --text-muted: #5e6864;
+  --text-faint: #8c9590;
+  --border: #e5ded1;
+  --border-strong: #d4ccba;
+
+  /* Discover stays dark */
+  --discover-bg: #0e1311;
+
+  /* Shadows */
+  --shadow-card: 0 4px 16px rgba(14, 19, 17, 0.04);
+  --shadow-pop: 0 8px 32px rgba(14, 19, 17, 0.08);
+
+  /* Type families */
+  --font-display: "Cabinet Grotesk", "General Sans", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-body: "Inter", "Plus Jakarta Sans", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+[data-theme="dark"] {
+  --bg: #0e1311;
+  --bg-elev: #181e1b;
+  --bg-sunken: #0a0e0d;
+  --card: #181e1b;
+  --text: #f7f3ec;
+  --text-muted: #94a39c;
+  --text-faint: #6a746f;
+  --border: #26302c;
+  --border-strong: #354039;
+  --primary-soft: #14271f;
+  --accent-soft: #2a2114;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-pop: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* Expose tokens to Tailwind v4 utilities */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-elev: var(--bg-elev);
+  --color-bg-sunken: var(--bg-sunken);
+  --color-card: var(--card);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-primary: var(--primary);
+  --color-primary-deep: var(--primary-deep);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-discover-bg: var(--discover-bg);
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  font-feature-settings: "ss01", "cv11";
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* Grainy mesh overlay (used on hero cards) */
+.grain {
+  position: relative;
+  isolation: isolate;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px;
+  opacity: 0.45;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Display utility classes (replacing app-shell stuff from design/styles.css) */
+.font-display {
+  font-family: var(--font-display);
+}
