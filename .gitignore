@@ -43,3 +43,9 @@ Thumbs.db
 # Misc
 *.tsbuildinfo
 .eslintcache
+
+# Local screenshots / playwright output
+landing-hero*.png
+features-bento.png
+hero-with-bg.png
+**/.playwright-mcp/
