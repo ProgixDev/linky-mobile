@@ -13,6 +13,7 @@ interface Cursor { created_at: string; id: string }
 interface Body {
   type?: 'location' | 'vente' | 'terrain';
   city?: string;
+  owner_id?: string;
   bedrooms_min?: number;
   bedrooms_max?: number;
   price_min?: number;
@@ -44,6 +45,7 @@ function valid(b: unknown): b is Body {
   const x = b as Record<string, unknown>;
   if (x.type !== undefined && (typeof x.type !== 'string' || !TYPES.has(x.type as string))) return false;
   if (x.city !== undefined && (typeof x.city !== 'string' || x.city.length > 80)) return false;
+  if (x.owner_id !== undefined && (typeof x.owner_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.owner_id))) return false;
   if (x.bedrooms_min !== undefined && (typeof x.bedrooms_min !== 'number' || !Number.isInteger(x.bedrooms_min) || x.bedrooms_min < 0 || x.bedrooms_min > 50)) return false;
   if (x.bedrooms_max !== undefined && (typeof x.bedrooms_max !== 'number' || !Number.isInteger(x.bedrooms_max) || x.bedrooms_max < 0 || x.bedrooms_max > 50)) return false;
   if (x.price_min !== undefined && (typeof x.price_min !== 'number' || !Number.isInteger(x.price_min) || x.price_min < 0)) return false;
@@ -60,11 +62,15 @@ Deno.serve(makePost<Body>('/v1/properties/list', valid, async ({ sb, body }) => 
   const limit = body.limit ?? 50;
   let q = sb
     .from('properties_with_cover')
-    .select('id, owner_id, shop_id, type, title, description, price_minor, per_month, bedrooms, area_sqm, furnished, amenities, city, district, distance_to_road_m, lat, lng, video_url, status, view_count, fav_count, created_at, cover_url')
-    .eq('status', 'active');
+    .select('id, owner_id, shop_id, type, title, description, price_minor, per_month, bedrooms, area_sqm, furnished, amenities, city, district, distance_to_road_m, lat, lng, video_url, status, view_count, fav_count, created_at, cover_url');
+
+  // When the caller asks for their own listings, surface every status so they can
+  // manage paused/reserved/sold. Public reads (no owner_id) stay active-only.
+  if (!body.owner_id) q = q.eq('status', 'active');
 
   if (body.type)                       q = q.eq('type', body.type);
   if (body.city)                       q = q.eq('city', body.city);
+  if (body.owner_id)                   q = q.eq('owner_id', body.owner_id);
   if (body.bedrooms_min !== undefined) q = q.gte('bedrooms', body.bedrooms_min);
   if (body.bedrooms_max !== undefined) q = q.lte('bedrooms', body.bedrooms_max);
   if (body.price_min !== undefined)    q = q.gte('price_minor', body.price_min);

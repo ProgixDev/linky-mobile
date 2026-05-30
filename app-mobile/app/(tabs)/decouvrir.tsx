@@ -5,7 +5,7 @@ import { useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { DiscoverCard, DiscoverEnd } from '../../src/components/discover/DiscoverCard';
-import { useDiscoverFeed } from '../../src/data/queries';
+import { useDiscoverInfinite } from '../../src/data/queries';
 import type { DiscoverItem } from '../../src/data/types';
 import { Text } from '../../src/components/primitives/Text';
 import { useAuth } from '../../src/stores/auth';
@@ -25,13 +25,17 @@ export default function DecouvrirRoute() {
   const isPureSeller = isSeller && !isAgent && !isBuyer;
   const feedFilter = isPureAgent ? 'properties' : isPureSeller ? 'products' : 'all';
 
-  const { data, isLoading, refetch } = useDiscoverFeed(feedFilter);
+  const { items, isLoading, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useDiscoverInfinite(feedFilter);
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef<FlashListRef<FeedRow>>(null);
 
-  const rows: FeedRow[] =
-    data?.map((d, i) => ({ kind: 'item' as const, data: d, id: `${d.kind}-${d.item.id}-${i}` })) ?? [];
-  rows.push({ kind: 'end', id: 'end' });
+  const rows: FeedRow[] = items.map((d, i) => ({
+    kind: 'item' as const,
+    data: d,
+    id: `${d.kind}-${d.item.id}-${i}`,
+  }));
+  // End-of-feed card only when truly nothing more to load.
+  if (!isLoading && !hasNextPage) rows.push({ kind: 'end', id: 'end' });
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
@@ -67,6 +71,10 @@ export default function DecouvrirRoute() {
           showsVerticalScrollIndicator={false}
           viewabilityConfig={{ itemVisiblePercentThreshold: 70 }}
           onViewableItemsChanged={onViewableItemsChanged}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+          }}
+          onEndReachedThreshold={1.5}
         />
       )}
     </View>

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import type { DiscoverItem } from '../types';
 import { apiPost } from '../../lib/api';
 
@@ -23,4 +23,31 @@ export function useDiscoverFeed(filter: DiscoverFilter = 'all') {
       return items;
     },
   });
+}
+
+// Infinite-scroll variant. Filter is applied client-side (backend doesn't accept
+// `kind`) so the cursor stays page-stable — the server returns mixed items each
+// page and the client narrows. Tradeoff: when filter='products', some pages might
+// contain mostly properties and yield few visible rows. Acceptable for V1 volume.
+export function useDiscoverInfinite(filter: DiscoverFilter = 'all') {
+  const query = useInfiniteQuery({
+    queryKey: ['discover-infinite', filter],
+    initialPageParam: undefined as DiscoverCursor | undefined,
+    queryFn: async ({ pageParam }: { pageParam: DiscoverCursor | undefined }) => {
+      return apiPost<{ items: DiscoverItem[]; next_cursor: DiscoverCursor | null }>({
+        path: '/discover-feed',
+        authed: false,
+        body: { limit: 20, cursor: pageParam },
+      });
+    },
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+  });
+
+  const rawItems = query.data?.pages.flatMap((p) => p.items) ?? [];
+  const items =
+    filter === 'products' ? rawItems.filter((i) => i.kind === 'product')
+    : filter === 'properties' ? rawItems.filter((i) => i.kind === 'property')
+    : rawItems;
+
+  return { ...query, items };
 }

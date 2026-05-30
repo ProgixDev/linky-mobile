@@ -2,9 +2,12 @@
 // unauthed; seller writes + visit requests are JWT-authed via apiPost. The shape of
 // each query result is unchanged from the mock contract — screens that previously
 // consumed mockProperties continue to work without translation.
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Property, PropertyType } from '../types';
 import { apiPost } from '../../lib/api';
+import { useAuth } from '../../stores/auth';
+
+type ListingStatus = 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
 
 export interface PropertyFilters {
   type?: PropertyType;
@@ -120,6 +123,61 @@ export function useProperty(id: string | undefined) {
   });
 }
 
+// Caller's own properties — surfaces every status (not just active) so sellers can
+// manage paused/reserved/sold rows. Powered by list-properties' owner_id filter.
+// Guards on UUID shape: pre-real-auth installs (or stale MMKV state from old
+// completeOnboarding) can leak a mock 'u_mariama' string into authUserId, which the
+// backend validator would reject as INVALID_BODY. Skip silently in that case.
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+export function useMyProperties() {
+  const userId = useAuth((s) => s.authUserId);
+  const isUuid = !!userId && UUID_RE.test(userId);
+  return useQuery({
+    queryKey: ['my-properties', userId],
+    enabled: isUuid,
+    queryFn: async (): Promise<Property[]> => {
+      const { properties } = await apiPost<{ properties: Property[]; next_cursor: Cursor | null }>({
+        path: '/list-properties',
+        authed: false,
+        body: { owner_id: userId },
+      });
+      return properties;
+    },
+  });
+}
+
+// Infinite-scroll variant of useProperties. Same translation as the non-infinite
+// hook: rooms-string → bedrooms_min/bedrooms_max, prices/distances stripped to
+// undefined when 0. Returns flat `properties` across all pages.
+export function useInfiniteProperties(filters: PropertyFilters = {}) {
+  const { min: bedrooms_min, max: bedrooms_max } = roomsToBedrooms(filters.rooms);
+  const query = useInfiniteQuery({
+    queryKey: ['properties-infinite', filters],
+    initialPageParam: undefined as Cursor | undefined,
+    queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
+      return apiPost<{ properties: Property[]; next_cursor: Cursor | null }>({
+        path: '/list-properties',
+        authed: false,
+        body: {
+          type: filters.type,
+          city: filters.city || undefined,
+          bedrooms_min,
+          bedrooms_max,
+          price_max: filters.priceMaxGnf || undefined,
+          distance_max: filters.distanceToRoadMaxM || undefined,
+          furnished: filters.furnishedOnly === true ? true : undefined,
+          query: filters.query || undefined,
+          cursor: pageParam,
+        },
+      });
+    },
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+  });
+
+  const properties = query.data?.pages.flatMap((p) => p.properties) ?? [];
+  return { ...query, properties };
+}
+
 export function useNearbyProperties(limit = 4) {
   return useQuery({
     queryKey: ['properties-nearby', limit],
@@ -178,6 +236,24 @@ export function useDeleteProperty() {
       qc.invalidateQueries({ queryKey: ['properties'] });
       qc.invalidateQueries({ queryKey: ['properties-nearby'] });
       qc.invalidateQueries({ queryKey: ['my-shops'] });
+    },
+  });
+}
+
+// Convenience wrapper: status-only update with a narrower input type than
+// useUpdateProperty. Invalidates the same caches.
+export function useSetPropertyStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; status: ListingStatus }) => {
+      const r = await apiPost<{ property: Property }>({ path: '/property-update', body: input });
+      return r.property;
+    },
+    onSuccess: (property) => {
+      qc.invalidateQueries({ queryKey: ['property', property.id] });
+      qc.invalidateQueries({ queryKey: ['properties'] });
+      qc.invalidateQueries({ queryKey: ['properties-nearby'] });
+      qc.invalidateQueries({ queryKey: ['my-properties'] });
     },
   });
 }

@@ -14,6 +14,10 @@ export const ROLE_FROM_UI: Record<'buy' | 'sell' | 'agent', UserRole> = {
 
 interface AuthState {
   user: User | null;
+  // Real Supabase user UUID, populated from otp-verify response. Stays set even when
+  // `user` is null (mock lookup misses real UUIDs); use this for any backend call
+  // that needs the caller's id at the API layer (e.g. owner_id filters).
+  authUserId: string | null;
   isOnboarded: boolean;
   channel: AuthChannel;
   pendingPhone: string;
@@ -56,6 +60,7 @@ function saveRoles(roles: UserRole[]) {
 
 export const useAuth = create<AuthState>((set) => ({
   user: initialDone ? getUser(initialUserId ?? CURRENT_USER_ID) ?? null : null,
+  authUserId: initialDone ? (initialUserId ?? CURRENT_USER_ID) : null,
   isOnboarded: initialDone,
   channel: 'phone',
   pendingPhone: '+224 622 55 12 88',
@@ -79,7 +84,7 @@ export const useAuth = create<AuthState>((set) => ({
   signIn: (userId = CURRENT_USER_ID) => {
     const user = getUser(userId) ?? null;
     storage.set(STORAGE_KEYS.currentUserId, userId);
-    set({ user });
+    set({ user, authUserId: userId });
   },
   signOut: async () => {
     // V1: clears local credentials only. TODO(task #12): hit /v1/session/revoke once that endpoint exists.
@@ -87,17 +92,21 @@ export const useAuth = create<AuthState>((set) => ({
     await secure.remove(SECURE_KEYS.refreshToken);
     storage.remove(STORAGE_KEYS.currentUserId);
     storage.set(STORAGE_KEYS.onboardingDone, false);
-    set({ user: null, isOnboarded: false, pendingOtpId: null, pendingDevCode: null });
+    set({ user: null, authUserId: null, isOnboarded: false, pendingOtpId: null, pendingDevCode: null });
   },
   completeOnboarding: (roles) => {
     storage.set(STORAGE_KEYS.onboardingDone, true);
-    const user = getUser(CURRENT_USER_ID) ?? null;
-    storage.set(STORAGE_KEYS.currentUserId, CURRENT_USER_ID);
+    // Preserve any real user id signIn() wrote during OTP verify; only fall back to
+    // the mock CURRENT_USER_ID for first-install dev paths that skip auth entirely.
+    const persistedId = storage.getString(STORAGE_KEYS.currentUserId) ?? null;
+    const userId = persistedId ?? CURRENT_USER_ID;
+    const user = getUser(userId) ?? null;
+    if (!persistedId) storage.set(STORAGE_KEYS.currentUserId, CURRENT_USER_ID);
     if (roles && roles.length > 0) {
       saveRoles(roles);
-      set({ isOnboarded: true, user, roles });
+      set({ isOnboarded: true, user, authUserId: userId, roles });
     } else {
-      set({ isOnboarded: true, user });
+      set({ isOnboarded: true, user, authUserId: userId });
     }
   },
 }));

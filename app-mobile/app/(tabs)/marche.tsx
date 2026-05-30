@@ -1,5 +1,13 @@
-import { useEffect, useState } from 'react';
-import { ScrollView, View, Pressable, TextInput } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  View,
+  Pressable,
+  TextInput,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Search,
@@ -24,7 +32,7 @@ import { Chip } from '../../src/components/primitives/Chip';
 import { haptic } from '../../src/lib/haptics';
 import { useFilters } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
-import { useProducts, useProperties } from '../../src/data/queries';
+import { useProductsInfinite, useInfiniteProperties } from '../../src/data/queries';
 
 const PRODUCT_CATEGORIES = ['Tout', 'Mode', 'Électronique', 'Maison', 'Beauté', 'Auto'];
 const PROPERTY_TYPES: { value: 'location' | 'vente' | 'terrain'; label: string }[] = [
@@ -67,11 +75,11 @@ export default function MarcheRoute() {
     }
   }, [isPureAgent, isPureSeller, filters]);
 
-  const { data: products, isLoading: prodLoading } = useProducts({
+  const productsQuery = useProductsInfinite({
     category: filters.productCategory === 'all' ? undefined : filters.productCategory,
     query: debouncedSearch || undefined,
   });
-  const { data: properties, isLoading: propLoading } = useProperties({
+  const propertiesQuery = useInfiniteProperties({
     type: filters.propertyType,
     city: filters.city ?? undefined,
     rooms: filters.rooms,
@@ -80,6 +88,10 @@ export default function MarcheRoute() {
     furnishedOnly: filters.furnishedOnly,
     query: debouncedSearch || undefined,
   });
+  const products = productsQuery.products;
+  const properties = propertiesQuery.properties;
+  const prodLoading = productsQuery.isLoading;
+  const propLoading = propertiesQuery.isLoading;
 
   // Effective tab: respects role locks even before useEffect syncs the store.
   const effectiveTab = isPureAgent
@@ -91,12 +103,29 @@ export default function MarcheRoute() {
   const placeholder = isArticles ? 'Cherche un produit…' : 'Quartier, type, surface…';
   const isPurePro = isPureAgent || isPureSeller;
 
+  // Near-bottom trigger for fetchNextPage. 600px buffer = pre-fetch before the user
+  // sees the end so the grid keeps growing as they scroll.
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+      const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+      if (distanceFromBottom >= 600) return;
+      const q = isArticles ? productsQuery : propertiesQuery;
+      if (q.hasNextPage && !q.isFetchingNextPage) {
+        void q.fetchNextPage();
+      }
+    },
+    [isArticles, productsQuery, propertiesQuery],
+  );
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
         stickyHeaderIndices={[]}
+        onScroll={handleScroll}
+        scrollEventThrottle={300}
       >
         {/* ===== Header ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
@@ -418,6 +447,12 @@ export default function MarcheRoute() {
                     <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
                   </View>
                 ) : null}
+          </View>
+        )}
+
+        {(isArticles ? productsQuery.isFetchingNextPage : propertiesQuery.isFetchingNextPage) && (
+          <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={colors.textMuted} />
           </View>
         )}
       </ScrollView>

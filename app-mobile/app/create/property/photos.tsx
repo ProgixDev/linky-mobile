@@ -13,6 +13,7 @@ import { useCreateListing } from '../../../src/stores/createListing';
 import { useRequestPhotoUploadUrl } from '../../../src/data/queries/products';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
+import { optimizePhoto } from '../../../src/lib/photoOptimize';
 
 const MAX_PHOTOS = 12;
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -74,7 +75,11 @@ export default function PropertyPhotosRoute() {
       setUploading(true);
       haptic.light();
       const asset = picked.assets[0];
-      const contentType = resolveMime(asset);
+      // Optimize before upload: resize > 1600px down + re-encode as jpeg. Cuts
+      // typical camera output from ~3-5 MB to ~250-500 KB. Pass-through for small inputs.
+      const originalMime = resolveMime(asset);
+      const optimized = await optimizePhoto(asset.uri, originalMime);
+      const contentType = optimized.mimeType;
       const filename = sanitizeFilename(asset.fileName, extForMime(contentType));
 
       const { upload_url, public_url, path } = await requestUploadUrl.mutateAsync({
@@ -83,7 +88,7 @@ export default function PropertyPhotosRoute() {
         content_type: contentType,
       });
 
-      const fileRes = await fetch(asset.uri);
+      const fileRes = await fetch(optimized.uri);
       const blob = await fileRes.blob();
       const putRes = await fetch(upload_url, {
         method: 'PUT',

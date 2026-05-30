@@ -17,7 +17,7 @@ export function useShops(limit?: number) {
   return useQuery({
     queryKey: ['shops', limit],
     queryFn: async (): Promise<Shop[]> => {
-      const { shops } = await apiPost<{ shops: Shop[] }>({
+      const { shops } = await apiPost<{ shops: Shop[]; next_cursor: { created_at: string; id: string } | null }>({
         path: '/list-shops',
         authed: false,
         body: { verified_only: true, ...(typeof limit === 'number' ? { limit } : {}) },

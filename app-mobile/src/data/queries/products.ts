@@ -1,7 +1,7 @@
 // Wired to live edge functions: list-products / get-product. Public reads (no JWT required).
 // Backwards-compat: existing screens consume Product[] / Product — shape is unchanged from
 // the mock contract, since the edge functions return the same camelCase shape.
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
 import type { Product } from '../types';
 
@@ -141,6 +141,23 @@ export function useUpdateProduct() {
   });
 }
 
+// Convenience wrapper: status-only update with a narrower input type than
+// useUpdateProduct. Invalidates the same caches.
+export function useSetProductStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; status: 'active' | 'reserved' | 'sold' | 'paused' | 'pending' }) => {
+      const r = await apiPost<{ product: Product }>({ path: '/product-update', body: input });
+      return r.product;
+    },
+    onSuccess: (product) => {
+      qc.invalidateQueries({ queryKey: ['product', product.id] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['my-shops'] });
+    },
+  });
+}
+
 export function useDeleteProduct() {
   const qc = useQueryClient();
   return useMutation({
@@ -163,6 +180,35 @@ export function useTrackView() {
       return apiPost<{ ok: true }>({ path: '/view-track', body: input, authed: false });
     },
   });
+}
+
+interface Cursor { created_at: string; id: string }
+
+// Infinite-scroll variant of useProducts. queryKey embeds the filter object so
+// filter changes reset to first page automatically. Caller consumes `products`
+// (flat array across all loaded pages) + fetchNextPage / hasNextPage /
+// isFetchingNextPage from the underlying query.
+export function useProductsInfinite(filters: ProductFilters = {}) {
+  const query = useInfiniteQuery({
+    queryKey: ['products-infinite', filters],
+    initialPageParam: undefined as Cursor | undefined,
+    queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
+      return apiPost<{ products: Product[]; next_cursor: Cursor | null }>({
+        path: '/list-products',
+        authed: false,
+        body: {
+          category: filters.category && filters.category !== 'all' ? filters.category : undefined,
+          query: filters.query || undefined,
+          shop_id: filters.shopId || undefined,
+          cursor: pageParam,
+        },
+      });
+    },
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+  });
+
+  const products = query.data?.pages.flatMap((p) => p.products) ?? [];
+  return { ...query, products };
 }
 
 // Returns a one-shot signed upload URL. Client PUTs the file to upload_url with the

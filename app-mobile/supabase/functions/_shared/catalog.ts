@@ -34,6 +34,7 @@ export interface ShopRow {
   follower_count: number;
   response_time_text: string;
   product_count?: number; // present on shops_with_counts view only
+  created_at: string;
 }
 
 export function mapProduct(r: ProductRow) {

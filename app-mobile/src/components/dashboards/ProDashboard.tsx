@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -24,6 +24,10 @@ import {
   KeyRound,
   MapPin,
   BedDouble,
+  Trash2,
+  Check,
+  Pause,
+  CircleDot,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -33,7 +37,19 @@ import { haptic } from '../../lib/haptics';
 import { formatGNF } from '../../lib/format';
 import { mockShops } from '../../data/mockShops';
 import { mockProperties } from '../../data/mockProperties';
-import { useProducts, useMyShops } from '../../data/queries';
+import {
+  useProducts,
+  useMyShops,
+  useMyProperties,
+  useSetProductStatus,
+  useSetPropertyStatus,
+  useDeleteProduct,
+  useDeleteProperty,
+} from '../../data/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { Sheet } from '../sheets/Sheet';
+import { useToast } from '../feedback/Toast';
+import { ApiError, toToastMessage } from '../../lib/api';
 
 export type ProMode = 'shop' | 'estate';
 
@@ -150,11 +166,22 @@ export function ModeTab({
 // Shop (Vendor) dashboard
 // =================================================================
 
+type ManagementTarget = { kind: 'product' | 'property'; id: string; current?: string; title?: string };
+
 export function ShopDashboard() {
   const { colors } = useTheme();
   const { data: shops } = useMyShops();
   const myShop = shops?.[0];
   const { data: products } = useProducts({ shopId: myShop?.id });
+  const { data: properties } = useMyProperties();
+  const setProductStatus = useSetProductStatus();
+  const setPropertyStatus = useSetPropertyStatus();
+  const deleteProduct = useDeleteProduct();
+  const deleteProperty = useDeleteProperty();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [statusTarget, setStatusTarget] = useState<ManagementTarget | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ManagementTarget | null>(null);
 
   return (
     <View>
@@ -236,25 +263,7 @@ export function ShopDashboard() {
         <ViewsChart bars={VIEW_BARS} title="VUES · 30 JOURS" value="4 280" trend="+24 %" />
       </View>
 
-      {shops === undefined ? null : myShop ? (
-        <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
-          <SectionTitle title="Mes annonces" />
-          <View style={{ gap: 12 }}>
-            {products?.slice(0, 4).map((p) => (
-              <ProductRow
-                key={p.id}
-                title={p.title}
-                price={formatGNF(p.priceGnf)}
-                cover={p.photos[0]}
-                views={p.viewCount}
-                favs={p.favCount}
-                boosted={p.boosted}
-                onPress={() => router.push(`/product/${p.id}`)}
-              />
-            ))}
-          </View>
-        </View>
-      ) : (
+      {shops === undefined ? null : !myShop ? (
         <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
           <SectionTitle title="Mes annonces" />
           <Pressable
@@ -282,8 +291,308 @@ export function ShopDashboard() {
             </Text>
           </Pressable>
         </View>
+      ) : (
+        <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
+          <SectionTitle title="Mes annonces" />
+          {(!products?.length && !properties?.length) ? (
+            <View
+              style={{
+                padding: 20,
+                borderRadius: 18,
+                backgroundColor: colors.card,
+                borderWidth: 1.5,
+                borderStyle: 'dashed',
+                borderColor: colors.border,
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Package size={20} color={colors.textMuted} strokeWidth={1.75} />
+              <Text style={{ fontSize: 13.5, color: colors.text, fontWeight: '600' }}>
+                Tu n'as pas encore d'annonce.
+              </Text>
+              <Text style={{ fontSize: 11.5, color: colors.textMuted }}>
+                Tape sur + pour publier.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {products?.map((p) => (
+                <ManagementRow
+                  key={`p-${p.id}`}
+                  kind="product"
+                  title={p.title}
+                  price={formatGNF(p.priceGnf)}
+                  cover={p.photos[0]}
+                  status={p.status}
+                  onPress={() => router.push(`/product/${p.id}`)}
+                  onStatus={() => setStatusTarget({ kind: 'product', id: p.id, current: p.status })}
+                  onDelete={() => setDeleteTarget({ kind: 'product', id: p.id, title: p.title })}
+                />
+              ))}
+              {properties?.map((p) => (
+                <ManagementRow
+                  key={`pr-${p.id}`}
+                  kind="property"
+                  title={p.title}
+                  price={`${formatGNF(p.priceGnf)}${p.perMonth ? ' /mois' : ''}`}
+                  cover={p.photos[0]}
+                  status={p.status}
+                  onPress={() => router.push(`/property/${p.id}`)}
+                  onStatus={() => setStatusTarget({ kind: 'property', id: p.id, current: p.status })}
+                  onDelete={() => setDeleteTarget({ kind: 'property', id: p.id, title: p.title })}
+                />
+              ))}
+            </View>
+          )}
+        </View>
       )}
+
+      {/* Status change sheet */}
+      <Sheet
+        open={!!statusTarget}
+        onClose={() => setStatusTarget(null)}
+        title="Changer le statut"
+        snapPoints={['45%']}
+      >
+        <View style={{ padding: 16, gap: 8 }}>
+          {(statusTarget?.kind === 'property'
+            ? [
+                { value: 'active' as const, label: 'Actif', Icon: CircleDot },
+                { value: 'paused' as const, label: 'En pause', Icon: Pause },
+                { value: 'reserved' as const, label: 'Réservé', Icon: Check },
+                { value: 'sold' as const, label: 'Vendu', Icon: Check },
+              ]
+            : [
+                { value: 'active' as const, label: 'Actif', Icon: CircleDot },
+                { value: 'paused' as const, label: 'En pause', Icon: Pause },
+                { value: 'sold' as const, label: 'Vendu', Icon: Check },
+              ]
+          ).map((opt) => (
+            <Pressable
+              key={opt.value}
+              disabled={setProductStatus.isPending || setPropertyStatus.isPending}
+              onPress={async () => {
+                if (!statusTarget) return;
+                try {
+                  if (statusTarget.kind === 'product') {
+                    await setProductStatus.mutateAsync({ id: statusTarget.id, status: opt.value });
+                  } else {
+                    await setPropertyStatus.mutateAsync({ id: statusTarget.id, status: opt.value });
+                  }
+                  toast.show(`Statut: ${opt.label}`, 'success');
+                  setStatusTarget(null);
+                } catch (e: unknown) {
+                  console.error('[mes-annonces] status error:', e);
+                  toast.show(toToastMessage(e, 'Mise à jour échouée'), 'danger');
+                }
+              }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                padding: 14,
+                borderRadius: 14,
+                backgroundColor: statusTarget?.current === opt.value ? colors.primarySoft : colors.card,
+                borderWidth: 1,
+                borderColor: statusTarget?.current === opt.value ? colors.primary : colors.border,
+              }}
+            >
+              <opt.Icon size={16} color={colors.text} strokeWidth={2} />
+              <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.text }}>
+                {opt.label}
+              </Text>
+              {statusTarget?.current === opt.value && (
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary }}>ACTUEL</Text>
+              )}
+            </Pressable>
+          ))}
+        </View>
+      </Sheet>
+
+      {/* Delete confirmation sheet */}
+      <Sheet
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Supprimer l'annonce"
+        snapPoints={['35%']}
+      >
+        <View style={{ padding: 16, gap: 14 }}>
+          <Text style={{ fontSize: 14, color: colors.text }}>
+            « {deleteTarget?.title} » sera définitivement supprimé. Action irréversible.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Pressable
+              onPress={() => setDeleteTarget(null)}
+              style={{
+                flex: 1,
+                height: 48,
+                borderRadius: 14,
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontWeight: '700', color: colors.text }}>Annuler</Text>
+            </Pressable>
+            <Pressable
+              disabled={deleteProduct.isPending || deleteProperty.isPending}
+              onPress={async () => {
+                if (!deleteTarget) return;
+                try {
+                  if (deleteTarget.kind === 'product') {
+                    await deleteProduct.mutateAsync(deleteTarget.id);
+                  } else {
+                    await deleteProperty.mutateAsync(deleteTarget.id);
+                  }
+                  toast.show('Annonce supprimée', 'success');
+                  setDeleteTarget(null);
+                } catch (e: unknown) {
+                  console.error('[mes-annonces] delete error:', e);
+                  // 404 means the row is already gone (stale list, double-tap, or another
+                  // session deleted it). Treat as success — refresh the lists so the row
+                  // disappears, dismiss the sheet, soft toast.
+                  if (e instanceof ApiError && e.status === 404) {
+                    qc.invalidateQueries({ queryKey: ['products'] });
+                    qc.invalidateQueries({ queryKey: ['my-properties'] });
+                    qc.invalidateQueries({ queryKey: ['my-shops'] });
+                    toast.show('Annonce déjà supprimée', 'info');
+                    setDeleteTarget(null);
+                    return;
+                  }
+                  toast.show(toToastMessage(e, 'Suppression échouée'), 'danger');
+                }
+              }}
+              style={{
+                flex: 1,
+                height: 48,
+                borderRadius: 14,
+                backgroundColor: colors.danger,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: (deleteProduct.isPending || deleteProperty.isPending) ? 0.6 : 1,
+              }}
+            >
+              <Text style={{ fontWeight: '700', color: '#FFFFFF' }}>
+                {(deleteProduct.isPending || deleteProperty.isPending) ? 'Suppression…' : 'Supprimer'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Sheet>
     </View>
+  );
+}
+
+function ManagementRow({
+  kind,
+  title,
+  price,
+  cover,
+  status,
+  onPress,
+  onStatus,
+  onDelete,
+}: {
+  kind: 'product' | 'property';
+  title: string;
+  price: string;
+  cover: string;
+  status: string;
+  onPress: () => void;
+  onStatus: () => void;
+  onDelete: () => void;
+}) {
+  const { colors } = useTheme();
+  const statusLabel =
+    status === 'paused' ? 'En pause'
+    : status === 'sold' ? 'Vendu'
+    : status === 'reserved' ? 'Réservé'
+    : status === 'pending' ? 'En attente'
+    : 'Actif';
+  const statusTone =
+    status === 'active' ? colors.primarySoft
+    : status === 'paused' ? colors.bgSunken
+    : colors.accentSoft;
+  const statusFg =
+    status === 'active' ? colors.primaryDeep
+    : status === 'paused' ? colors.textMuted
+    : colors.accentText;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        padding: 12,
+        borderRadius: 16,
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+        flexDirection: 'row',
+        gap: 12,
+        alignItems: 'center',
+      }}
+    >
+      <Image
+        source={cover}
+        style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.bgSunken }}
+        contentFit="cover"
+      />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 9.5, fontWeight: '700', color: colors.textFaint, letterSpacing: 0.4 }}>
+          {kind === 'product' ? 'PRODUIT' : 'BIEN'}
+        </Text>
+        <Text
+          numberOfLines={1}
+          style={{ fontSize: 13.5, fontWeight: '600', color: colors.text, marginTop: 2, letterSpacing: 0 }}
+        >
+          {title}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+          <Text
+            style={{
+              fontSize: 12.5,
+              fontWeight: '700',
+              color: colors.text,
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {price}
+          </Text>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onStatus();
+            }}
+            hitSlop={6}
+            style={{
+              paddingHorizontal: 8,
+              height: 22,
+              borderRadius: 999,
+              backgroundColor: statusTone,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 10, fontWeight: '700', color: statusFg, letterSpacing: 0.3 }}>
+              {statusLabel.toUpperCase()}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+      <Pressable
+        onPress={(e) => {
+          e.stopPropagation?.();
+          onDelete();
+        }}
+        hitSlop={6}
+        style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
+        accessibilityLabel="Supprimer"
+      >
+        <Trash2 size={16} color={colors.danger} strokeWidth={2} />
+      </Pressable>
+    </Pressable>
   );
 }
 
