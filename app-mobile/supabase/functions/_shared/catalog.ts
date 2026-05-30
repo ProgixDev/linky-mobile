@@ -104,6 +104,8 @@ export function mapProperty(r: PropertyRow, photos: string[]) {
     photos,
     videoUrl: r.video_url ?? undefined,
     status: r.status,
+    viewCount: r.view_count,
+    favCount: r.fav_count,
     gps: { lat: r.lat ?? 0, lng: r.lng ?? 0 },
     createdAt: r.created_at,
   };

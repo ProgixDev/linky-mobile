@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
-import Mapbox, { MapView, Camera, PointAnnotation } from '@rnmapbox/maps';
+import Mapbox, { MapView, Camera, PointAnnotation, type ScreenPointPayload } from '@rnmapbox/maps';
+import type { Feature, Point } from 'geojson';
 import { Check, MapPin } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
@@ -135,11 +136,14 @@ export function CityMapPicker({
     if (c && c.region !== activeRegion) setActiveRegion(c.region as Region);
   };
 
-  // Mapbox onPress payload: { geometry: { coordinates: [lng, lat] } }
-  const handleMapPress = (feature: { geometry?: { coordinates?: [number, number] } }) => {
+  // Mapbox onPress signature: Feature<Point, ScreenPointPayload>. Position is number[]
+  // (potentially 3D with elevation), so we runtime-check both coords are present.
+  const handleMapPress = (feature: Feature<Point, ScreenPointPayload>) => {
     const coords = feature.geometry?.coordinates;
-    if (!coords) return;
-    const [lng, lat] = coords;
+    if (!coords || coords.length < 2) return;
+    const lng = coords[0];
+    const lat = coords[1];
+    if (typeof lng !== 'number' || typeof lat !== 'number') return;
     let nearest = GUINEA_CITIES[0]!;
     let bestD = Infinity;
     for (const c of GUINEA_CITIES) {

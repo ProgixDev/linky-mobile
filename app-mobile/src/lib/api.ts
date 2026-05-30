@@ -139,7 +139,6 @@ export async function apiPost<T>({ path, body, authed = true, idempotencyKey }: 
 
   const send = async (headers: Record<string, string>): Promise<Response> => {
     try {
-      console.log(`[apiPost] ${path}`, JSON.stringify(body ?? {}));
       return await fetch(`${FN_BASE}${path}`, {
         method: 'POST',
         headers,

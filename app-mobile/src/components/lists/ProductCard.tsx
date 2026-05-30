@@ -69,6 +69,27 @@ export function ProductCard({
             />
           </View>
         )}
+        {product.favCount > 0 && !sold && (
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 8,
+              right: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 3,
+              paddingHorizontal: 7,
+              height: 22,
+              borderRadius: 999,
+              backgroundColor: 'rgba(0,0,0,0.55)',
+            }}
+          >
+            <I.heartFill size={10} color="#FFFFFF" />
+            <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#FFFFFF', fontVariant: ['tabular-nums'] }}>
+              {product.favCount}
+            </Text>
+          </View>
+        )}
         {sold && (
           <View
             style={{

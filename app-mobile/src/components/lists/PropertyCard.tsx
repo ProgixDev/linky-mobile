@@ -53,6 +53,27 @@ export function PropertyCard({ property }: { property: Property }) {
             )}
           </Text>
         </View>
+        {property.favCount > 0 && (
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 10,
+              left: 10,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 3,
+              paddingHorizontal: 8,
+              height: 24,
+              borderRadius: 999,
+              backgroundColor: 'rgba(0,0,0,0.55)',
+            }}
+          >
+            <I.heartFill size={11} color="#FFFFFF" />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF', fontVariant: ['tabular-nums'] }}>
+              {property.favCount}
+            </Text>
+          </View>
+        )}
       </View>
       <View style={{ padding: 14, gap: 6 }}>
         <Text variant="titleM" numberOfLines={2}>

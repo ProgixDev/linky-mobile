@@ -78,6 +78,8 @@ export interface Property {
   badge?: 'Nouveau' | 'Réservé';
   gps: { lat: number; lng: number };
   createdAt: string;
+  viewCount: number;
+  favCount: number;
 }
 
 export type DiscoverItem =

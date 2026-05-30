@@ -1,9 +1,8 @@
 // Update a property the caller owns. Only the property owner (properties.owner_id
 // directly — no shop join needed because property.owner_id is required) may edit.
-// per_month is re-derived when type changes. Photos: delete-then-insert replacement
-// when body.photos is present. Not atomic with the property UPDATE — if insert fails
-// after delete, photos are gone until the next update. V1 accepts this; future:
-// either add a replace_property_photos RPC or do a smart diff.
+// per_month is re-derived when type changes. Photos: atomic replacement via the
+// replace_property_photos RPC. Property UPDATE is a separate statement (so a failure
+// of either is independent), but the photos replacement itself is now safe.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
@@ -107,26 +106,24 @@ Deno.serve(makePost<Body>('/v1/properties/update', valid, async ({ sb, body, req
   if (body.lng !== undefined)                patch.lng = body.lng;
   if (body.status !== undefined)             patch.status = body.status;
 
-  // Photos: delete-all + insert-new replacement. Not atomic with the property update.
+  // Photos: atomic replacement via RPC. Pre-normalize positions to 0..N-1 so the
+  // cover ends up at position 0 regardless of client-sent values; the RPC trusts
+  // what we send.
   if (body.photos !== undefined) {
-    const { error: delErr } = await sb
-      .from('property_photos').delete().eq('property_id', body.id);
-    if (delErr) {
-      console.error('[property-update] photos delete error:', delErr);
-      throwApi('INTERNAL_ERROR', 500, 'Erreur mise à jour photos');
-    }
-    const photoRows = body.photos
+    const photosPayload = body.photos
       .slice()
       .sort((a, b) => a.position - b.position)
       .map((p, idx) => ({
-        property_id: body.id,
         url: p.url,
         storage_path: p.storage_path,
         position: idx,
       }));
-    const { error: insErr } = await sb.from('property_photos').insert(photoRows);
-    if (insErr) {
-      console.error('[property-update] photos insert error:', insErr);
+    const { error: rpcErr } = await sb.rpc('replace_property_photos', {
+      p_property_id: body.id,
+      p_photos: photosPayload,
+    });
+    if (rpcErr) {
+      console.error('[property-update] replace_property_photos error:', rpcErr);
       throwApi('INTERNAL_ERROR', 500, 'Erreur mise à jour photos');
     }
   }

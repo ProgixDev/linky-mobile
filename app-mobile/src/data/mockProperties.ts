@@ -24,6 +24,8 @@ export const mockProperties: Property[] = [
     status: 'active',
     gps: { lat: 9.5092, lng: -13.7122 },
     createdAt: days(3),
+    viewCount: 0,
+    favCount: 0,
   },
   {
     id: 'pr_villa_lambanyi',
@@ -46,6 +48,8 @@ export const mockProperties: Property[] = [
     badge: 'Nouveau',
     gps: { lat: 9.6311, lng: -13.5689 },
     createdAt: days(1),
+    viewCount: 0,
+    favCount: 0,
   },
   {
     id: 'pr_villa_dixinn',
@@ -65,6 +69,8 @@ export const mockProperties: Property[] = [
     status: 'active',
     gps: { lat: 9.5588, lng: -13.6826 },
     createdAt: days(15),
+    viewCount: 0,
+    favCount: 0,
   },
   {
     id: 'pr_studio_kipe',
@@ -85,6 +91,8 @@ export const mockProperties: Property[] = [
     badge: 'Réservé',
     gps: { lat: 9.6172, lng: -13.6234 },
     createdAt: days(6),
+    viewCount: 0,
+    favCount: 0,
   },
   {
     id: 'pr_terrain_maneah',
@@ -102,6 +110,8 @@ export const mockProperties: Property[] = [
     status: 'active',
     gps: { lat: 9.7172, lng: -13.4034 },
     createdAt: days(20),
+    viewCount: 0,
+    favCount: 0,
   },
   {
     id: 'pr_apt_ratoma',
@@ -121,6 +131,8 @@ export const mockProperties: Property[] = [
     status: 'active',
     gps: { lat: 9.5872, lng: -13.6534 },
     createdAt: days(9),
+    viewCount: 0,
+    favCount: 0,
   },
   {
     id: 'pr_villa_kindia',
@@ -139,6 +151,8 @@ export const mockProperties: Property[] = [
     status: 'active',
     gps: { lat: 10.0584, lng: -12.866 },
     createdAt: days(14),
+    viewCount: 0,
+    favCount: 0,
   },
   {
     id: 'pr_terrain_kankan',
@@ -156,6 +170,8 @@ export const mockProperties: Property[] = [
     status: 'active',
     gps: { lat: 10.385, lng: -9.305 },
     createdAt: days(22),
+    viewCount: 0,
+    favCount: 0,
   },
   {
     id: 'pr_apt_perfume_reel',
@@ -176,6 +192,8 @@ export const mockProperties: Property[] = [
     status: 'active',
     gps: { lat: 9.51, lng: -13.7 },
     createdAt: days(2),
+    viewCount: 0,
+    favCount: 0,
   },
 ];
 
