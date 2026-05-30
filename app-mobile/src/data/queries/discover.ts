@@ -1,41 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
-import { mockProducts } from '../mockProducts';
-import { mockProperties } from '../mockProperties';
 import type { DiscoverItem } from '../types';
-import { latency } from './latency';
+import { apiPost } from '../../lib/api';
 
 export type DiscoverFilter = 'all' | 'products' | 'properties';
 
-// Stable shuffle using mulberry32 so the feed is deterministic across renders.
-function seeded(seed: number) {
-  return function () {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+interface DiscoverCursor { created_at: string; id: string }
 
+// Calls /discover-feed (live). Backend interleaves both kinds by created_at desc;
+// client-side filter narrows when the caller wants only products or only properties.
+// Pagination via next_cursor isn't wired yet — caller gets the first page (up to 50).
 export function useDiscoverFeed(filter: DiscoverFilter = 'all') {
   return useQuery({
     queryKey: ['discover-feed', filter],
     queryFn: async (): Promise<DiscoverItem[]> => {
-      await latency();
-      const items: DiscoverItem[] = [];
-      if (filter !== 'properties') {
-        for (const item of mockProducts.filter((p) => p.status === 'active')) {
-          items.push({ kind: 'product', item });
-        }
-      }
-      if (filter !== 'products') {
-        for (const item of mockProperties.filter((p) => p.status === 'active')) {
-          items.push({ kind: 'property', item });
-        }
-      }
-      // Interleave / shuffle deterministically
-      const rng = seeded(42);
-      return items.sort(() => rng() - 0.5);
+      const { items } = await apiPost<{ items: DiscoverItem[]; next_cursor: DiscoverCursor | null }>({
+        path: '/discover-feed',
+        authed: false,
+        body: { limit: 50 },
+      });
+      if (filter === 'products') return items.filter((i) => i.kind === 'product');
+      if (filter === 'properties') return items.filter((i) => i.kind === 'property');
+      return items;
     },
   });
 }

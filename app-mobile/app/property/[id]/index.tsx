@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -14,13 +15,23 @@ import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { MicroLabel } from '../../../src/components/lists/SectionHeader';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
-import { useProperty } from '../../../src/data/queries';
+import { useProperty, useTrackView } from '../../../src/data/queries';
 import { formatDistance } from '../../../src/lib/format';
 
 export default function PropertyDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
   const { data: prop, isLoading } = useProperty(id);
+  const trackView = useTrackView();
+
+  // Fire-and-forget view bump on mount / when id changes. Failures don't block render.
+  useEffect(() => {
+    if (!id) return;
+    trackView.mutate({ kind: 'property', id }, {
+      onError: (e) => console.error('[view-track] property error:', e),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   if (isLoading || !prop) {
     return <View style={{ flex: 1, backgroundColor: colors.bg }} />;

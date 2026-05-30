@@ -1,7 +1,7 @@
 import { Dimensions, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -24,7 +24,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ProductCard } from '../../src/components/lists/ProductCard';
 import { haptic } from '../../src/lib/haptics';
-import { useProduct, useProducts, useToggleFavorite } from '../../src/data/queries';
+import { useProduct, useProducts, useToggleFavorite, useTrackView } from '../../src/data/queries';
 import { useFavorites } from '../../src/stores/favorites';
 import { useCart } from '../../src/stores/cart';
 import { useToast } from '../../src/components/feedback/Toast';
@@ -42,6 +42,16 @@ export default function ProductDetailRoute() {
   const isFav = useFavorites((s) => (id ? s.productIds.has(id) : false));
   const toggleFav = useFavorites((s) => s.toggleProduct);
   const toggleFavorite = useToggleFavorite();
+  const trackView = useTrackView();
+
+  // Fire-and-forget view bump on mount / when id changes. Failures don't block render.
+  useEffect(() => {
+    if (!id) return;
+    trackView.mutate({ kind: 'product', id }, {
+      onError: (e) => console.error('[view-track] product error:', e),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
   const addToCart = useCart((s) => s.add);
   const { show } = useToast();
   const [photoIdx, setPhotoIdx] = useState(0);

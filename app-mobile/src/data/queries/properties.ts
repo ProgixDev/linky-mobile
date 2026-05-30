@@ -95,7 +95,7 @@ export function useProperties(filters: PropertyFilters = {}) {
           bedrooms_min,
           bedrooms_max,
           price_max: filters.priceMaxGnf || undefined,
-          distance_max: filters.distanceToRoadMaxM,
+          distance_max: filters.distanceToRoadMaxM || undefined,
           furnished: filters.furnishedOnly === true ? true : undefined,
           query: filters.query || undefined,
         },

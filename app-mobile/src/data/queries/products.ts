@@ -155,6 +155,16 @@ export function useDeleteProduct() {
   });
 }
 
+// Fire-and-forget view counter. Caller's useEffect fires this once on detail-screen
+// mount; failures are swallowed so they don't block render. Public endpoint (no auth).
+export function useTrackView() {
+  return useMutation({
+    mutationFn: async (input: { kind: 'product' | 'property'; id: string }) => {
+      return apiPost<{ ok: true }>({ path: '/view-track', body: input, authed: false });
+    },
+  });
+}
+
 // Returns a one-shot signed upload URL. Client PUTs the file to upload_url with the
 // matching Content-Type, then puts public_url into the create-product photos[] array.
 export function useRequestPhotoUploadUrl() {

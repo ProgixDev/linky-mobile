@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, View, Pressable } from 'react-native';
+import { ScrollView, View, Pressable, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Search,
@@ -25,7 +25,6 @@ import { haptic } from '../../src/lib/haptics';
 import { useFilters } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
 import { useProducts, useProperties } from '../../src/data/queries';
-import { formatGNF } from '../../src/lib/format';
 
 const PRODUCT_CATEGORIES = ['Tout', 'Mode', 'Électronique', 'Maison', 'Beauté', 'Auto'];
 const PROPERTY_TYPES: { value: 'location' | 'vente' | 'terrain'; label: string }[] = [
@@ -39,6 +38,14 @@ export default function MarcheRoute() {
   const filters = useFilters();
   const roles = useAuth((s) => s.roles);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce the search input so typing doesn't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   // Tab visibility by role.
   // Pure agent → only Immobilier. Pure seller → only Articles. Everyone else → both.
@@ -62,6 +69,7 @@ export default function MarcheRoute() {
 
   const { data: products, isLoading: prodLoading } = useProducts({
     category: filters.productCategory === 'all' ? undefined : filters.productCategory,
+    query: debouncedSearch || undefined,
   });
   const { data: properties, isLoading: propLoading } = useProperties({
     type: filters.propertyType,
@@ -70,6 +78,7 @@ export default function MarcheRoute() {
     priceMaxGnf: filters.priceMaxGnf,
     distanceToRoadMaxM: filters.distanceToRoadMaxM,
     furnishedOnly: filters.furnishedOnly,
+    query: debouncedSearch || undefined,
   });
 
   // Effective tab: respects role locks even before useEffect syncs the store.
@@ -230,18 +239,23 @@ export default function MarcheRoute() {
             }}
           >
             <Search size={18} color={colors.textMuted} strokeWidth={2} />
-            <Text
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder={placeholder}
+              placeholderTextColor={colors.textFaint}
               style={{
                 flex: 1,
                 fontSize: 14.5,
-                color: colors.textFaint,
+                color: colors.text,
                 letterSpacing: 0,
                 marginLeft: 10,
+                padding: 0,
               }}
-              numberOfLines={1}
-            >
-              {placeholder}
-            </Text>
+              returnKeyType="search"
+              autoCorrect={false}
+              accessibilityLabel="Recherche"
+            />
             <View
               style={{
                 width: 40,
@@ -381,17 +395,29 @@ export default function MarcheRoute() {
                     <ProductCardSkeleton />
                   </View>
                 ))
-              : products?.map((p) => (
-                  <View key={p.id} style={{ flexBasis: '47%', flexGrow: 1 }}>
-                    <ProductCard product={p} />
+              : products && products.length > 0
+                ? products.map((p) => (
+                    <View key={p.id} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                      <ProductCard product={p} />
+                    </View>
+                  ))
+                : debouncedSearch ? (
+                  <View style={{ width: '100%', paddingVertical: 40, alignItems: 'center' }}>
+                    <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
                   </View>
-                ))}
+                ) : null}
           </View>
         ) : (
           <View style={{ paddingHorizontal: 24, marginTop: 14, gap: 14 }}>
             {propLoading
               ? Array.from({ length: 3 }).map((_, i) => <ProductCardSkeleton key={i} />)
-              : properties?.map((p) => <PropertyCard key={p.id} property={p} />)}
+              : properties && properties.length > 0
+                ? properties.map((p) => <PropertyCard key={p.id} property={p} />)
+                : debouncedSearch ? (
+                  <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                    <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
+                  </View>
+                ) : null}
           </View>
         )}
       </ScrollView>
@@ -412,35 +438,22 @@ export default function MarcheRoute() {
             ))}
           </View>
 
-          <MicroLabel label="Prix par mois" />
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text variant="caption" style={{ fontVariant: ['tabular-nums'], fontWeight: '600' }}>
-              {formatGNF(filters.priceMinGnf)}
-            </Text>
-            <Text variant="caption" style={{ fontVariant: ['tabular-nums'], fontWeight: '600' }}>
-              {formatGNF(filters.priceMaxGnf)}
-            </Text>
-          </View>
-          <View
-            style={{
-              height: 6,
-              borderRadius: 999,
-              backgroundColor: colors.border,
-              marginBottom: 20,
-              position: 'relative',
-            }}
-          >
-            <View
-              style={{
-                position: 'absolute',
-                left: '10%',
-                right: '30%',
-                top: 0,
-                bottom: 0,
-                backgroundColor: colors.primary,
-                borderRadius: 999,
-              }}
-            />
+          <MicroLabel label="Prix max par mois" />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+            {[
+              { label: 'Tout', value: 0 },
+              { label: '< 1M', value: 1_000_000 },
+              { label: '< 2M', value: 2_000_000 },
+              { label: '< 5M', value: 5_000_000 },
+              { label: '< 10M', value: 10_000_000 },
+            ].map((p) => (
+              <Chip
+                key={p.label}
+                label={p.label}
+                active={filters.priceMaxGnf === p.value}
+                onPress={() => filters.setPriceRange(filters.priceMinGnf, p.value)}
+              />
+            ))}
           </View>
 
           <MicroLabel label="Ville" />
@@ -457,47 +470,36 @@ export default function MarcheRoute() {
 
           <MicroLabel label="Pièces" />
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
-            {['Studio', '1', '2', '3', '4+'].map((r) => (
-              <Chip
-                key={r}
-                label={r}
-                active={filters.rooms === r.toLowerCase() || filters.rooms === r}
-                onPress={() => filters.setRooms(filters.rooms === r ? null : r)}
-                block
-              />
-            ))}
+            {['Studio', '1', '2', '3', '4+'].map((r) => {
+              const value = r.toLowerCase();
+              return (
+                <Chip
+                  key={r}
+                  label={r}
+                  active={filters.rooms === value}
+                  onPress={() => filters.setRooms(filters.rooms === value ? null : value)}
+                  block
+                />
+              );
+            })}
           </View>
 
           <MicroLabel label="Distance max au goudron" />
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text variant="caption">0 m</Text>
-            <Text variant="caption" style={{ color: colors.accent, fontWeight: '600' }}>
-              {filters.distanceToRoadMaxM <= 1000
-                ? `${filters.distanceToRoadMaxM} m`
-                : `${(filters.distanceToRoadMaxM / 1000).toFixed(1)} km`}
-            </Text>
-            <Text variant="caption">2 km</Text>
-          </View>
-          <View
-            style={{
-              height: 6,
-              borderRadius: 999,
-              backgroundColor: colors.border,
-              marginBottom: 20,
-              position: 'relative',
-            }}
-          >
-            <View
-              style={{
-                position: 'absolute',
-                left: 0,
-                width: `${Math.min(100, (filters.distanceToRoadMaxM / 2000) * 100)}%`,
-                top: 0,
-                bottom: 0,
-                backgroundColor: colors.accent,
-                borderRadius: 999,
-              }}
-            />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+            {[
+              { label: 'Tout', value: 0 },
+              { label: '< 250 m', value: 250 },
+              { label: '< 500 m', value: 500 },
+              { label: '< 1 km', value: 1000 },
+              { label: '< 2 km', value: 2000 },
+            ].map((d) => (
+              <Chip
+                key={d.label}
+                label={d.label}
+                active={filters.distanceToRoadMaxM === d.value}
+                onPress={() => filters.setDistanceMax(d.value)}
+              />
+            ))}
           </View>
 
           <MicroLabel label="Meublé" />
