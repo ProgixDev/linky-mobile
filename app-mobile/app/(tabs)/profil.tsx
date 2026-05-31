@@ -23,10 +23,6 @@ import {
   Heart,
   Wallet,
   Pencil,
-  ShoppingBag,
-  Store,
-  Building2,
-  Bug,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -94,7 +90,7 @@ export default function ProfilRoute() {
           >
             <View style={{ position: 'relative' }}>
               <Image
-                source={user?.photo}
+                source={user?.avatar_url ?? undefined}
                 style={{
                   width: 64,
                   height: 64,
@@ -103,7 +99,7 @@ export default function ProfilRoute() {
                 }}
                 contentFit="cover"
               />
-              {user?.kycVerified && (
+              {false && (
                 <View
                   style={{
                     position: 'absolute',
@@ -136,7 +132,7 @@ export default function ProfilRoute() {
                 }}
                 numberOfLines={1}
               >
-                {user?.name ?? 'Linky'}
+                {user?.display_name ?? 'Toi'}
               </Text>
               <View
                 style={{
@@ -155,8 +151,7 @@ export default function ProfilRoute() {
                   }}
                   numberOfLines={1}
                 >
-                  {user?.city ?? 'Conakry'}
-                  {user?.kycVerified ? ' · Vérifiée' : ''}
+                  {'Conakry'}
                 </Text>
               </View>
               <Pressable
@@ -362,9 +357,6 @@ export default function ProfilRoute() {
           </SettingsCard>
         </View>
 
-        {/* ===== Dev: role debug ===== */}
-        {__DEV__ && <RoleDebug />}
-
         {/* ===== Logout ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
           <Pressable
@@ -440,186 +432,6 @@ function SettingsCard({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-    </View>
-  );
-}
-
-function RoleDebug() {
-  const { colors } = useTheme();
-  const roles = useAuth((s) => s.roles);
-  const setRoles = useAuth((s) => s.setRoles);
-
-  const toggle = (role: 'buyer' | 'seller' | 'agent') => {
-    haptic.selection();
-    const has = roles.includes(role);
-    if (has) {
-      const next = roles.filter((r) => r !== role);
-      // Always keep at least one role
-      setRoles(next.length > 0 ? next : ['buyer']);
-    } else {
-      setRoles([...roles, role]);
-    }
-  };
-
-  const presets: { label: string; roles: Array<'buyer' | 'seller' | 'agent'> }[] = [
-    { label: 'Buyer only', roles: ['buyer'] },
-    { label: 'Seller only', roles: ['seller'] },
-    { label: 'Agent only', roles: ['agent'] },
-    { label: 'Buyer + Seller', roles: ['buyer', 'seller'] },
-    { label: 'Buyer + Agent', roles: ['buyer', 'agent'] },
-    { label: 'All three', roles: ['buyer', 'seller', 'agent'] },
-  ];
-
-  const ROLE_META = [
-    { id: 'buyer' as const, label: 'Buyer', Icon: ShoppingBag },
-    { id: 'seller' as const, label: 'Seller', Icon: Store },
-    { id: 'agent' as const, label: 'Agent', Icon: Building2 },
-  ];
-
-  return (
-    <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          marginBottom: 10,
-          marginLeft: 4,
-        }}
-      >
-        <Bug size={11} color={colors.accent} strokeWidth={2.25} />
-        <Text
-          style={{
-            fontSize: 11,
-            fontWeight: '700',
-            color: colors.accent,
-            letterSpacing: 0.6,
-          }}
-        >
-          DEV · RÔLES
-        </Text>
-      </View>
-
-      <View
-        style={{
-          borderRadius: 18,
-          backgroundColor: colors.accentSoft,
-          borderWidth: 1,
-          borderColor: 'rgba(232,165,61,0.25)',
-          overflow: 'hidden',
-          padding: 14,
-        }}
-      >
-        {/* Toggle chips */}
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {ROLE_META.map(({ id, label, Icon }) => {
-            const on = roles.includes(id);
-            return (
-              <Pressable
-                key={id}
-                onPress={() => toggle(id)}
-                style={{
-                  flex: 1,
-                  height: 44,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: on ? colors.accent : colors.border,
-                  backgroundColor: on ? colors.accent : colors.bg,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                }}
-              >
-                <Icon
-                  size={14}
-                  color={on ? '#FFFFFF' : colors.text}
-                  strokeWidth={1.75}
-                />
-                <Text
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: '700',
-                    color: on ? '#FFFFFF' : colors.text,
-                    letterSpacing: 0,
-                    lineHeight: 15,
-                    includeFontPadding: false,
-                  }}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Presets */}
-        <Text
-          style={{
-            fontSize: 10.5,
-            fontWeight: '700',
-            color: colors.accentText,
-            letterSpacing: 0.5,
-            marginTop: 14,
-            marginBottom: 8,
-          }}
-        >
-          PRÉSETS
-        </Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {presets.map((p) => {
-            const active =
-              p.roles.length === roles.length &&
-              p.roles.every((r) => roles.includes(r));
-            return (
-              <Pressable
-                key={p.label}
-                onPress={() => {
-                  haptic.selection();
-                  setRoles(p.roles);
-                }}
-                style={{
-                  paddingHorizontal: 10,
-                  height: 28,
-                  borderRadius: 999,
-                  backgroundColor: active ? colors.accentText : colors.bg,
-                  borderWidth: 1,
-                  borderColor: active ? colors.accentText : 'rgba(232,165,61,0.35)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 11,
-                    fontWeight: '700',
-                    color: active ? colors.accentSoft : colors.accentText,
-                    lineHeight: 13,
-                    includeFontPadding: false,
-                    letterSpacing: 0,
-                  }}
-                >
-                  {p.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <Text
-          style={{
-            fontSize: 11,
-            color: colors.accentText,
-            marginTop: 14,
-            opacity: 0.75,
-            letterSpacing: 0,
-            lineHeight: 16,
-          }}
-        >
-          Visible uniquement en dev. Le changement est instantané, pas besoin de relancer
-          l'onboarding.
-        </Text>
-      </View>
     </View>
   );
 }

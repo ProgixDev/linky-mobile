@@ -619,6 +619,7 @@ export default function ProductDetailRoute() {
           <Pressable
             onPress={() => {
               haptic.medium();
+              addToCart(product.id);
               router.push('/checkout');
             }}
             style={{

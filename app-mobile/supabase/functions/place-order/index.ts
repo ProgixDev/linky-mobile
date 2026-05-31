@@ -1,8 +1,9 @@
 // Place an order. Authed (requireUser → buyer_id). Calls place_order RPC which
-// validates the product, computes totals, and inserts an order row in 'placed'
-// state. H1 does NOT touch wallets — the full escrow lifecycle (debit on
-// place, release on confirm-receipt, dispute paths, platform fees) lands in H2
-// with fresh eyes.
+// validates the product, computes totals, auto-creates the buyer's GNF wallet,
+// inserts the order at status='paid', and post_transfers total_minor
+// buyer→escrow_gnf (ref_type='order_escrow') atomically. Wallet branch only —
+// MoMo/Stripe rails return PAYMENT_METHOD_NOT_SUPPORTED until Phase I/I' wires
+// the rail webhooks + confirm-payment endpoint.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
@@ -42,6 +43,7 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     if (msg.includes('BUYER_IS_SELLER'))              throwApi('BUYER_IS_SELLER', 400, "Tu ne peux pas acheter ton propre produit.");
     if (msg.includes('INVALID_QUANTITY'))             throwApi('INVALID_BODY', 400, 'Quantité invalide.');
     if (msg.includes('PAYMENT_METHOD_NOT_SUPPORTED')) throwApi('PAYMENT_METHOD_NOT_SUPPORTED', 400, 'Méthode de paiement non supportée. Utilise le portefeuille.');
+    if (msg.includes('INSUFFICIENT_FUNDS'))           throwApi('INSUFFICIENT_FUNDS', 400, 'Solde insuffisant pour passer cette commande.');
     throwApi('INTERNAL_ERROR', 500, 'Erreur création commande');
   }
 

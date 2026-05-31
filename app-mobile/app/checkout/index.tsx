@@ -117,7 +117,20 @@ export default function CheckoutRoute() {
                 Visa, Mastercard via Stripe
               </Text>
             </View>
-            <I.chevronR size={16} color={colors.textMuted} />
+            <View
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 999,
+                backgroundColor: selected === 'card' ? colors.primary : 'transparent',
+                borderWidth: selected === 'card' ? 0 : 1.5,
+                borderColor: colors.borderStrong,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {selected === 'card' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
+            </View>
           </Pressable>
           <Pressable
             onPress={() => setSelected('wallet')}
@@ -141,7 +154,20 @@ export default function CheckoutRoute() {
                 Solde 850 000 GNF
               </Text>
             </View>
-            <I.chevronR size={16} color={colors.textMuted} />
+            <View
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 999,
+                backgroundColor: selected === 'wallet' ? colors.primary : 'transparent',
+                borderWidth: selected === 'wallet' ? 0 : 1.5,
+                borderColor: colors.borderStrong,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {selected === 'wallet' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
+            </View>
           </Pressable>
         </Card>
 
@@ -161,7 +187,7 @@ export default function CheckoutRoute() {
           size="lg"
           block
           loading={placeOrder.isPending}
-          disabled={lines.length === 0 || placeOrder.isPending}
+          disabled={placeOrder.isPending}
           label={placeOrder.isPending ? 'Paiement en cours…' : `Payer ${formatGNF(total)}`}
           onPress={() => {
             const first = lines[0];

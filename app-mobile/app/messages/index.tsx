@@ -10,6 +10,8 @@ import { TopBar } from '../../src/components/nav/TopBar';
 import { IconButton } from '../../src/components/primitives/Button';
 import { I } from '../../src/icons/Icon';
 import { useConversations } from '../../src/data/queries';
+// dev-fixture: conversation list runs off mockUsers for other-user display
+// info until a real /v1/messages backend ships. Remove when that lands.
 import { getUser } from '../../src/data/mockUsers';
 import { formatRelativeFR } from '../../src/lib/format';
 import { EmptyState } from '../../src/components/feedback/EmptyState';

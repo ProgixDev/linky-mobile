@@ -9,6 +9,9 @@ import { Avatar } from '../../src/components/primitives/Avatar';
 import { IconButton } from '../../src/components/primitives/Button';
 import { I } from '../../src/icons/Icon';
 import { useConversation, useSendMessage } from '../../src/data/queries';
+// dev-fixture: messages screen runs entirely off mockUsers until a real
+// /v1/messages backend ships. Both getUser(otherUserId) and CURRENT_USER_ID
+// (the me/them check) should be removed when that lands.
 import { getUser, CURRENT_USER_ID } from '../../src/data/mockUsers';
 import { getProduct } from '../../src/data/mockProducts';
 import { formatGNF } from '../../src/lib/format';

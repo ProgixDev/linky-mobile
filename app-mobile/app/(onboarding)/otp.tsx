@@ -140,7 +140,7 @@ export default function OtpRoute() {
         });
         await setTokens(access_token, refresh_token);
         setPendingOtpId(null);
-        signIn(user.id);
+        signIn(user);
         haptic.success();
         router.push('/(onboarding)/profile-setup');
       } catch (e: unknown) {

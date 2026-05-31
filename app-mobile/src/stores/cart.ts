@@ -12,12 +12,7 @@ interface CartState {
 }
 
 export const useCart = create<CartState>((set) => ({
-  // Pre-seeded with the 3 items from the design mockup so the cart screen has content.
-  lines: [
-    { productId: 'p_perfume', quantity: 1 },
-    { productId: 'p_iphone', quantity: 1 },
-    { productId: 'p_bag', quantity: 1 },
-  ],
+  lines: [],
   promoCode: null,
   add: (productId, quantity = 1) =>
     set((s) => {

@@ -106,7 +106,7 @@ export default function OrderRoute() {
           </Card>
         </View>
 
-        {order.status !== 'released' && (
+        {(order.status === 'paid' || order.status === 'delivered') && (
           <>
             <View style={{ marginTop: 16 }}>
               <TrustStrip tone="accent">

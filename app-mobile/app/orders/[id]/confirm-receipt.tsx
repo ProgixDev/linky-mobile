@@ -8,14 +8,22 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
-import { mockOrders } from '../../../src/data/mockOrders';
+import { useOrder, useConfirmReception } from '../../../src/data/queries';
+import { useToast } from '../../../src/components/feedback/Toast';
 import { formatGNF } from '../../../src/lib/format';
 
 export default function ConfirmReceiptRoute() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [confirmed, setConfirmed] = useState(false);
-  const order = mockOrders.find((o) => o.id === id) ?? mockOrders[0]!;
+  const { data: order } = useOrder(id);
+  const confirm = useConfirmReception();
+  const { show } = useToast();
+  if (!order) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  const canRelease =
+    confirmed &&
+    (order.status === 'paid' || order.status === 'delivered') &&
+    !confirm.isPending;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -255,25 +263,30 @@ export default function ConfirmReceiptRoute() {
         }}
       >
         <Pressable
-          disabled={!confirmed}
+          disabled={!canRelease}
           onPress={() => {
             haptic.medium();
-            router.replace(`/orders/${order.id}/review`);
+            confirm.mutate(order.id, {
+              onSuccess: () => {
+                show('Réception confirmée 🎉', 'success');
+                router.replace('/orders');
+              },
+            });
           }}
           style={{
             height: 56,
             borderRadius: 16,
-            backgroundColor: confirmed ? colors.text : colors.bgSunken,
+            backgroundColor: canRelease ? colors.text : colors.bgSunken,
             alignItems: 'center',
             justifyContent: 'center',
-            opacity: confirmed ? 1 : 0.6,
+            opacity: canRelease ? 1 : 0.6,
           }}
         >
           <Text
             style={{
               fontSize: 15,
               fontWeight: '700',
-              color: confirmed ? colors.bg : colors.textFaint,
+              color: canRelease ? colors.bg : colors.textFaint,
               lineHeight: 18,
               includeFontPadding: false,
             }}

@@ -27,6 +27,16 @@ export default function CheckoutSuccess() {
   const ringScale = useSharedValue(0.6);
   const ringOpacity = useSharedValue(0);
 
+  const checkStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+    opacity: checkScale.value,
+  }));
+
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ringScale.value }],
+    opacity: ringOpacity.value,
+  }));
+
   useEffect(() => {
     haptic.success();
     checkScale.value = withSequence(
@@ -41,16 +51,6 @@ export default function CheckoutSuccess() {
   }, [checkScale, ringOpacity, ringScale]);
 
   if (!order) return <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }} />;
-
-  const checkStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
-    opacity: checkScale.value,
-  }));
-
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: ringScale.value }],
-    opacity: ringOpacity.value,
-  }));
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>

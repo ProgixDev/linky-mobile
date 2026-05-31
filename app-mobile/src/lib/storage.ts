@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   notificationsEnabled: 'prefs.notifications',
   onboardingDone: 'auth.onboardingDone',
   currentUserId: 'auth.currentUserId',
+  authUserJson: 'auth.userJson',
   roles: 'auth.roles',
 } as const;
 

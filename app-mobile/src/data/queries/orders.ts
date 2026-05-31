@@ -1,8 +1,9 @@
-// Wired to live edge functions: place-order / get-order / list-my-orders. All
-// authed — list/get use the JWT to scope to the caller (buyer; participant for
-// get). H1 covers order creation + reads only; the escrow lifecycle
-// (confirm-receipt RPC, dispute paths, wallet debit/release) lands in H2, so
-// useConfirmReception stays stubbed below until then.
+// Wired to live edge functions: place-order / get-order / list-my-orders /
+// confirm-receipt / dispute-order. All authed — list/get use the JWT to scope
+// to the caller (buyer; participant for get). H2 escrow lifecycle is live:
+// place_order debits the buyer's wallet into escrow, confirm-receipt splits
+// the escrow (amount → seller, fees → platform), dispute-order parks the
+// order at status='disputed' pending admin resolution (Phase K).
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
 import { useCart } from '../../stores/cart';
@@ -87,19 +88,48 @@ export function usePlaceOrder() {
   });
 }
 
-// H2 placeholder: confirm-receipt RPC lands with the escrow lifecycle. Kept as
-// a stub so app/order/[id].tsx keeps compiling; the optimistic UI state shift
-// is the only effect today.
 export function useConfirmReception() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (orderId: string) => {
-      await new Promise((r) => setTimeout(r, 600));
-      return orderId;
+    mutationFn: async (orderId: string): Promise<Order> => {
+      const { order } = await apiPost<{ order: Order }>({
+        path: '/confirm-receipt',
+        body: { order_id: orderId },
+      });
+      return order;
     },
-    onSuccess: (orderId) => {
-      qc.invalidateQueries({ queryKey: ['order', orderId] });
+    onSuccess: (order) => {
+      qc.invalidateQueries({ queryKey: ['order', order.id] });
       qc.invalidateQueries({ queryKey: ['my-orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders-infinite'] });
+      qc.invalidateQueries({ queryKey: ['wallet'] });
+    },
+  });
+}
+
+export type DisputeReason = 'damaged' | 'wrong' | 'not_received';
+
+export interface DisputeOrderInput {
+  orderId: string;
+  reason: DisputeReason;
+  note?: string;
+}
+
+export function useDisputeOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orderId, reason, note }: DisputeOrderInput): Promise<Order> => {
+      const { order } = await apiPost<{ order: Order }>({
+        path: '/dispute-order',
+        body: { order_id: orderId, reason, note },
+      });
+      return order;
+    },
+    onSuccess: (order) => {
+      qc.invalidateQueries({ queryKey: ['order', order.id] });
+      qc.invalidateQueries({ queryKey: ['my-orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders-infinite'] });
+      qc.invalidateQueries({ queryKey: ['wallet'] });
     },
   });
 }

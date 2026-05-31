@@ -11,26 +11,29 @@ import { TopBar } from '../../src/components/nav/TopBar';
 import { StickyBottom } from '../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../src/icons/Icon';
 import { useToast } from '../../src/components/feedback/Toast';
+import { useOrder, useDisputeOrder, type DisputeReason } from '../../src/data/queries';
 
 interface IssueDef {
-  id: string;
+  id: DisputeReason;
   t: string;
   icon: IconKey;
 }
 
 const ISSUES: IssueDef[] = [
-  { id: 'noreceive', t: "Je n'ai pas reçu mon article", icon: 'package' },
-  { id: 'different', t: "L'article est différent de l'annonce", icon: 'warn' },
-  { id: 'damaged', t: "L'article est endommagé", icon: 'trash' },
-  { id: 'other', t: 'Autre problème', icon: 'more' },
+  { id: 'not_received', t: "Je n'ai pas reçu mon article",        icon: 'package' },
+  { id: 'wrong',        t: "L'article est différent de l'annonce", icon: 'warn'    },
+  { id: 'damaged',      t: "L'article est endommagé",              icon: 'trash'   },
 ];
 
 export default function DisputeRoute() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const { colors, radii } = useTheme();
-  const [issue, setIssue] = useState('noreceive');
+  const [issue, setIssue] = useState<DisputeReason | null>(null);
   const [description, setDescription] = useState('');
   const { show } = useToast();
+  const { data: order } = useOrder(orderId);
+  const dispute = useDisputeOrder();
+  const canSubmit = !!issue && !!order && !dispute.isPending;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -95,6 +98,7 @@ export default function DisputeRoute() {
           <Input
             label="Décris ce qui s'est passé"
             multiline
+            maxLength={500}
             value={description}
             onChangeText={setDescription}
             placeholder="Donne le maximum de détails…"
@@ -129,10 +133,19 @@ export default function DisputeRoute() {
           variant="destructive"
           size="lg"
           block
+          disabled={!canSubmit}
           label="Envoyer le signalement"
           onPress={() => {
-            show('Signalement envoyé', 'info');
-            router.back();
+            if (!issue || !order) return;
+            dispute.mutate(
+              { orderId: order.id, reason: issue, note: description.trim() || undefined },
+              {
+                onSuccess: () => {
+                  show('Litige signalé', 'success');
+                  router.replace('/orders');
+                },
+              },
+            );
           }}
         />
       </StickyBottom>

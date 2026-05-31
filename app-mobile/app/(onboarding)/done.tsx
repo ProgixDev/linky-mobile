@@ -15,6 +15,8 @@ const CONFETTI = Array.from({ length: 24 }, (_, i) => i);
 export default function OnboardingDoneRoute() {
   const { colors } = useTheme();
   const complete = useAuth((s) => s.completeOnboarding);
+  const user = useAuth((s) => s.user);
+  const firstName = (user?.display_name ?? '').split(' ')[0] || 'toi';
 
   useEffect(() => {
     haptic.success();
@@ -64,7 +66,7 @@ export default function OnboardingDoneRoute() {
           <I.check size={38} color="#FFFFFF" stroke={2.5} />
         </View>
         <Text variant="dispL" center>
-          Bienvenue, Mariama !
+          {`Bienvenue, ${firstName} !`}
         </Text>
         <Text variant="bodyM" tone="muted" center style={{ marginTop: 6, maxWidth: 260 }}>
           Ton compte est prêt. Découvre des milliers d'articles et de logements.

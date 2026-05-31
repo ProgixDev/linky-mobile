@@ -193,7 +193,7 @@ function BuyerHome() {
   const { data: properties } = useNearbyProperties(3);
   const { data: wallet } = useWallet();
 
-  const firstName = (user?.name ?? 'Linky').split(' ')[0];
+  const firstName = (user?.display_name ?? 'Toi').split(' ')[0];
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -212,7 +212,7 @@ function BuyerHome() {
             gap: 12,
           }}
         >
-          <Avatar source={user?.photo} size="md" />
+          <Avatar source={user?.avatar_url ?? undefined} size="md" />
           <View style={{ flex: 1 }}>
             <Text
               style={{

@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { mockConversations, mockMessagesByConversation, mockNotifications } from '../mockConversations';
 import type { Conversation, Message, AppNotification } from '../types';
 import { latency } from './latency';
+// dev-fixture: messages backend not yet implemented. CURRENT_USER_ID used to
+// stamp outgoing senderId until a real /v1/messages endpoint ships and reads
+// caller_id from the JWT. Remove this import when that lands.
 import { CURRENT_USER_ID } from '../mockUsers';
 
 const conversations: Conversation[] = [...mockConversations];
