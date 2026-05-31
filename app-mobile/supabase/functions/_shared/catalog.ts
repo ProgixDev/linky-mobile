@@ -112,6 +112,46 @@ export function mapProperty(r: PropertyRow, photos: string[]) {
   };
 }
 
+export interface OrderRow {
+  id: string;
+  reference: string;
+  buyer_id: string;
+  seller_id: string;
+  shop_id: string;
+  product_id: string;
+  product_snapshot: { title: string; photo: string; priceGnf: number };
+  quantity: number;
+  amount_minor: number | string;
+  fees_minor: number | string;
+  total_minor: number | string;
+  payment_method: string;
+  status: string;
+  events: Array<{ at: string; label: string }>;
+  release_at: string | null;
+  created_at: string;
+}
+
+export function mapOrder(r: OrderRow) {
+  return {
+    id: r.id,
+    reference: r.reference,
+    buyerId: r.buyer_id,
+    sellerId: r.seller_id,
+    shopId: r.shop_id,
+    productId: r.product_id,
+    productSnapshot: r.product_snapshot,
+    quantity: r.quantity,
+    amountGnf: Number(r.amount_minor),
+    feesGnf: Number(r.fees_minor),
+    totalGnf: Number(r.total_minor),
+    paymentMethod: r.payment_method,
+    status: r.status,
+    events: r.events,
+    createdAt: r.created_at,
+    releaseAt: r.release_at ?? undefined,
+  };
+}
+
 export function mapShop(r: ShopRow) {
   return {
     id: r.id,

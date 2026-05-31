@@ -15,13 +15,13 @@ import { Check, Package, Clock, ShieldCheck, Receipt } from 'lucide-react-native
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { haptic } from '../../src/lib/haptics';
-import { mockOrders } from '../../src/data/mockOrders';
+import { useOrder } from '../../src/data/queries';
 import { formatGNF } from '../../src/lib/format';
 
 export default function CheckoutSuccess() {
   const { colors } = useTheme();
   const { orderId } = useLocalSearchParams<{ orderId?: string }>();
-  const order = mockOrders.find((o) => o.id === orderId) ?? mockOrders[0]!;
+  const { data: order } = useOrder(orderId);
 
   const checkScale = useSharedValue(0);
   const ringScale = useSharedValue(0.6);
@@ -39,6 +39,8 @@ export default function CheckoutSuccess() {
       withTiming(0, { duration: 640, easing: Easing.out(Easing.quad) }),
     );
   }, [checkScale, ringOpacity, ringScale]);
+
+  if (!order) return <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }} />;
 
   const checkStyle = useAnimatedStyle(() => ({
     transform: [{ scale: checkScale.value }],

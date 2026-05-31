@@ -1,108 +1,105 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { mockOrders } from '../mockOrders';
-import type { Order, PaymentMethod } from '../types';
-import { latency } from './latency';
+// Wired to live edge functions: place-order / get-order / list-my-orders. All
+// authed — list/get use the JWT to scope to the caller (buyer; participant for
+// get). H1 covers order creation + reads only; the escrow lifecycle
+// (confirm-receipt RPC, dispute paths, wallet debit/release) lands in H2, so
+// useConfirmReception stays stubbed below until then.
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiPost } from '../../lib/api';
 import { useCart } from '../../stores/cart';
-import { getProduct } from '../mockProducts';
+import type { Order, OrderStatus, PaymentMethod } from '../types';
 
-const localOrders: Order[] = [...mockOrders];
+interface Cursor { created_at: string; id: string }
 
-export function useOrders() {
+export interface MyOrdersFilters {
+  status?: OrderStatus;
+}
+
+export function useMyOrders(filters: MyOrdersFilters = {}) {
   return useQuery({
-    queryKey: ['orders'],
+    queryKey: ['my-orders', filters],
     queryFn: async (): Promise<Order[]> => {
-      await latency();
-      return localOrders;
+      const { orders } = await apiPost<{ orders: Order[]; next_cursor: Cursor | null }>({
+        path: '/list-my-orders',
+        body: { status: filters.status },
+      });
+      return orders;
     },
   });
 }
+
+export function useMyOrdersInfinite(filters: MyOrdersFilters = {}) {
+  const query = useInfiniteQuery({
+    queryKey: ['my-orders-infinite', filters],
+    initialPageParam: undefined as Cursor | undefined,
+    queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) =>
+      apiPost<{ orders: Order[]; next_cursor: Cursor | null }>({
+        path: '/list-my-orders',
+        body: { status: filters.status, cursor: pageParam },
+      }),
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+  });
+  const orders = query.data?.pages.flatMap((p) => p.orders) ?? [];
+  return { ...query, orders };
+}
+
+export const useOrders = useMyOrders;
 
 export function useOrder(id: string | undefined) {
   return useQuery({
     queryKey: ['order', id],
     enabled: !!id,
     queryFn: async (): Promise<Order | undefined> => {
-      await latency();
-      return localOrders.find((o) => o.id === id);
+      const { order } = await apiPost<{ order: Order }>({
+        path: '/get-order',
+        body: { id },
+      });
+      return order;
     },
   });
 }
 
-interface PlaceOrderArgs {
+export interface PlaceOrderInput {
+  productId: string;
+  quantity: number;
   paymentMethod: PaymentMethod;
 }
 
 export function usePlaceOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ paymentMethod }: PlaceOrderArgs): Promise<Order> => {
-      // Mock checkout — 1.5s loading delay
-      await new Promise((r) => setTimeout(r, 1500));
-      const lines = useCart.getState().lines;
-      const items = lines
-        .map((l) => ({ line: l, product: getProduct(l.productId) }))
-        .filter((x) => x.product);
-      const subtotal = items.reduce(
-        (sum, { line, product }) => sum + (product?.priceGnf ?? 0) * line.quantity,
-        0,
-      );
-      const fees = Math.round(subtotal * 0.03);
-      const total = subtotal + fees;
-      const ref = `LK-2026-${String(4900 + Math.floor(Math.random() * 99)).padStart(5, '0')}`;
-      const first = items[0];
-      const order: Order = {
-        id: `o_${Date.now()}`,
-        reference: ref,
-        buyerId: 'u_mariama',
-        sellerId: first?.product?.shopId === 's_maison_aissatou' ? 'u_aissatou' : 'u_conakrytech',
-        shopId: first?.product?.shopId ?? 's_maison_aissatou',
-        productId: first?.product?.id ?? 'p_perfume',
-        productSnapshot: {
-          title: first?.product?.title ?? '',
-          photo: first?.product?.photos[0] ?? '',
-          priceGnf: first?.product?.priceGnf ?? 0,
+    mutationFn: async ({ productId, quantity, paymentMethod }: PlaceOrderInput): Promise<Order> => {
+      const { order } = await apiPost<{ order: Order }>({
+        path: '/place-order',
+        body: {
+          product_id: productId,
+          quantity,
+          payment_method: paymentMethod,
         },
-        quantity: first?.line.quantity ?? 1,
-        amountGnf: subtotal,
-        feesGnf: fees,
-        totalGnf: total,
-        paymentMethod,
-        status: 'paid',
-        createdAt: new Date().toISOString(),
-        events: [
-          { at: new Date().toISOString(), label: 'Commande passée' },
-          { at: new Date().toISOString(), label: 'Paiement reçu en séquestre' },
-        ],
-        releaseAt: new Date(Date.now() + 72 * 3600_000).toISOString(),
-      };
-      localOrders.unshift(order);
-      useCart.getState().clear();
+      });
       return order;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders-infinite'] });
       qc.invalidateQueries({ queryKey: ['wallet'] });
+      useCart.getState().clear();
     },
   });
 }
 
+// H2 placeholder: confirm-receipt RPC lands with the escrow lifecycle. Kept as
+// a stub so app/order/[id].tsx keeps compiling; the optimistic UI state shift
+// is the only effect today.
 export function useConfirmReception() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (orderId: string) => {
       await new Promise((r) => setTimeout(r, 600));
-      const idx = localOrders.findIndex((o) => o.id === orderId);
-      if (idx >= 0) {
-        const o = localOrders[idx]!;
-        const newEvents = [...o.events, { at: new Date().toISOString(), label: 'Réception confirmée — paiement libéré' }];
-        localOrders[idx] = { ...o, status: 'released', events: newEvents };
-      }
       return orderId;
     },
     onSuccess: (orderId) => {
       qc.invalidateQueries({ queryKey: ['order', orderId] });
-      qc.invalidateQueries({ queryKey: ['orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders'] });
     },
   });
 }
-

@@ -16,7 +16,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { haptic } from '../../src/lib/haptics';
-import { mockOrders } from '../../src/data/mockOrders';
+import { useMyOrders } from '../../src/data/queries';
 import { formatGNF } from '../../src/lib/format';
 import type { Order, OrderStatus } from '../../src/data/types';
 
@@ -40,8 +40,9 @@ const STATUS_META: Record<OrderStatus, { label: string; Icon: LucideIcon; bg: st
 export default function OrdersIndex() {
   const { colors } = useTheme();
   const [filter, setFilter] = useState<Filter>('all');
+  const { data: orders = [] } = useMyOrders();
 
-  const filtered = mockOrders.filter((o) => {
+  const filtered = orders.filter((o) => {
     if (filter === 'active') return ['placed', 'paid', 'preparing'].includes(o.status);
     if (filter === 'completed') return ['delivered', 'released'].includes(o.status);
     return true;

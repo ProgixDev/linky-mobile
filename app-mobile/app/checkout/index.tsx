@@ -161,14 +161,21 @@ export default function CheckoutRoute() {
           size="lg"
           block
           loading={placeOrder.isPending}
+          disabled={lines.length === 0 || placeOrder.isPending}
           label={placeOrder.isPending ? 'Paiement en cours…' : `Payer ${formatGNF(total)}`}
           onPress={() => {
+            const first = lines[0];
+            if (!first) return;
             placeOrder.mutate(
-              { paymentMethod: selected },
+              { productId: first.productId, quantity: first.quantity, paymentMethod: selected },
               {
                 onSuccess: (order) => {
-                  show('Paiement reçu en séquestre', 'success');
+                  show('Commande créée', 'success');
                   router.replace(`/checkout/success?orderId=${order.id}`);
+                },
+                onError: (err: unknown) => {
+                  const msg = (err as { message?: string })?.message ?? 'Erreur paiement';
+                  show(msg, 'danger');
                 },
               },
             );
