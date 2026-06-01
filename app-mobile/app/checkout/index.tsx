@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useQueries } from '@tanstack/react-query';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Card } from '../../src/components/primitives/Card';
@@ -12,9 +13,9 @@ import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { I, type IconKey } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useCart } from '../../src/stores/cart';
-import { getProduct } from '../../src/data/mockProducts';
+import { apiPost } from '../../src/lib/api';
 import { usePlaceOrder } from '../../src/data/queries';
-import type { PaymentMethod } from '../../src/data/types';
+import type { PaymentMethod, Product } from '../../src/data/types';
 import { useToast } from '../../src/components/feedback/Toast';
 
 interface MethodOption {
@@ -38,8 +39,24 @@ export default function CheckoutRoute() {
   const placeOrder = usePlaceOrder();
   const { show } = useToast();
 
-  const subtotal = lines.reduce((sum, l) => {
-    const p = getProduct(l.productId);
+  // Real backend prices, same queryKey as useProduct → shared cache with the
+  // detail page and cart screen. Subtotal stays at 0 until products land,
+  // and the Payer button is gated on allLoaded so we don't ship a wrong total.
+  const queries = useQueries({
+    queries: lines.map((l) => ({
+      queryKey: ['product', l.productId],
+      queryFn: async (): Promise<Product> => {
+        const { product } = await apiPost<{ product: Product }>({
+          path: '/get-product', authed: false, body: { id: l.productId },
+        });
+        return product;
+      },
+      retry: 1,
+    })),
+  });
+  const allLoaded = queries.every((q) => !q.isLoading);
+  const subtotal = lines.reduce((sum, l, i) => {
+    const p = queries[i].data;
     return sum + (p?.priceGnf ?? 0) * l.quantity;
   }, 0);
   const total = subtotal + Math.round(subtotal * 0.03);
@@ -105,34 +122,6 @@ export default function CheckoutRoute() {
         <MicroLabel label="Autres options" />
         <Card padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
           <Pressable
-            onPress={() => setSelected('card')}
-            style={{ padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border }}
-          >
-            <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
-              <I.card size={18} color={colors.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600' }}>Carte bancaire</Text>
-              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                Visa, Mastercard via Stripe
-              </Text>
-            </View>
-            <View
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 999,
-                backgroundColor: selected === 'card' ? colors.primary : 'transparent',
-                borderWidth: selected === 'card' ? 0 : 1.5,
-                borderColor: colors.borderStrong,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {selected === 'card' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
-            </View>
-          </Pressable>
-          <Pressable
             onPress={() => setSelected('wallet')}
             style={{ padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}
           >
@@ -187,7 +176,7 @@ export default function CheckoutRoute() {
           size="lg"
           block
           loading={placeOrder.isPending}
-          disabled={placeOrder.isPending}
+          disabled={placeOrder.isPending || !allLoaded || lines.length === 0}
           label={placeOrder.isPending ? 'Paiement en cours…' : `Payer ${formatGNF(total)}`}
           onPress={() => {
             const first = lines[0];
@@ -195,9 +184,16 @@ export default function CheckoutRoute() {
             placeOrder.mutate(
               { productId: first.productId, quantity: first.quantity, paymentMethod: selected },
               {
-                onSuccess: (order) => {
-                  show('Commande créée', 'success');
-                  router.replace(`/checkout/success?orderId=${order.id}`);
+                onSuccess: ({ order, intent }) => {
+                  if (intent) {
+                    // Rail path: route to confirmation screen with spinner + cron polling.
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
+                    router.replace(`/checkout/confirm/${order.id}` as any);
+                  } else {
+                    // Wallet path (no intent): order already at status='paid'; existing flow.
+                    show('Commande créée', 'success');
+                    router.replace(`/checkout/success?orderId=${order.id}`);
+                  }
                 },
                 onError: (err: unknown) => {
                   const msg = (err as { message?: string })?.message ?? 'Erreur paiement';

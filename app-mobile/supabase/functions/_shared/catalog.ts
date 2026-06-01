@@ -125,6 +125,7 @@ export interface OrderRow {
   fees_minor: number | string;
   total_minor: number | string;
   payment_method: string;
+  currency: 'GNF' | 'EUR';
   status: string;
   events: Array<{ at: string; label: string }>;
   release_at: string | null;
@@ -145,10 +146,54 @@ export function mapOrder(r: OrderRow) {
     feesGnf: Number(r.fees_minor),
     totalGnf: Number(r.total_minor),
     paymentMethod: r.payment_method,
+    currency: r.currency,
     status: r.status,
     events: r.events,
     createdAt: r.created_at,
     releaseAt: r.release_at ?? undefined,
+  };
+}
+
+export interface PaymentIntentRow {
+  id: string;
+  order_id: string;
+  rail: string;
+  rail_intent_id: string;
+  rail_status: string | null;
+  status: 'pending' | 'completed' | 'failed' | 'expired' | 'cancelled';
+  method: 'orange-money' | 'mtn-money' | 'card';
+  currency: 'GNF' | 'EUR';
+  amount_minor: number | string;
+  payer_phone: string | null;
+  attempt_index: number;
+  attempts_count: number;
+  last_polled_at: string | null;
+  last_error_code: string | null;
+  last_error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export function mapPaymentIntent(r: PaymentIntentRow) {
+  return {
+    id: r.id,
+    orderId: r.order_id,
+    rail: r.rail,
+    railIntentId: r.rail_intent_id,
+    railStatus: r.rail_status ?? undefined,
+    status: r.status,
+    method: r.method,
+    currency: r.currency,
+    amountGnf: Number(r.amount_minor),
+    payerPhone: r.payer_phone ?? undefined,
+    attemptIndex: r.attempt_index,
+    attemptsCount: r.attempts_count,
+    lastPolledAt: r.last_polled_at ?? undefined,
+    lastErrorCode: r.last_error_code ?? undefined,
+    lastErrorMessage: r.last_error_message ?? undefined,
+    createdAt: r.created_at,
+    completedAt: r.completed_at ?? undefined,
   };
 }
 

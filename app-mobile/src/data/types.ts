@@ -104,10 +104,33 @@ export interface Order {
   feesGnf: number;
   totalGnf: number;
   paymentMethod: PaymentMethod;
+  currency: 'GNF' | 'EUR';
   status: OrderStatus;
   createdAt: string;
   events: Array<{ at: string; label: string }>;
   releaseAt?: string;
+}
+
+export type PaymentIntentStatus = 'pending' | 'completed' | 'failed' | 'expired' | 'cancelled';
+
+export interface PaymentIntent {
+  id: ID;
+  orderId: ID;
+  rail: string;
+  railIntentId: string;
+  railStatus?: string;
+  status: PaymentIntentStatus;
+  method: 'orange-money' | 'mtn-money' | 'card';
+  currency: 'GNF' | 'EUR';
+  amountGnf: number;
+  payerPhone?: string;
+  attemptIndex: number;
+  attemptsCount: number;
+  lastPolledAt?: string;
+  lastErrorCode?: string;
+  lastErrorMessage?: string;
+  createdAt: string;
+  completedAt?: string;
 }
 
 export interface WalletMovement {

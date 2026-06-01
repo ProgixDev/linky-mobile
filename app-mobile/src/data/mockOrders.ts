@@ -19,6 +19,7 @@ export const mockOrders: Order[] = [
     feesGnf: 12_600,
     totalGnf: 432_600,
     paymentMethod: 'orange-money',
+    currency: 'GNF',
     status: 'preparing',
     createdAt: new Date(Date.now() - 18 * 3600_000).toISOString(),
     events: [
@@ -45,6 +46,7 @@ export const mockOrders: Order[] = [
     feesGnf: 18_600,
     totalGnf: 638_600,
     paymentMethod: 'wallet',
+    currency: 'GNF',
     status: 'released',
     createdAt: new Date(Date.now() - 9 * 86_400_000).toISOString(),
     events: [

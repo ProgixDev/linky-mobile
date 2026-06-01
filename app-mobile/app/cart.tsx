@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
+import { useQueries } from '@tanstack/react-query';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { Text } from '../src/components/primitives/Text';
 import { Card } from '../src/components/primitives/Card';
@@ -13,20 +15,63 @@ import { I } from '../src/icons/Icon';
 import { formatGNF, formatEUR } from '../src/lib/format';
 import { gnfToEur } from '../src/lib/currency';
 import { useCart } from '../src/stores/cart';
-import { getProduct } from '../src/data/mockProducts';
+import { apiPost } from '../src/lib/api';
+import type { Product } from '../src/data/types';
 import { haptic } from '../src/lib/haptics';
 
 export default function CartRoute() {
   const { colors, radii } = useTheme();
   const { lines, setQuantity, remove } = useCart();
 
+  // One real-backend fetch per cart line; shared cache with useProduct on the
+  // detail page (same queryKey shape: ['product', id]).
+  const queries = useQueries({
+    queries: lines.map((l) => ({
+      queryKey: ['product', l.productId],
+      queryFn: async (): Promise<Product> => {
+        const { product } = await apiPost<{ product: Product }>({
+          path: '/get-product', authed: false, body: { id: l.productId },
+        });
+        return product;
+      },
+      retry: 1,
+    })),
+  });
+
+  // Self-heal: 404 PRODUCT_NOT_FOUND ⇒ line points at a deleted product,
+  // drop it from the store. Other errors (network, 5xx) are transient and
+  // we leave the line alone so the next mount can recover.
+  useEffect(() => {
+    queries.forEach((q, i) => {
+      if (!q.isError) return;
+      const status = (q.error as { status?: number })?.status;
+      const code = (q.error as { code?: string })?.code;
+      if (status === 404 || code === 'PRODUCT_NOT_FOUND') {
+        remove(lines[i].productId);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queries.map((q) => q.status).join(',')]);
+
+  const allLoaded = queries.every((q) => !q.isLoading);
   const items = lines
-    .map((l) => ({ line: l, product: getProduct(l.productId) }))
-    .filter((x): x is { line: typeof lines[0]; product: NonNullable<ReturnType<typeof getProduct>> } => !!x.product);
+    .map((l, i) => ({ line: l, product: queries[i].data }))
+    .filter((x): x is { line: typeof lines[0]; product: Product } => !!x.product);
   const subtotal = items.reduce((sum, { line, product }) => sum + product.priceGnf * line.quantity, 0);
   const fees = Math.round(subtotal * 0.03);
   const total = subtotal + fees;
   const sellers = Array.from(new Set(items.map((i) => i.product.shopId))).length;
+
+  if (!allLoaded && lines.length > 0) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+        <TopBar title="Mon panier" back />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text variant="bodyM" tone="muted">Synchronisation du panier…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (items.length === 0) {
     return (

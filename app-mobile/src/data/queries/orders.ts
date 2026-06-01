@@ -7,7 +7,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
 import { useCart } from '../../stores/cart';
-import type { Order, OrderStatus, PaymentMethod } from '../types';
+import type { Order, OrderStatus, PaymentIntent, PaymentMethod } from '../types';
 
 interface Cursor { created_at: string; id: string }
 
@@ -45,17 +45,36 @@ export function useMyOrdersInfinite(filters: MyOrdersFilters = {}) {
 
 export const useOrders = useMyOrders;
 
+interface OrderEnvelope { order: Order; intent: PaymentIntent | null }
+
+// /get-order now returns BOTH the order and its latest payment_intent (null
+// for wallet orders). useOrder uses TanStack `select` to project just the
+// order so the existing 4 callers (dispute, success, order detail,
+// confirm-receipt) stay backward-compat. useOrderWithIntent shares the same
+// queryKey + cache, so the confirmation screen and other screens reading the
+// same orderId issue ONE HTTP call per polling cycle (not two).
+async function fetchOrderEnvelope(id: string | undefined): Promise<OrderEnvelope> {
+  return apiPost<OrderEnvelope>({ path: '/get-order', body: { id } });
+}
+
 export function useOrder(id: string | undefined) {
   return useQuery({
     queryKey: ['order', id],
     enabled: !!id,
-    queryFn: async (): Promise<Order | undefined> => {
-      const { order } = await apiPost<{ order: Order }>({
-        path: '/get-order',
-        body: { id },
-      });
-      return order;
-    },
+    queryFn: () => fetchOrderEnvelope(id),
+    select: (env) => env.order,
+  });
+}
+
+/** Confirmation-screen hook. Same query+cache as useOrder; returns both pieces. */
+export function useOrderWithIntent(id: string | undefined) {
+  return useQuery({
+    queryKey: ['order', id],
+    enabled: !!id,
+    queryFn: () => fetchOrderEnvelope(id),
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -63,21 +82,28 @@ export interface PlaceOrderInput {
   productId: string;
   quantity: number;
   paymentMethod: PaymentMethod;
+  /** Optional Q6 override; omit to use the user's primary phone from /phones. */
+  payerPhone?: string;
+}
+
+export interface PlaceOrderResult {
+  order: Order;
+  intent?: PaymentIntent;  // present for rail methods, absent for wallet
 }
 
 export function usePlaceOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ productId, quantity, paymentMethod }: PlaceOrderInput): Promise<Order> => {
-      const { order } = await apiPost<{ order: Order }>({
+    mutationFn: async ({ productId, quantity, paymentMethod, payerPhone }: PlaceOrderInput): Promise<PlaceOrderResult> => {
+      return apiPost<PlaceOrderResult>({
         path: '/place-order',
         body: {
           product_id: productId,
           quantity,
           payment_method: paymentMethod,
+          ...(payerPhone ? { payer_phone: payerPhone } : {}),
         },
       });
-      return order;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-orders'] });

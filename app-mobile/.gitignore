@@ -11,3 +11,11 @@ android/
 .mcp.json
 expo-env.d.ts
 nativewind-env.d.ts
+
+# Daily reports / plans / scratch artifacts that live in the repo root
+DAILY_REPORT_*
+WORK_PLAN.*
+BACKEND_PLAN.*
+MAPS_SETUP_ISSUE.*
+*.pdf
+*.html
