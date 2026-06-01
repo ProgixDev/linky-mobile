@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   CircleAlert,
   ChevronRight,
+  Ban,
+  RotateCcw,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -36,7 +38,11 @@ const STATUS_META: Record<OrderStatus, { label: string; Icon: LucideIcon; bg: st
   delivered: { label: 'LIVRÉE', Icon: Package, bg: '#E0F0E8', fg: '#155F45' },
   released: { label: 'PAYÉE', Icon: CheckCircle2, bg: '#E8F2EE', fg: '#0A5240' },
   disputed: { label: 'LITIGE', Icon: CircleAlert, bg: '#FBE7E5', fg: '#B53D2F' },
+  cancelled: { label: 'ANNULÉE', Icon: Ban, bg: '#EEEEEE', fg: '#606060' },
+  refunded: { label: 'REMBOURSÉE', Icon: RotateCcw, bg: '#E8EFF6', fg: '#1F4E7A' },
 };
+
+const STATUS_FALLBACK = { label: '—', Icon: CircleAlert, bg: '#EEEEEE', fg: '#606060' } as const;
 
 export default function SellerOrdersIndex() {
   const { colors } = useTheme();
@@ -124,7 +130,7 @@ export default function SellerOrdersIndex() {
 
 function SellerOrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
   const { colors } = useTheme();
-  const meta = STATUS_META[order.status];
+  const meta = STATUS_META[order.status] ?? { ...STATUS_FALLBACK, label: order.status.toUpperCase() };
   const needsAction = order.status === 'paid' || order.status === 'placed';
 
   return (

@@ -10,7 +10,7 @@ interface FavoritesState {
 }
 
 export const useFavorites = create<FavoritesState>((set, get) => ({
-  productIds: new Set(['p_perfume']),
+  productIds: new Set(),
   propertyIds: new Set(),
   toggleProduct: (id) =>
     set((s) => {

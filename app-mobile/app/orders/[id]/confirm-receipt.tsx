@@ -14,7 +14,14 @@ import { formatGNF } from '../../../src/lib/format';
 
 export default function ConfirmReceiptRoute() {
   const { colors } = useTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // typedRoutes doesn't model query params on dynamic routes — cast to read
+  // `token` alongside `id`. Per migration 20260601_03 (QR-gate), this token
+  // is required to call confirm-receipt; without it, the server raises
+  // INVALID_SCAN_TOKEN. The route exists from the pre-QR-gate era so we
+  // tolerate visits but gate the confirm button on token presence.
+  const params = useLocalSearchParams() as { id?: string; token?: string };
+  const id = params.id;
+  const token = params.token;
   const [confirmed, setConfirmed] = useState(false);
   const { data: order } = useOrder(id);
   const confirm = useConfirmReception();
@@ -22,6 +29,7 @@ export default function ConfirmReceiptRoute() {
   if (!order) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   const canRelease =
     confirmed &&
+    !!token &&
     (order.status === 'paid' || order.status === 'delivered') &&
     !confirm.isPending;
 
@@ -265,13 +273,26 @@ export default function ConfirmReceiptRoute() {
         <Pressable
           disabled={!canRelease}
           onPress={() => {
+            if (!token) {
+              show('Scanne le QR du colis pour confirmer.', 'danger');
+              return;
+            }
             haptic.medium();
-            confirm.mutate(order.id, {
-              onSuccess: () => {
-                show('Réception confirmée 🎉', 'success');
-                router.replace('/orders');
+            confirm.mutate(
+              { orderId: order.id, scanToken: token },
+              {
+                onSuccess: () => {
+                  show('Réception confirmée 🎉', 'success');
+                  router.replace('/orders');
+                },
+                onError: (e) => {
+                  const msg = (e as { message_fr?: string; message?: string }).message_fr
+                    ?? (e as { message?: string }).message
+                    ?? 'Erreur de confirmation';
+                  show(msg, 'danger');
+                },
               },
-            });
+            );
           }}
           style={{
             height: 56,

@@ -29,10 +29,19 @@ const REGIONS = [
 ] as const;
 type Region = (typeof REGIONS)[number];
 
-// All 33 prefecture capitals of Guinea + Conakry, the 8 administrative regions
-// share their names with their capital cities.
+// All 33 prefecture capitals of Guinea + Conakry's 5 communes + the rollup
+// "Conakry" entry (kept for backwards-compat with existing properties that
+// store city='Conakry'). The 8 administrative regions share their names with
+// their capital cities. Conakry communes (Kaloum / Dixinn / Matam / Ratoma /
+// Matoto) match Guinea's actual sub-municipal divisions — users in the capital
+// can now pick their specific neighborhood instead of the metro-wide "Conakry".
 export const GUINEA_CITIES: GuineaCity[] = [
   { name: 'Conakry', region: 'Conakry', lat: 9.6412, lng: -13.5784 },
+  { name: 'Kaloum', region: 'Conakry', lat: 9.5092, lng: -13.7122 },
+  { name: 'Dixinn', region: 'Conakry', lat: 9.5380, lng: -13.6800 },
+  { name: 'Matam', region: 'Conakry', lat: 9.5483, lng: -13.6610 },
+  { name: 'Ratoma', region: 'Conakry', lat: 9.5800, lng: -13.6550 },
+  { name: 'Matoto', region: 'Conakry', lat: 9.5750, lng: -13.6011 },
   { name: 'Boké', region: 'Boké', lat: 10.9333, lng: -14.3 },
   { name: 'Boffa', region: 'Boké', lat: 10.1667, lng: -14.0333 },
   { name: 'Fria', region: 'Boké', lat: 10.3667, lng: -13.5833 },

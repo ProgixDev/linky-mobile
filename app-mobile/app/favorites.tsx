@@ -10,8 +10,7 @@ import { ProductCard } from '../src/components/lists/ProductCard';
 import { PropertyCard } from '../src/components/lists/PropertyCard';
 import { haptic } from '../src/lib/haptics';
 import { useFavorites } from '../src/stores/favorites';
-import { mockProducts } from '../src/data/mockProducts';
-import { mockProperties } from '../src/data/mockProperties';
+import { useProducts, useProperties } from '../src/data/queries';
 
 type Tab = 'products' | 'properties';
 
@@ -21,12 +20,14 @@ export default function FavoritesRoute() {
   const favProductIds = useFavorites((s) => s.productIds);
   const favPropertyIds = useFavorites((s) => s.propertyIds);
 
-  const favProducts = mockProducts.filter((p) => favProductIds.has(p.id));
-  const favProperties = mockProperties.filter((p) => favPropertyIds.has(p.id));
-
-  // Show demo content if empty so the screen never feels broken
-  const productsToShow = favProducts.length > 0 ? favProducts : mockProducts.slice(0, 4);
-  const propertiesToShow = favProperties.length > 0 ? favProperties : mockProperties.slice(0, 3);
+  // Pull from the live catalog and filter by fav ids. Cheap query: the user's
+  // fav set is small, but the catalog list is bounded by /list-products' limit
+  // (50 by default) so this handles the common case. For larger user fav sets,
+  // V1.1 would add a server-side /list-favorites endpoint that joins fav ids.
+  const { data: allProducts = [] } = useProducts();
+  const { data: allProperties = [] } = useProperties();
+  const favProducts = allProducts.filter((p) => favProductIds.has(p.id));
+  const favProperties = allProperties.filter((p) => favPropertyIds.has(p.id));
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -80,7 +81,7 @@ export default function FavoritesRoute() {
                 gap: 14,
               }}
             >
-              {productsToShow.map((p) => (
+              {favProducts.map((p) => (
                 <View key={p.id} style={{ flexBasis: '47%', flexGrow: 1 }}>
                   <ProductCard product={p} />
                 </View>
@@ -96,7 +97,7 @@ export default function FavoritesRoute() {
           />
         ) : (
           <View style={{ paddingHorizontal: 24, gap: 14 }}>
-            {propertiesToShow.map((p) => (
+            {favProperties.map((p) => (
               <PropertyCard key={p.id} property={p} />
             ))}
           </View>

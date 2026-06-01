@@ -2,18 +2,17 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
+import QRCode from 'react-native-qrcode-svg';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Card } from '../../src/components/primitives/Card';
 import { Button } from '../../src/components/primitives/Button';
-import { HoldToConfirmButton } from '../../src/components/primitives/HoldToConfirmButton';
-import { TrustStrip } from '../../src/components/primitives/TrustStrip';
 import { TopBar } from '../../src/components/nav/TopBar';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { I } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
-import { useOrder, useConfirmReception } from '../../src/data/queries';
-import { useToast } from '../../src/components/feedback/Toast';
+import { useOrder } from '../../src/data/queries';
+import { useAuth } from '../../src/stores/auth';
 
 const STAGES = [
   { key: 'placed', t: 'Commande passée' },
@@ -26,13 +25,25 @@ export default function OrderRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const { data: order } = useOrder(id);
-  const confirm = useConfirmReception();
-  const { show } = useToast();
+  const meId = useAuth((s) => s.user?.id ?? s.authUserId);
 
   if (!order) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
 
   const currentStageIdx = STAGES.findIndex((s) => s.key === order.status);
   const idx = currentStageIdx === -1 ? 2 : currentStageIdx;
+
+  const isBuyer = !!meId && meId === order.buyerId;
+  const isSeller = !!meId && meId === order.sellerId;
+  const inHandoffWindow = order.status === 'paid' || order.status === 'delivered';
+  // QR payload includes the scan_token secret as a query param. Only the seller
+  // receives scanToken in the get-order response (PII gate, server-side), so
+  // this branch only renders when the seller is viewing their own order.
+  // Buyer-side will never have access to scanToken — the QR is therefore only
+  // visible to the seller, and the scan is the only way for the buyer to learn
+  // the token. That's what makes the QR an actual lock, not a navigation hint.
+  const qrPayload = order.scanToken
+    ? `linky://order/${order.id}/confirm?token=${order.scanToken}`
+    : null;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -106,24 +117,31 @@ export default function OrderRoute() {
           </Card>
         </View>
 
-        {(order.status === 'paid' || order.status === 'delivered') && (
+        {isBuyer && inHandoffWindow && (
           <>
-            <View style={{ marginTop: 16 }}>
-              <TrustStrip tone="accent">
-                <Text style={{ color: colors.accentText, fontSize: 11.5 }}>
-                  Une fois que tu confirmes, le paiement est libéré vers le vendeur.{' '}
-                  <Text style={{ fontWeight: '700' }}>Cette action est irréversible.</Text>
+            <View style={{ marginTop: 18 }}>
+              <MicroLabel label="Confirmation" />
+              <Card padding={20}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <I.qr size={16} color={colors.text} />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                    Scanne le QR du colis
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12.5, color: colors.textMuted, lineHeight: 18 }}>
+                  Pour libérer le paiement vers le vendeur, scanne le QR code collé sur ton colis avec l&apos;app. Cela garantit que tu as bien reçu ta commande — le code prouve la remise physique.
                 </Text>
-              </TrustStrip>
+              </Card>
             </View>
 
-            <View style={{ marginTop: 18 }}>
-              <HoldToConfirmButton
-                onConfirm={() => {
-                  confirm.mutate(order.id, {
-                    onSuccess: () => show('Paiement libéré au vendeur', 'success'),
-                  });
-                }}
+            <View style={{ marginTop: 14 }}>
+              <Button
+                variant="primary"
+                block
+                label="Scanner le QR"
+                leading={<I.qr size={16} color="#FFFFFF" />}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /scan typedRoute regenerates next start
+                onPress={() => router.push('/scan' as any)}
               />
               <Button
                 variant="ghost"
@@ -136,6 +154,51 @@ export default function OrderRoute() {
               />
             </View>
           </>
+        )}
+
+        {isSeller && inHandoffWindow && qrPayload && (
+          <View style={{ marginTop: 18 }}>
+            <MicroLabel label="Code de livraison" />
+            <Card padding={20}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <I.qr size={16} color={colors.text} />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                  Code de réception
+                </Text>
+              </View>
+              <View
+                style={{
+                  alignSelf: 'center',
+                  padding: 14,
+                  borderRadius: 14,
+                  backgroundColor: '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <QRCode value={qrPayload} size={180} backgroundColor="#FFFFFF" color="#0E1311" />
+              </View>
+              <Text
+                variant="micro"
+                tone="muted"
+                style={{ alignSelf: 'center', marginTop: 10, letterSpacing: 0, textTransform: 'none' }}
+              >
+                #{order.reference}
+              </Text>
+              <Text
+                style={{
+                  marginTop: 14,
+                  fontSize: 12.5,
+                  color: colors.textMuted,
+                  lineHeight: 18,
+                  textAlign: 'center',
+                }}
+              >
+                Imprime ce code et colle-le sur le colis. L&apos;acheteur le scanne à la réception
+                pour confirmer et libérer ton paiement.
+              </Text>
+            </Card>
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>

@@ -130,9 +130,27 @@ export interface OrderRow {
   events: Array<{ at: string; label: string }>;
   release_at: string | null;
   created_at: string;
+  // Only present when the SELECT clause asks for it (get-order, when caller
+  // is seller). Other endpoints don't even include it in their SELECT, so
+  // it's optional here.
+  scan_token?: string;
 }
 
-export function mapOrder(r: OrderRow) {
+// scanToken is opt-in PII gate: only the seller of an order may see the
+// scan_token (it's the QR secret they print on the package). Buyer/agent
+// callers must NOT receive it — that's what makes the QR an actual lock.
+//
+// Caller contract:
+//   - get-order passes { includeScanToken: r.seller_id === userId } per request
+//   - Buyer-facing endpoints (list-my-orders, place-order, confirm-receipt)
+//     omit opts entirely → scanToken stays undefined in the response
+//   - If a caller defensively passes opts.includeScanToken=true but the SELECT
+//     clause forgot to include scan_token, the dev-time warn below catches it
+//     loud so the bug doesn't ship silent.
+export function mapOrder(r: OrderRow, opts?: { includeScanToken?: boolean }) {
+  if (opts?.includeScanToken && !r.scan_token) {
+    console.warn('[mapOrder] includeScanToken=true but row has no scan_token — SELECT likely missing it');
+  }
   return {
     id: r.id,
     reference: r.reference,
@@ -151,6 +169,7 @@ export function mapOrder(r: OrderRow) {
     events: r.events,
     createdAt: r.created_at,
     releaseAt: r.release_at ?? undefined,
+    scanToken: opts?.includeScanToken ? r.scan_token : undefined,
   };
 }
 

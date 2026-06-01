@@ -12,16 +12,18 @@ import { Text } from './Text';
 import { haptic } from '../../lib/haptics';
 import { I } from '../../icons/Icon';
 
-const HOLD_MS = 800;
+const HOLD_MS = 5000;
 
 export function HoldToConfirmButton({
   label = 'Maintiens pour confirmer la réception',
   onConfirm,
   disabled,
+  holdMs,
 }: {
   label?: string;
   onConfirm: () => void;
   disabled?: boolean;
+  holdMs?: number;
 }) {
   const { colors } = useTheme();
   const progress = useSharedValue(0);
@@ -43,7 +45,7 @@ export function HoldToConfirmButton({
   const start = () => {
     if (disabled) return;
     haptic.light();
-    progress.value = withTiming(1, { duration: HOLD_MS });
+    progress.value = withTiming(1, { duration: holdMs ?? HOLD_MS });
   };
   const cancel = () => {
     cancelAnimation(progress);

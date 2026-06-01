@@ -75,6 +75,9 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   }
 
   if (body.payment_method === 'wallet') {
+    // Buyer-only response path; never add scan_token to the SELECT or pass
+    // opts to mapOrder — scanToken stays undefined so it can't be read back
+    // by the buyer who just placed the order.
     return { body: { order: mapOrder(row as OrderRow) } };
   }
 
@@ -179,5 +182,7 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     rail_intent_id: initResp.pay_id,
     rail_status: initResp.status,
   };
+  // Buyer-only response path (rail flow); never add scan_token to the SELECT
+  // or pass opts to mapOrder — scanToken stays undefined.
   return { body: { order: mapOrder(orderRow), intent: mapPaymentIntent(finalIntent) } };
 }));

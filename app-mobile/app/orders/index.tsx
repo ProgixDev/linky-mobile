@@ -10,11 +10,14 @@ import {
   CheckCircle2,
   CircleAlert,
   ChevronRight,
+  Ban,
+  RotateCcw,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
+import { I } from '../../src/icons/Icon';
 import { haptic } from '../../src/lib/haptics';
 import { useMyOrders } from '../../src/data/queries';
 import { formatGNF } from '../../src/lib/format';
@@ -35,7 +38,13 @@ const STATUS_META: Record<OrderStatus, { label: string; Icon: LucideIcon; bg: st
   delivered: { label: 'LIVRÉE', Icon: Package, bg: '#E0F0E8', fg: '#155F45' },
   released: { label: 'TERMINÉE', Icon: CheckCircle2, bg: '#E8F2EE', fg: '#0A5240' },
   disputed: { label: 'LITIGE', Icon: CircleAlert, bg: '#FBE7E5', fg: '#B53D2F' },
+  cancelled: { label: 'ANNULÉE', Icon: Ban, bg: '#EEEEEE', fg: '#606060' },
+  refunded: { label: 'REMBOURSÉE', Icon: RotateCcw, bg: '#E8EFF6', fg: '#1F4E7A' },
 };
+
+// Defensive fallback for any future status the client hasn't been taught about
+// yet — surfaces the raw status code instead of crashing the row.
+const STATUS_FALLBACK = { label: '—', Icon: CircleAlert, bg: '#EEEEEE', fg: '#606060' } as const;
 
 export default function OrdersIndex() {
   const { colors } = useTheme();
@@ -54,7 +63,34 @@ export default function OrdersIndex() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <ScreenHeader title="Mes commandes" subtitle="Suis tes achats et confirme la réception." />
+        <ScreenHeader
+          title="Mes commandes"
+          subtitle="Suis tes achats et confirme la réception."
+          trailing={
+            <Pressable
+              onPress={() => {
+                haptic.light();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- new route, regenerates on next expo start
+                router.push('/scan' as any);
+              }}
+              accessibilityLabel="Scanner un QR"
+              style={{
+                height: 40,
+                paddingHorizontal: 14,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <I.qr size={14} color={colors.text} />
+              <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.text }}>Scanner</Text>
+            </Pressable>
+          }
+        />
 
         {/* Filter chips */}
         <View
@@ -119,7 +155,7 @@ export default function OrdersIndex() {
 
 function OrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
   const { colors } = useTheme();
-  const meta = STATUS_META[order.status];
+  const meta = STATUS_META[order.status] ?? { ...STATUS_FALLBACK, label: order.status.toUpperCase() };
   return (
     <Pressable
       onPress={onPress}

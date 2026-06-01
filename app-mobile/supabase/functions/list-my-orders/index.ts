@@ -34,7 +34,7 @@ Deno.serve(makePost<Body>('/v1/orders/list-mine', valid, async ({ sb, body, req 
   const limit = body.limit ?? 50;
   let q = sb
     .from('orders')
-    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, status, events, release_at, created_at')
+    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at')
     .eq('buyer_id', userId);
   if (body.status) q = q.eq('status', body.status);
   if (body.cursor) {
@@ -53,5 +53,10 @@ Deno.serve(makePost<Body>('/v1/orders/list-mine', valid, async ({ sb, body, req 
   const next_cursor = rows.length === limit
     ? { created_at: rows[rows.length - 1].created_at, id: rows[rows.length - 1].id }
     : null;
-  return { body: { orders: rows.map(mapOrder), next_cursor } };
+  // Buyer-only endpoint; mapOrder's 2nd arg intentionally omitted so scanToken
+  // never appears in the response. Array.prototype.map passes (item, index) to
+  // the callback — the index is harmless here because mapOrder's opts is
+  // typed as `{ includeScanToken?: boolean }`, and a number coerces to a
+  // falsy `.includeScanToken` lookup.
+  return { body: { orders: rows.map((r) => mapOrder(r)), next_cursor } };
 }));

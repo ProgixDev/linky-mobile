@@ -1,6 +1,7 @@
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { Navigation } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { Badge } from '../primitives/Badge';
@@ -8,7 +9,13 @@ import { I } from '../../icons/Icon';
 import { formatGNF, formatDistance } from '../../lib/format';
 import type { Property } from '../../data/types';
 
-export function PropertyCard({ property }: { property: Property }) {
+export function PropertyCard({
+  property,
+  distanceFromUserKm,
+}: {
+  property: Property;
+  distanceFromUserKm?: number;
+}) {
   const { colors, radii } = useTheme();
   return (
     <Pressable
@@ -120,6 +127,27 @@ export function PropertyCard({ property }: { property: Property }) {
             {formatDistance(property.distanceToRoadMeters)}
           </Text>
         </View>
+        {distanceFromUserKm != null && distanceFromUserKm > 0 && (
+          <View
+            style={{
+              alignSelf: 'flex-start',
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 999,
+              backgroundColor: colors.bgSunken,
+              borderWidth: 1,
+              borderColor: colors.border,
+              flexDirection: 'row',
+              gap: 4,
+              alignItems: 'center',
+            }}
+          >
+            <Navigation size={11} color={colors.textMuted} strokeWidth={2} />
+            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '600' }}>
+              {distanceFromUserKm.toFixed(1)} km
+            </Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );

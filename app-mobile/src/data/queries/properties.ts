@@ -62,14 +62,28 @@ export interface RequestVisitInput {
   note?: string;
 }
 
+export type VisitStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed';
+
 export interface VisitRequest {
   id: string;
   propertyId: string;
   buyerId: string;
   requestedAt: string;
   note: string;
-  status: string;
+  status: VisitStatus | string;
   createdAt: string;
+  decidedAt?: string;
+  decidedById?: string;
+  // Optional joined snapshots — populated by list-agent-visits, absent from
+  // request-visit / visit-respond responses (those return the base row only).
+  property?: { id: string; title: string; district: string | null; city: string };
+  buyer?: { id: string; displayName?: string; avatarUrl?: string };
+}
+
+export interface RespondVisitInput {
+  visit_request_id: string;
+  decision: 'accept' | 'reject';
+  note?: string;
 }
 
 interface Cursor { created_at: string; id: string }
@@ -263,6 +277,35 @@ export function useRequestVisit() {
     mutationFn: async (input: RequestVisitInput) => {
       const r = await apiPost<{ visit_request: VisitRequest }>({ path: '/request-visit', body: input });
       return r.visit_request;
+    },
+  });
+}
+
+export function useAgentVisits(status?: VisitStatus | string) {
+  return useQuery({
+    queryKey: ['agent-visits', status ?? null],
+    queryFn: async (): Promise<VisitRequest[]> => {
+      const r = await apiPost<{ visits: VisitRequest[] }>({
+        path: '/list-agent-visits',
+        body: status ? { status } : {},
+      });
+      return r.visits;
+    },
+  });
+}
+
+export function useRespondVisitRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: RespondVisitInput) => {
+      const r = await apiPost<{ visit_request: VisitRequest }>({
+        path: '/visit-respond',
+        body: input,
+      });
+      return r.visit_request;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['agent-visits'] });
     },
   });
 }

@@ -19,6 +19,7 @@ import {
   Telescope,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import * as Location from 'expo-location';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ProductCard } from '../../src/components/lists/ProductCard';
@@ -33,6 +34,7 @@ import { haptic } from '../../src/lib/haptics';
 import { useFilters } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
 import { useProductsInfinite, useInfiniteProperties } from '../../src/data/queries';
+import { haversineKm } from '../../src/lib/distance';
 
 const PRODUCT_CATEGORIES = ['Tout', 'Mode', 'Électronique', 'Maison', 'Beauté', 'Auto'];
 const PROPERTY_TYPES: { value: 'location' | 'vente' | 'terrain'; label: string }[] = [
@@ -54,6 +56,38 @@ export default function MarcheRoute() {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  // One-shot user-location fetch for the distance-from-user badge. If permission
+  // is denied or the sensor errors, we fall back to Conakry city center (between
+  // Matam and Ratoma communes) so the distance badge still renders with realistic
+  // km values for Guinean users — better than a missing badge.
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const CONAKRY_FALLBACK = { lat: 9.5485, lng: -13.6770 };
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          if (!cancelled) setUserLocation(CONAKRY_FALLBACK);
+          return;
+        }
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        if (cancelled) return;
+        const { latitude, longitude } = pos.coords;
+        if (latitude === 0 && longitude === 0) {
+          setUserLocation(CONAKRY_FALLBACK);
+          return;
+        }
+        setUserLocation({ lat: latitude, lng: longitude });
+      } catch {
+        if (!cancelled) setUserLocation(CONAKRY_FALLBACK);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Tab visibility by role.
   // Pure agent → only Immobilier. Pure seller → only Articles. Everyone else → both.
@@ -441,7 +475,17 @@ export default function MarcheRoute() {
             {propLoading
               ? Array.from({ length: 3 }).map((_, i) => <ProductCardSkeleton key={i} />)
               : properties && properties.length > 0
-                ? properties.map((p) => <PropertyCard key={p.id} property={p} />)
+                ? properties.map((p) => {
+                    let dKm: number | undefined;
+                    if (
+                      userLocation &&
+                      p.gps &&
+                      !(p.gps.lat === 0 && p.gps.lng === 0)
+                    ) {
+                      dKm = haversineKm(userLocation, p.gps);
+                    }
+                    return <PropertyCard key={p.id} property={p} distanceFromUserKm={dKm} />;
+                  })
                 : debouncedSearch ? (
                   <View style={{ paddingVertical: 40, alignItems: 'center' }}>
                     <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
@@ -493,7 +537,7 @@ export default function MarcheRoute() {
 
           <MicroLabel label="Ville" />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-            {['Conakry', 'Kindia', 'Kankan', 'Labé', 'Boké'].map((c) => (
+            {['Conakry', 'Boké', 'Kindia', 'Labé', 'Mamou', 'Faranah', 'Kankan', 'Nzérékoré'].map((c) => (
               <Chip
                 key={c}
                 label={c}

@@ -114,13 +114,23 @@ export function usePlaceOrder() {
   });
 }
 
+// scanToken is the QR-gate secret (per migration 20260601_03_qr_scan_gate). The
+// buyer learns it ONLY by scanning the seller's QR — it's never delivered to
+// the buyer via /get-order. Without it, the server raises INVALID_SCAN_TOKEN
+// and the confirm fails fast (400 with explanatory French message). Caller is
+// the post-scan confirm route, which reads ?token=X from useLocalSearchParams.
+export interface ConfirmReceptionInput {
+  orderId: string;
+  scanToken: string;
+}
+
 export function useConfirmReception() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (orderId: string): Promise<Order> => {
+    mutationFn: async (input: ConfirmReceptionInput): Promise<Order> => {
       const { order } = await apiPost<{ order: Order }>({
         path: '/confirm-receipt',
-        body: { order_id: orderId },
+        body: { order_id: input.orderId, scan_token: input.scanToken },
       });
       return order;
     },

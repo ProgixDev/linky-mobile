@@ -19,11 +19,19 @@ import { haptic } from '../../../src/lib/haptics';
 import { mockProperties } from '../../../src/data/mockProperties';
 import { photos } from '../../../src/data/photos';
 import { formatGNF } from '../../../src/lib/format';
+import { useAgentVisits } from '../../../src/data/queries/properties';
 
 export default function VisitDetailRoute() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const property = mockProperties[0]!;
+  // Status drives whether the post-acceptance action area renders.
+  // The list-screen accept/reject buttons handle the pending decision; once
+  // a visit is accepted, the agent comes here to mark it completed / reschedule
+  // / cancel. For non-accepted statuses we hide the action area entirely.
+  const { data: visits = [] } = useAgentVisits();
+  const visit = visits.find((v) => v.id === id);
+  const isAccepted = visit?.status === 'accepted';
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -212,96 +220,98 @@ export default function VisitDetailRoute() {
           </Pressable>
         </Section>
 
-        {/* Actions */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 18, gap: 10 }}>
-          <Pressable
-            onPress={() => haptic.medium()}
-            style={{
-              height: 54,
-              borderRadius: 16,
-              backgroundColor: colors.text,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            <Check size={16} color={colors.bg} strokeWidth={2.25} />
-            <Text
-              style={{
-                fontSize: 14.5,
-                fontWeight: '700',
-                color: colors.bg,
-                lineHeight: 17,
-                includeFontPadding: false,
-              }}
-            >
-              Marquer comme terminée
-            </Text>
-          </Pressable>
-
-          <View style={{ flexDirection: 'row', gap: 10 }}>
+        {/* Actions — only for accepted visits. Pending decisions live on the list screen. */}
+        {isAccepted && (
+          <View style={{ paddingHorizontal: 24, paddingTop: 18, gap: 10 }}>
             <Pressable
-              onPress={() => haptic.light()}
+              onPress={() => haptic.medium()}
               style={{
-                flex: 1,
-                height: 50,
+                height: 54,
                 borderRadius: 16,
-                backgroundColor: colors.card,
-                borderWidth: 1,
-                borderColor: colors.border,
+                backgroundColor: colors.text,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 6,
+                gap: 8,
               }}
             >
-              <CalendarClock size={14} color={colors.text} strokeWidth={2} />
+              <Check size={16} color={colors.bg} strokeWidth={2.25} />
               <Text
                 style={{
-                  fontSize: 13,
-                  fontWeight: '600',
-                  color: colors.text,
-                  lineHeight: 16,
-                  includeFontPadding: false,
-                }}
-              >
-                Reporter
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                haptic.medium();
-                router.back();
-              }}
-              style={{
-                flex: 1,
-                height: 50,
-                borderRadius: 16,
-                backgroundColor: 'rgba(209,79,60,0.08)',
-                borderWidth: 1,
-                borderColor: 'rgba(209,79,60,0.25)',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-              }}
-            >
-              <X size={14} color={colors.danger} strokeWidth={2} />
-              <Text
-                style={{
-                  fontSize: 13,
+                  fontSize: 14.5,
                   fontWeight: '700',
-                  color: colors.danger,
-                  lineHeight: 16,
+                  color: colors.bg,
+                  lineHeight: 17,
                   includeFontPadding: false,
                 }}
               >
-                Annuler
+                Marquer comme terminée
               </Text>
             </Pressable>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={() => haptic.light()}
+                style={{
+                  flex: 1,
+                  height: 50,
+                  borderRadius: 16,
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <CalendarClock size={14} color={colors.text} strokeWidth={2} />
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '600',
+                    color: colors.text,
+                    lineHeight: 16,
+                    includeFontPadding: false,
+                  }}
+                >
+                  Reporter
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  haptic.medium();
+                  router.back();
+                }}
+                style={{
+                  flex: 1,
+                  height: 50,
+                  borderRadius: 16,
+                  backgroundColor: 'rgba(209,79,60,0.08)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(209,79,60,0.25)',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <X size={14} color={colors.danger} strokeWidth={2} />
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '700',
+                    color: colors.danger,
+                    lineHeight: 16,
+                    includeFontPadding: false,
+                  }}
+                >
+                  Annuler
+                </Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

@@ -20,7 +20,7 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
 
   const { data: row, error } = await sb
     .from('orders')
-    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at')
+    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at, scan_token')
     .eq('id', body.id)
     .maybeSingle();
   if (error) {
@@ -32,6 +32,9 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
   if (r.buyer_id !== userId && r.seller_id !== userId) {
     throwApi('FORBIDDEN', 403, 'Action refusée.');
   }
+  // PII gate: only the seller may see the scan_token (it's the QR secret
+  // they print on the package; buyer learns it ONLY by scanning the QR).
+  const isSeller = r.seller_id === userId;
 
   // Latest payment_intent for this order. Currently attempt_index stays at 1
   // (V1 retry creates a NEW order, not a new attempt on the same one).
@@ -54,7 +57,10 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
 
   return {
     body: {
-      order:  mapOrder(r),
+      // PII opt-in: includeScanToken is true only when the caller is the seller
+      // of this order. Buyer/agent callers get scanToken=undefined in the
+      // mapped payload, preventing the QR-bypass deep-link path.
+      order:  mapOrder(r, { includeScanToken: isSeller }),
       intent: intentRow ? mapPaymentIntent(intentRow as PaymentIntentRow) : null,
     },
   };

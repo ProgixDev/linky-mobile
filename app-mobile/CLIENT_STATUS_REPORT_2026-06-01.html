@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>État d'avancement Linky — 1 juin 2026</title>
+<style>
+  :root {
+    --navy: #1F4E7A;
+    --navy-deep: #14304D;
+    --navy-soft: #E8EFF6;
+    --saffron: #E8A53D;
+    --saffron-soft: #FBEDD3;
+    --cream: #F4F6F9;
+    --cream-warm: #E3E9F1;
+    --deep: #0F1A26;
+    --text: #2A323D;
+    --text-muted: #6B7480;
+    --border: #C9D2DC;
+    --border-soft: #DDE3EB;
+    --green: #1E7A4D;
+    --green-soft: #E5F2EC;
+    --rose: #B5403A;
+    --rose-soft: #F6E6E5;
+    --gold: #B8841E;
+    --amber: #C97D1A;
+    --amber-soft: #FBE8C9;
+  }
+  @page { size: A4; margin: 10mm 12mm; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: #fff; color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Inter", Roboto, sans-serif;
+    font-size: 9pt; line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 178mm; margin: 0 auto; }
+
+  .report-banner {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding-bottom: 6px; margin-bottom: 10px;
+    border-bottom: 1.5px solid var(--navy);
+  }
+  .report-title { font-size: 20pt; font-weight: 800; color: var(--navy); letter-spacing: -0.3px; line-height: 1; }
+  .report-author { text-align: right; line-height: 1.35; }
+  .report-author .name { font-size: 11pt; font-weight: 700; color: var(--navy); }
+  .report-author .date { font-size: 9pt; color: #5A6B7E; margin-top: 2px; }
+
+  .brand-strip {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: #fff; border-radius: 6px; padding: 9px 18px; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .brand-strip .left { font-size: 9.5pt; letter-spacing: 0.16em; text-transform: uppercase; color: var(--saffron); font-weight: 700; }
+  .brand-strip .left::before { content: "∞"; margin-right: 6px; font-size: 11pt; vertical-align: -1px; }
+  .brand-strip .right { font-size: 9.5pt; color: rgba(255,255,255,0.78); }
+  .brand-strip .right strong { color: #fff; font-weight: 600; }
+
+  .summary {
+    background: var(--green-soft); border-left: 4px solid var(--green);
+    border-radius: 4px; padding: 9px 14px; margin-bottom: 10px;
+  }
+  .summary-label { font-size: 8pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--green); margin-bottom: 4px; }
+  .summary p { margin: 0; font-size: 9.5pt; color: var(--deep); line-height: 1.5; }
+
+  h2 {
+    font-size: 12pt; font-weight: 700; color: var(--navy-deep);
+    margin: 14px 0 6px 0; padding-bottom: 3px;
+    border-bottom: 1.5px solid var(--border-soft);
+    letter-spacing: -0.2px;
+  }
+  h2 .num { color: var(--saffron); font-weight: 800; margin-right: 6px; }
+
+  h3 {
+    font-size: 10pt; font-weight: 700; color: var(--navy);
+    margin: 10px 0 4px 0;
+  }
+
+  strong { font-weight: 700; color: var(--deep); }
+  em { font-style: italic; color: var(--text-muted); }
+
+  .stats { display: flex; gap: 8px; margin: 4px 0 10px 0; }
+  .stat {
+    flex: 1; background: #fff; border: 1px solid var(--border-soft);
+    border-radius: 6px; padding: 6px 11px; text-align: left;
+  }
+  .stat .label { font-size: 7pt; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .stat .value { font-size: 13pt; font-weight: 800; color: var(--navy-deep); margin-top: 1px; }
+  .stat .sub { font-size: 7.5pt; color: var(--text-muted); margin-top: 1px; }
+
+  .feature-card {
+    background: #fff; border: 1px solid var(--border-soft);
+    border-left: 3px solid var(--green); border-radius: 5px;
+    padding: 7px 12px; margin-bottom: 5px;
+  }
+  .feature-card .name {
+    font-size: 10pt; font-weight: 700; color: var(--deep); margin-bottom: 3px;
+  }
+  .feature-card .name::before {
+    content: "✓"; color: var(--green); font-weight: 800; margin-right: 6px;
+  }
+  .feature-card .desc {
+    font-size: 9pt; color: var(--text); line-height: 1.5;
+  }
+
+  .pending-card {
+    background: #fff; border: 1px solid var(--border-soft);
+    border-left: 3px solid var(--amber); border-radius: 5px;
+    padding: 7px 12px; margin-bottom: 5px;
+  }
+  .pending-card .name {
+    font-size: 10pt; font-weight: 700; color: var(--deep); margin-bottom: 3px;
+  }
+  .pending-card .name::before {
+    content: "⧗"; color: var(--amber); font-weight: 800; margin-right: 6px;
+  }
+  .pending-card .desc {
+    font-size: 9pt; color: var(--text); line-height: 1.5;
+  }
+  .pending-card .reason {
+    font-size: 8.5pt; color: var(--text-muted);
+    margin-top: 3px; font-style: italic;
+    padding-left: 8px; border-left: 2px solid var(--amber-soft);
+  }
+
+  .priority-card {
+    background: #fff; border: 1px solid var(--border-soft);
+    border-left: 3px solid var(--navy); border-radius: 5px;
+    padding: 7px 12px; margin-bottom: 5px;
+  }
+  .priority-card .head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 3px;
+  }
+  .priority-card .name {
+    font-size: 10pt; font-weight: 700; color: var(--deep);
+  }
+  .priority-card .order {
+    font-size: 7.5pt; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--navy); background: var(--navy-soft);
+    padding: 2px 7px; border-radius: 999px;
+  }
+  .priority-card .desc {
+    font-size: 9pt; color: var(--text); line-height: 1.5;
+  }
+
+  .question-card {
+    background: var(--saffron-soft); border-left: 4px solid var(--saffron);
+    border-radius: 5px; padding: 7px 13px; margin-bottom: 5px;
+  }
+  .question-card .q {
+    font-size: 9.5pt; font-weight: 700; color: var(--deep); margin-bottom: 2px;
+  }
+  .question-card .why {
+    font-size: 8.5pt; color: var(--text); line-height: 1.45;
+  }
+
+  .doc-footer {
+    border-top: 1px solid var(--border); margin-top: 14px; padding-top: 7px;
+    text-align: center; color: var(--text-muted); font-size: 7.5pt; letter-spacing: 0.04em;
+  }
+  .doc-footer .knot { color: var(--saffron); font-weight: 700; margin: 0 6px; }
+
+  @media print {
+    body { background: #fff; }
+    .brand-strip, .summary, .stat, .feature-card, .pending-card,
+    .priority-card, .question-card {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="report-banner">
+    <div class="report-title">État d'avancement</div>
+    <div class="report-author">
+      <div class="name">Linky — Achraf Benamrane</div>
+      <div class="date">Compte-rendu · 1 juin 2026</div>
+    </div>
+  </div>
+
+  <div class="brand-strip">
+    <div class="left">Linky · Marketplace &amp; Immobilier de Guin&eacute;e</div>
+    <div class="right">Objectif lancement : <strong>avant septembre 2026</strong></div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-label">Résumé</div>
+    <p>L'application Linky avance bien sur les éléments essentiels. <strong>Le système de paiement sécurisé fonctionne de bout en bout</strong> — l'argent de l'acheteur est protégé jusqu'à la confirmation de réception via le code QR à maintenir 5 secondes, exactement comme demandé. <strong>Les paiements Mobile Money (Orange Money + MTN) sont prêts</strong> côté technique. La gestion des biens immobiliers, les demandes de visite côté agent, et l'intégration Mapbox sont également en place. Quelques points restent à finaliser avant le lancement, notamment l'intégration KYC et l'activation de Stripe pour les cartes bancaires.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="label">Modules livrés</div>
+      <div class="value" style="color: var(--green);">7 / 9</div>
+      <div class="sub">essentiels pour V1</div>
+    </div>
+    <div class="stat">
+      <div class="label">Fonctionnalités utilisateur</div>
+      <div class="value">~30</div>
+      <div class="sub">testées sur téléphone réel</div>
+    </div>
+    <div class="stat">
+      <div class="label">Scénarios paiement</div>
+      <div class="value" style="color: var(--green);">5 / 5</div>
+      <div class="sub">succès · échec · annulation · expiration · wallet</div>
+    </div>
+    <div class="stat">
+      <div class="label">Cible lancement</div>
+      <div class="value" style="color: var(--green);">Sep 2026</div>
+      <div class="sub">planning tenu</div>
+    </div>
+  </div>
+
+  <h2><span class="num">01</span>Ce qui fonctionne aujourd'hui</h2>
+
+  <h3>Inscription &amp; comptes</h3>
+
+  <div class="feature-card">
+    <div class="name">Inscription par téléphone ou email</div>
+    <div class="desc">L'utilisateur peut s'inscrire avec son numéro de téléphone (acheteurs en Guinée) ou son email (diaspora). Un code de vérification est envoyé à chaque connexion. Les emails de vérification arrivent réellement dans la boîte de réception.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Sélecteur de ville avec géographie complète de Guinée</div>
+    <div class="desc">Lors de l'inscription, l'utilisateur choisit sa localisation parmi les 8 régions administratives + les 33 préfectures + les 5 communes de Conakry (Kaloum, Dixinn, Matam, Ratoma, Matoto). Hiérarchie complète comme demandé.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Multi-rôles par utilisateur</div>
+    <div class="desc">Un même compte peut être acheteur, vendeur et agent immobilier simultanément. L'utilisateur bascule entre les fonctionnalités selon ses besoins.</div>
+  </div>
+
+  <h3>Marketplace &amp; recherche</h3>
+
+  <div class="feature-card">
+    <div class="name">Catalogue de produits avec photos</div>
+    <div class="desc">Les vendeurs publient des annonces avec jusqu'à 8 photos depuis leur téléphone. Les photos sont automatiquement compressées avant envoi pour économiser la bande passante sur les connexions 3G.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Gestion des annonces côté vendeur</div>
+    <div class="desc">Le vendeur voit ses produits dans « Mes annonces » avec un menu de statut (Actif / En pause / Vendu / Réservé) et la possibilité de supprimer.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Recherche, filtres, et feed « Découvrir »</div>
+    <div class="desc">Recherche textuelle dans les titres et descriptions. Filtres par prix, ville, nombre de chambres, distance. Un feed combiné qui mélange produits et propriétés par récence. Défilement infini sur toutes les listes.</div>
+  </div>
+
+  <h3>Immobilier</h3>
+
+  <div class="feature-card">
+    <div class="name">Module Immobilier complet</div>
+    <div class="desc">Les agents publient des biens (location, vente, terrain) avec photos. L'acheteur peut filtrer par type de bien, prix, nombre de chambres, surface, et distance à la route goudronnée.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Demande de visite + acceptation par l'agent</div>
+    <div class="desc">L'acheteur choisit un créneau (date + heure + message) et envoie sa demande. L'agent voit la demande dans son écran Visites avec deux boutons clairs : Accepter / Refuser. L'acheteur est informé de la décision en temps réel.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Distance Mapbox sur les cartes propriétés</div>
+    <div class="desc">Chaque carte affiche la distance entre la position de l'utilisateur et le bien immobilier, calculée en temps réel via Mapbox. L'utilisateur peut juger immédiatement si un bien est proche.</div>
+  </div>
+
+  <h3>Paiement sécurisé</h3>
+
+  <div class="feature-card">
+    <div class="name">Trois moyens de paiement</div>
+    <div class="desc">L'acheteur peut payer par Orange Money, MTN Mobile Money, ou son Wallet Linky interne. La carte bancaire est cachée pour l'instant (arrive avec Stripe).</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Séquestre — l'argent protégé pendant la livraison</div>
+    <div class="desc">Quand l'acheteur paie, l'argent est bloqué dans un séquestre Linky et n'est PAS encore versé au vendeur. Cela garantit que ni l'acheteur ni le vendeur ne sont exposés tant que la livraison n'est pas confirmée.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Code QR imprimé sur le colis</div>
+    <div class="desc">Une fois la commande payée, l'écran du vendeur affiche un QR code unique qu'il imprime et colle sur le colis. L'acheteur scanne ce code à la réception pour confirmer.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Confirmation par maintien de 5 secondes</div>
+    <div class="desc">Après le scan, l'acheteur maintient un bouton vert pendant exactement 5 secondes. Ce délai est volontaire — il évite les confirmations accidentelles puisque l'action est irréversible (libération du paiement).</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Libération automatique du paiement</div>
+    <div class="desc">Dès la confirmation, l'argent quitte le séquestre : le vendeur reçoit le montant de l'article, Linky retient la commission de 3%, le tout en une seule opération atomique.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Signalement de problème (litige)</div>
+    <div class="desc">À la place de la confirmation, l'acheteur peut signaler un problème (article endommagé, mauvais article, jamais reçu). La commande passe en litige, l'argent reste bloqué jusqu'à arbitrage admin.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Wallet Linky avec historique</div>
+    <div class="desc">Chaque utilisateur a un portefeuille interne en GNF (et EUR pour la diaspora). Historique complet des mouvements consultable. Le wallet sert pour les achats et reçoit les remboursements en cas de litige résolu en faveur de l'acheteur.</div>
+  </div>
+
+  <h2><span class="num">02</span>Ce qui ne fonctionne pas encore</h2>
+
+  <div class="pending-card">
+    <div class="name">Paiement par carte bancaire (Visa / Mastercard)</div>
+    <div class="desc">L'option carte est actuellement cachée du checkout. Elle reviendra avec l'intégration Stripe — c'est le canal pour les utilisateurs de la diaspora qui n'ont pas de Mobile Money guinéen.</div>
+    <div class="reason">Raison : Stripe nécessite un LLC américain pour ouvrir le compte marchand. La création du LLC est en attente — c'est une décision côté business, pas technique.</div>
+  </div>
+
+  <div class="pending-card">
+    <div class="name">Vérification d'identité (KYC) pour vendeurs et agents</div>
+    <div class="desc">Aujourd'hui n'importe quel utilisateur peut s'inscrire comme vendeur ou agent. En production, une vérification d'identité par un partenaire externe sera obligatoire pour ces deux rôles (les acheteurs restent optionnels).</div>
+    <div class="reason">Raison : nécessite de signer avec un fournisseur KYC (Smile Identity recommandé pour la couverture francophone Guinée + 500 utilisations gratuites). Décision sur le fournisseur en attente.</div>
+  </div>
+
+  <div class="pending-card">
+    <div class="name">Console admin pour arbitrer les litiges</div>
+    <div class="desc">Quand un acheteur signale un problème, la commande passe en statut « litige » et l'argent reste bloqué dans le séquestre. Il manque l'interface pour qu'un administrateur Linky tranche : rembourser l'acheteur ou libérer au vendeur.</div>
+    <div class="reason">Raison : développement en cours, commencé aujourd'hui. L'architecture est complète (6 décisions techniques validées). L'implémentation est planifiée sur les prochaines sessions.</div>
+  </div>
+
+  <div class="pending-card">
+    <div class="name">Notifications push</div>
+    <div class="desc">Aujourd'hui les utilisateurs doivent ouvrir l'app pour voir les changements (commande payée, visite acceptée, litige résolu). Les notifications push enverront ces événements directement sur le téléphone.</div>
+    <div class="reason">Raison : à venir après la console admin. Nécessite la configuration Firebase + Apple Push Notification Service.</div>
+  </div>
+
+  <div class="pending-card">
+    <div class="name">Messagerie entre acheteur et vendeur</div>
+    <div class="desc">L'écran de messagerie existe mais n'est pas encore connecté au backend — les messages affichés sont fictifs. À implémenter avant le lancement.</div>
+    <div class="reason">Raison : priorité moins urgente que paiement / KYC / admin — pas de bloqueur client lors de la réunion du 29 mai.</div>
+  </div>
+
+  <div class="pending-card">
+    <div class="name">SMS OTP en production</div>
+    <div class="desc">La connexion par téléphone affiche aujourd'hui le code en mode développement. En production, un vrai SMS doit être envoyé via un opérateur (Africastalking, Orange Bulk SMS, ou Twilio).</div>
+    <div class="reason">Raison : choix du fournisseur SMS en attente. Décision basée sur le coût par SMS et la fiabilité de livraison en Guinée.</div>
+  </div>
+
+  <div class="pending-card">
+    <div class="name">Lengopay en production (Mobile Money réel)</div>
+    <div class="desc">Aujourd'hui les paiements Mobile Money fonctionnent en mode simulateur — l'intégration technique côté Linky est complète, mais on n'envoie pas encore de vraies transactions chez Orange Money ou MTN.</div>
+    <div class="reason">Raison : nécessite d'obtenir l'accès au bac à sable (sandbox) chez Lengopay + signer le contrat commercial. Une introduction côté client à l'équipe Lengopay à Conakry accélérerait significativement cette étape.</div>
+  </div>
+
+  <h2><span class="num">03</span>Priorités à venir (par ordre)</h2>
+
+  <div class="priority-card">
+    <div class="head">
+      <div class="name">Console admin pour litiges</div>
+      <div class="order">Priorité 1</div>
+    </div>
+    <div class="desc">Permet à un administrateur de trancher les litiges (rembourser acheteur ou libérer au vendeur). Architecture déjà validée aujourd'hui (1er juin), implémentation à suivre. Débloque l'argent actuellement bloqué dans des litiges de test.</div>
+  </div>
+
+  <div class="priority-card">
+    <div class="head">
+      <div class="name">Intégration KYC (vérification d'identité)</div>
+      <div class="order">Priorité 2</div>
+    </div>
+    <div class="desc">Obligatoire légalement pour les vendeurs et agents. Recommandation : Smile Identity (couverture Guinée + 500 vérifications gratuites pour démarrer). Nécessite validation côté client sur le choix du fournisseur.</div>
+  </div>
+
+  <div class="priority-card">
+    <div class="head">
+      <div class="name">Notifications push</div>
+      <div class="order">Priorité 3</div>
+    </div>
+    <div class="desc">Notifie l'utilisateur en temps réel des événements importants (commande payée, visite acceptée, litige résolu). Améliore significativement l'engagement.</div>
+  </div>
+
+  <div class="priority-card">
+    <div class="head">
+      <div class="name">Activation Lengopay en production</div>
+      <div class="order">Priorité 4</div>
+    </div>
+    <div class="desc">Bascule des paiements Mobile Money du simulateur vers le vrai système Lengopay. Nécessite accès sandbox + contrat commercial signé.</div>
+  </div>
+
+  <div class="priority-card">
+    <div class="head">
+      <div class="name">Intégration Stripe pour cartes</div>
+      <div class="order">Priorité 5</div>
+    </div>
+    <div class="desc">Permet aux utilisateurs de la diaspora de payer par Visa/Mastercard. Bloqué uniquement sur l'ouverture du LLC US — pas de blocage technique.</div>
+  </div>
+
+  <div class="priority-card">
+    <div class="head">
+      <div class="name">Messagerie en temps réel</div>
+      <div class="order">Priorité 6</div>
+    </div>
+    <div class="desc">Permet à l'acheteur et au vendeur d'échanger autour d'une annonce. Backend à câbler sur l'écran existant.</div>
+  </div>
+
+  <h2><span class="num">04</span>Tableaux de bord par profil d'utilisateur</h2>
+
+  <p style="font-size: 9pt; color: var(--text); margin-bottom: 8px;">Linky est conçu pour <strong>4 profils d'utilisateurs</strong>. Chaque profil voit une interface adaptée à son rôle. Un même compte peut combiner plusieurs profils (un vendeur peut aussi être acheteur, un agent peut aussi vendre, etc.).</p>
+
+  <h3>4.1 · L'Acheteur — le client qui achète</h3>
+
+  <p style="font-size: 9pt; color: var(--text-muted); margin-bottom: 4px;"><em>Profil par défaut de tout nouvel utilisateur. Ne nécessite pas de vérification d'identité (KYC optionnel).</em></p>
+
+  <div class="feature-card">
+    <div class="name">Onglets visibles en bas de l'écran</div>
+    <div class="desc">Accueil · Marché · Découvrir · Panier · Notifications · Profil. Pas d'onglet Boutique ni Pro.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Marketplace (Marché)</div>
+    <div class="desc">Parcourir produits et propriétés. Recherche par mot-clé. Filtres : prix, ville, catégorie, nombre de chambres, distance. Distance affichée sur chaque carte propriété. Défilement infini.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Découvrir</div>
+    <div class="desc">Feed mixte produits + propriétés interlacés par récence. Façon de découvrir des annonces sans filtre.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Favoris</div>
+    <div class="desc">Sauvegarder les produits et propriétés intéressants. Le compteur de favoris est visible sur chaque carte.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Panier &amp; Achat</div>
+    <div class="desc">Ajouter au panier ou acheter directement. Au checkout, choisir entre Orange Money, MTN Mobile Money, ou Wallet Linky. Paiement automatiquement protégé en séquestre.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Mes commandes</div>
+    <div class="desc">Liste de toutes les commandes passées. Filtres : Toutes / En cours / Terminées. Bouton Scanner en haut à droite pour scanner le QR d'un colis reçu. Sur chaque commande : maintien 5 secondes pour confirmer réception, ou bouton "Signaler un problème" pour ouvrir un litige.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Demandes de visite immobilière</div>
+    <div class="desc">L'acheteur peut demander une visite sur une propriété : choisir date + heure + message. L'agent reçoit la demande et l'accepte/refuse. L'acheteur voit le statut dans son écran.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Wallet (Portefeuille)</div>
+    <div class="desc">Solde en GNF (et EUR pour diaspora). Historique complet des mouvements. Recharger via Mobile Money. Reçoit les remboursements en cas de litige résolu en faveur de l'acheteur.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Messages</div>
+    <div class="desc">Converser avec les vendeurs et agents autour d'une annonce. <em>(Branchement backend à finaliser avant le lancement.)</em></div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Profil</div>
+    <div class="desc">Avatar, nom d'affichage, ville (parmi les 33 préfectures + Conakry communes). KYC optionnel pour gagner un badge "Vérifié" qui rassure les vendeurs.</div>
+  </div>
+
+  <h3>4.2 · Le Vendeur — qui publie et vend des articles</h3>
+
+  <p style="font-size: 9pt; color: var(--text-muted); margin-bottom: 4px;"><em>Profil activé en plus de l'acheteur via "Devenir vendeur" dans Profil. Nécessite la vérification d'identité (KYC obligatoire pour pouvoir publier).</em></p>
+
+  <div class="feature-card">
+    <div class="name">Onglets visibles</div>
+    <div class="desc">Tous les onglets de l'acheteur + un onglet supplémentaire <strong>Boutique</strong> (icône magasin) qui ouvre le tableau de bord vendeur.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Boutique — tableau de bord vendeur</div>
+    <div class="desc">Vue d'ensemble des annonces actives, des commandes en attente, du solde Wallet à recevoir. Raccourcis vers les actions fréquentes.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Mes annonces</div>
+    <div class="desc">Liste des produits publiés par le vendeur. Sur chaque ligne : menu de statut (Actif / En pause / Vendu / Réservé) + bouton supprimer avec confirmation.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Nouvelle annonce produit</div>
+    <div class="desc">Assistant de publication étape par étape : choix catégorie, titre, description, prix, condition (neuf / occasion / reconditionné), jusqu'à 8 photos depuis la galerie avec sélection de la photo principale, ordre des photos. Les photos sont automatiquement compressées (jusqu'à 10× réduction) pour les connexions 3G lentes.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Mes ventes — commandes reçues</div>
+    <div class="desc">Liste des commandes où le vendeur est le destinataire des fonds. Chaque commande affiche un <strong>code QR à imprimer</strong> que le vendeur colle sur le colis avant livraison.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Détail commande côté vendeur</div>
+    <div class="desc">Affiche un QR code 180×180 avec instruction "Imprime ce code et colle-le sur le colis. L'acheteur le scanne à la réception." + référence de la commande + montant à recevoir après livraison confirmée.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Wallet vendeur</div>
+    <div class="desc">Reçoit les paiements une fois la réception confirmée par l'acheteur (montant moins la commission 3% Linky). Le vendeur peut retirer son solde vers son compte Mobile Money quand il veut.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Statistiques basiques</div>
+    <div class="desc">Vues et favoris par annonce. Visible directement sur la carte produit du vendeur dans Mes annonces.</div>
+  </div>
+
+  <h3>4.3 · L'Agent immobilier — qui publie des biens</h3>
+
+  <p style="font-size: 9pt; color: var(--text-muted); margin-bottom: 4px;"><em>Profil activé en plus de l'acheteur via "Devenir agent" dans Profil. Nécessite KYC obligatoire + vérification du statut professionnel d'agent immobilier.</em></p>
+
+  <div class="feature-card">
+    <div class="name">Onglets visibles</div>
+    <div class="desc">Tous les onglets de l'acheteur + un onglet supplémentaire <strong>Pro</strong> qui ouvre le tableau de bord agent. Si l'utilisateur est aussi vendeur, l'onglet Boutique est également présent.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Pro — tableau de bord agent</div>
+    <div class="desc">Vue d'ensemble : biens immobiliers actifs, demandes de visite en attente, visites du jour, revenus de visites. Raccourcis vers les actions fréquentes.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Mes biens immobiliers</div>
+    <div class="desc">Liste des propriétés publiées par l'agent. Chaque ligne : type (location / vente / terrain), prix, statut (Actif / Réservé / Vendu / En pause).</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Nouvelle annonce immobilière</div>
+    <div class="desc">Assistant spécifique immobilier (différent du wizard produit) : type de bien (location / vente / terrain), nombre de chambres, surface en m², meublé ou non, prix (mensuel pour location), position GPS (carte Mapbox), distance à la route goudronnée. Jusqu'à 8 photos.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Visites — demandes reçues</div>
+    <div class="desc">Liste de toutes les demandes de visite reçues. Groupées par jour (Aujourd'hui / Demain / cette semaine). Trois compteurs en haut : Aujourd'hui / Confirmées / En attente.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Accepter / Refuser une demande de visite</div>
+    <div class="desc">Sur chaque demande "EN ATTENTE", deux boutons en ligne : <strong>Refuser</strong> (rouge) et <strong>Accepter</strong> (vert). Décision immédiate, l'acheteur est notifié.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Détail visite confirmée</div>
+    <div class="desc">Une fois une visite acceptée, l'agent peut : marquer comme terminée, reporter, ou annuler. Affiche l'acheteur, la propriété, l'horaire choisi, son message éventuel.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Wallet agent</div>
+    <div class="desc">Reçoit les revenus liés aux visites (ou commissions sur vente immobilière selon le modèle). Retrait vers Mobile Money.</div>
+  </div>
+
+  <h3>4.4 · La Diaspora — acheteur depuis l'étranger</h3>
+
+  <p style="font-size: 9pt; color: var(--text-muted); margin-bottom: 4px;"><em>Cas spécial de l'acheteur. Profil pour les Guinéens vivant à l'étranger qui achètent pour leur famille ou pour eux-mêmes.</em></p>
+
+  <div class="feature-card">
+    <div class="name">Inscription par email</div>
+    <div class="desc">Pas de Mobile Money disponible hors Guinée, donc l'inscription se fait par email + OTP. Tout le reste de l'expérience est identique à l'acheteur local.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Paiement par carte bancaire (à venir avec Stripe)</div>
+    <div class="desc">La diaspora payera par Visa/Mastercard via Stripe une fois cette intégration finalisée. En attendant, possibilité de payer via Wallet Linky rechargé par un proche en Guinée.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Envoyer de l'argent à un proche</div>
+    <div class="desc">Possibilité de créditer le Wallet d'un membre de sa famille en Guinée (transfert P2P prévu en V1.1).</div>
+  </div>
+
+  <h3>4.5 · Multi-rôle — un compte, plusieurs profils</h3>
+
+  <div class="feature-card">
+    <div class="name">Combinaisons possibles</div>
+    <div class="desc">Un même utilisateur peut activer plusieurs profils simultanément :
+      <ul style="margin: 4px 0 0 16px; padding: 0;">
+        <li><strong>Acheteur seul</strong> — par défaut, sans KYC</li>
+        <li><strong>Acheteur + Vendeur</strong> — un commerçant qui vend ses produits ET achète chez d'autres</li>
+        <li><strong>Acheteur + Agent</strong> — un agent immobilier qui achète aussi sur la marketplace</li>
+        <li><strong>Acheteur + Vendeur + Agent</strong> — combinaison complète, tous les onglets visibles</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Bascule automatique des fonctionnalités</div>
+    <div class="desc">L'app affiche dynamiquement les onglets et écrans pertinents selon les rôles activés. Pas besoin de se déconnecter pour changer de "casquette" — tout est dans une seule interface.</div>
+  </div>
+
+  <h3>4.6 · Tableau comparatif des fonctionnalités</h3>
+
+  <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt; margin: 6px 0;">
+    <thead>
+      <tr style="background: var(--navy-soft);">
+        <th style="text-align: left; padding: 5px 8px; border-bottom: 1.5px solid var(--navy); color: var(--navy-deep); font-weight: 700;">Fonctionnalité</th>
+        <th style="text-align: center; padding: 5px 8px; border-bottom: 1.5px solid var(--navy); color: var(--navy-deep); font-weight: 700; width: 70px;">Acheteur</th>
+        <th style="text-align: center; padding: 5px 8px; border-bottom: 1.5px solid var(--navy); color: var(--navy-deep); font-weight: 700; width: 70px;">Vendeur</th>
+        <th style="text-align: center; padding: 5px 8px; border-bottom: 1.5px solid var(--navy); color: var(--navy-deep); font-weight: 700; width: 70px;">Agent</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft);">Parcourir le Marché (Articles + Immobilier)</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft);">Acheter / Payer / Confirmer réception</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft);">Demander une visite immobilière</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft);">Wallet personnel (recharge / historique)</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft);">Messages</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft);">Favoris</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr style="background: var(--cream);"><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft); font-weight: 700;">Publier une annonce produit</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--text-muted);">—</td></tr>
+      <tr style="background: var(--cream);"><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft); font-weight: 700;">Gérer ses annonces (Mes annonces)</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--text-muted);">—</td></tr>
+      <tr style="background: var(--cream);"><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft); font-weight: 700;">Voir ses ventes / Code QR à imprimer</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--text-muted);">—</td></tr>
+      <tr style="background: var(--cream);"><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft); font-weight: 700;">Onglet Boutique</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--text-muted);">—</td></tr>
+      <tr style="background: var(--cream);"><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft); font-weight: 700;">Publier un bien immobilier</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr style="background: var(--cream);"><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft); font-weight: 700;">Recevoir / Accepter / Refuser des visites</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr style="background: var(--cream);"><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft); font-weight: 700;">Onglet Pro</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft);">Vérification d'identité (KYC)</td><td style="text-align: center; color: var(--text-muted);">Optionnel</td><td style="text-align: center; color: var(--rose); font-weight: 700;">Obligatoire</td><td style="text-align: center; color: var(--rose); font-weight: 700;">Obligatoire</td></tr>
+      <tr><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft);">Recevoir des paiements (commissions Linky 3%)</td><td style="text-align: center; color: var(--text-muted);">—</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+      <tr><td style="padding: 4px 8px; border-bottom: 1px solid var(--border-soft);">Retirer vers Mobile Money</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td><td style="text-align: center; color: var(--green); font-weight: 700;">✓</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="num">05</span>Décisions en attente côté client</h2>
+
+  <p style="font-size: 9pt; color: var(--text-muted); margin-bottom: 5px;">Points qui débloquent des phases de développement — réponses attendues pour avancer.</p>
+
+  <div class="question-card">
+    <div class="q">1 · Statut du LLC US pour Stripe</div>
+    <div class="why">Le LLC est nécessaire pour ouvrir le compte marchand Stripe. Selon le délai (semaines vs mois), Stripe reste en V1 ou bascule en V1.1 (lancement avec Mobile Money seul).</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">2 · Préférence fournisseur KYC</div>
+    <div class="why">Recommandation Smile Identity (forte couverture francophone Afrique de l'Ouest, support Guinée explicite, 500 vérifications gratuites). Si vous préférez un autre fournisseur (Onfido, Sumsub, partenaire local), donnez le nom et le contact.</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">3 · Éléments de marque finaux (logo, palette, mode sombre)</div>
+    <div class="why">L'identité actuelle de l'app reprend les couleurs de marque évoquées (jaune + vert Guinée) mais sans logo final ni maquettes mode sombre. Nous avons besoin des assets pour appliquer la version finale.</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">4 · Introduction à Lengopay à Conakry</div>
+    <div class="why">Une relation directe avec l'équipe Lengopay = meilleur tarif négocié + accès sandbox plus rapide. Une introduction de votre part accélérerait l'activation production.</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">5 · Confirmation du scope V1</div>
+    <div class="why">Le plan actuel reporte le module Feed (style TikTok) en V1.1 pour tenir le lancement de septembre. Confirmer que cette option reste valide, ou indiquer si une autre priorité a émergé.</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">6 · Cohorte bêta — qui teste avant le lancement ?</div>
+    <div class="why">Nous avons besoin d'environ 10-20 utilisateurs à Conakry + 3-5 vendeurs + 2 agents pour tester avant le lancement public. Avez-vous déjà des contacts identifiés, ou organise-t-on le recrutement ?</div>
+  </div>
+
+  <h2><span class="num">06</span>Ce que le client doit fournir</h2>
+
+  <p style="font-size: 9pt; color: var(--text-muted); margin-bottom: 5px;">Livrables concrets, comptes, documents et accès dont nous avons besoin pour avancer sans blocage. Chaque ligne décrit le format attendu et la phase qu'elle débloque.</p>
+
+  <div class="question-card">
+    <div class="q">1 · Documents juridiques du LLC US</div>
+    <div class="why">Articles d'incorporation, EIN, et bank statement initial (au moins 30 jours d'activité). Stripe ne crée le compte marchand qu'après vérification de ces 3 pièces. Débloque l'intégration Stripe pour les paiements diaspora.</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">2 · Décision fournisseur KYC + contact commercial</div>
+    <div class="why">Réponse explicite : Smile Identity (recommandation) ou autre fournisseur. Si autre, fournir l'email d'un contact commercial chez ce fournisseur pour activer le compte test. Débloque la phase KYC (obligatoire pour les vendeurs + agents au lancement).</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">3 · Pack d'identité visuelle finalisé</div>
+    <div class="why">Logo final (SVG + PNG haute résolution), palette de couleurs hex définitive, version mode sombre du logo, et maquettes de l'écran d'accueil + de l'app store. Le pack actuel est inspiré (jaune + vert Guinée) mais sans assets définitifs. Débloque la version production de l'app + les soumissions aux app stores.</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">4 · Introduction commerciale Lengopay</div>
+    <div class="why">Un email ou message WhatsApp adressé à un contact à l'équipe Lengopay à Conakry, nous présentant comme votre partenaire technique pour Linky. Permet de négocier le tarif et d'accélérer l'accès au sandbox de production. Débloque la phase de paiements Mobile Money en mode réel.</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">5 · Liste des testeurs bêta — noms et téléphones</div>
+    <div class="why">15 à 25 personnes au total : 10 à 20 acheteurs (consommateurs), 3 à 5 vendeurs (commerçants existants ou de votre réseau), 2 agents immobiliers. Format minimum : prénom + nom + numéro WhatsApp. Débloque la phase de test bêta (août 2026) sans devoir recruter à froid.</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">6 · Comptes développeur app stores</div>
+    <div class="why">Compte Apple Developer (99 USD/an) ouvert au nom de l'entreprise et compte Google Play Console (25 USD une fois) idem. Si déjà existants, transfert vers notre équipe pour publication. Débloque les soumissions Google Play (août) et App Store (septembre).</div>
+  </div>
+
+  <div class="question-card">
+    <div class="q">7 · Décision et accès fournisseur SMS</div>
+    <div class="why">Sélection entre Africastalking, Orange Bulk SMS (via votre relation), ou Twilio. Une fois choisi : credentials API + numéro d'expéditeur validé (sender ID). Débloque l'envoi de codes de vérification SMS en mode réel (actuellement en mode test côté serveur uniquement).</div>
+  </div>
+
+  <h2><span class="num">07</span>Calendrier prévisionnel</h2>
+
+  <div class="feature-card" style="border-left-color: var(--saffron);">
+    <div class="name" style="font-weight: 700;">Juin 2026</div>
+    <div class="desc">Console admin litiges, intégration KYC (Smile Identity), notifications push, activation Lengopay production.</div>
+  </div>
+
+  <div class="feature-card" style="border-left-color: var(--saffron);">
+    <div class="name" style="font-weight: 700;">Juillet 2026</div>
+    <div class="desc">Stripe (sous réserve LLC US), messagerie, SMS production, performances (3G, mode hors-ligne partiel).</div>
+  </div>
+
+  <div class="feature-card" style="border-left-color: var(--saffron);">
+    <div class="name" style="font-weight: 700;">Août 2026</div>
+    <div class="desc">Phase de test bêta avec la cohorte d'utilisateurs réels. Durcissement sécurité. Conformité légale (CGV, politique de confidentialité). Soumission aux app stores.</div>
+  </div>
+
+  <div class="feature-card" style="border-left-color: var(--green);">
+    <div class="name" style="font-weight: 700;">Septembre 2026</div>
+    <div class="desc">Lancement public officiel.</div>
+  </div>
+
+  <div class="doc-footer">
+    LINKY <span class="knot">∞</span> Marketplace &amp; Immobilier de Guin&eacute;e <span class="knot">·</span> État d'avancement client <span class="knot">·</span> 1 juin 2026
+  </div>
+
+</div>
+</body>
+</html>

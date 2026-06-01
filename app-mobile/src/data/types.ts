@@ -6,7 +6,7 @@ export type ID = string;
 export type Condition = 'neuf' | 'occasion' | 'reconditionné';
 export type ListingStatus = 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
 export type PropertyType = 'location' | 'vente' | 'terrain';
-export type OrderStatus = 'placed' | 'paid' | 'preparing' | 'delivered' | 'released' | 'disputed';
+export type OrderStatus = 'placed' | 'paid' | 'preparing' | 'delivered' | 'released' | 'disputed' | 'cancelled' | 'refunded';
 export type PaymentMethod = 'orange-money' | 'mtn-money' | 'card' | 'wallet';
 
 export interface User {
@@ -106,6 +106,10 @@ export interface Order {
   paymentMethod: PaymentMethod;
   currency: 'GNF' | 'EUR';
   status: OrderStatus;
+  /** Secret printed inside the seller's QR. Populated ONLY when the caller is the
+   *  seller of the order (get-order enforces this). Buyers never receive this
+   *  field — that's what makes the QR scan an actual lock, not a navigation hint. */
+  scanToken?: string;
   createdAt: string;
   events: Array<{ at: string; label: string }>;
   releaseAt?: string;
