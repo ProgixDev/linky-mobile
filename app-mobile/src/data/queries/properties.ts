@@ -2,10 +2,18 @@
 // unauthed; seller writes + visit requests are JWT-authed via apiPost. The shape of
 // each query result is unchanged from the mock contract — screens that previously
 // consumed mockProperties continue to work without translation.
+import { useMemo } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Property, PropertyType } from '../types';
 import { apiPost } from '../../lib/api';
 import { useAuth } from '../../stores/auth';
+
+// Hide-own-listings: returns the caller's user id when authed, undefined when
+// visitor. Consumers filter `p.ownerId !== meId` ONLY when meId is defined —
+// visitors see everything (their own would-be-listings don't exist anyway).
+function useMeId(): string | undefined {
+  return useAuth((s) => s.user?.id ?? s.authUserId ?? undefined);
+}
 
 type ListingStatus = 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
 
@@ -99,7 +107,8 @@ function roomsToBedrooms(rooms: string | null | undefined): { min?: number; max?
 }
 
 export function useProperties(filters: PropertyFilters = {}) {
-  return useQuery({
+  const meId = useMeId();
+  const query = useQuery({
     queryKey: ['properties', filters],
     queryFn: async (): Promise<Property[]> => {
       const { min: bedrooms_min, max: bedrooms_max } = roomsToBedrooms(filters.rooms);
@@ -120,6 +129,11 @@ export function useProperties(filters: PropertyFilters = {}) {
       return properties;
     },
   });
+  const data = useMemo(
+    () => (meId ? query.data?.filter((p) => p.ownerId !== meId) : query.data),
+    [query.data, meId],
+  );
+  return { ...query, data };
 }
 
 export function useProperty(id: string | undefined) {
@@ -164,6 +178,7 @@ export function useMyProperties() {
 // hook: rooms-string → bedrooms_min/bedrooms_max, prices/distances stripped to
 // undefined when 0. Returns flat `properties` across all pages.
 export function useInfiniteProperties(filters: PropertyFilters = {}) {
+  const meId = useMeId();
   const { min: bedrooms_min, max: bedrooms_max } = roomsToBedrooms(filters.rooms);
   const query = useInfiniteQuery({
     queryKey: ['properties-infinite', filters],
@@ -188,12 +203,18 @@ export function useInfiniteProperties(filters: PropertyFilters = {}) {
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   });
 
-  const properties = query.data?.pages.flatMap((p) => p.properties) ?? [];
+  // Filter the AGGREGATE so own-listings never appear even if they were in
+  // an earlier page. V1.1: push the filter server-side into list-properties.
+  const properties = useMemo(() => {
+    const all = query.data?.pages.flatMap((p) => p.properties) ?? [];
+    return meId ? all.filter((p) => p.ownerId !== meId) : all;
+  }, [query.data, meId]);
   return { ...query, properties };
 }
 
 export function useNearbyProperties(limit = 4) {
-  return useQuery({
+  const meId = useMeId();
+  const query = useQuery({
     queryKey: ['properties-nearby', limit],
     queryFn: async (): Promise<Property[]> => {
       const { properties } = await apiPost<{ properties: Property[]; next_cursor: Cursor | null }>({
@@ -204,6 +225,11 @@ export function useNearbyProperties(limit = 4) {
       return properties;
     },
   });
+  const data = useMemo(
+    () => (meId ? query.data?.filter((p) => p.ownerId !== meId) : query.data),
+    [query.data, meId],
+  );
+  return { ...query, data };
 }
 
 // Seller writes — all require auth. The first property also auto-creates "Mon agence"

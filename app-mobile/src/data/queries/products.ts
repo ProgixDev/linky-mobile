@@ -1,9 +1,29 @@
 // Wired to live edge functions: list-products / get-product. Public reads (no JWT required).
 // Backwards-compat: existing screens consume Product[] / Product — shape is unchanged from
 // the mock contract, since the edge functions return the same camelCase shape.
+import { useMemo } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
+import { useAuth } from '../../stores/auth';
 import type { Product } from '../types';
+
+// Hide-own-listings: list-products is public + doesn't join shops, so Product
+// only carries shopId (no ownerId). We fetch the caller's shop ids and filter
+// products whose shopId belongs to the caller. Visitor (no userId) → empty set
+// → no filter applied. The shared queryKey 'my-shops' is cached across the
+// app, so this fires once per session and re-renders other consumers cheaply.
+function useMyShopIds(): Set<string> {
+  const userId = useAuth((s) => s.user?.id ?? s.authUserId);
+  const { data: myShops } = useQuery({
+    queryKey: ['my-shops'],
+    enabled: !!userId,
+    queryFn: async (): Promise<{ id: string }[]> => {
+      const { shops } = await apiPost<{ shops: { id: string }[] }>({ path: '/shop-get-mine', body: {} });
+      return shops;
+    },
+  });
+  return useMemo(() => new Set((myShops ?? []).map((s) => s.id)), [myShops]);
+}
 
 export interface CreateProductInput {
   shop_id?: string;
@@ -45,7 +65,8 @@ export interface ProductFilters {
 }
 
 export function useProducts(filters: ProductFilters = {}) {
-  return useQuery({
+  const myShopIds = useMyShopIds();
+  const query = useQuery({
     queryKey: ['products', filters],
     queryFn: async (): Promise<Product[]> => {
       const { products } = await apiPost<{ products: Product[] }>({
@@ -60,6 +81,11 @@ export function useProducts(filters: ProductFilters = {}) {
       return products;
     },
   });
+  const data = useMemo(
+    () => query.data?.filter((p) => !myShopIds.has(p.shopId)),
+    [query.data, myShopIds],
+  );
+  return { ...query, data };
 }
 
 export function useProduct(id: string | undefined) {
@@ -78,7 +104,8 @@ export function useProduct(id: string | undefined) {
 }
 
 export function usePopularProducts(limit = 4) {
-  return useQuery({
+  const myShopIds = useMyShopIds();
+  const query = useQuery({
     queryKey: ['products-popular', limit],
     queryFn: async (): Promise<Product[]> => {
       const { products } = await apiPost<{ products: Product[] }>({
@@ -89,6 +116,11 @@ export function usePopularProducts(limit = 4) {
       return products;
     },
   });
+  const data = useMemo(
+    () => query.data?.filter((p) => !myShopIds.has(p.shopId)),
+    [query.data, myShopIds],
+  );
+  return { ...query, data };
 }
 
 // Atomic toggle: the server returns the new state + count, so we update without refetch.
@@ -189,6 +221,7 @@ interface Cursor { created_at: string; id: string }
 // (flat array across all loaded pages) + fetchNextPage / hasNextPage /
 // isFetchingNextPage from the underlying query.
 export function useProductsInfinite(filters: ProductFilters = {}) {
+  const myShopIds = useMyShopIds();
   const query = useInfiniteQuery({
     queryKey: ['products-infinite', filters],
     initialPageParam: undefined as Cursor | undefined,
@@ -207,7 +240,14 @@ export function useProductsInfinite(filters: ProductFilters = {}) {
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   });
 
-  const products = query.data?.pages.flatMap((p) => p.products) ?? [];
+  // Filter the AGGREGATE (across all loaded pages) so own-products never appear
+  // even if they were in a page we already pulled. Per pre-fetch filtering is
+  // server-side only — see the V1.1 follow-up to add owner-aware filtering at
+  // list-products to avoid client-side waste.
+  const products = useMemo(() => {
+    const all = query.data?.pages.flatMap((p) => p.products) ?? [];
+    return all.filter((p) => !myShopIds.has(p.shopId));
+  }, [query.data, myShopIds]);
   return { ...query, products };
 }
 
