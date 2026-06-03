@@ -18,7 +18,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
-import { mockOrders } from '../../../src/data/mockOrders';
+import { useSellerOrders } from '../../../src/data/queries';
 import { formatGNF, formatRelativeFR } from '../../../src/lib/format';
 import type { Order, OrderStatus } from '../../../src/data/types';
 
@@ -47,8 +47,9 @@ const STATUS_FALLBACK = { label: '—', Icon: CircleAlert, bg: '#EEEEEE', fg: '#
 export default function SellerOrdersIndex() {
   const { colors } = useTheme();
   const [filter, setFilter] = useState<Filter>('todo');
+  const { data: orders, isLoading } = useSellerOrders();
 
-  const filtered = mockOrders.filter((o) => {
+  const filtered = (orders ?? []).filter((o) => {
     const f = FILTERS.find((x) => x.id === filter);
     if (!f?.statuses) return true;
     return f.statuses.includes(o.status);
@@ -116,10 +117,16 @@ export default function SellerOrdersIndex() {
             />
           ))}
           {filtered.length === 0 && (
-            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-              <Text style={{ color: colors.textMuted, fontSize: 13 }}>
-                Rien à traiter pour le moment.
+            <View style={{ paddingVertical: 40, alignItems: 'center', gap: 6 }}>
+              <Package size={22} color={colors.textFaint} strokeWidth={1.75} />
+              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+                {isLoading ? 'Chargement…' : 'Aucune commande reçue'}
               </Text>
+              {!isLoading && (
+                <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+                  Les commandes apparaîtront ici dès qu'un client passera commande.
+                </Text>
+              )}
             </View>
           )}
         </View>

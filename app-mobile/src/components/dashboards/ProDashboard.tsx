@@ -35,8 +35,6 @@ import { Text } from '../primitives/Text';
 import { NoiseOverlay } from '../visuals/NoiseOverlay';
 import { haptic } from '../../lib/haptics';
 import { formatGNF } from '../../lib/format';
-import { mockShops } from '../../data/mockShops';
-import { mockProperties } from '../../data/mockProperties';
 import {
   useProducts,
   useMyShops,
@@ -46,6 +44,7 @@ import {
   useDeleteProduct,
   useDeleteProperty,
 } from '../../data/queries';
+import { useAuth } from '../../stores/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sheet } from '../sheets/Sheet';
 import { useToast } from '../feedback/Toast';
@@ -53,10 +52,10 @@ import { ApiError, toToastMessage } from '../../lib/api';
 
 export type ProMode = 'shop' | 'estate';
 
-const VIEW_BARS = [
-  40, 55, 35, 70, 60, 80, 45, 90, 75, 60, 95, 70, 85, 100, 80, 75, 90, 65, 50, 85, 95, 70, 80, 100,
-  90, 75, 65, 90, 85, 100,
-];
+// Empty 30-day bars used while metrics endpoint is not wired. Flat baseline so
+// the hero card still has its shape but communicates "no activity yet" rather
+// than fake growth.
+const EMPTY_BARS: number[] = Array(30).fill(8);
 
 // =================================================================
 // Identity pill — shared header element
@@ -64,9 +63,25 @@ const VIEW_BARS = [
 
 export function IdentityPill({ mode }: { mode: ProMode }) {
   const { colors } = useTheme();
-  const shop = mockShops[0]!;
+  const { data: shops } = useMyShops();
+  const user = useAuth((s) => s.user);
+  const myShop = shops?.[0];
+
+  // Shop mode: name + avatar come from the seller's own shop (if any). When
+  // there is no shop yet, route to /create so the next publish flow scaffolds one.
+  // Estate mode: agents do not own a shop record — show the user's own identity.
+  const isShop = mode === 'shop';
+  const noShop = isShop && shops !== undefined && !myShop;
+
+  const name = isShop ? (myShop?.name ?? 'Crée ta boutique') : (user?.display_name ?? 'Mon agence');
+  const subtitle = isShop ? (noShop ? 'TAPE POUR CRÉER' : 'BOUTIQUE') : 'AGENCE IMMO';
+  const avatar = isShop ? myShop?.avatar : user?.avatar_url;
+
   return (
     <Pressable
+      onPress={() => {
+        if (noShop) router.push('/create');
+      }}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -77,14 +92,34 @@ export function IdentityPill({ mode }: { mode: ProMode }) {
         borderRadius: 999,
         backgroundColor: colors.card,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: noShop ? colors.primary : colors.border,
+        borderStyle: noShop ? 'dashed' : 'solid',
       }}
     >
-      <Image
-        source={shop.avatar}
-        style={{ width: 36, height: 36, borderRadius: 999, backgroundColor: colors.bgSunken }}
-        contentFit="cover"
-      />
+      {avatar ? (
+        <Image
+          source={avatar}
+          style={{ width: 36, height: 36, borderRadius: 999, backgroundColor: colors.bgSunken }}
+          contentFit="cover"
+        />
+      ) : (
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 999,
+            backgroundColor: colors.bgSunken,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {isShop ? (
+            <Package size={16} color={colors.textMuted} strokeWidth={1.75} />
+          ) : (
+            <Building2 size={16} color={colors.textMuted} strokeWidth={1.75} />
+          )}
+        </View>
+      )}
       <View>
         <Text
           style={{
@@ -97,18 +132,18 @@ export function IdentityPill({ mode }: { mode: ProMode }) {
           }}
           numberOfLines={1}
         >
-          {mode === 'shop' ? shop.name : 'Agence Aïssatou'}
+          {name}
         </Text>
         <Text
           style={{
             fontSize: 10,
             fontWeight: '700',
-            color: colors.textFaint,
+            color: noShop ? colors.primaryDeep : colors.textFaint,
             letterSpacing: 0.4,
             marginTop: 2,
           }}
         >
-          {mode === 'shop' ? 'BOUTIQUE' : 'AGENCE IMMO'}
+          {subtitle}
         </Text>
       </View>
       <ChevronDown size={14} color={colors.textMuted} strokeWidth={2} />
@@ -183,15 +218,22 @@ export function ShopDashboard() {
   const [statusTarget, setStatusTarget] = useState<ManagementTarget | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagementTarget | null>(null);
 
+  const productCount = products?.length ?? 0;
+  const propertyCount = properties?.length ?? 0;
+  const listingCount = productCount + propertyCount;
+  const pendingCount =
+    (products?.filter((p) => p.status === 'pending').length ?? 0) +
+    (properties?.filter((p) => p.status === 'pending').length ?? 0);
+  const boostedCount = products?.filter((p) => p.boosted).length ?? 0;
+
   return (
     <View>
       <View style={{ paddingHorizontal: 20 }}>
         <RevenueHero
           label="REVENUS · 30 JOURS"
-          value="2,4M"
+          value="0"
           unit="GNF"
-          subline="18 commandes · panier moyen 133 000 GNF"
-          trend="+18 %"
+          subline="Pas encore de ventes ce mois"
         />
       </View>
 
@@ -201,15 +243,11 @@ export function ShopDashboard() {
             Icon={Package}
             label="Commandes"
             onPress={() => router.push('/seller/orders')}
-            badge="3"
-            accent
           />
           <QuickAction
             Icon={MessageSquare}
             label="Demandes"
             onPress={() => router.push('/pro/demandes')}
-            badge="3"
-            accent
           />
           <QuickAction
             Icon={Zap}
@@ -227,17 +265,11 @@ export function ShopDashboard() {
             Icon={Megaphone}
             label="Promo"
             onPress={() => router.push('/pro/promo')}
-            badge="2"
           />
           <QuickAction
             Icon={ArrowUpRight}
             label="Versements"
             onPress={() => router.push('/seller/payouts')}
-          />
-          <QuickAction
-            Icon={Clock}
-            label="Litiges"
-            onPress={() => router.push('/seller/refunds')}
           />
           <QuickAction
             Icon={Star}
@@ -248,19 +280,20 @@ export function ShopDashboard() {
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 22, flexDirection: 'row', gap: 10 }}>
-        <StatTile Icon={Package} label="Annonces" value="42" sub="2 boostées" />
+        <StatTile
+          Icon={Package}
+          label="Annonces"
+          value={String(listingCount)}
+          sub={boostedCount > 0 ? `${boostedCount} boostée${boostedCount > 1 ? 's' : ''}` : 'Aucune boostée'}
+        />
         <StatTile
           Icon={Clock}
           label="En attente"
-          value="3"
-          sub="Action requise"
-          subTone="accent"
+          value={String(pendingCount)}
+          sub={pendingCount > 0 ? 'Action requise' : 'Rien à valider'}
+          subTone={pendingCount > 0 ? 'accent' : undefined}
         />
-        <StatTile Icon={Star} label="Note" value="4.9" sub="124 avis" />
-      </View>
-
-      <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
-        <ViewsChart bars={VIEW_BARS} title="VUES · 30 JOURS" value="4 280" trend="+24 %" />
+        <StatTile Icon={Star} label="Note" value="—" sub="Aucun avis" />
       </View>
 
       {shops === undefined ? null : !myShop ? (
@@ -601,17 +634,22 @@ function ManagementRow({
 // =================================================================
 
 export function EstateDashboard() {
-  const myProperties = useMemo(() => mockProperties.slice(0, 4), []);
+  const { colors } = useTheme();
+  const { data: properties } = useMyProperties();
+  const myProperties = useMemo(() => (properties ?? []).slice(0, 4), [properties]);
+
+  const totalCount = properties?.length ?? 0;
+  const pendingCount = properties?.filter((p) => p.status === 'pending').length ?? 0;
+  const leasedCount = properties?.filter((p) => p.status === 'reserved').length ?? 0;
 
   return (
     <View>
       <View style={{ paddingHorizontal: 20 }}>
         <RevenueHero
           label="REVENUS LOCATIFS · 30 JOURS"
-          value="9,8M"
+          value="0"
           unit="GNF"
-          subline="6 biens loués · loyer moyen 1,6M GNF"
-          trend="+12 %"
+          subline="Pas encore de loyer encaissé"
         />
       </View>
 
@@ -621,15 +659,11 @@ export function EstateDashboard() {
             Icon={CalendarDays}
             label="Visites"
             onPress={() => router.push('/pro/visites')}
-            badge="4"
-            accent
           />
           <QuickAction
             Icon={MessageSquare}
             label="Demandes"
             onPress={() => router.push('/pro/demandes')}
-            badge="7"
-            accent
           />
           <QuickAction
             Icon={KeyRound}
@@ -667,40 +701,64 @@ export function EstateDashboard() {
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 22, flexDirection: 'row', gap: 10 }}>
-        <StatTile Icon={Building2} label="Biens" value="12" sub="3 en attente" />
+        <StatTile
+          Icon={Building2}
+          label="Biens"
+          value={String(totalCount)}
+          sub={pendingCount > 0 ? `${pendingCount} en attente` : 'Aucun en attente'}
+        />
         <StatTile
           Icon={KeyRound}
           label="Loués"
-          value="6"
-          sub="Tout occupé"
-          subTone="accent"
+          value={String(leasedCount)}
+          sub={leasedCount > 0 ? 'En location' : 'Aucun loué'}
+          subTone={leasedCount > 0 ? 'accent' : undefined}
         />
-        <StatTile Icon={Star} label="Note" value="4.8" sub="48 avis" />
-      </View>
-
-      <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
-        <ViewsChart bars={VIEW_BARS} title="VUES · 30 JOURS" value="2 140" trend="+9 %" />
+        <StatTile Icon={Star} label="Note" value="—" sub="Aucun avis" />
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
         <SectionTitle title="Mes biens" />
-        <View style={{ gap: 12 }}>
-          {myProperties.map((p) => (
-            <PropertyRow
-              key={p.id}
-              title={p.title}
-              price={formatGNF(p.priceGnf)}
-              perMonth={!!p.perMonth}
-              cover={p.photos[0]}
-              district={p.district}
-              city={p.city}
-              bedrooms={p.bedrooms}
-              status={p.status}
-              type={p.type}
-              onPress={() => router.push(`/property/${p.id}`)}
-            />
-          ))}
-        </View>
+        {myProperties.length === 0 ? (
+          <View
+            style={{
+              padding: 20,
+              borderRadius: 18,
+              backgroundColor: colors.card,
+              borderWidth: 1.5,
+              borderStyle: 'dashed',
+              borderColor: colors.border,
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <Building2 size={20} color={colors.textMuted} strokeWidth={1.75} />
+            <Text style={{ fontSize: 13.5, color: colors.text, fontWeight: '600' }}>
+              Tu n'as pas encore de bien.
+            </Text>
+            <Text style={{ fontSize: 11.5, color: colors.textMuted }}>
+              Tape sur + pour publier ton premier bien.
+            </Text>
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {myProperties.map((p) => (
+              <PropertyRow
+                key={p.id}
+                title={p.title}
+                price={formatGNF(p.priceGnf)}
+                perMonth={!!p.perMonth}
+                cover={p.photos[0]}
+                district={p.district}
+                city={p.city}
+                bedrooms={p.bedrooms}
+                status={p.status}
+                type={p.type}
+                onPress={() => router.push(`/property/${p.id}`)}
+              />
+            ))}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -716,13 +774,18 @@ function RevenueHero({
   unit,
   subline,
   trend,
+  bars,
 }: {
   label: string;
   value: string;
   unit: string;
   subline: string;
-  trend: string;
+  // Trend pill hidden when omitted — used during welcome state before any real
+  // metric has been computed for this seller/agent.
+  trend?: string;
+  bars?: number[];
 }) {
+  const barData = bars ?? EMPTY_BARS;
   return (
     <Pressable>
       <View
@@ -780,20 +843,22 @@ function RevenueHero({
             >
               {label}
             </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 999,
-                backgroundColor: 'rgba(255,255,255,0.18)',
-              }}
-            >
-              <TrendingUp size={11} color="#FFFFFF" strokeWidth={2.25} />
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{trend}</Text>
-            </View>
+            {trend ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                }}
+              >
+                <TrendingUp size={11} color="#FFFFFF" strokeWidth={2.25} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{trend}</Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 14 }}>
@@ -827,7 +892,7 @@ function RevenueHero({
               marginTop: 18,
             }}
           >
-            {VIEW_BARS.slice(0, 24).map((h, i) => (
+            {barData.slice(0, 24).map((h, i) => (
               <View
                 key={i}
                 style={{

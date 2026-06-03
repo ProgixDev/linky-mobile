@@ -1,3 +1,14 @@
+// Phase K.4 — admin login wiring.
+//
+// Additive change: this endpoint now selects `is_admin` from public.users and
+// returns it in the user payload so the Next.js admin shell (`admin/`) can gate
+// access without a second round-trip. No change to JWT mint, refresh, rate
+// limit, or idempotency. The boolean is also enumeration-safe — non-admin users
+// hit the same login path with the same response shape, just is_admin: false.
+//
+// Mobile clients ignore the field (AuthUser.is_admin is optional in the mobile
+// type, see app-mobile/src/data/queries/auth.ts).
+
 import { makePost, stripTokens } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { normalizeEmail } from '@shared/validate.ts';
@@ -70,10 +81,15 @@ Deno.serve(makePost<Body>('/v1/auth/email/signin', valid, async ({ sb, body, req
   const lookupAddress = normalizedEmail ?? '\x00invalid\x00';
   const { data: row } = await sb
     .from('emails')
-    .select('user_id, users:users(id, display_name, avatar_url, locale, password_hash, status)')
+    .select('user_id, users:users(id, display_name, avatar_url, locale, password_hash, status, is_admin)')
     .eq('address', lookupAddress)
     .maybeSingle();
 
+  // is_admin is exposed in the response (defaults false) so the admin shell can
+  // gate on it without a second round-trip. Non-admin callers (every mobile
+  // user) just see is_admin=false, which the mobile app's AuthUser type
+  // tolerates (optional field). The mobile UI never uses it; only the admin
+  // shell does.
   const user = (row?.users ?? null) as {
     id: string;
     display_name: string | null;
@@ -81,6 +97,7 @@ Deno.serve(makePost<Body>('/v1/auth/email/signin', valid, async ({ sb, body, req
     locale: string;
     password_hash: string | null;
     status: string;
+    is_admin: boolean;
   } | null;
 
   // 2E: always bcryptCompare — real hash if user exists, DUMMY_HASH otherwise. Same compute cost

@@ -14,7 +14,7 @@ import { I, type IconKey } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useCart } from '../../src/stores/cart';
 import { apiPost } from '../../src/lib/api';
-import { usePlaceOrder } from '../../src/data/queries';
+import { usePlaceOrder, useWallet } from '../../src/data/queries';
 import type { PaymentMethod, Product } from '../../src/data/types';
 import { useToast } from '../../src/components/feedback/Toast';
 
@@ -28,8 +28,8 @@ interface MethodOption {
 }
 
 const METHODS: MethodOption[] = [
-  { id: 'orange-money', name: 'Orange Money', hint: '+224 622 •• 12 88', badge: 'OM', badgeColor: '#FF7900' },
-  { id: 'mtn-money', name: 'MTN Mobile Money', hint: '+224 657 •• 44 02', badge: 'M', badgeColor: '#FFC500' },
+  { id: 'orange-money', name: 'Orange Money', hint: 'Tu confirmes au prochain écran', badge: 'OM', badgeColor: '#FF7900' },
+  { id: 'mtn-money', name: 'MTN Mobile Money', hint: 'Tu confirmes au prochain écran', badge: 'M', badgeColor: '#FFC500' },
 ];
 
 export default function CheckoutRoute() {
@@ -38,6 +38,7 @@ export default function CheckoutRoute() {
   const lines = useCart((s) => s.lines);
   const placeOrder = usePlaceOrder();
   const { show } = useToast();
+  const { data: wallet } = useWallet();
 
   // Real backend prices, same queryKey as useProduct → shared cache with the
   // detail page and cart screen. Subtotal stays at 0 until products land,
@@ -140,7 +141,7 @@ export default function CheckoutRoute() {
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, fontWeight: '600' }}>Wallet Linky</Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', fontVariant: ['tabular-nums'] }}>
-                Solde 850 000 GNF
+                Solde {formatGNF(wallet?.balanceGnf ?? 0)}
               </Text>
             </View>
             <View

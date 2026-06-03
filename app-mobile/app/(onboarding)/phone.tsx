@@ -31,7 +31,7 @@ function GuineaFlag() {
 
 export default function PhoneRoute() {
   const { colors } = useTheme();
-  const [phone, setPhone] = useState('622 55 12 88');
+  const [phone, setPhone] = useState('');
   const [focused, setFocused] = useState(false);
   const setChannel = useAuth((s) => s.setChannel);
   const setPendingPhone = useAuth((s) => s.setPendingPhone);

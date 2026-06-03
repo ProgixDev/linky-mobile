@@ -45,6 +45,23 @@ export function useMyOrdersInfinite(filters: MyOrdersFilters = {}) {
 
 export const useOrders = useMyOrders;
 
+// Seller-side mirror of useMyOrders. Backend filters by JWT-derived seller_id
+// (per project_list_seller_orders_scan_token_defense): never spoof-able from
+// the body. The mapped rows include scanToken — the seller UI prints the QR
+// strip on each card from this list to bypass a second round-trip.
+export function useSellerOrders(filters: MyOrdersFilters = {}) {
+  return useQuery({
+    queryKey: ['seller-orders', filters],
+    queryFn: async (): Promise<Order[]> => {
+      const { orders } = await apiPost<{ orders: Order[]; next_cursor: Cursor | null }>({
+        path: '/list-seller-orders',
+        body: { status: filters.status },
+      });
+      return orders;
+    },
+  });
+}
+
 interface OrderEnvelope { order: Order; intent: PaymentIntent | null }
 
 // /get-order now returns BOTH the order and its latest payment_intent (null

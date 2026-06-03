@@ -40,9 +40,9 @@ interface QuickAction {
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { Icon: Package, label: 'Commandes', badge: '3', href: '/orders' },
+  { Icon: Package, label: 'Commandes', href: '/orders' },
   { Icon: CalendarDays, label: 'Demandes', href: '/buyer/requests' },
-  { Icon: Heart, label: 'Favoris', badge: '8', href: '/favorites' },
+  { Icon: Heart, label: 'Favoris', href: '/favorites' },
   { Icon: Wallet, label: 'Wallet', href: '/wallet' },
   { Icon: ShieldCheck, label: 'KYC', href: '/kyc/intro' },
 ];
@@ -134,26 +134,28 @@ export default function ProfilRoute() {
               >
                 {user?.display_name ?? 'Toi'}
               </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                  marginTop: 4,
-                }}
-              >
-                <MapPin size={11} color={colors.textMuted} strokeWidth={2} />
-                <Text
+              {user?.city ? (
+                <View
                   style={{
-                    fontSize: 12,
-                    color: colors.textMuted,
-                    letterSpacing: 0,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    marginTop: 4,
                   }}
-                  numberOfLines={1}
                 >
-                  {'Conakry'}
-                </Text>
-              </View>
+                  <MapPin size={11} color={colors.textMuted} strokeWidth={2} />
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: colors.textMuted,
+                      letterSpacing: 0,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {user.city}
+                  </Text>
+                </View>
+              ) : null}
               <Pressable
                 hitSlop={6}
                 style={{
@@ -258,42 +260,43 @@ export default function ProfilRoute() {
             <Row
               Icon={Phone}
               label="Numéros de téléphone"
-              sub="2 numéros liés"
               onPress={() => router.push('/settings/phones')}
             />
             <Row
               Icon={MapPin}
               label="Adresses"
-              value="Kaloum"
               onPress={() => router.push('/settings/addresses')}
             />
             <Row
               Icon={ShieldCheck}
               label="Vérification d'identité"
+              onPress={() => router.push('/kyc/intro')}
               right={
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    height: 24,
-                    borderRadius: 999,
-                    backgroundColor: colors.primarySoft,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text
+                user?.kyc_status === 'verified' ? (
+                  <View
                     style={{
-                      fontSize: 10.5,
-                      fontWeight: '700',
-                      color: colors.primaryDeep,
-                      letterSpacing: 0.3,
-                      lineHeight: 12,
-                      includeFontPadding: false,
+                      paddingHorizontal: 10,
+                      height: 24,
+                      borderRadius: 999,
+                      backgroundColor: colors.primarySoft,
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    VÉRIFIÉE
-                  </Text>
-                </View>
+                    <Text
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: '700',
+                        color: colors.primaryDeep,
+                        letterSpacing: 0.3,
+                        lineHeight: 12,
+                        includeFontPadding: false,
+                      }}
+                    >
+                      VÉRIFIÉE
+                    </Text>
+                  </View>
+                ) : undefined
               }
             />
             <Row

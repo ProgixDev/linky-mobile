@@ -13,6 +13,7 @@ import { I } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useOrder } from '../../src/data/queries';
 import { useAuth } from '../../src/stores/auth';
+import { OrderResolutionBanner } from '../../src/components/orders/OrderResolutionBanner';
 
 const STAGES = [
   { key: 'placed', t: 'Commande passée' },
@@ -49,6 +50,12 @@ export default function OrderRoute() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title="Suivi de commande" back subtitle={`#${order.reference}`} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
+        {(isBuyer || isSeller) && (
+          <OrderResolutionBanner
+            order={order}
+            viewerRole={isBuyer ? 'buyer' : 'seller'}
+          />
+        )}
         <Card padding={12}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
             <Image

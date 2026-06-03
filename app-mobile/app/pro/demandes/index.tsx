@@ -1,91 +1,56 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { CircleAlert, MessageCircle, Clock } from 'lucide-react-native';
+import { CalendarDays, Clock, CheckCircle2, X } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
-import { photos } from '../../../src/data/photos';
+import { useAgentVisits } from '../../../src/data/queries';
+import type { VisitRequest, VisitStatus } from '../../../src/data/queries/properties';
+import { formatRelativeFR } from '../../../src/lib/format';
 
-type DemandKind = 'price' | 'question' | 'visit';
-type DemandFilter = 'all' | 'price' | 'question' | 'visit';
+type Filter = 'all' | 'pending' | 'accepted' | 'rejected';
 
-interface Demand {
-  id: string;
-  kind: DemandKind;
-  clientName: string;
-  clientAvatar: string;
-  itemTitle: string;
-  preview: string;
-  ago: string;
-  unread: boolean;
-}
-
-const DEMANDS: Demand[] = [
-  {
-    id: 'd1',
-    kind: 'price',
-    clientName: 'Mariama Diallo',
-    clientAvatar: photos.woman1,
-    itemTitle: 'Villa moderne 4 chambres — Lambanyi',
-    preview: 'Je propose 3 800 000 GNF pour 6 mois de bail.',
-    ago: '5 min',
-    unread: true,
-  },
-  {
-    id: 'd2',
-    kind: 'visit',
-    clientName: 'Ibrahima Sow',
-    clientAvatar: photos.man2,
-    itemTitle: 'Appartement 2 pièces — Kaloum',
-    preview: 'Est-ce que vendredi 17 mai à 16h fonctionne ?',
-    ago: '32 min',
-    unread: true,
-  },
-  {
-    id: 'd3',
-    kind: 'question',
-    clientName: 'Fatou Camara',
-    clientAvatar: photos.woman2,
-    itemTitle: 'Studio meublé — Dixinn',
-    preview: 'Les charges sont-elles comprises dans le loyer ?',
-    ago: '2 h',
-    unread: false,
-  },
-  {
-    id: 'd4',
-    kind: 'question',
-    clientName: 'Ousmane Touré',
-    clientAvatar: photos.man1,
-    itemTitle: 'Appartement 3 pièces — Ratoma',
-    preview: 'Bonjour, la place de parking est-elle incluse ?',
-    ago: 'Hier',
-    unread: false,
-  },
-];
-
-const FILTERS: { id: DemandFilter; label: string }[] = [
+const FILTERS: { id: Filter; label: string; statuses?: VisitStatus[] }[] = [
   { id: 'all', label: 'Tout' },
-  { id: 'price', label: 'Offres' },
-  { id: 'visit', label: 'Visites' },
-  { id: 'question', label: 'Questions' },
+  { id: 'pending', label: 'À répondre', statuses: ['pending'] },
+  { id: 'accepted', label: 'Acceptées', statuses: ['accepted'] },
+  { id: 'rejected', label: 'Refusées', statuses: ['rejected', 'cancelled'] },
 ];
 
-const KIND_META: Record<DemandKind, { label: string; bg: string; fg: string }> = {
-  price: { label: 'OFFRE', bg: '#FCE7D3', fg: '#A04D08' },
-  visit: { label: 'VISITE', bg: '#E0F0E8', fg: '#155F45' },
-  question: { label: 'QUESTION', bg: '#E4ECF6', fg: '#2F5BBE' },
+const STATUS_META: Record<
+  string,
+  { label: string; Icon: LucideIcon; bg: string; fg: string }
+> = {
+  pending: { label: 'EN ATTENTE', Icon: Clock, bg: '#FCF1DC', fg: '#8B5A0A' },
+  accepted: { label: 'ACCEPTÉE', Icon: CheckCircle2, bg: '#E0F0E8', fg: '#155F45' },
+  rejected: { label: 'REFUSÉE', Icon: X, bg: '#FBE7E5', fg: '#B53D2F' },
+  cancelled: { label: 'ANNULÉE', Icon: X, bg: '#EEEEEE', fg: '#606060' },
+  completed: { label: 'TERMINÉE', Icon: CheckCircle2, bg: '#E8F2EE', fg: '#0A5240' },
 };
 
 export default function DemandesIndex() {
   const { colors } = useTheme();
-  const [filter, setFilter] = useState<DemandFilter>('all');
+  const [filter, setFilter] = useState<Filter>('all');
+  const { data: visits, isLoading } = useAgentVisits();
 
-  const filtered = filter === 'all' ? DEMANDS : DEMANDS.filter((d) => d.kind === filter);
-  const unreadCount = DEMANDS.filter((d) => d.unread).length;
+  const filtered = useMemo(() => {
+    const list = visits ?? [];
+    const f = FILTERS.find((x) => x.id === filter);
+    if (!f?.statuses) return list;
+    return list.filter((v) => f.statuses!.includes(v.status as VisitStatus));
+  }, [visits, filter]);
+
+  const unreadCount = (visits ?? []).filter((v) => v.status === 'pending').length;
+  const subtitle = isLoading
+    ? 'Chargement…'
+    : unreadCount > 0
+      ? `${unreadCount} demande${unreadCount > 1 ? 's' : ''} en attente de réponse.`
+      : 'Aucune demande en attente.';
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -93,10 +58,7 @@ export default function DemandesIndex() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <ScreenHeader
-          title="Demandes"
-          subtitle={`${unreadCount} demandes en attente de réponse.`}
-        />
+        <ScreenHeader title="Demandes" subtitle={subtitle} />
 
         {/* Filter chips */}
         <ScrollView
@@ -146,16 +108,22 @@ export default function DemandesIndex() {
         </ScrollView>
 
         <View style={{ paddingHorizontal: 24, gap: 10 }}>
-          {filtered.map((d) => (
+          {filtered.map((v) => (
             <DemandRow
-              key={d.id}
-              demand={d}
-              onPress={() => router.push(`/pro/demandes/${d.id}`)}
+              key={v.id}
+              visit={v}
+              onPress={() => router.push(`/pro/demandes/${v.id}`)}
             />
           ))}
-          {filtered.length === 0 && (
-            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-              <Text style={{ color: colors.textMuted, fontSize: 13 }}>Aucune demande.</Text>
+          {filtered.length === 0 && !isLoading && (
+            <View style={{ paddingVertical: 40, alignItems: 'center', gap: 6 }}>
+              <CalendarDays size={22} color={colors.textFaint} strokeWidth={1.75} />
+              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+                Aucune demande
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+                Les demandes de visite apparaîtront ici.
+              </Text>
             </View>
           )}
         </View>
@@ -166,9 +134,13 @@ export default function DemandesIndex() {
 
 // ===================================================================
 
-function DemandRow({ demand, onPress }: { demand: Demand; onPress: () => void }) {
+function DemandRow({ visit, onPress }: { visit: VisitRequest; onPress: () => void }) {
   const { colors } = useTheme();
-  const meta = KIND_META[demand.kind];
+  const meta = STATUS_META[String(visit.status)] ?? STATUS_META.pending;
+  const isPending = visit.status === 'pending';
+  const buyerName = visit.buyer?.displayName ?? 'Visiteur';
+  const initial = buyerName.charAt(0).toUpperCase();
+  const propertyTitle = visit.property?.title ?? 'Bien';
 
   return (
     <Pressable
@@ -177,19 +149,34 @@ function DemandRow({ demand, onPress }: { demand: Demand; onPress: () => void })
         padding: 14,
         borderRadius: 18,
         backgroundColor: colors.card,
-        borderWidth: demand.unread ? 1.5 : 1,
-        borderColor: demand.unread ? colors.primary : colors.border,
+        borderWidth: isPending ? 1.5 : 1,
+        borderColor: isPending ? colors.primary : colors.border,
         flexDirection: 'row',
         gap: 12,
       }}
     >
       <View style={{ position: 'relative' }}>
-        <Image
-          source={demand.clientAvatar}
-          style={{ width: 44, height: 44, borderRadius: 999, backgroundColor: colors.bgSunken }}
-          contentFit="cover"
-        />
-        {demand.unread && (
+        {visit.buyer?.avatarUrl ? (
+          <Image
+            source={visit.buyer.avatarUrl}
+            style={{ width: 44, height: 44, borderRadius: 999, backgroundColor: colors.bgSunken }}
+            contentFit="cover"
+          />
+        ) : (
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 999,
+              backgroundColor: colors.bgSunken,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{initial}</Text>
+          </View>
+        )}
+        {isPending && (
           <View
             style={{
               position: 'absolute',
@@ -206,13 +193,7 @@ function DemandRow({ demand, onPress }: { demand: Demand; onPress: () => void })
         )}
       </View>
       <View style={{ flex: 1 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text
             style={{
               fontSize: 13.5,
@@ -224,7 +205,7 @@ function DemandRow({ demand, onPress }: { demand: Demand; onPress: () => void })
             }}
             numberOfLines={1}
           >
-            {demand.clientName}
+            {buyerName}
           </Text>
           <View
             style={{
@@ -234,8 +215,11 @@ function DemandRow({ demand, onPress }: { demand: Demand; onPress: () => void })
               backgroundColor: meta.bg,
               alignItems: 'center',
               justifyContent: 'center',
+              flexDirection: 'row',
+              gap: 4,
             }}
           >
+            <meta.Icon size={9} color={meta.fg} strokeWidth={2.5} />
             <Text
               style={{
                 fontSize: 9.5,
@@ -250,14 +234,8 @@ function DemandRow({ demand, onPress }: { demand: Demand; onPress: () => void })
             </Text>
           </View>
           <View style={{ flex: 1 }} />
-          <Text
-            style={{
-              fontSize: 11,
-              color: colors.textFaint,
-              letterSpacing: 0,
-            }}
-          >
-            {demand.ago}
+          <Text style={{ fontSize: 11, color: colors.textFaint, letterSpacing: 0 }}>
+            {formatRelativeFR(visit.createdAt)}
           </Text>
         </View>
         <Text
@@ -270,20 +248,22 @@ function DemandRow({ demand, onPress }: { demand: Demand; onPress: () => void })
           }}
           numberOfLines={1}
         >
-          {demand.itemTitle}
+          {propertyTitle}
         </Text>
-        <Text
-          style={{
-            fontSize: 13,
-            color: colors.text,
-            marginTop: 4,
-            letterSpacing: 0,
-            lineHeight: 18,
-          }}
-          numberOfLines={2}
-        >
-          {demand.preview}
-        </Text>
+        {visit.note ? (
+          <Text
+            style={{
+              fontSize: 13,
+              color: colors.text,
+              marginTop: 4,
+              letterSpacing: 0,
+              lineHeight: 18,
+            }}
+            numberOfLines={2}
+          >
+            {visit.note}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );

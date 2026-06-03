@@ -1,58 +1,14 @@
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  Plus,
-  MapPin,
-  Home as HomeIcon,
-  Briefcase,
-  MoreVertical,
-  Check,
-  Truck,
-} from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
+import { Plus, MapPin, Truck } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { haptic } from '../../src/lib/haptics';
 
-type AddressKind = 'home' | 'work' | 'other';
-
-interface Address {
-  id: string;
-  kind: AddressKind;
-  label: string;
-  street: string;
-  district: string;
-  city: string;
-  primary: boolean;
-}
-
-const ADDRESSES: Address[] = [
-  {
-    id: '1',
-    kind: 'home',
-    label: 'Maison',
-    street: 'Immeuble Le Niger, Apt 4B',
-    district: 'Kaloum',
-    city: 'Conakry',
-    primary: true,
-  },
-  {
-    id: '2',
-    kind: 'work',
-    label: 'Boutique',
-    street: 'Marché Madina, allée 7',
-    district: 'Matam',
-    city: 'Conakry',
-    primary: false,
-  },
-];
-
-const KIND_ICON: Record<AddressKind, LucideIcon> = {
-  home: HomeIcon,
-  work: Briefcase,
-  other: MapPin,
-};
+// Addresses backend lands in a later step. Until then the screen renders an
+// empty state with the existing "Ajouter une adresse" CTA so the entry from
+// the profile leads somewhere meaningful instead of stranger addresses.
 
 export default function AddressesRoute() {
   const { colors } = useTheme();
@@ -68,10 +24,46 @@ export default function AddressesRoute() {
           subtitle="Où on doit livrer ou venir chercher tes commandes."
         />
 
-        <View style={{ paddingHorizontal: 24, gap: 10 }}>
-          {ADDRESSES.map((a) => (
-            <AddressCard key={a.id} address={a} />
-          ))}
+        <View style={{ paddingHorizontal: 24 }}>
+          <View
+            style={{
+              paddingVertical: 32,
+              alignItems: 'center',
+              gap: 8,
+              borderRadius: 18,
+              borderWidth: 1.5,
+              borderStyle: 'dashed',
+              borderColor: colors.border,
+              backgroundColor: colors.card,
+            }}
+          >
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 999,
+                backgroundColor: colors.bgSunken,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MapPin size={20} color={colors.textMuted} strokeWidth={1.75} />
+            </View>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+              Aucune adresse enregistrée
+            </Text>
+            <Text
+              style={{
+                fontSize: 12,
+                color: colors.textMuted,
+                textAlign: 'center',
+                maxWidth: 260,
+                lineHeight: 17,
+              }}
+            >
+              Enregistre une adresse pour livrer plus vite tes commandes.
+            </Text>
+          </View>
         </View>
 
         <View style={{ paddingHorizontal: 24, paddingTop: 18 }}>
@@ -133,110 +125,3 @@ export default function AddressesRoute() {
   );
 }
 
-function AddressCard({ address }: { address: Address }) {
-  const { colors } = useTheme();
-  const Icon = KIND_ICON[address.kind];
-  return (
-    <View
-      style={{
-        padding: 14,
-        borderRadius: 18,
-        backgroundColor: colors.card,
-        borderWidth: address.primary ? 1.5 : 1,
-        borderColor: address.primary ? colors.primary : colors.border,
-        flexDirection: 'row',
-        gap: 14,
-        alignItems: 'flex-start',
-      }}
-    >
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          backgroundColor: address.primary ? colors.primarySoft : colors.bgSunken,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icon
-          size={18}
-          color={address.primary ? colors.primary : colors.text}
-          strokeWidth={1.75}
-        />
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text
-            style={{
-              fontSize: 14.5,
-              fontWeight: '700',
-              color: colors.text,
-              letterSpacing: 0,
-              lineHeight: 18,
-              includeFontPadding: false,
-            }}
-          >
-            {address.label}
-          </Text>
-          {address.primary && (
-            <View
-              style={{
-                paddingHorizontal: 8,
-                height: 20,
-                borderRadius: 999,
-                backgroundColor: colors.primarySoft,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 3,
-              }}
-            >
-              <Check size={9} color={colors.primaryDeep} strokeWidth={3} />
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: '700',
-                  color: colors.primaryDeep,
-                  lineHeight: 12,
-                  includeFontPadding: false,
-                  letterSpacing: 0.3,
-                }}
-              >
-                PRINCIPAL
-              </Text>
-            </View>
-          )}
-        </View>
-        <Text
-          style={{
-            fontSize: 13,
-            color: colors.text,
-            marginTop: 4,
-            letterSpacing: 0,
-            lineHeight: 18,
-          }}
-        >
-          {address.street}
-        </Text>
-        <Text
-          style={{
-            fontSize: 12,
-            color: colors.textMuted,
-            marginTop: 2,
-            letterSpacing: 0,
-            lineHeight: 16,
-          }}
-        >
-          {address.district}, {address.city}
-        </Text>
-      </View>
-      <Pressable
-        hitSlop={6}
-        style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
-      >
-        <MoreVertical size={16} color={colors.textMuted} strokeWidth={1.75} />
-      </Pressable>
-    </View>
-  );
-}

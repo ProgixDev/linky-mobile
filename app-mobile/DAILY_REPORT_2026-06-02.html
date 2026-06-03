@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Daily Report — Achraf Benamrane — 2 June 2026</title>
+<style>
+  :root {
+    --navy: #1F4E7A;
+    --navy-deep: #14304D;
+    --navy-soft: #E8EFF6;
+    --saffron: #E8A53D;
+    --saffron-soft: #FBEDD3;
+    --cream: #F4F6F9;
+    --cream-warm: #E3E9F1;
+    --deep: #0F1A26;
+    --text: #2A323D;
+    --text-muted: #6B7480;
+    --border: #C9D2DC;
+    --border-soft: #DDE3EB;
+    --green: #1E7A4D;
+    --green-soft: #E5F2EC;
+  }
+  @page { size: A4; margin: 8mm 11mm 8mm 11mm; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: #fff; color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Inter", Roboto, sans-serif;
+    font-size: 8.5pt; line-height: 1.3;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 178mm; margin: 0 auto; }
+
+  .report-banner {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding-bottom: 5px; margin-bottom: 8px;
+    border-bottom: 1.5px solid var(--navy);
+  }
+  .report-title { font-size: 18pt; font-weight: 800; color: var(--navy); letter-spacing: -0.3px; line-height: 1; }
+  .report-author { text-align: right; line-height: 1.35; }
+  .report-author .name { font-size: 10.5pt; font-weight: 700; color: var(--navy); }
+  .report-author .date { font-size: 9pt; color: #5A6B7E; margin-top: 2px; }
+
+  .brand-strip {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: #fff; border-radius: 6px; padding: 7px 16px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .brand-strip .left { font-size: 9pt; letter-spacing: 0.16em; text-transform: uppercase; color: var(--saffron); font-weight: 700; }
+  .brand-strip .left::before { content: "∞"; margin-right: 6px; font-size: 11pt; vertical-align: -1px; }
+  .brand-strip .right { font-size: 9pt; color: rgba(255,255,255,0.78); }
+  .brand-strip .right strong { color: #fff; font-weight: 600; }
+
+  .summary {
+    background: var(--green-soft); border-left: 4px solid var(--green);
+    border-radius: 4px; padding: 7px 14px; margin-bottom: 8px;
+  }
+  .summary-label { font-size: 8pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--green); margin-bottom: 3px; }
+  .summary p { margin: 0; font-size: 9pt; color: var(--deep); }
+
+  .effort-note {
+    background: var(--saffron-soft); border-left: 4px solid var(--saffron);
+    border-radius: 4px; padding: 6px 14px; margin-bottom: 8px;
+    font-size: 8.5pt; color: var(--deep);
+  }
+  .effort-note strong { color: var(--navy-deep); }
+
+  h2 {
+    font-size: 10.5pt; font-weight: 700; color: var(--navy-deep);
+    margin: 8px 0 4px 0; padding-bottom: 2px;
+    border-bottom: 1.5px solid var(--border-soft);
+    letter-spacing: -0.2px;
+  }
+  h2 .num { color: var(--saffron); font-weight: 800; margin-right: 6px; }
+
+  strong { font-weight: 700; color: var(--deep); }
+
+  .stats { display: flex; gap: 8px; margin: 2px 0 8px 0; }
+  .stat {
+    flex: 1; background: #fff; border: 1px solid var(--border-soft);
+    border-radius: 6px; padding: 5px 10px; text-align: left;
+  }
+  .stat .label { font-size: 7pt; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .stat .value { font-size: 11pt; font-weight: 700; color: var(--navy-deep); margin-top: 1px; }
+  .stat .sub { font-size: 7.5pt; color: var(--text-muted); margin-top: 0; }
+
+  .task-list {
+    list-style: none; padding: 0; margin: 5px 0 9px 0; counter-reset: tcnt;
+  }
+  .task-list > li {
+    position: relative; background: #fff; border: 1px solid var(--border-soft);
+    border-left: 3px solid var(--green); border-radius: 4px;
+    padding: 4px 12px 4px 34px; margin-bottom: 3px;
+    counter-increment: tcnt;
+  }
+  .task-list > li::before {
+    content: counter(tcnt, decimal-leading-zero);
+    position: absolute; left: 10px; top: 4px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8pt; font-weight: 700; color: var(--saffron);
+  }
+  .task-list > li .title { font-weight: 600; color: var(--deep); font-size: 8.5pt; }
+  .task-list > li .body { color: var(--text-muted); font-size: 8pt; margin-top: 1px; line-height: 1.4; }
+
+  .doc-footer {
+    border-top: 1px solid var(--border); margin-top: 9px; padding-top: 6px;
+    text-align: center; color: var(--text-muted); font-size: 7.5pt; letter-spacing: 0.04em;
+  }
+  .doc-footer .knot { color: var(--saffron); font-weight: 700; margin: 0 6px; }
+
+  @media print {
+    body { background: #fff; }
+    .brand-strip, .summary, .effort-note, .task-list > li, .stat {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="report-banner">
+    <div class="report-title">Daily Report</div>
+    <div class="report-author">
+      <div class="name">Achraf Benamrane</div>
+      <div class="date">Date: June 2, 2026</div>
+    </div>
+  </div>
+
+  <div class="brand-strip">
+    <div class="left">Linky · Marketplace &amp; Immobilier</div>
+    <div class="right">Focus: <strong>console admin litiges · bandeaux de résolution acheteur &amp; vendeur</strong></div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-label">Summary</div>
+    <p>L'app a maintenant une <strong>console admin complète pour arbitrer les litiges</strong> entre acheteurs et vendeurs. Quand un litige s'ouvre, l'argent reste bloqué dans le séquestre — l'admin peut désormais ouvrir un tableau de bord dédié, examiner le dossier (acheteur, vendeur, produit, historique de la commande), et trancher en deux clics : soit <strong>rembourser l'acheteur</strong>, soit <strong>libérer le paiement au vendeur</strong>. Chaque décision est tracée avec son motif dans un journal d'audit permanent. Côté mobile, dès qu'un litige est résolu, l'acheteur et le vendeur voient un <strong>bandeau clair</strong> en haut de la commande qui explique ce qui s'est passé et combien a été versé à qui. Tout le code passe les vérifications de type sans aucune erreur.</p>
+  </div>
+
+  <div class="effort-note">
+    <strong>Note :</strong> Le déploiement final de la fonction d'authentification admin et le test de bout en bout dans le navigateur restent à faire avant que la console soit utilisable en ligne — c'est la première chose programmée pour la prochaine session.
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="label">Major features shipped</div>
+      <div class="value" style="color:#1E7A4D;">2</div>
+      <div class="sub">admin dispute console · close-the-loop banners</div>
+    </div>
+    <div class="stat">
+      <div class="label">New screens</div>
+      <div class="value">4</div>
+      <div class="sub">3 admin (Kanban, confirm, detail) · 1 mobile banner</div>
+    </div>
+    <div class="stat">
+      <div class="label">Backend deployed</div>
+      <div class="value" style="color:#1E7A4D;">3 + 3</div>
+      <div class="sub">migrations DB · edge functions</div>
+    </div>
+    <div class="stat">
+      <div class="label">Status</div>
+      <div class="value" style="color:#1E7A4D;">Green</div>
+      <div class="sub">on track for Sep launch</div>
+    </div>
+  </div>
+
+  <h2><span class="num">01</span>What I worked on</h2>
+  <ol class="task-list">
+    <li>
+      <div class="title">Console admin — tableau de bord Kanban des litiges</div>
+      <div class="body">Construit le board principal de l'admin : quatre colonnes — <strong>Reçus</strong>, <strong>En examen</strong>, <strong>Remboursés</strong>, <strong>Libérés</strong>. Chaque litige apparaît automatiquement dans la première colonne dès qu'un acheteur l'ouvre depuis l'app mobile. L'admin glisse-dépose la carte d'une colonne à l'autre pour la classer. Le board se rafraîchit tout seul toutes les 30 secondes pour capter les nouveaux litiges sans avoir à recharger la page.</div>
+    </li>
+    <li>
+      <div class="title">Résolution en deux clics avec motif obligatoire</div>
+      <div class="body">Quand l'admin déplace une carte vers <strong>Remboursés</strong> ou <strong>Libérés</strong>, une fenêtre de confirmation s'ouvre avec un récapitulatif de la commande, un menu déroulant des motifs disponibles (Produit non reçu / Produit non conforme / Litige sans fondement / Accord à l'amiable / Autre) et un champ note libre. Tant que l'admin n'a pas choisi un motif, le bouton Confirmer reste désactivé — impossible de cliquer par erreur.</div>
+    </li>
+    <li>
+      <div class="title">Tiroir de détail pour examiner un dossier complet</div>
+      <div class="body">Clic sur une carte du Kanban → un tiroir latéral s'ouvre à droite avec tout le contexte du dossier : nom et email de l'acheteur, nom et email du vendeur, photo et titre du produit, montant total et frais, l'historique complet de la commande (passée → payée → expédiée → contestée → résolue), et le journal des actions admin déjà posées sur ce dossier. Ça permet à l'admin de prendre une décision informée sans aller chercher l'info ailleurs.</div>
+    </li>
+    <li>
+      <div class="title">Journal d'audit permanent de chaque décision admin</div>
+      <div class="body">Chaque résolution écrit une ligne immuable dans une table dédiée : qui a tranché, sur quelle commande, vers quel verdict, avec quel motif, et l'état exact de la commande avant et après. Ce journal ne peut pas être modifié ni effacé après coup — c'est la trace officielle pour les contrôles internes futurs et pour répondre aux contestations vendeur/acheteur si elles arrivent.</div>
+    </li>
+    <li>
+      <div class="title">Mécanique séquestre — remboursement intégral ou libération avec frais plateforme</div>
+      <div class="body">Si l'admin tranche <strong>remboursement</strong> : l'acheteur récupère <strong>l'intégralité de ce qu'il avait payé</strong> (produit + frais) sur son wallet Linky en une seule opération atomique. Si l'admin tranche <strong>libération</strong> : le vendeur reçoit son montant net (produit moins commission plateforme) et la commission part vers le wallet plateforme. Les deux opérations passent par le ledger en double entrée — aucune ligne n'est effacée, tout est traçable historiquement.</div>
+    </li>
+    <li>
+      <div class="title">Bandeau « Litige résolu » côté acheteur mobile</div>
+      <div class="body">Sur le détail d'une commande remboursée, l'acheteur voit en haut un <strong>bandeau vert</strong> : « Litige résolu — X GNF remboursés sur votre wallet le DATE ». Sur une commande libérée au vendeur, le bandeau est gris et factuel : « Litige clos — Commande libérée au vendeur le DATE ». Plus besoin de chercher l'info dans l'historique, l'acheteur sait ce qui s'est passé dès qu'il ouvre la commande.</div>
+    </li>
+    <li>
+      <div class="title">Bandeau symétrique côté vendeur mobile</div>
+      <div class="body">Côté vendeur, deux variantes : si le litige a été tranché en sa faveur → bandeau vert « Litige résolu en votre faveur — X GNF libérés sur votre wallet le DATE ». Si le litige a été tranché en faveur de l'acheteur → bandeau orange neutre « Litige tranché en faveur de l'acheteur — Aucun versement pour cette commande ». Pas de jugement de valeur, juste les faits — le vendeur comprend la décision sans avoir à demander.</div>
+    </li>
+    <li>
+      <div class="title">Nettoyage du faux écran « Litiges » côté vendeur</div>
+      <div class="body">L'app vendeur avait un raccourci « Litiges » sur le dashboard Boutique qui ouvrait une page avec des fausses demandes de remboursement et deux boutons « Accepter / Refuser » qui ne faisaient rien. Comme c'est désormais l'admin qui tranche les litiges (pas le vendeur), ce raccourci a été retiré et la page remplacée par un message clair : « Aucun remboursement à gérer — les litiges sont traités par l'équipe Linky ». Plus de fausse promesse de pouvoir agir.</div>
+    </li>
+    <li>
+      <div class="title">Protection des données : aucun identifiant admin ne fuit côté mobile</div>
+      <div class="body">L'identifiant de l'admin qui a tranché un litige est <strong>masqué côté serveur</strong> avant d'être renvoyé à l'app mobile — ni l'acheteur ni le vendeur ne peuvent voir qui a pris la décision, seulement le verdict et la date. L'info reste accessible uniquement dans la console admin et dans le journal d'audit. Vérifié par lecture du code et confirmé par les tests.</div>
+    </li>
+    <li>
+      <div class="title">Documentation du backlog de polish post-lancement</div>
+      <div class="body">Documenté formellement les 8 améliorations identifiées pendant la construction de cette console et explicitement <strong>reportées après le lancement</strong> : passage de la persistance « En examen » sur serveur (V1 = local seulement), remplacement du rafraîchissement par sondage par du temps réel Supabase, élargissement de la liste des litiges aux dossiers récemment résolus, mise à jour en direct des bandeaux mobile sans recharger, vérification que l'admin ne peut pas trancher un litige où il est lui-même partie, garde-fou « second admin requis » au-dessus de 5 millions GNF, notifications push à la résolution, pagination du journal d'audit si une commande accumule beaucoup d'actions. Aucun de ces points ne bloque le lancement V1.</div>
+    </li>
+    <li>
+      <div class="title">Vérification de type sur toute la pile — sans aucune erreur</div>
+      <div class="body">Trois passages de vérification de type complets exécutés à la fin de chaque étape majeure : sur la console admin Next.js, sur l'app mobile React Native, et après le nettoyage du faux écran Litiges. Les trois retournent un code de sortie 0 — aucun import cassé, aucun type incompatible, aucune référence morte. Le code est techniquement prêt à être déployé une fois le test final de l'authentification admin validé.</div>
+    </li>
+  </ol>
+
+  <div class="doc-footer">
+    LINKY <span class="knot">∞</span> Marketplace &amp; Immobilier de Guin&eacute;e <span class="knot">·</span> Daily report <span class="knot">·</span> 2 June 2026
+  </div>
+
+</div>
+</body>
+</html>

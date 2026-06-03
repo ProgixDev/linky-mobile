@@ -18,12 +18,9 @@ import {
   Video as VideoIcon,
   CloudOff,
   MapPin,
-  ShieldCheck,
-  Star,
 } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
-import { Avatar } from '../primitives/Avatar';
 import { CommentsSheet } from './CommentsSheet';
 import { formatGNF, formatEUR, formatDistance } from '../../lib/format';
 import { gnfToEur } from '../../lib/currency';
@@ -281,90 +278,6 @@ export function DiscoverCard({
           }}
           pointerEvents="box-none"
         >
-          {/* Seller / agent row */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 12,
-              paddingRight: RAIL_WIDTH,
-              marginBottom: 14,
-            }}
-          >
-            <Avatar source="https://images.unsplash.com/photo-1573497019418-b400bb3ab074?w=200" size="sm" />
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: '700',
-                    color: '#FFFFFF',
-                    letterSpacing: 0,
-                    lineHeight: 17,
-                    includeFontPadding: false,
-                  }}
-                  numberOfLines={1}
-                >
-                  {isProduct ? 'Maison Aïssatou' : 'Agence Conakry'}
-                </Text>
-                <View
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 999,
-                    backgroundColor: colors.accent,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <ShieldCheck size={8} color="#FFFFFF" strokeWidth={3.5} />
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                <Star size={10} color={colors.accent} fill={colors.accent} />
-                <Text
-                  style={{
-                    fontSize: 11,
-                    color: 'rgba(255,255,255,0.75)',
-                    fontWeight: '600',
-                    fontVariant: ['tabular-nums'],
-                    letterSpacing: 0,
-                  }}
-                >
-                  4.9
-                </Text>
-                <Text
-                  style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', letterSpacing: 0 }}
-                >
-                  · Vérifié
-                </Text>
-              </View>
-            </View>
-            <Pressable
-              onPress={() => haptic.light()}
-              style={{
-                height: 36,
-                paddingHorizontal: 16,
-                borderRadius: 999,
-                backgroundColor: '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text
-                style={{
-                  color: colors.text,
-                  fontWeight: '700',
-                  fontSize: 13,
-                  lineHeight: 16,
-                  includeFontPadding: false,
-                }}
-              >
-                Suivre
-              </Text>
-            </Pressable>
-          </View>
-
           {/* Title */}
           <View style={{ paddingRight: RAIL_WIDTH }}>
             <Text

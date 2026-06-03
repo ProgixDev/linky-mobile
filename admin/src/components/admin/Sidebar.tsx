@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -45,8 +45,19 @@ const NAV: { section: string; items: Item[] }[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const session = useAuth((s) => s.session);
-  const signOut = useAuth((s) => s.signOut);
+  const clearSession = useAuth((s) => s.clearSession);
+  // Initials for the avatar — prefer the explicit displayName, fall back to
+  // the email's local-part, finally a placeholder. Keeps the chip rendered
+  // even on a freshly-promoted account with display_name=null in DB.
+  const initialsSource = session?.displayName ?? session?.email ?? 'Admin';
+  const initials = initialsSource.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || 'A';
+
+  const handleSignOut = () => {
+    clearSession();
+    router.replace('/login');
+  };
 
   return (
     <aside className="hidden h-screen w-72 shrink-0 flex-col border-r border-line bg-surface px-4 py-5 lg:flex">
@@ -113,18 +124,18 @@ export function Sidebar() {
       <div className="mt-5 border-t border-line pt-4">
         <div className="flex items-center gap-3 px-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sunken text-sm font-bold text-[#0E1311]">
-            {(session?.name ?? 'A').slice(0, 2).toUpperCase()}
+            {initials}
           </div>
           <div className="flex-1 overflow-hidden">
             <div className="truncate text-sm font-bold text-[#0E1311]">
-              {session?.name ?? 'Admin'}
+              {session?.displayName ?? 'Admin'}
             </div>
             <div className="truncate text-[11px] text-muted">
               {session?.email ?? '—'}
             </div>
           </div>
           <button
-            onClick={signOut}
+            onClick={handleSignOut}
             title="Se déconnecter"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-sunken hover:text-danger"
           >

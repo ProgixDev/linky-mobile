@@ -9,6 +9,12 @@ export interface AuthUser {
   display_name: string | null;
   avatar_url: string | null;
   locale: string;
+  city?: string | null;
+  kyc_status?: string | null;
+  // Phase K.4: returned by email-signin so the Next.js admin shell can gate
+  // on it without a separate get-me round-trip. Mobile users always see
+  // is_admin = false; the mobile UI never reads it.
+  is_admin?: boolean;
 }
 
 export interface TokenBundle {

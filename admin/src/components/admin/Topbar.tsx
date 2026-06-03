@@ -1,7 +1,12 @@
 'use client';
 
 import { Bell, Search, ShieldCheck } from 'lucide-react';
-import { useAuth } from '@/stores/auth';
+
+// Env badge is now driven by NEXT_PUBLIC_ADMIN_ENV (set in .env.local).
+// Defaults to 'staging' when the var is unset; only literal 'production'
+// flips the badge to the danger tint.
+const ENV_RAW = (process.env.NEXT_PUBLIC_ADMIN_ENV ?? 'staging').toLowerCase();
+const ENV: 'production' | 'staging' = ENV_RAW === 'production' ? 'production' : 'staging';
 
 export function Topbar({
   title,
@@ -10,9 +15,6 @@ export function Topbar({
   title: string;
   subtitle?: string;
 }) {
-  const session = useAuth((s) => s.session);
-  const env = session?.env ?? 'staging';
-
   return (
     <header className="flex h-20 shrink-0 items-center justify-between gap-6 border-b border-line bg-surface px-8">
       <div>
@@ -22,13 +24,13 @@ export function Topbar({
           </h1>
           <span
             className={`inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-[10px] font-bold uppercase tracking-wider ${
-              env === 'production'
+              ENV === 'production'
                 ? 'bg-danger/12 text-danger'
                 : 'bg-accent-soft text-accent-text'
             }`}
           >
             <ShieldCheck size={11} />
-            {env}
+            {ENV}
           </span>
         </div>
         {subtitle && (

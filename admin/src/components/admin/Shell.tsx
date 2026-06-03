@@ -18,14 +18,32 @@ export function Shell({
   const router = useRouter();
   const pathname = usePathname();
   const session = useAuth((s) => s.session);
+  const hydrated = useAuth((s) => s.hydrated);
+  const hydrate = useAuth((s) => s.hydrate);
+
+  // Hydrate from localStorage exactly once on mount. Before this fires the
+  // store reports session=null and hydrated=false, which lets us show a
+  // neutral placeholder instead of flashing the redirect or the authed UI.
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   useEffect(() => {
-    if (!session && pathname !== '/login') {
-      router.replace('/login');
+    if (!hydrated) return;
+    if (!session || !session.isAdmin) {
+      if (pathname !== '/login') router.replace('/login');
     }
-  }, [session, pathname, router]);
+  }, [hydrated, session, pathname, router]);
 
-  if (!session) {
+  if (!hydrated) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-sunken">
+        <div className="text-sm text-muted">Vérification…</div>
+      </div>
+    );
+  }
+
+  if (!session || !session.isAdmin) {
     return (
       <div className="grid min-h-screen place-items-center bg-sunken">
         <div className="text-sm text-muted">Redirection…</div>

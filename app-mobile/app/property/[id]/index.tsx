@@ -8,7 +8,6 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Chip } from '../../../src/components/primitives/Chip';
 import { Card } from '../../../src/components/primitives/Card';
-import { Avatar } from '../../../src/components/primitives/Avatar';
 import { Button, IconButton } from '../../../src/components/primitives/Button';
 import { MoneyText } from '../../../src/components/primitives/MoneyText';
 import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
@@ -226,21 +225,6 @@ export default function PropertyDetailRoute() {
                       </Text>
                       <Text style={{ fontSize: 10, color: colors.accentText, opacity: 0.85 }}>
                         Accès facile en taxi ou moto
-                      </Text>
-                    </View>
-                  </View>
-                </Card>
-              </View>
-
-              <View style={{ marginTop: 16 }}>
-                <MicroLabel label="Propriétaire" />
-                <Card padding={12}>
-                  <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-                    <Avatar source="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" size="md" verified />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '600' }}>Mamadou Bah · Agence</Text>
-                      <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                        12 biens en gestion · répond en ~1h
                       </Text>
                     </View>
                   </View>

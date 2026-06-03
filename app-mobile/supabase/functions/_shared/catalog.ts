@@ -127,7 +127,11 @@ export interface OrderRow {
   payment_method: string;
   currency: 'GNF' | 'EUR';
   status: string;
-  events: Array<{ at: string; label: string }>;
+  // Phase K adds richer event entries (kind, outcome, admin_id, reason, note)
+  // alongside the original { at, label } shape. The widened type keeps the
+  // base fields known while permitting arbitrary extras at runtime so PII
+  // strip can walk + filter without needing a closed event union.
+  events: Array<{ at: string; label?: string } & Record<string, unknown>>;
   release_at: string | null;
   created_at: string;
   // Only present when the SELECT clause asks for it (get-order, when caller
@@ -136,21 +140,41 @@ export interface OrderRow {
   scan_token?: string;
 }
 
-// scanToken is opt-in PII gate: only the seller of an order may see the
-// scan_token (it's the QR secret they print on the package). Buyer/agent
-// callers must NOT receive it — that's what makes the QR an actual lock.
+// Two opt-in PII gates layered on top of the base mapper:
 //
-// Caller contract:
-//   - get-order passes { includeScanToken: r.seller_id === userId } per request
-//   - Buyer-facing endpoints (list-my-orders, place-order, confirm-receipt)
-//     omit opts entirely → scanToken stays undefined in the response
-//   - If a caller defensively passes opts.includeScanToken=true but the SELECT
-//     clause forgot to include scan_token, the dev-time warn below catches it
-//     loud so the bug doesn't ship silent.
-export function mapOrder(r: OrderRow, opts?: { includeScanToken?: boolean }) {
+// includeScanToken — only the seller of an order may see scan_token (the QR
+//   secret printed on the package). Buyer/agent callers MUST NOT receive it;
+//   that's what makes the QR an actual lock, not a navigation hint. get-order
+//   passes { includeScanToken: r.seller_id === userId }; seller-only endpoints
+//   pass { includeScanToken: true }; buyer/public endpoints omit opts entirely.
+//
+// includeAdminMeta — only an admin caller may see admin_id inside the
+//   dispute_resolved events that Phase K resolve_dispute appends. Buyer/seller
+//   callers reading their own order detail must NOT learn which admin handled
+//   the dispute (memo project_phase_k_mapper_pii). The strip applies only to
+//   events where kind === 'dispute_resolved' — every other field on the event
+//   (outcome, reason, note, label, at) stays visible because it's legitimate
+//   information for the participants.
+//
+// Dev-time guard: if a caller defensively passes includeScanToken=true but
+// the SELECT forgot scan_token, the warn surfaces the bug loud rather than
+// silently returning scanToken=undefined as if the order had none.
+export function mapOrder(
+  r: OrderRow,
+  opts?: { includeScanToken?: boolean; includeAdminMeta?: boolean },
+) {
   if (opts?.includeScanToken && !r.scan_token) {
     console.warn('[mapOrder] includeScanToken=true but row has no scan_token — SELECT likely missing it');
   }
+  const events = opts?.includeAdminMeta
+    ? r.events
+    : r.events.map((e) => {
+        if (e && typeof e === 'object' && (e as { kind?: unknown }).kind === 'dispute_resolved') {
+          const { admin_id: _admin_id, ...rest } = e as Record<string, unknown> & { admin_id?: unknown };
+          return rest as typeof e;
+        }
+        return e;
+      });
   return {
     id: r.id,
     reference: r.reference,
@@ -166,10 +190,41 @@ export function mapOrder(r: OrderRow, opts?: { includeScanToken?: boolean }) {
     paymentMethod: r.payment_method,
     currency: r.currency,
     status: r.status,
-    events: r.events,
+    events,
     createdAt: r.created_at,
     releaseAt: r.release_at ?? undefined,
     scanToken: opts?.includeScanToken ? r.scan_token : undefined,
+  };
+}
+
+// Phase K admin_actions audit row → frontend shape. Snapshots stay as raw
+// jsonb (the admin console renders them through a diff viewer); reason
+// coalesces null → undefined to match the optional shape on the wire.
+export interface AdminActionRow {
+  id: string;
+  admin_id: string;
+  target_type: string;
+  target_id: string;
+  action: string;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  before_snapshot: Record<string, unknown> | null;
+  after_snapshot: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export function mapAdminAction(r: AdminActionRow) {
+  return {
+    id: r.id,
+    adminId: r.admin_id,
+    targetType: r.target_type,
+    targetId: r.target_id,
+    action: r.action,
+    reason: r.reason ?? undefined,
+    metadata: r.metadata,
+    beforeSnapshot: r.before_snapshot ?? undefined,
+    afterSnapshot: r.after_snapshot ?? undefined,
+    createdAt: r.created_at,
   };
 }
 

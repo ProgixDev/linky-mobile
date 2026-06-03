@@ -14,7 +14,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { I, type IconKey } from '../../src/icons/Icon';
-import { photos, roleHeroes } from '../../src/data/photos';
+import { roleHeroes } from '../../src/data/photos';
 import { CityMapPicker } from '../../src/components/onboarding/CityMapPicker';
 import { ROLE_FROM_UI, useAuth } from '../../src/stores/auth';
 
@@ -41,10 +41,10 @@ export default function ProfileSetupRoute() {
   const { colors, radii } = useTheme();
   const setRolesInStore = useAuth((s) => s.setRoles);
   const [step, setStep] = useState(0);
-  const [name, setName] = useState('Mariama Diallo');
+  const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
-  const [city, setCity] = useState('Conakry');
-  const [roles, setRoles] = useState<Set<string>>(new Set(['buy', 'sell']));
+  const [city, setCity] = useState('');
+  const [roles, setRoles] = useState<Set<string>>(new Set());
 
   const toggleRole = (id: string) => {
     setRoles((prev) => {
@@ -178,8 +178,7 @@ function IdentityStep({
       {/* Avatar */}
       <View style={{ alignItems: 'center', marginBottom: 26 }}>
         <Pressable style={{ position: 'relative' }}>
-          <Image
-            source={photos.woman1}
+          <View
             style={{
               width: 104,
               height: 104,
@@ -187,9 +186,12 @@ function IdentityStep({
               backgroundColor: colors.bgSunken,
               borderWidth: 3,
               borderColor: colors.bg,
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
-            contentFit="cover"
-          />
+          >
+            <UserIcon size={40} color={colors.textFaint} strokeWidth={1.5} />
+          </View>
           <View
             style={{
               position: 'absolute',

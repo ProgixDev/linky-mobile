@@ -1,23 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { mockConversations, mockMessagesByConversation, mockNotifications } from '../mockConversations';
 import type { Conversation, Message, AppNotification } from '../types';
-import { latency } from './latency';
-// dev-fixture: messages backend not yet implemented. CURRENT_USER_ID used to
-// stamp outgoing senderId until a real /v1/messages endpoint ships and reads
-// caller_id from the JWT. Remove this import when that lands.
-import { CURRENT_USER_ID } from '../mockUsers';
 
-const conversations: Conversation[] = [...mockConversations];
-const messagesByConv: Record<string, Message[]> = { ...mockMessagesByConversation };
-const notifications: AppNotification[] = [...mockNotifications];
+// Messaging backend not yet implemented. Until the /v1/messages endpoint ships,
+// every query returns an empty result so the UI shows real empty states instead
+// of a fake inbox. Mutations are no-ops that resolve cleanly so callers don't
+// crash.
 
 export function useConversations() {
   return useQuery({
     queryKey: ['conversations'],
-    queryFn: async (): Promise<Conversation[]> => {
-      await latency();
-      return conversations;
-    },
+    queryFn: async (): Promise<Conversation[]> => [],
   });
 }
 
@@ -25,37 +17,17 @@ export function useConversation(id: string | undefined) {
   return useQuery({
     queryKey: ['conversation', id],
     enabled: !!id,
-    queryFn: async () => {
-      await latency();
-      const conv = conversations.find((c) => c.id === id);
-      const msgs = messagesByConv[id as string] ?? [];
-      return { conversation: conv, messages: msgs };
-    },
+    queryFn: async (): Promise<{ conversation: Conversation | undefined; messages: Message[] }> => ({
+      conversation: undefined,
+      messages: [],
+    }),
   });
 }
 
 export function useSendMessage(conversationId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: string) => {
-      await new Promise((r) => setTimeout(r, 80));
-      if (!conversationId) return null;
-      const msg: Message = {
-        id: `m_${Date.now()}`,
-        conversationId,
-        senderId: CURRENT_USER_ID,
-        body,
-        at: new Date().toISOString(),
-        seen: false,
-      };
-      messagesByConv[conversationId] = [...(messagesByConv[conversationId] ?? []), msg];
-      const convIdx = conversations.findIndex((c) => c.id === conversationId);
-      if (convIdx >= 0) {
-        const c = conversations[convIdx]!;
-        conversations[convIdx] = { ...c, lastMessage: `Tu : ${body}`, lastAt: msg.at, unread: 0 };
-      }
-      return msg;
-    },
+    mutationFn: async (_body: string): Promise<Message | null> => null,
     onSuccess: () => {
       if (conversationId) {
         qc.invalidateQueries({ queryKey: ['conversation', conversationId] });
@@ -68,19 +40,14 @@ export function useSendMessage(conversationId: string | undefined) {
 export function useNotifications() {
   return useQuery({
     queryKey: ['notifications'],
-    queryFn: async (): Promise<AppNotification[]> => {
-      await latency();
-      return notifications;
-    },
+    queryFn: async (): Promise<AppNotification[]> => [],
   });
 }
 
 export function useMarkNotificationsRead() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      for (const n of notifications) n.read = true;
-    },
+    mutationFn: async () => {},
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
 }

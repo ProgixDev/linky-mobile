@@ -53,6 +53,8 @@ import {
   usePopularProducts,
   useNearbyProperties,
   useWallet,
+  useMyShops,
+  useMyProperties,
 } from '../../src/data/queries';
 
 export default function HomeRoute() {
@@ -337,16 +339,6 @@ function BuyerHome() {
               label="Recharger"
               onPress={() => router.push('/wallet/recharger')}
             />
-          </View>
-        </View>
-
-        {/* Promo banner */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 22 }}>
-          <PromoBanner />
-          <View style={{ flexDirection: 'row', gap: 5, justifyContent: 'center', marginTop: 12 }}>
-            <View style={{ width: 20, height: 4, backgroundColor: colors.primary, borderRadius: 999 }} />
-            <View style={{ width: 4, height: 4, backgroundColor: colors.borderStrong, borderRadius: 999 }} />
-            <View style={{ width: 4, height: 4, backgroundColor: colors.borderStrong, borderRadius: 999 }} />
           </View>
         </View>
 
@@ -836,102 +828,6 @@ function QuickAction({
   );
 }
 
-function PromoBanner() {
-  const { colors } = useTheme();
-  return (
-    <View style={{ borderRadius: 22, overflow: 'hidden' }}>
-      <LinearGradient
-        colors={[colors.primaryDeep, colors.primary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          padding: 22,
-          minHeight: 168,
-          justifyContent: 'space-between',
-          overflow: 'hidden',
-        }}
-      >
-        <View
-          style={{
-            position: 'absolute',
-            right: -30,
-            bottom: -30,
-            width: 200,
-            height: 200,
-            borderRadius: 999,
-            backgroundColor: 'rgba(232,165,61,0.18)',
-          }}
-        />
-        <View
-          style={{
-            position: 'absolute',
-            right: 18,
-            bottom: 18,
-            width: 110,
-            height: 110,
-            borderRadius: 999,
-            backgroundColor: 'rgba(0,0,0,0.18)',
-            overflow: 'hidden',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Image
-            source={photos.iphone}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-          />
-        </View>
-        <View>
-          <View
-            style={{
-              alignSelf: 'flex-start',
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderRadius: 999,
-              backgroundColor: 'rgba(255,255,255,0.16)',
-              marginBottom: 10,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 10,
-                fontWeight: '700',
-                color: '#FFFFFF',
-                letterSpacing: 0.6,
-              }}
-            >
-              BLACK FRIDAY
-            </Text>
-          </View>
-          <Text
-            style={{
-              color: '#FFFFFF',
-              fontSize: 22,
-              fontWeight: '700',
-              maxWidth: '70%',
-              lineHeight: 26,
-              letterSpacing: -0.3,
-            }}
-          >
-            -30 % sur{'\n'}l'électronique
-          </Text>
-        </View>
-        <Text
-          style={{
-            fontSize: 11.5,
-            color: 'rgba(255,255,255,0.72)',
-            marginTop: 12,
-            letterSpacing: 0,
-          }}
-        >
-          Du 25 au 30 novembre
-        </Text>
-      </LinearGradient>
-    </View>
-  );
-}
-
 const CATEGORIES: Array<{
   Icon: LucideIcon;
   label: string;
@@ -1020,12 +916,24 @@ function CategoryGridTile({
 
 function ProSummaryCard({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean }) {
   const { colors } = useTheme();
-  // Pick the headline metric to show
-  const headline = isSeller
-    ? { label: 'REVENUS · 30 J', value: '2,4M GNF', delta: '+18 %' }
-    : { label: 'REVENUS LOCATIFS · 30 J', value: '9,8M GNF', delta: '+12 %' };
-  const pendingCount = isSeller ? 3 : 7;
-  const pendingLabel = isSeller ? 'commandes en attente' : 'demandes de visite';
+  const { data: shops } = useMyShops();
+  const { data: properties } = useMyProperties();
+
+  const shopCount = shops?.length ?? 0;
+  const propertyCount = properties?.length ?? 0;
+  const productAndPropertyCount = propertyCount; // products counted via shop scope on the Pro tab
+
+  // No shop AND no properties → hide the whole CTA. Showing "0 GNF" or
+  // "0 commandes" would burn the first impression for a fresh multi-role user.
+  // We wait until the user has at least one listing before promoting the Pro tab.
+  if (shopCount === 0 && propertyCount === 0) return null;
+
+  const badgeLabel = isSeller && isAgent ? 'MODE PRO' : isSeller ? 'BOUTIQUE' : 'AGENCE IMMO';
+  const sublabel = shopCount > 0 && propertyCount > 0
+    ? `${shopCount} boutique${shopCount > 1 ? 's' : ''} · ${propertyCount} bien${propertyCount > 1 ? 's' : ''}`
+    : shopCount > 0
+      ? `${shopCount} boutique${shopCount > 1 ? 's' : ''}`
+      : `${productAndPropertyCount} bien${productAndPropertyCount > 1 ? 's' : ''}`;
 
   return (
     <Pressable
@@ -1062,101 +970,34 @@ function ProSummaryCard({ isSeller, isAgent }: { isSeller: boolean; isAgent: boo
                 letterSpacing: 0.5,
               }}
             >
-              {isSeller && isAgent ? 'MODE PRO' : isSeller ? 'BOUTIQUE' : 'AGENCE IMMO'}
+              {badgeLabel}
             </Text>
           </View>
           <ChevronRight size={16} color="rgba(255,255,255,0.6)" strokeWidth={2} />
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 14 }}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: 'rgba(255,255,255,0.55)',
-              letterSpacing: 0.5,
-            }}
-          >
-            {headline.label}
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10, marginTop: 4 }}>
-          <Text
-            style={{
-              fontSize: 24,
-              fontWeight: '700',
-              color: '#FFFFFF',
-              letterSpacing: -0.3,
-              fontVariant: ['tabular-nums'],
-            }}
-          >
-            {headline.value}
-          </Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 3,
-              paddingHorizontal: 7,
-              paddingVertical: 3,
-              borderRadius: 999,
-              backgroundColor: 'rgba(15,114,86,0.4)',
-            }}
-          >
-            <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#5FE3B4' }}>
-              {headline.delta}
-            </Text>
-          </View>
-        </View>
-
-        <View
+        <Text
           style={{
+            fontSize: 18,
+            fontWeight: '700',
+            color: '#FFFFFF',
+            letterSpacing: -0.2,
             marginTop: 14,
-            paddingTop: 14,
-            borderTopWidth: 1,
-            borderTopColor: 'rgba(255,255,255,0.1)',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
           }}
         >
-          <View
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 999,
-              backgroundColor: colors.accent,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: '700',
-                color: '#2A1A05',
-                lineHeight: 13,
-                includeFontPadding: false,
-              }}
-            >
-              {pendingCount}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: '#FFFFFF', letterSpacing: 0 }}>
-            {pendingLabel}
-          </Text>
-          <View style={{ flex: 1 }} />
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '700',
-              color: 'rgba(255,255,255,0.85)',
-              letterSpacing: 0,
-            }}
-          >
-            Voir →
-          </Text>
-        </View>
+          Tableau de bord
+        </Text>
+        <Text
+          style={{
+            fontSize: 12.5,
+            fontWeight: '500',
+            color: 'rgba(255,255,255,0.65)',
+            letterSpacing: 0,
+            marginTop: 4,
+          }}
+        >
+          {sublabel}
+        </Text>
       </View>
     </Pressable>
   );
