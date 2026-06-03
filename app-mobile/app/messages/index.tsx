@@ -10,9 +10,6 @@ import { TopBar } from '../../src/components/nav/TopBar';
 import { IconButton } from '../../src/components/primitives/Button';
 import { I } from '../../src/icons/Icon';
 import { useConversations } from '../../src/data/queries';
-// dev-fixture: conversation list runs off mockUsers for other-user display
-// info until a real /v1/messages backend ships. Remove when that lands.
-import { getUser } from '../../src/data/mockUsers';
 import { formatRelativeFR } from '../../src/lib/format';
 import { EmptyState } from '../../src/components/feedback/EmptyState';
 
@@ -47,7 +44,6 @@ export default function MessagesRoute() {
           <EmptyState icon="msg" title="Aucune conversation" description="Contacte un vendeur depuis une annonce pour démarrer une discussion" />
         ) : (
           convs?.map((c) => {
-            const other = getUser(c.otherUserId);
             return (
               <Pressable
                 key={c.id}
@@ -61,14 +57,14 @@ export default function MessagesRoute() {
                   alignItems: 'center',
                 }}
               >
-                <Avatar source={other?.photo} size="lg" verified={other?.kycVerified} />
+                <Avatar source={c.otherUserAvatarUrl ?? undefined} size="lg" />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 13, fontWeight: c.unread > 0 ? '600' : '500' }} numberOfLines={1}>
-                      {other?.name ?? 'Utilisateur'}
+                      {c.otherUserDisplayName ?? 'Utilisateur'}
                     </Text>
                     <Text style={{ fontSize: 10, color: c.unread > 0 ? colors.primary : colors.textMuted, fontWeight: c.unread > 0 ? '600' : '400' }}>
-                      {formatRelativeFR(c.lastAt)}
+                      {c.lastAt ? formatRelativeFR(c.lastAt) : ''}
                     </Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 }}>
@@ -81,7 +77,7 @@ export default function MessagesRoute() {
                       }}
                       numberOfLines={1}
                     >
-                      {c.lastMessage}
+                      {c.lastMessage ?? ''}
                     </Text>
                     {c.unread > 0 && (
                       <View

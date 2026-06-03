@@ -165,10 +165,16 @@ export interface Conversation {
   id: ID;
   participants: ID[];
   otherUserId: ID;
-  pinnedListingId?: ID;
-  pinnedListingKind?: 'product' | 'property';
-  lastMessage: string;
-  lastAt: string;
+  otherUserDisplayName: string | null;
+  otherUserAvatarUrl: string | null;
+  pinnedListingId: ID | null;
+  pinnedListingKind: 'product' | 'property' | null;
+  pinnedListingTitle: string | null;
+  pinnedListingPhotoUrl: string | null;
+  pinnedListingPriceGnf: number | null;
+  lastMessage: string | null;
+  lastAt: string | null;
+  lastMessageSenderId: ID | null;
   unread: number;
 }
 

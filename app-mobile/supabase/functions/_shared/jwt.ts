@@ -38,6 +38,42 @@ export async function signAccessToken(userId: string, secret: string): Promise<{
   return { token: `${data}.${b64url(sig)}`, claims };
 }
 
+export interface SupabaseRealtimeClaims {
+  sub: string;
+  iat: number;
+  exp: number;
+  aud: 'authenticated';
+  role: 'authenticated';
+}
+
+export const REALTIME_TOKEN_TTL_SEC = 60 * 60; // 1 hour
+
+// Mints a JWT signed with the Supabase project JWT secret, suitable for
+// Supabase Realtime auth. The aud/role claims are required by Supabase
+// platform — both must equal 'authenticated' for the JWT to be accepted by
+// the Realtime gateway. Pattern mirrors signAccessToken (HS256 via
+// crypto.subtle.sign) but with a different secret AND the extra aud claim.
+export async function signSupabaseRealtimeToken(
+  userId: string,
+  supabaseJwtSecret: string,
+): Promise<{ token: string; claims: SupabaseRealtimeClaims }> {
+  const now = Math.floor(Date.now() / 1000);
+  const claims: SupabaseRealtimeClaims = {
+    sub: userId,
+    iat: now,
+    exp: now + REALTIME_TOKEN_TTL_SEC,
+    aud: 'authenticated',
+    role: 'authenticated',
+  };
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const headerB64 = b64url(enc.encode(JSON.stringify(header)));
+  const payloadB64 = b64url(enc.encode(JSON.stringify(claims)));
+  const data = `${headerB64}.${payloadB64}`;
+  const key = await hmacKey(supabaseJwtSecret);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data));
+  return { token: `${data}.${b64url(sig)}`, claims };
+}
+
 export function randomRefreshToken(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
