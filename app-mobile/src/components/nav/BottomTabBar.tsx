@@ -14,6 +14,7 @@ const TAB_ICONS: Record<string, IconKey> = {
   index: 'home',
   marche: 'shop',
   decouvrir: 'sparkle',
+  messagerie: 'msg',
   boutique: 'store',
   profil: 'user',
 };
@@ -21,6 +22,7 @@ const TAB_LABELS: Record<string, string> = {
   index: 'Accueil',
   marche: 'Marché',
   decouvrir: 'Découvrir',
+  messagerie: 'Messages',
   boutique: 'Boutique',
   profil: 'Profil',
 };

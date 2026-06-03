@@ -212,6 +212,33 @@ export function useMarkConversationRead(conversationId: string | undefined) {
   });
 }
 
+interface FindOrCreateInput {
+  recipient_id: string;
+  pinned_kind?: 'product' | 'property';
+  pinned_id?: string;
+}
+
+interface FindOrCreateResponse {
+  conversation_id: string;
+  is_new_conversation: boolean;
+}
+
+export function useFindOrCreateConversation() {
+  return useMutation({
+    mutationFn: async (input: FindOrCreateInput): Promise<FindOrCreateResponse> => {
+      const body: Record<string, unknown> = { recipient_id: input.recipient_id };
+      if (input.pinned_kind && input.pinned_id) {
+        body.pinned_kind = input.pinned_kind;
+        body.pinned_id = input.pinned_id;
+      }
+      return await apiPost<FindOrCreateResponse>({
+        path: '/find-or-create-conversation',
+        body,
+      });
+    },
+  });
+}
+
 // Notifications backend not yet implemented — gated behind push notifs
 // workstream (post-Phase L queue). Stubs returning [] / no-op so callers
 // don't crash.

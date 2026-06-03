@@ -24,11 +24,12 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ProductCard } from '../../src/components/lists/ProductCard';
 import { haptic } from '../../src/lib/haptics';
-import { useProduct, useProducts, useToggleFavorite, useTrackView } from '../../src/data/queries';
+import { useProduct, useProducts, useToggleFavorite, useTrackView, useFindOrCreateConversation } from '../../src/data/queries';
+import { useShop } from '../../src/data/queries/shops';
 import { useFavorites } from '../../src/stores/favorites';
 import { useCart } from '../../src/stores/cart';
 import { useToast } from '../../src/components/feedback/Toast';
-import { getShop } from '../../src/data/mockShops';
+import { toToastMessage } from '../../src/lib/api';
 import { formatGNF, formatEUR } from '../../src/lib/format';
 import { gnfToEur } from '../../src/lib/currency';
 
@@ -55,11 +56,27 @@ export default function ProductDetailRoute() {
   const addToCart = useCart((s) => s.add);
   const { show } = useToast();
   const [photoIdx, setPhotoIdx] = useState(0);
+  const { data: shop } = useShop(product?.shopId);
+  const findOrCreate = useFindOrCreateConversation();
+
+  async function onChatPress() {
+    if (!shop?.ownerId || !product?.id) return;
+    haptic.light();
+    try {
+      const r = await findOrCreate.mutateAsync({
+        recipient_id: shop.ownerId,
+        pinned_kind: 'product',
+        pinned_id: product.id,
+      });
+      router.push(`/messages/${r.conversation_id}`);
+    } catch (e) {
+      show(toToastMessage(e, "Impossible d'ouvrir la conversation"), 'danger');
+    }
+  }
 
   if (!product) {
     return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
-  const shop = getShop(product.shopId);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -564,10 +581,8 @@ export default function ProductDetailRoute() {
           }}
         >
           <Pressable
-            onPress={() => {
-              haptic.light();
-              router.push('/messages');
-            }}
+            onPress={onChatPress}
+            disabled={findOrCreate.isPending || !shop?.ownerId}
             style={{
               width: 52,
               height: 52,
@@ -577,6 +592,7 @@ export default function ProductDetailRoute() {
               borderColor: colors.borderStrong,
               alignItems: 'center',
               justifyContent: 'center',
+              opacity: findOrCreate.isPending || !shop?.ownerId ? 0.5 : 1,
             }}
             accessibilityLabel="Contacter le vendeur"
           >

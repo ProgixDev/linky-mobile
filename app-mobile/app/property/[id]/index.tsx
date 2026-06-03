@@ -14,14 +14,19 @@ import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { MicroLabel } from '../../../src/components/lists/SectionHeader';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
-import { useProperty, useTrackView } from '../../../src/data/queries';
+import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
 import { formatDistance } from '../../../src/lib/format';
+import { toToastMessage } from '../../../src/lib/api';
+import { useToast } from '../../../src/components/feedback/Toast';
+import { haptic } from '../../../src/lib/haptics';
 
 export default function PropertyDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
   const { data: prop, isLoading } = useProperty(id);
   const trackView = useTrackView();
+  const findOrCreate = useFindOrCreateConversation();
+  const { show } = useToast();
 
   // Fire-and-forget view bump on mount / when id changes. Failures don't block render.
   useEffect(() => {
@@ -31,6 +36,21 @@ export default function PropertyDetailRoute() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  async function onChatPress() {
+    if (!prop?.ownerId || !prop?.id) return;
+    haptic.light();
+    try {
+      const r = await findOrCreate.mutateAsync({
+        recipient_id: prop.ownerId,
+        pinned_kind: 'property',
+        pinned_id: prop.id,
+      });
+      router.push(`/messages/${r.conversation_id}`);
+    } catch (e) {
+      show(toToastMessage(e, "Impossible d'ouvrir la conversation"), 'danger');
+    }
+  }
 
   if (isLoading || !prop) {
     return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
@@ -255,7 +275,8 @@ export default function PropertyDetailRoute() {
             <IconButton
               variant="secondary"
               size={44}
-              onPress={() => router.push('/messages')}
+              onPress={onChatPress}
+              disabled={findOrCreate.isPending || !prop.ownerId}
             >
               <I.msg size={18} color={colors.text} />
             </IconButton>
@@ -267,7 +288,12 @@ export default function PropertyDetailRoute() {
           </>
         ) : (
           <>
-            <IconButton variant="secondary" size={44} onPress={() => router.push('/messages')}>
+            <IconButton
+              variant="secondary"
+              size={44}
+              onPress={onChatPress}
+              disabled={findOrCreate.isPending || !prop.ownerId}
+            >
               <I.msg size={18} color={colors.text} />
             </IconButton>
             <Button
