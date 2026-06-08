@@ -176,8 +176,8 @@
   <div class="report-banner">
     <div class="report-title">État d'avancement</div>
     <div class="report-author">
-      <div class="name">Linky — Achraf Benamrane</div>
-      <div class="date">Compte-rendu · 1 juin 2026</div>
+      <div class="name">Livré par Progix</div>
+      <div class="date">Développeur · Achraf Benamrane · 1 juin 2026</div>
     </div>
   </div>
 
@@ -191,30 +191,12 @@
     <p>L'application Linky avance bien sur les éléments essentiels. <strong>Le système de paiement sécurisé fonctionne de bout en bout</strong> — l'argent de l'acheteur est protégé jusqu'à la confirmation de réception via le code QR à maintenir 5 secondes, exactement comme demandé. <strong>Les paiements Mobile Money (Orange Money + MTN) sont prêts</strong> côté technique. La gestion des biens immobiliers, les demandes de visite côté agent, et l'intégration Mapbox sont également en place. Quelques points restent à finaliser avant le lancement, notamment l'intégration KYC et l'activation de Stripe pour les cartes bancaires.</p>
   </div>
 
-  <div class="stats">
-    <div class="stat">
-      <div class="label">Modules livrés</div>
-      <div class="value" style="color: var(--green);">7 / 9</div>
-      <div class="sub">essentiels pour V1</div>
-    </div>
-    <div class="stat">
-      <div class="label">Fonctionnalités utilisateur</div>
-      <div class="value">~30</div>
-      <div class="sub">testées sur téléphone réel</div>
-    </div>
-    <div class="stat">
-      <div class="label">Scénarios paiement</div>
-      <div class="value" style="color: var(--green);">5 / 5</div>
-      <div class="sub">succès · échec · annulation · expiration · wallet</div>
-    </div>
-    <div class="stat">
-      <div class="label">Cible lancement</div>
-      <div class="value" style="color: var(--green);">Sep 2026</div>
-      <div class="sub">planning tenu</div>
-    </div>
+  <div class="summary" style="background: var(--saffron-soft); border-left-color: var(--saffron);">
+    <div class="summary-label" style="color: var(--saffron);">Ajout du 1<sup>er</sup> juin · suite à la réunion d'aujourd'hui</div>
+    <p><strong>Fonction QR code obligatoire avant confirmation de réception.</strong> Comme demandé en réunion, l'acheteur ne peut plus libérer le paiement vers le vendeur sans avoir scanné le QR code physique collé sur le colis. Le QR contient un jeton secret unique par commande, vérifié côté serveur — pas de scan = pas de libération. Le QR n'est visible que côté vendeur (le jeton ne circule jamais vers l'acheteur sans le scan physique). Déployé en production aujourd'hui sur l'environnement Linky.</p>
   </div>
 
-  <h2><span class="num">01</span>Ce qui fonctionne aujourd'hui</h2>
+  <h2><span class="num">01</span>Ce qui fonctionne</h2>
 
   <h3>Inscription &amp; comptes</h3>
 
@@ -647,69 +629,8 @@
     <div class="why">Nous avons besoin d'environ 10-20 utilisateurs à Conakry + 3-5 vendeurs + 2 agents pour tester avant le lancement public. Avez-vous déjà des contacts identifiés, ou organise-t-on le recrutement ?</div>
   </div>
 
-  <h2><span class="num">06</span>Ce que le client doit fournir</h2>
-
-  <p style="font-size: 9pt; color: var(--text-muted); margin-bottom: 5px;">Livrables concrets, comptes, documents et accès dont nous avons besoin pour avancer sans blocage. Chaque ligne décrit le format attendu et la phase qu'elle débloque.</p>
-
-  <div class="question-card">
-    <div class="q">1 · Documents juridiques du LLC US</div>
-    <div class="why">Articles d'incorporation, EIN, et bank statement initial (au moins 30 jours d'activité). Stripe ne crée le compte marchand qu'après vérification de ces 3 pièces. Débloque l'intégration Stripe pour les paiements diaspora.</div>
-  </div>
-
-  <div class="question-card">
-    <div class="q">2 · Décision fournisseur KYC + contact commercial</div>
-    <div class="why">Réponse explicite : Smile Identity (recommandation) ou autre fournisseur. Si autre, fournir l'email d'un contact commercial chez ce fournisseur pour activer le compte test. Débloque la phase KYC (obligatoire pour les vendeurs + agents au lancement).</div>
-  </div>
-
-  <div class="question-card">
-    <div class="q">3 · Pack d'identité visuelle finalisé</div>
-    <div class="why">Logo final (SVG + PNG haute résolution), palette de couleurs hex définitive, version mode sombre du logo, et maquettes de l'écran d'accueil + de l'app store. Le pack actuel est inspiré (jaune + vert Guinée) mais sans assets définitifs. Débloque la version production de l'app + les soumissions aux app stores.</div>
-  </div>
-
-  <div class="question-card">
-    <div class="q">4 · Introduction commerciale Lengopay</div>
-    <div class="why">Un email ou message WhatsApp adressé à un contact à l'équipe Lengopay à Conakry, nous présentant comme votre partenaire technique pour Linky. Permet de négocier le tarif et d'accélérer l'accès au sandbox de production. Débloque la phase de paiements Mobile Money en mode réel.</div>
-  </div>
-
-  <div class="question-card">
-    <div class="q">5 · Liste des testeurs bêta — noms et téléphones</div>
-    <div class="why">15 à 25 personnes au total : 10 à 20 acheteurs (consommateurs), 3 à 5 vendeurs (commerçants existants ou de votre réseau), 2 agents immobiliers. Format minimum : prénom + nom + numéro WhatsApp. Débloque la phase de test bêta (août 2026) sans devoir recruter à froid.</div>
-  </div>
-
-  <div class="question-card">
-    <div class="q">6 · Comptes développeur app stores</div>
-    <div class="why">Compte Apple Developer (99 USD/an) ouvert au nom de l'entreprise et compte Google Play Console (25 USD une fois) idem. Si déjà existants, transfert vers notre équipe pour publication. Débloque les soumissions Google Play (août) et App Store (septembre).</div>
-  </div>
-
-  <div class="question-card">
-    <div class="q">7 · Décision et accès fournisseur SMS</div>
-    <div class="why">Sélection entre Africastalking, Orange Bulk SMS (via votre relation), ou Twilio. Une fois choisi : credentials API + numéro d'expéditeur validé (sender ID). Débloque l'envoi de codes de vérification SMS en mode réel (actuellement en mode test côté serveur uniquement).</div>
-  </div>
-
-  <h2><span class="num">07</span>Calendrier prévisionnel</h2>
-
-  <div class="feature-card" style="border-left-color: var(--saffron);">
-    <div class="name" style="font-weight: 700;">Juin 2026</div>
-    <div class="desc">Console admin litiges, intégration KYC (Smile Identity), notifications push, activation Lengopay production.</div>
-  </div>
-
-  <div class="feature-card" style="border-left-color: var(--saffron);">
-    <div class="name" style="font-weight: 700;">Juillet 2026</div>
-    <div class="desc">Stripe (sous réserve LLC US), messagerie, SMS production, performances (3G, mode hors-ligne partiel).</div>
-  </div>
-
-  <div class="feature-card" style="border-left-color: var(--saffron);">
-    <div class="name" style="font-weight: 700;">Août 2026</div>
-    <div class="desc">Phase de test bêta avec la cohorte d'utilisateurs réels. Durcissement sécurité. Conformité légale (CGV, politique de confidentialité). Soumission aux app stores.</div>
-  </div>
-
-  <div class="feature-card" style="border-left-color: var(--green);">
-    <div class="name" style="font-weight: 700;">Septembre 2026</div>
-    <div class="desc">Lancement public officiel.</div>
-  </div>
-
   <div class="doc-footer">
-    LINKY <span class="knot">∞</span> Marketplace &amp; Immobilier de Guin&eacute;e <span class="knot">·</span> État d'avancement client <span class="knot">·</span> 1 juin 2026
+    LINKY <span class="knot">∞</span> Marketplace &amp; Immobilier de Guin&eacute;e <span class="knot">·</span> Livré par <strong>Progix</strong> · Développeur Achraf Benamrane <span class="knot">·</span> 1 juin 2026
   </div>
 
 </div>
