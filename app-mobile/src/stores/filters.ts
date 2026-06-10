@@ -32,9 +32,14 @@ const DEFAULTS = {
   propertyType: 'location' as PropertyTypeFilter,
   city: null as string | null,
   rooms: null as string | null,
-  priceMinGnf: 500_000,
-  priceMaxGnf: 5_000_000,
-  distanceToRoadMaxM: 2000,
+  // 0 = « Tout » : the query layer sends `value || undefined`, so 0 means no
+  // server-side filter. Non-zero defaults here silently HIDE inventory on
+  // first load (a 6M GNF/month property never appeared until the user
+  // touched the filter sheet) and made « Effacer » restore those same
+  // invisible filters instead of clearing them.
+  priceMinGnf: 0,
+  priceMaxGnf: 0,
+  distanceToRoadMaxM: 0,
   furnishedOnly: false,
   searchQuery: '',
 };
