@@ -1,10 +1,15 @@
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { ArrowLeft, IdCard, Camera, ScanFace, ShieldCheck, Lock, Clock } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
+import { useStartKyc } from '../../src/data/queries';
+import { ApiError } from '../../src/lib/api';
 
 const STEPS = [
   { n: '01', label: 'Choisis ta pièce', Icon: IdCard },
@@ -20,6 +25,47 @@ const ASSURANCES = [
 
 export default function KycIntroRoute() {
   const { colors } = useTheme();
+  const startKyc = useStartKyc();
+  const [error, setError] = useState<string | null>(null);
+
+  // Phase P — the capture happens in Didit's hosted flow (ID scan + selfie +
+  // liveness in the in-app browser). The browser closes itself when Didit
+  // redirects to linky://kyc/return ; we then land on the pending screen,
+  // which polls the decision.
+  const onStart = async () => {
+    setError(null);
+    try {
+      const r = await startKyc.mutateAsync();
+      if (r.kycStatus === 'approved') {
+        router.replace('/(tabs)/profil');
+        return;
+      }
+      if (r.kycStatus === 'in_review') {
+        // A human reviewer already has the file — nothing to capture.
+        router.replace('/kyc/pending');
+        return;
+      }
+      if (r.url) {
+        const result = await WebBrowser.openAuthSessionAsync(r.url, Linking.createURL('kyc/return'));
+        // 'success' = Didit redirected to linky://kyc/return → submitted.
+        // 'dismiss'/'cancel' = user closed the browser early : stay here so
+        // the pending screen never claims « C'est envoyé ! » for an empty
+        // session. (If the deep link DID fire, return.tsx already navigated
+        // to pending and this replace is a no-op on an unfocused screen.)
+        if (result.type !== 'success') return;
+      }
+      router.replace('/kyc/pending');
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'KYC_NOT_CONFIGURED') {
+        setError('La vérification arrive très bientôt. Réessaie dans quelques jours.');
+      } else if (e instanceof ApiError && e.code === 'KYC_PROVIDER_ERROR') {
+        setError(e.message_fr); // « service indisponible » — pas la faute de sa connexion
+      } else {
+        setError('Impossible de démarrer la vérification. Vérifie ta connexion et réessaie.');
+      }
+    }
+  };
+
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ flex: 1, paddingHorizontal: 24 }}>
@@ -136,7 +182,19 @@ export default function KycIntroRoute() {
         </View>
 
         <View style={{ gap: 4, paddingBottom: 4 }}>
-          <Button variant="dark" size="lg" block label="Commencer" onPress={() => router.push('/kyc/choose-doc')} />
+          {error && (
+            <Text center style={{ fontSize: 12.5, color: colors.danger, marginBottom: 8, letterSpacing: 0 }}>
+              {error}
+            </Text>
+          )}
+          <Button
+            variant="dark"
+            size="lg"
+            block
+            label={startKyc.isPending ? 'Ouverture…' : 'Commencer'}
+            loading={startKyc.isPending}
+            onPress={onStart}
+          />
           <Button
             variant="ghost"
             size="sm"

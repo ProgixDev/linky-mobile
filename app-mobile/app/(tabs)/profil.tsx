@@ -32,6 +32,7 @@ import { haptic } from '../../src/lib/haptics';
 import { unregisterPushToken } from '../../src/lib/push';
 import { useAuth } from '../../src/stores/auth';
 import { usePrefs } from '../../src/stores/prefs';
+import { useKycStatus } from '../../src/data/queries';
 
 interface QuickAction {
   Icon: LucideIcon;
@@ -53,6 +54,10 @@ export default function ProfilRoute() {
   const user = useAuth((s) => s.user);
   const signOut = useAuth((s) => s.signOut);
   const { dataSaver, setDataSaver, notifications, setNotifications } = usePrefs();
+  // Live status beats the MMKV-cached user snapshot (which only refreshes at
+  // sign-in) — a KYC approval should light the chip on the next profile visit.
+  const { data: kyc } = useKycStatus();
+  const kycApproved = (kyc?.kycStatus ?? user?.kyc_status) === 'approved';
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -100,7 +105,7 @@ export default function ProfilRoute() {
                 }}
                 contentFit="cover"
               />
-              {false && (
+              {kycApproved && (
                 <View
                   style={{
                     position: 'absolute',
@@ -273,7 +278,7 @@ export default function ProfilRoute() {
               label="Vérification d'identité"
               onPress={() => router.push('/kyc/intro')}
               right={
-                user?.kyc_status === 'verified' ? (
+                kycApproved ? (
                   <View
                     style={{
                       paddingHorizontal: 10,

@@ -56,5 +56,7 @@ Deno.serve(makePost<Body>('/v1/auth/email/signup', valid, async ({ sb, body, req
   }).select('id').single();
   if (eSess || !sess) throwApi('INTERNAL_ERROR', 500, 'Erreur création session');
 
-  return { body: { access_token, refresh_token: `${sess.id}.${refreshSecret}`, user } };
+  // kyc_status aligned with otp-verify / email-signin payloads ; a fresh
+  // account is always 'none' (the RPC doesn't return the column).
+  return { body: { access_token, refresh_token: `${sess.id}.${refreshSecret}`, user: { ...user, kyc_status: 'none' } } };
 }, stripTokens));

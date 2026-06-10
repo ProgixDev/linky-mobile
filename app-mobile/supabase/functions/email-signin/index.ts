@@ -81,7 +81,7 @@ Deno.serve(makePost<Body>('/v1/auth/email/signin', valid, async ({ sb, body, req
   const lookupAddress = normalizedEmail ?? '\x00invalid\x00';
   const { data: row } = await sb
     .from('emails')
-    .select('user_id, users:users(id, display_name, avatar_url, locale, password_hash, status, is_admin)')
+    .select('user_id, users:users(id, display_name, avatar_url, locale, kyc_status, password_hash, status, is_admin)')
     .eq('address', lookupAddress)
     .maybeSingle();
 
@@ -95,6 +95,7 @@ Deno.serve(makePost<Body>('/v1/auth/email/signin', valid, async ({ sb, body, req
     display_name: string | null;
     avatar_url: string | null;
     locale: string;
+    kyc_status: string;
     password_hash: string | null;
     status: string;
     is_admin: boolean;

@@ -7,3 +7,4 @@ export * from './orders';
 export * from './payments';
 export * from './wallet';
 export * from './messages';
+export * from './kyc';

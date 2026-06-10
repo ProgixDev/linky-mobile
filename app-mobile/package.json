@@ -43,6 +43,7 @@
     "expo-system-ui": "~55.0.18",
     "expo-updates": "~55.0.24",
     "expo-video": "~55.0.17",
+    "expo-web-browser": "~55.0.16",
     "i18next": "^26.2.0",
     "lucide-react-native": "^1.16.0",
     "moti": "^0.30.0",

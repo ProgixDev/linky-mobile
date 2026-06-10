@@ -97,7 +97,7 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
 
   const { data: user } = await sb
     .from('users')
-    .select('id, display_name, avatar_url, locale')
+    .select('id, display_name, avatar_url, locale, kyc_status')
     .eq('id', userId)
     .single();
 

@@ -95,9 +95,8 @@ export default function RootLayout() {
                       <Stack.Screen name="messages/[id]" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="kyc/intro" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="kyc/choose-doc" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="kyc/capture" options={{ animation: 'fade' }} />
                       <Stack.Screen name="kyc/pending" options={{ animation: 'fade' }} />
+                      <Stack.Screen name="kyc/return" options={{ animation: 'fade' }} />
                       <Stack.Screen name="dispute/[orderId]" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="settings/index" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="settings/phones" options={{ animation: 'slide_from_right' }} />
