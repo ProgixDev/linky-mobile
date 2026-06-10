@@ -574,6 +574,9 @@ verify_jwt = false
 [functions.shop-upsert]
 verify_jwt = false
 
+[functions.stripe-webhook]
+verify_jwt = false
+
 [functions.topup-confirm]
 verify_jwt = false
 

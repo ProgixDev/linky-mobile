@@ -157,11 +157,17 @@ export default function CheckoutConfirmRoute() {
   // Past this point: stateClass is WAIT | FAIL | EXPIRED | USER_CANCEL.
   // (INVALID-expired routed away via the effect above.)
 
+  // Phase Q — card orders confirm via the Stripe webhook (1-3s typical), not
+  // a buyer action on their phone : different WAIT copy, no phone row, no
+  // 15-min countdown (stripe intents are excluded from the TTL sweep).
+  const isCard = order.paymentMethod === 'card';
+
   // Countdown for WAIT state.
   const elapsedMs = now - new Date(intent.createdAt).getTime();
   const remainingMs = Math.max(0, TTL_MS - elapsedMs);
   const mm = String(Math.floor(remainingMs / 60_000)).padStart(2, '0');
   const ss = String(Math.floor((remainingMs % 60_000) / 1000)).padStart(2, '0');
+  const cardSlow = isCard && elapsedMs > 30_000;
 
   async function handleCancel() {
     try {
@@ -209,7 +215,8 @@ export default function CheckoutConfirmRoute() {
         <TopBar title="Suivi du paiement" back subtitle={`#${order.reference}`} />
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
           <Card padding={16} style={{ marginTop: 12 }}>
-            <Row label="Méthode" value={order.paymentMethod === 'orange-money' ? 'Orange Money' : 'MTN Mobile Money'} />
+            <Row label="Méthode" value={isCard ? 'Carte bancaire' : order.paymentMethod === 'orange-money' ? 'Orange Money' : 'MTN Mobile Money'} />
+            {!isCard && (
             <Row
               label="Numéro"
               value={editingPhone ? '' : (intent.payerPhone ? maskPhone(intent.payerPhone) : '—')}
@@ -221,7 +228,8 @@ export default function CheckoutConfirmRoute() {
                 ) : undefined
               }
             />
-            {editingPhone && (
+            )}
+            {!isCard && editingPhone && (
               <View style={{ marginTop: 8, padding: 12, borderRadius: 12, backgroundColor: colors.bgSunken }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>+224</Text>
@@ -265,6 +273,23 @@ export default function CheckoutConfirmRoute() {
             <Row label="Montant" value={formatGNF(order.totalGnf)} />
           </Card>
 
+          {isCard ? (
+            <Card padding={16} style={{ marginTop: 16, alignItems: 'center' }}>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
+                ⏳  Confirmation en cours…
+              </Text>
+              <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
+                Ta banque confirme le paiement de{' '}
+                <Text style={{ color: colors.text, fontWeight: '700' }}>{formatGNF(order.totalGnf)}</Text>
+                {' '}— ça prend quelques secondes.
+              </Text>
+              {cardSlow && (
+                <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 12, lineHeight: 19 }}>
+                  C'est plus long que prévu. Pas d'inquiétude : la commande se mettra à jour automatiquement dès que la confirmation arrive.
+                </Text>
+              )}
+            </Card>
+          ) : (
           <Card padding={16} style={{ marginTop: 16, alignItems: 'center' }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
               ⏳  Vérifie ton téléphone
@@ -278,6 +303,7 @@ export default function CheckoutConfirmRoute() {
               ⏱  Temps restant : <Text style={{ color: colors.text, fontWeight: '700' }}>{mm}:{ss}</Text>
             </Text>
           </Card>
+          )}
 
           <Button
             variant="ghost"

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useStripe } from '@stripe/stripe-react-native';
 import { useQueries } from '@tanstack/react-query';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
@@ -39,6 +40,57 @@ export default function CheckoutRoute() {
   const placeOrder = usePlaceOrder();
   const { show } = useToast();
   const { data: wallet } = useWallet();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  // Keeps the Payer button busy across the whole sheet flow (place-order →
+  // init → present), not just the mutation.
+  const [cardFlowBusy, setCardFlowBusy] = useState(false);
+
+  // Phase Q — card checkout via the Stripe payment sheet. Whatever happens
+  // after place-order succeeds (sheet success, sheet cancel, init failure),
+  // the confirmation screen is the destination : it polls get-order and shows
+  // the same pending / paid / cancelled states as the Lengopay rail.
+  async function handleCardOrder() {
+    const first = lines[0];
+    if (!first) return;
+    setCardFlowBusy(true);
+    try {
+      const { order, payment } = await placeOrder.mutateAsync({
+        productId: first.productId,
+        quantity: first.quantity,
+        paymentMethod: 'card',
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
+      const confirmRoute = `/checkout/confirm/${order.id}` as any;
+      if (!payment) {
+        router.replace(confirmRoute);
+        return;
+      }
+      const { error: initErr } = await initPaymentSheet({
+        merchantDisplayName: 'Linky',
+        paymentIntentClientSecret: payment.client_secret,
+        googlePay: { merchantCountryCode: 'US', testEnv: true },
+        returnURL: 'linky://stripe-redirect',
+      });
+      if (initErr) {
+        show('Impossible de préparer le paiement', 'danger');
+        router.replace(confirmRoute);
+        return;
+      }
+      const { error: payErr } = await presentPaymentSheet();
+      if (payErr && payErr.code !== 'Canceled') {
+        show(payErr.message || 'Paiement échoué', 'danger');
+      }
+      // Success : webhook flips the order to paid in ~1-3s, the confirmation
+      // screen polls until then. Cancel : order stays placed + intent pending,
+      // same screen offers « Annuler le paiement ».
+      router.replace(confirmRoute);
+    } catch (err: unknown) {
+      const msg = (err as { message?: string })?.message ?? 'Erreur paiement';
+      show(msg, 'danger');
+    } finally {
+      setCardFlowBusy(false);
+    }
+  }
 
   // Real backend prices, same queryKey as useProduct → shared cache with the
   // detail page and cart screen. Subtotal stays at 0 until products land,
@@ -159,14 +211,56 @@ export default function CheckoutRoute() {
               {selected === 'wallet' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
             </View>
           </Pressable>
+          <Pressable
+            onPress={() => setSelected('card')}
+            style={{ padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: '#635BFF',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <I.card size={18} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600' }}>Carte bancaire</Text>
+              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', fontVariant: ['tabular-nums'] }}>
+                Visa, Mastercard, Google Pay
+              </Text>
+            </View>
+            <View
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 999,
+                backgroundColor: selected === 'card' ? colors.primary : 'transparent',
+                borderWidth: selected === 'card' ? 0 : 1.5,
+                borderColor: colors.borderStrong,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {selected === 'card' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
+            </View>
+          </Pressable>
         </Card>
 
         <Card padding={12}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
             <I.info size={16} color={colors.primary} />
             <Text variant="micro" tone="muted" style={{ flex: 1, lineHeight: 16, letterSpacing: 0, textTransform: 'none' }}>
-              Tu recevras un{' '}
-              <Text style={{ color: colors.text, fontWeight: '700' }}>code SMS</Text> sur ton numéro {selected === 'mtn-money' ? 'MTN' : 'Orange Money'} pour confirmer le paiement.
+              {selected === 'card' ? (
+                <>Tu confirmes le paiement dans une{' '}
+                <Text style={{ color: colors.text, fontWeight: '700' }}>fenêtre sécurisée</Text> — carte ou Google Pay.</>
+              ) : (
+                <>Tu recevras un{' '}
+                <Text style={{ color: colors.text, fontWeight: '700' }}>code SMS</Text> sur ton numéro {selected === 'mtn-money' ? 'MTN' : 'Orange Money'} pour confirmer le paiement.</>
+              )}
             </Text>
           </View>
         </Card>
@@ -176,12 +270,16 @@ export default function CheckoutRoute() {
         <Button
           size="lg"
           block
-          loading={placeOrder.isPending}
-          disabled={placeOrder.isPending || !allLoaded || lines.length === 0}
-          label={placeOrder.isPending ? 'Paiement en cours…' : `Payer ${formatGNF(total)}`}
+          loading={placeOrder.isPending || cardFlowBusy}
+          disabled={placeOrder.isPending || cardFlowBusy || !allLoaded || lines.length === 0}
+          label={placeOrder.isPending || cardFlowBusy ? 'Paiement en cours…' : `Payer ${formatGNF(total)}`}
           onPress={() => {
             const first = lines[0];
             if (!first) return;
+            if (selected === 'card') {
+              void handleCardOrder();
+              return;
+            }
             placeOrder.mutate(
               { productId: first.productId, quantity: first.quantity, paymentMethod: selected },
               {

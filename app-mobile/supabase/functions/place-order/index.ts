@@ -1,8 +1,9 @@
 // Place an order. Authed (requireUser → buyer_id). Calls place_order RPC.
 // Wallet branch: order lands at status='paid' with atomic buyer→escrow_gnf
-// post_transfer in the RPC. Rail branch (orange-money / mtn-money): order at
-// 'placed', then payment_intent inserted + Lengopay v2 init called from this
-// edge function. Card method rejected (Phase I' Stripe takes cards).
+// post_transfer in the RPC. Rail branches: order at 'placed', then
+// payment_intent inserted + rail init called from this edge function —
+// orange-money / mtn-money via Lengopay v2 (cron-polled), card via Stripe
+// PaymentIntent (webhook-driven, Phase Q).
 //
 // Rail flow ordering (S2 orphan-safe per Phase I.3 review):
 //   1. RPC inserts order at 'placed' (atomic)
@@ -20,6 +21,7 @@ import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from
 import { initPayment } from '@shared/lengopay.ts';
 import { methodToAccountType } from '@shared/lengopay-types.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
+import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 
 interface Body {
   product_id: string;
@@ -46,6 +48,13 @@ function valid(b: unknown): b is Body {
 
 Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
+
+  // Card needs Stripe configured — check BEFORE the RPC so a missing secret
+  // doesn't create an order we'd immediately have to cancel. Same graceful
+  // degradation as KYC_NOT_CONFIGURED.
+  if (body.payment_method === 'card' && !stripeConfigured()) {
+    throwApi('STRIPE_NOT_CONFIGURED', 503, 'Le paiement par carte arrive bientôt.');
+  }
 
   const { data: newId, error: rpcErr } = await sb.rpc('place_order', {
     p_buyer_id: userId,
@@ -96,9 +105,119 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     return { body: { order: mapOrder(paidRow) } };
   }
 
+  if (body.payment_method === 'card') {
+    // ───────────────────────────────────────────────────────────────────────
+    // STRIPE RAIL PATH (Phase Q) — same S2 orphan-safe ordering as Lengopay.
+    // GNF is zero-decimal on Stripe : amount = total_minor (whole francs).
+    // stripe-webhook drives the outcome — this intent is excluded from the
+    // Lengopay cron (pick/expire filter rail='lengopay' since 20260610_03).
+    // ───────────────────────────────────────────────────────────────────────
+    const orderRow = row as OrderRow;
+
+    // S2 Step 1: intent row FIRST with a placeholder rail_intent_id (unique
+    // per attempt via embedded uuid). payer_phone stays NULL for cards.
+    const placeholderId = `pending-init-${crypto.randomUUID()}`;
+    const { data: intentRow, error: intentErr } = await sb
+      .from('payment_intents')
+      .insert({
+        order_id:       orderRow.id,
+        rail:           'stripe',
+        rail_intent_id: placeholderId,
+        method:         'card',
+        currency:       orderRow.currency,
+        amount_minor:   orderRow.total_minor,
+        payer_phone:    null,
+      })
+      .select('*')
+      .single();
+    if (intentErr || !intentRow) {
+      // Pre-rail-call failure: cancel order directly (no intent to transition).
+      await sb.from('orders').update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString(),
+      }).eq('id', orderRow.id);
+      console.error('[place-order] stripe payment_intent insert error:', intentErr);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur intent de paiement');
+    }
+
+    // S2 Step 2: create the Stripe PaymentIntent. On failure, transition
+    // intent → failed, which cancels the order atomically.
+    let stripeIntent;
+    try {
+      stripeIntent = await stripeClient().paymentIntents.create({
+        amount: Number(orderRow.total_minor),
+        currency: 'gnf',
+        automatic_payment_methods: { enabled: true },
+        metadata: { order_id: orderRow.id, intent_id: intentRow.id, user_id: userId },
+      });
+      if (!stripeIntent.client_secret) throw new Error('missing client_secret');
+    } catch (e) {
+      console.error('[place-order] stripe init error:', e);
+      await sb.rpc('process_intent_outcome', {
+        p_intent_id:       intentRow.id,
+        p_terminal_status: 'failed',
+        p_rail_status:     'init_failed',
+        p_error_code:      'RAIL_INIT_FAILED',
+        p_error_message:   (e instanceof Error ? e.message : String(e)).slice(0, 500),
+      });
+      throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
+    }
+
+    // S2 Step 3: UPDATE intent with the real Stripe PaymentIntent id.
+    const { error: updateErr } = await sb
+      .from('payment_intents')
+      .update({
+        rail_intent_id: stripeIntent.id,
+        rail_status:    stripeIntent.status,
+        updated_at:     new Date().toISOString(),
+      })
+      .eq('id', intentRow.id);
+    if (updateErr) {
+      // Stripe has the PI, our row has the placeholder — the webhook can't
+      // match it. Mark failed + cancel order, and best-effort cancel the
+      // Stripe PI so a stale sheet can't charge a cancelled order.
+      console.error('[place-order] CRITICAL stripe intent UPDATE failed post-init', {
+        intent_id: intentRow.id, stripe_pi: stripeIntent.id, error: updateErr,
+      });
+      try {
+        await stripeClient().paymentIntents.cancel(stripeIntent.id);
+      } catch (cancelErr) {
+        console.error('[place-order] CRITICAL stripe PI cancel also failed — manual reconcile needed', {
+          stripe_pi: stripeIntent.id, error: cancelErr,
+        });
+      }
+      await sb.rpc('process_intent_outcome', {
+        p_intent_id:       intentRow.id,
+        p_terminal_status: 'failed',
+        p_rail_status:     stripeIntent.status,
+        p_error_code:      'INTENT_UPDATE_FAILED',
+        p_error_message:   `stripe_pi=${stripeIntent.id} update_err=${updateErr.message}`.slice(0, 500),
+      });
+      throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
+    }
+
+    const finalIntent: PaymentIntentRow = {
+      ...(intentRow as PaymentIntentRow),
+      rail_intent_id: stripeIntent.id,
+      rail_status: stripeIntent.status,
+    };
+    // Buyer-only response path; scan_token excluded from the SELECT (see
+    // wallet-branch note). payment carries what the payment sheet needs.
+    return {
+      body: {
+        order: mapOrder(orderRow),
+        intent: mapPaymentIntent(finalIntent),
+        payment: {
+          client_secret: stripeIntent.client_secret,
+          publishable_key: stripePublishableKey(),
+        },
+      },
+    };
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
-  // RAIL PATH — S2 orphan-safe ordering.
-  // Card is already rejected at the RPC. Only orange-money / mtn-money reach here.
+  // LENGOPAY RAIL PATH — S2 orphan-safe ordering.
+  // Only orange-money / mtn-money reach here (wallet + card returned above).
   // ─────────────────────────────────────────────────────────────────────────
 
   // Q6 phone capture: pre-fill from primary phone, allow body override.

@@ -106,6 +106,8 @@ export interface PlaceOrderInput {
 export interface PlaceOrderResult {
   order: Order;
   intent?: PaymentIntent;  // present for rail methods, absent for wallet
+  /** Stripe payment-sheet bundle — present only for paymentMethod 'card'. */
+  payment?: { client_secret: string; publishable_key: string };
 }
 
 export function usePlaceOrder() {

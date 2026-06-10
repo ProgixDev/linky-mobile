@@ -8,6 +8,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { stripeClient } from '@shared/stripe.ts';
 
 interface Body { order_id: string }
 
@@ -28,7 +29,7 @@ Deno.serve(makePost<Body>('/v1/payments/cancel-pending', valid, async ({ sb, bod
 
   const { data: intent } = await sb
     .from('payment_intents')
-    .select('id')
+    .select('id, rail, rail_intent_id')
     .eq('order_id', body.order_id)
     .eq('status', 'pending')
     .order('attempt_index', { ascending: false })
@@ -36,6 +37,31 @@ Deno.serve(makePost<Body>('/v1/payments/cancel-pending', valid, async ({ sb, bod
     .limit(1)
     .maybeSingle();
   if (!intent) throwApi('NO_PENDING_INTENT', 400, 'Aucun paiement en attente.');
+
+  // Phase Q : stripe intents must ALSO be cancelled on Stripe's side BEFORE
+  // the local cancel — otherwise a stale payment sheet could still charge the
+  // card for an order we just cancelled. Lengopay has no cancel API ; its
+  // intents expire via the cron TTL instead.
+  if (intent.rail === 'stripe' && !intent.rail_intent_id.startsWith('pending-init-')) {
+    try {
+      await stripeClient().paymentIntents.cancel(intent.rail_intent_id);
+    } catch (e) {
+      // Cancel can race the payment. Re-read the PI : succeeded → the webhook
+      // is about to flip the order to paid, so refuse the local cancel ;
+      // already canceled → fine, proceed ; anything else → surface the error.
+      let piStatus: string | undefined;
+      try {
+        piStatus = (await stripeClient().paymentIntents.retrieve(intent.rail_intent_id)).status;
+      } catch { /* keep undefined — handled below */ }
+      if (piStatus === 'succeeded') {
+        throwApi('PAYMENT_ALREADY_COMPLETED', 409, "Le paiement vient d'aboutir — ta commande est confirmée.");
+      }
+      if (piStatus !== 'canceled') {
+        console.error('[cancel-pending-payment] stripe PI cancel failed:', e);
+        throwApi('RAIL_CANCEL_FAILED', 502, "Échec de l'annulation du paiement — réessaie.");
+      }
+    }
+  }
 
   const { error: rpcErr } = await sb.rpc('process_intent_outcome', {
     p_intent_id:       intent.id,

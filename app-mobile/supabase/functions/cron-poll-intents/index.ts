@@ -15,9 +15,9 @@
 //      last_error_code='RAIL_TRANSIENT' so expire_stale_intents (S5) defers.
 //   4. expire_stale_intents() — sweep > 15 min old (only if last poll was clean).
 
-import { serviceClient, type SupabaseClient } from '@shared/db.ts';
+import { serviceClient } from '@shared/db.ts';
 import { getPaymentStatus } from '@shared/lengopay.ts';
-import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
+import { notifyOrderPaid } from '@shared/order-paid-push.ts';
 
 interface PendingIntent {
   id: string;
@@ -26,41 +26,6 @@ interface PendingIntent {
   attempts_count: number;
   status: string;
   rail_status: string | null;
-}
-
-// O.3 hook #2 — rail twin of the place-order wallet-branch push. Fully
-// self-contained try/catch : a failure here must NOT fall into the loop's
-// transient handler (the intent is already terminal — bumping it would be wrong).
-async function notifyOrderPaid(sb: SupabaseClient, intentId: string): Promise<void> {
-  try {
-    const { data, error } = await sb
-      .from('payment_intents')
-      .select('order_id, orders!inner ( id, buyer_id, seller_id, total_minor, status )')
-      .eq('id', intentId)
-      .maybeSingle();
-    if (error || !data) {
-      if (error) console.error('[cron-poll-intents] notify fetch failed:', error);
-      return;
-    }
-    const order = (data as unknown as {
-      orders: { id: string; buyer_id: string; seller_id: string; total_minor: number | string; status: string } | null;
-    }).orders;
-    if (!order || order.status !== 'paid') return;
-
-    const buyerName = await displayNameOf(sb, order.buyer_id);
-    notifyDetached(sb, {
-      userIds: [order.seller_id],
-      category: 'order',
-      title: 'Nouvelle commande payée',
-      body: `${buyerName} a payé ${formatGNF(Number(order.total_minor))} — prépare la commande.`,
-      iconHint: 'check',
-      deeplink: `/seller/orders/${order.id}`,
-      refType: 'order',
-      refId: order.id,
-    });
-  } catch (e) {
-    console.error('[cron-poll-intents] notifyOrderPaid failed:', e);
-  }
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {

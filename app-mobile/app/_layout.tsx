@@ -7,6 +7,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { I18nextProvider } from 'react-i18next';
 import { useFonts } from 'expo-font';
@@ -29,6 +30,11 @@ const queryClient = new QueryClient({
 });
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Phase Q — Stripe payment sheet (card + Google Pay). TEST publishable key;
+// LIVE swap is an env change. merchantIdentifier (Apple Pay) is V1.1 — needs
+// the Apple Developer account.
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
 
 // Renders nothing — hosts the push side effects (token registration while
 // authed, notification tap → deeplink routing).
@@ -56,6 +62,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY} urlScheme="linky">
       <SafeAreaProvider>
         <KeyboardProvider>
           <QueryClientProvider client={queryClient}>
@@ -110,6 +117,7 @@ export default function RootLayout() {
           </QueryClientProvider>
         </KeyboardProvider>
       </SafeAreaProvider>
+      </StripeProvider>
     </GestureHandlerRootView>
   );
 }
