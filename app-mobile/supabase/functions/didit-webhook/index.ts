@@ -20,6 +20,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
     });
   }
 
+  // Ack-only mode while LINKY_DIDIT_WEBHOOK_SECRET is unset : Didit's
+  // destination-creation validation ping must get a 200 or the webhook can't
+  // be registered at all. We can't verify signatures without the secret, so
+  // we acknowledge WITHOUT applying anything. The moment the secret is set,
+  // strict verification below turns on automatically.
+  if (!Deno.env.get('LINKY_DIDIT_WEBHOOK_SECRET')) {
+    console.warn('[didit-webhook] LINKY_DIDIT_WEBHOOK_SECRET unset — ack-only, payload ignored');
+    return new Response(JSON.stringify({ received: true, ignored: true }), {
+      status: 200, headers: { 'content-type': 'application/json' },
+    });
+  }
+
   const rawBody = await req.text();
   const signature = req.headers.get('x-signature') ?? req.headers.get('x-didit-signature');
   if (!(await verifyDiditSignature(rawBody, signature))) {
