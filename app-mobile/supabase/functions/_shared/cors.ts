@@ -3,6 +3,7 @@ const DEFAULT_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:19006',
   'https://linky.app',
+  'https://linky-admin.vercel.app',
 ];
 
 const ALLOWED_ORIGINS = (Deno.env.get('LINKY_ALLOWED_ORIGINS') ?? DEFAULT_ORIGINS.join(','))
