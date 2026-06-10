@@ -411,3 +411,189 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# ============================================================================
+# verify_jwt pinned OFF for every function (2026-06-10, post-incident).
+# Linky auth is SELF-ROLLED (requireUser + LINKY_JWT_SECRET) - the gateway
+# JWT check rejects our bearers. On 2026-06-09 a deploy without
+# --no-verify-jwt broke 12 production functions for signed-in users.
+# Keep --import-map supabase/functions/deno.json --no-verify-jwt on every
+# manual deploy anyway; these sections make the default safe.
+# ============================================================================
+
+[functions.cancel-pending-payment]
+verify_jwt = false
+
+[functions.confirm-receipt]
+verify_jwt = false
+
+[functions.cron-poll-intents]
+verify_jwt = false
+
+[functions.didit-webhook]
+verify_jwt = false
+
+[functions.discover-feed]
+verify_jwt = false
+
+[functions.dispute-order]
+verify_jwt = false
+
+[functions.email-signin]
+verify_jwt = false
+
+[functions.email-signup]
+verify_jwt = false
+
+[functions.find-or-create-conversation]
+verify_jwt = false
+
+[functions.get-conversation]
+verify_jwt = false
+
+[functions.get-dispute]
+verify_jwt = false
+
+[functions.get-order]
+verify_jwt = false
+
+[functions.get-product]
+verify_jwt = false
+
+[functions.get-property]
+verify_jwt = false
+
+[functions.get-shop]
+verify_jwt = false
+
+[functions.kyc-callback]
+verify_jwt = false
+
+[functions.kyc-decide]
+verify_jwt = false
+
+[functions.kyc-start]
+verify_jwt = false
+
+[functions.kyc-status]
+verify_jwt = false
+
+[functions.list-agent-visits]
+verify_jwt = false
+
+[functions.list-conversations]
+verify_jwt = false
+
+[functions.list-disputes]
+verify_jwt = false
+
+[functions.list-kyc-sessions]
+verify_jwt = false
+
+[functions.list-my-orders]
+verify_jwt = false
+
+[functions.list-notifications]
+verify_jwt = false
+
+[functions.list-products]
+verify_jwt = false
+
+[functions.list-properties]
+verify_jwt = false
+
+[functions.list-seller-orders]
+verify_jwt = false
+
+[functions.list-shops]
+verify_jwt = false
+
+[functions.mark-notifications-read]
+verify_jwt = false
+
+[functions.mark-read]
+verify_jwt = false
+
+[functions.mint-realtime-jwt]
+verify_jwt = false
+
+[functions.mock-lengopay]
+verify_jwt = false
+
+[functions.otp-request]
+verify_jwt = false
+
+[functions.otp-verify]
+verify_jwt = false
+
+[functions.photo-upload-url]
+verify_jwt = false
+
+[functions.place-order]
+verify_jwt = false
+
+[functions.product-create]
+verify_jwt = false
+
+[functions.product-delete]
+verify_jwt = false
+
+[functions.product-favorite-toggle]
+verify_jwt = false
+
+[functions.product-update]
+verify_jwt = false
+
+[functions.property-create]
+verify_jwt = false
+
+[functions.property-delete]
+verify_jwt = false
+
+[functions.property-update]
+verify_jwt = false
+
+[functions.register-push-token]
+verify_jwt = false
+
+[functions.request-visit]
+verify_jwt = false
+
+[functions.resolve-dispute]
+verify_jwt = false
+
+[functions.send-message]
+verify_jwt = false
+
+[functions.session-refresh]
+verify_jwt = false
+
+[functions.shop-get-mine]
+verify_jwt = false
+
+[functions.shop-upsert]
+verify_jwt = false
+
+[functions.topup-confirm]
+verify_jwt = false
+
+[functions.unregister-push-token]
+verify_jwt = false
+
+[functions.view-track]
+verify_jwt = false
+
+[functions.visit-respond]
+verify_jwt = false
+
+[functions.wallet-balance]
+verify_jwt = false
+
+[functions.wallet-history]
+verify_jwt = false
+
+[functions.wallet-topup-intent]
+verify_jwt = false
+
+[functions.wallet-withdraw-request]
+verify_jwt = false
