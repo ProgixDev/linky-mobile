@@ -19,6 +19,7 @@ import { requireUser } from '@shared/auth.ts';
 import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from '@shared/catalog.ts';
 import { initPayment } from '@shared/lengopay.ts';
 import { methodToAccountType } from '@shared/lengopay-types.ts';
+import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 
 interface Body {
   product_id: string;
@@ -75,10 +76,24 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   }
 
   if (body.payment_method === 'wallet') {
+    // Wallet branch lands the order at 'paid' — tell the seller now.
+    // Rail branch only notifies once the intent completes (cron-poll-intents).
+    const paidRow = row as OrderRow;
+    const buyerName = await displayNameOf(sb, userId);
+    notifyDetached(sb, {
+      userIds: [paidRow.seller_id],
+      category: 'order',
+      title: 'Nouvelle commande payée',
+      body: `${buyerName} a payé ${formatGNF(Number(paidRow.total_minor))} — prépare la commande.`,
+      iconHint: 'check',
+      deeplink: `/seller/orders/${paidRow.id}`,
+      refType: 'order',
+      refId: paidRow.id,
+    });
     // Buyer-only response path; never add scan_token to the SELECT or pass
     // opts to mapOrder — scanToken stays undefined so it can't be read back
     // by the buyer who just placed the order.
-    return { body: { order: mapOrder(row as OrderRow) } };
+    return { body: { order: mapOrder(paidRow) } };
   }
 
   // ─────────────────────────────────────────────────────────────────────────

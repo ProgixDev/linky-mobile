@@ -11,7 +11,7 @@ import { useNotifications, useMarkNotificationsRead } from '../src/data/queries'
 import { formatRelativeFR } from '../src/lib/format';
 import type { AppNotification } from '../src/data/types';
 
-type Tab = 'all' | 'order' | 'message' | 'promo';
+type Tab = 'all' | 'order' | 'message' | 'visit' | 'promo';
 
 const ICON_FOR: Record<string, IconKey> = {
   check: 'check',
@@ -62,6 +62,7 @@ export default function NotificationsRoute() {
           <Chip label="Toutes" active={tab === 'all'} onPress={() => setTab('all')} />
           <Chip label="Commandes" active={tab === 'order'} onPress={() => setTab('order')} />
           <Chip label="Messages" active={tab === 'message'} onPress={() => setTab('message')} />
+          <Chip label="Visites" active={tab === 'visit'} onPress={() => setTab('visit')} />
           <Chip label="Promos" active={tab === 'promo'} onPress={() => setTab('promo')} />
         </ScrollView>
       </View>
@@ -100,9 +101,11 @@ function NotificationRow({ item }: { item: AppNotification }) {
       ? { bg: colors.primarySoft, fg: colors.primary }
       : item.category === 'message'
         ? { bg: 'rgba(58,124,168,0.1)', fg: colors.info }
-        : item.category === 'promo'
-          ? { bg: colors.accentSoft, fg: colors.accentText }
-          : { bg: colors.bgSunken, fg: colors.text };
+        : item.category === 'visit'
+          ? { bg: 'rgba(31,169,113,0.12)', fg: colors.success }
+          : item.category === 'promo'
+            ? { bg: colors.accentSoft, fg: colors.accentText }
+            : { bg: colors.bgSunken, fg: colors.text };
   return (
     <View
       style={{

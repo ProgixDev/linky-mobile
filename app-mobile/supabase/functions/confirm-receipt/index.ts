@@ -13,6 +13,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapOrder, type OrderRow } from '@shared/catalog.ts';
+import { notifyDetached, formatGNF } from '@shared/push.ts';
 
 interface Body {
   order_id: string;
@@ -54,5 +55,21 @@ Deno.serve(makePost<Body>('/v1/orders/confirm-receipt', valid, async ({ sb, body
     console.error('[confirm-receipt] readback error:', readErr);
     throwApi('INTERNAL_ERROR', 500, 'Erreur lecture commande');
   }
-  return { body: { order: mapOrder(row as OrderRow) } };
+
+  // Ledger truth (20260601_03 L109-116) : escrow held total (= amount + fees,
+  // buyer paid the fee on top) ; release credits the seller the FULL
+  // amount_minor and the platform takes fees_minor. Nothing off the seller.
+  const orderRow = row as OrderRow;
+  notifyDetached(sb, {
+    userIds: [orderRow.seller_id],
+    category: 'order',
+    title: 'Fonds libérés',
+    body: `${formatGNF(Number(orderRow.amount_minor))} ajoutés à ton portefeuille.`,
+    iconHint: 'star',
+    deeplink: `/seller/orders/${orderRow.id}`,
+    refType: 'order',
+    refId: orderRow.id,
+  });
+
+  return { body: { order: mapOrder(orderRow) } };
 }));

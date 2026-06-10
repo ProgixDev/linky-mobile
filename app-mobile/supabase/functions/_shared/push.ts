@@ -126,3 +126,10 @@ export async function displayNameOf(sb: SupabaseClient, userId: string): Promise
   const { data } = await sb.from('users').select('display_name').eq('id', userId).maybeSingle();
   return (data?.display_name as string | null) ?? 'Un utilisateur Linky';
 }
+
+// Mirrors src/lib/format.ts formatGNF on mobile. GNF has no decimals :
+// amount_minor === whole francs (see wallet.ts mapping amountGnf = amount_minor).
+const frNumber = new Intl.NumberFormat('fr-FR');
+export function formatGNF(amount: number): string {
+  return `${frNumber.format(Math.round(amount))} GNF`;
+}

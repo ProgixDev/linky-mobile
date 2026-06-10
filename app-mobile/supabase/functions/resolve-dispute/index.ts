@@ -32,6 +32,7 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { assertAdmin } from '@shared/admin.ts';
 import { mapOrder, type OrderRow } from '@shared/catalog.ts';
+import { notifyDetached, formatGNF } from '@shared/push.ts';
 
 interface Body {
   order_id: string;
@@ -84,10 +85,59 @@ Deno.serve(makePost<Body>('/v1/admin/disputes/resolve', valid, async ({ sb, body
     throwApi('INTERNAL_ERROR', 500, 'Erreur lecture commande');
   }
 
+  // Outcome-specific copy per role — mirrors the K.6 OrderResolutionBanner
+  // wording (adapted to "tu"). Amounts follow the LEDGER (20260602_03):
+  // refund returns total_minor to the buyer; release credits the seller the
+  // FULL amount_minor (buyer paid the fee on top — nothing off the seller).
+  const orderRow = row as OrderRow;
+  if (body.outcome === 'refund') {
+    notifyDetached(sb, {
+      userIds: [orderRow.buyer_id],
+      category: 'order',
+      title: 'Litige résolu',
+      body: `${formatGNF(Number(orderRow.total_minor))} remboursés sur ton wallet.`,
+      iconHint: 'shield',
+      deeplink: `/order/${orderRow.id}`,
+      refType: 'order',
+      refId: orderRow.id,
+    });
+    notifyDetached(sb, {
+      userIds: [orderRow.seller_id],
+      category: 'order',
+      title: "Litige tranché en faveur de l'acheteur",
+      body: 'Aucun versement pour cette commande.',
+      iconHint: 'shield',
+      deeplink: `/seller/orders/${orderRow.id}`,
+      refType: 'order',
+      refId: orderRow.id,
+    });
+  } else {
+    notifyDetached(sb, {
+      userIds: [orderRow.buyer_id],
+      category: 'order',
+      title: 'Litige clos',
+      body: 'Commande libérée au vendeur.',
+      iconHint: 'shield',
+      deeplink: `/order/${orderRow.id}`,
+      refType: 'order',
+      refId: orderRow.id,
+    });
+    notifyDetached(sb, {
+      userIds: [orderRow.seller_id],
+      category: 'order',
+      title: 'Litige résolu en ta faveur',
+      body: `${formatGNF(Number(orderRow.amount_minor))} libérés sur ton wallet.`,
+      iconHint: 'shield',
+      deeplink: `/seller/orders/${orderRow.id}`,
+      refType: 'order',
+      refId: orderRow.id,
+    });
+  }
+
   return {
     body: {
       ok: true,
-      order: mapOrder(row as OrderRow, { includeAdminMeta: true }),
+      order: mapOrder(orderRow, { includeAdminMeta: true }),
     },
   };
 }));

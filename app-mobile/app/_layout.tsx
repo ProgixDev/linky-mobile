@@ -13,6 +13,7 @@ import { useFonts } from 'expo-font';
 import i18n from '../src/i18n';
 import { ThemeProvider } from '../src/theme/ThemeProvider';
 import { ToastProvider } from '../src/components/feedback/Toast';
+import { usePushRegistration, useNotificationTapRouting } from '../src/lib/push';
 
 // Single QueryClient at module scope — do NOT instantiate inside the component.
 const queryClient = new QueryClient({
@@ -28,6 +29,14 @@ const queryClient = new QueryClient({
 });
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Renders nothing — hosts the push side effects (token registration while
+// authed, notification tap → deeplink routing).
+function PushBootstrap() {
+  usePushRegistration();
+  useNotificationTapRouting();
+  return null;
+}
 
 export default function RootLayout() {
   // For V1 we ship system fonts as fallback. Drop Cabinet Grotesk + Inter into assets/fonts to enable.
@@ -54,6 +63,7 @@ export default function RootLayout() {
               <ThemeProvider>
                 <BottomSheetModalProvider>
                   <ToastProvider>
+                    <PushBootstrap />
                     <StatusBar style="auto" />
                     <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
                       <Stack.Screen name="(onboarding)" />

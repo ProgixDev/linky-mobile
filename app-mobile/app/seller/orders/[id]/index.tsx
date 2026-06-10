@@ -42,7 +42,6 @@ export default function SellerOrderDetailRoute() {
   }
 
   const needsShip = order.status === 'paid' || order.status === 'placed';
-  const net = order.amountGnf - order.feesGnf;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -116,10 +115,13 @@ export default function SellerOrderDetailRoute() {
               gap: 10,
             }}
           >
+            {/* Ledger truth : the buyer pays the fee on top (total = amount +
+                fees) ; on release the seller wallet is credited the FULL
+                amount. The fee is never deducted from the seller. */}
             <BreakLine label="Montant article" value={formatGNF(order.amountGnf)} />
-            <BreakLine label="Frais Linky" value={`− ${formatGNF(order.feesGnf)}`} muted />
+            <BreakLine label="Frais Linky (payés par l'acheteur)" value={formatGNF(order.feesGnf)} muted />
             <View style={{ height: 1, backgroundColor: colors.border }} />
-            <BreakLine label="Tu recevras" value={formatGNF(net)} bold />
+            <BreakLine label="Tu recevras" value={formatGNF(order.amountGnf)} bold />
             <View
               style={{
                 marginTop: 4,

@@ -5,8 +5,10 @@
 // Amounts come from the order itself (no ledger fetch):
 //   - Buyer refunded  → totalGnf (the full amount the buyer paid; both ledger
 //                       transfers in resolve_dispute return amount+fees).
-//   - Seller released → amountGnf − feesGnf (matches the existing
-//                       "Tu recevras" line on the seller's order screen).
+//   - Seller released → amountGnf, in full. The buyer pays the fee on top
+//                       (total = amount + fees) and release credits the seller
+//                       the whole amount_minor — the fee is never deducted
+//                       from the seller (resolve_dispute release branch).
 //
 // Date: walk order.events for kind === 'dispute_resolved' and read `at`.
 // Falls back to the most recent event if no resolved entry exists (legacy
@@ -137,12 +139,11 @@ function buildContent({
 
   if (viewerRole === 'seller') {
     if (order.status === 'released') {
-      const net = order.amountGnf - order.feesGnf;
       return {
         variant: 'success',
         icon: ShieldCheck,
         title: 'Litige résolu en votre faveur',
-        body: `${formatGNF(net)} libérés sur votre wallet${dateSuffix}.`,
+        body: `${formatGNF(order.amountGnf)} libérés sur votre wallet${dateSuffix}.`,
       };
     }
     if (order.status === 'refunded') {

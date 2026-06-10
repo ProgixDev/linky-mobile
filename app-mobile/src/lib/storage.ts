@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   currentUserId: 'auth.currentUserId',
   authUserJson: 'auth.userJson',
   roles: 'auth.roles',
+  pushToken: 'push.expoToken',
 } as const;
 
 export const SECURE_KEYS = {

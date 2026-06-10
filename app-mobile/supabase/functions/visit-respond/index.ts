@@ -10,6 +10,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { notifyDetached } from '@shared/push.ts';
 
 interface Body {
   visit_request_id: string;
@@ -56,13 +57,22 @@ function mapVisit(r: VisitRow) {
   };
 }
 
+// Guinea is UTC+0, so server-side UTC formatting matches local wall time.
+function formatSlot(iso: string): string {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+  return `${date} à ${time}`;
+}
+
 Deno.serve(makePost<Body>('/v1/visits/respond', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
 
   // 1. Load the visit + owning property for authorization + status guard.
+  // title feeds the O.3 push to the buyer.
   const { data: visit, error: loadErr } = await sb
     .from('visit_requests')
-    .select('id, status, property_id, properties!inner ( owner_id )')
+    .select('id, status, property_id, properties!inner ( owner_id, title )')
     .eq('id', body.visit_request_id)
     .maybeSingle();
 
@@ -106,5 +116,25 @@ Deno.serve(makePost<Body>('/v1/visits/respond', valid, async ({ sb, body, req })
     throwApi('INVALID_STATUS', 409, "Cette demande vient d'être mise à jour.");
   }
 
-  return { body: { visit_request: mapVisit(updated as VisitRow) } };
+  const updatedRow = updated as VisitRow;
+  const propertyTitle =
+    (visit as { properties: { title: string | null } | null }).properties?.title ?? 'le bien';
+  const slot = formatSlot(updatedRow.requested_at);
+  notifyDetached(sb, {
+    userIds: [updatedRow.buyer_id],
+    category: 'visit',
+    title: body.decision === 'accept' ? 'Visite acceptée' : 'Visite refusée',
+    body:
+      body.decision === 'accept'
+        ? `Ta visite de ${propertyTitle} le ${slot} est confirmée.`
+        : `Ta demande de visite de ${propertyTitle} le ${slot} n'a pas été retenue.`,
+    iconHint: 'check',
+    // Buyer-side visit list lands in V1.1 (buyer/requests is an empty-state
+    // stub) — route to the property the visit concerns instead.
+    deeplink: `/property/${updatedRow.property_id}`,
+    refType: 'visit_request',
+    refId: updatedRow.id,
+  });
+
+  return { body: { visit_request: mapVisit(updatedRow) } };
 }));

@@ -239,20 +239,77 @@ export function useFindOrCreateConversation() {
   });
 }
 
-// Notifications backend not yet implemented — gated behind push notifs
-// workstream (post-Phase L queue). Stubs returning [] / no-op so callers
-// don't crash.
+// Phase O — wired to list-notifications / mark-notifications-read.
+interface NotificationRowWire {
+  id: string;
+  category: AppNotification['category'];
+  title: string;
+  body: string;
+  icon_hint: string;
+  deeplink: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+interface ListNotificationsResponse {
+  notifications: NotificationRowWire[];
+  next_cursor: { created_at: string; id: string } | null;
+  unread_count: number;
+}
+
+interface NotificationsFeed {
+  items: AppNotification[];
+  unreadCount: number;
+}
+
+// One fetch, one cache entry (['notifications']) — the screen and the bell
+// dots are `select` views over the same data, so invalidating the key after
+// mark-notifications-read refreshes both.
+async function fetchNotificationsFeed(): Promise<NotificationsFeed> {
+  const r = await apiPost<ListNotificationsResponse>({
+    path: '/list-notifications',
+    body: {},
+  });
+  return {
+    items: r.notifications.map((n) => ({
+      id: n.id,
+      category: n.category,
+      title: n.title,
+      body: n.body,
+      at: n.created_at,
+      read: n.read_at !== null,
+      iconHint: n.icon_hint,
+    })),
+    unreadCount: r.unread_count,
+  };
+}
+
 export function useNotifications() {
   return useQuery({
     queryKey: ['notifications'],
-    queryFn: async (): Promise<AppNotification[]> => [],
+    queryFn: fetchNotificationsFeed,
+    select: (d) => d.items,
+  });
+}
+
+export function useUnreadNotificationsCount() {
+  return useQuery({
+    queryKey: ['notifications'],
+    queryFn: fetchNotificationsFeed,
+    select: (d) => d.unreadCount,
   });
 }
 
 export function useMarkNotificationsRead() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {},
+    mutationFn: async (): Promise<number> => {
+      const r = await apiPost<{ marked_count: number }>({
+        path: '/mark-notifications-read',
+        body: {},
+      });
+      return r.marked_count;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
 }

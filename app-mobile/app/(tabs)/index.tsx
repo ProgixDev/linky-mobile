@@ -55,6 +55,7 @@ import {
   useWallet,
   useMyShops,
   useMyProperties,
+  useUnreadNotificationsCount,
 } from '../../src/data/queries';
 
 export default function HomeRoute() {
@@ -77,6 +78,7 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
   const { colors } = useTheme();
   const hasBoth = isSeller && isAgent;
   const [mode, setMode] = useState<ProMode>(isSeller ? 'shop' : 'estate');
+  const { data: unreadCount = 0 } = useUnreadNotificationsCount();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -114,19 +116,21 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
             accessibilityLabel="Notifications"
           >
             <Bell size={18} color={colors.text} strokeWidth={1.75} />
-            <View
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                width: 9,
-                height: 9,
-                borderRadius: 999,
-                backgroundColor: colors.danger,
-                borderWidth: 2,
-                borderColor: colors.card,
-              }}
-            />
+            {unreadCount > 0 && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  width: 9,
+                  height: 9,
+                  borderRadius: 999,
+                  backgroundColor: colors.danger,
+                  borderWidth: 2,
+                  borderColor: colors.card,
+                }}
+              />
+            )}
           </Pressable>
           <Pressable
             onPress={() => {
@@ -195,6 +199,7 @@ function BuyerHome() {
   const { data: products, isLoading: prodLoading } = usePopularProducts(4);
   const { data: properties } = useNearbyProperties(3);
   const { data: wallet } = useWallet();
+  const { data: unreadCount = 0 } = useUnreadNotificationsCount();
 
   const firstName = (user?.display_name ?? 'Toi').split(' ')[0];
 
@@ -242,7 +247,7 @@ function BuyerHome() {
           <CircleAction
             onPress={() => router.push('/notifications')}
             accessibilityLabel="Notifications"
-            badge="dot"
+            badge={unreadCount > 0 ? 'dot' : undefined}
           >
             <Bell size={18} color={colors.text} strokeWidth={1.75} />
           </CircleAction>

@@ -178,7 +178,7 @@ export interface Conversation {
   unread: number;
 }
 
-export type NotificationCategory = 'order' | 'message' | 'promo' | 'system';
+export type NotificationCategory = 'order' | 'message' | 'visit' | 'promo' | 'system';
 
 export interface AppNotification {
   id: ID;

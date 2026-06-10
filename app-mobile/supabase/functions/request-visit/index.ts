@@ -9,6 +9,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { notifyDetached, displayNameOf } from '@shared/push.ts';
 
 interface Body {
   property_id: string;
@@ -65,9 +66,9 @@ Deno.serve(makePost<Body>('/v1/visits/request', valid, async ({ sb, body, req })
   if (reqMs <= now) throwApi('VISIT_TIME_PAST', 400, 'Date dans le passé');
   if (reqMs > now + SIXTY_DAYS_MS) throwApi('VISIT_TIME_FAR', 400, 'Date trop éloignée (max 60 jours)');
 
-  // Property must exist and be active.
+  // Property must exist and be active. owner_id + title feed the O.3 push.
   const { data: prop, error: ePropCheck } = await sb
-    .from('properties').select('id, status').eq('id', body.property_id).maybeSingle();
+    .from('properties').select('id, status, owner_id, title').eq('id', body.property_id).maybeSingle();
   if (ePropCheck) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   if (!prop) throwApi('PROPERTY_NOT_FOUND', 404, 'Annonce introuvable.');
   if ((prop as { status: string }).status !== 'active') {
@@ -107,5 +108,21 @@ Deno.serve(makePost<Body>('/v1/visits/request', valid, async ({ sb, body, req })
     throwApi('INTERNAL_ERROR', 500, 'Erreur création demande');
   }
 
-  return { body: { visit_request: mapVisitRequest(created as VisitRow) } };
+  // Fresh insert only — the idempotent duplicate path above returns earlier
+  // without re-notifying the owner.
+  const { owner_id: ownerId, title } = prop as { owner_id: string; title: string };
+  const createdRow = created as VisitRow;
+  const buyerName = await displayNameOf(sb, userId);
+  notifyDetached(sb, {
+    userIds: [ownerId],
+    category: 'visit',
+    title: 'Nouvelle demande de visite',
+    body: `${buyerName} veut visiter ${title}.`,
+    iconHint: 'check',
+    deeplink: `/pro/visites/${createdRow.id}`,
+    refType: 'visit_request',
+    refId: createdRow.id,
+  });
+
+  return { body: { visit_request: mapVisitRequest(createdRow) } };
 }));

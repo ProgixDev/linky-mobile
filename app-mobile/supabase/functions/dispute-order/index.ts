@@ -7,6 +7,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapOrder, type OrderRow } from '@shared/catalog.ts';
+import { notifyDetached, displayNameOf } from '@shared/push.ts';
 
 interface Body {
   order_id: string;
@@ -53,5 +54,19 @@ Deno.serve(makePost<Body>('/v1/orders/dispute', valid, async ({ sb, body, req })
     console.error('[dispute-order] readback error:', readErr);
     throwApi('INTERNAL_ERROR', 500, 'Erreur lecture commande');
   }
-  return { body: { order: mapOrder(row as OrderRow) } };
+
+  const orderRow = row as OrderRow;
+  const buyerName = await displayNameOf(sb, userId);
+  notifyDetached(sb, {
+    userIds: [orderRow.seller_id],
+    category: 'order',
+    title: 'Litige ouvert',
+    body: `${buyerName} a signalé un problème sur ta commande.`,
+    iconHint: 'shield',
+    deeplink: `/seller/orders/${orderRow.id}`,
+    refType: 'order',
+    refId: orderRow.id,
+  });
+
+  return { body: { order: mapOrder(orderRow) } };
 }));

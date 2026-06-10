@@ -29,6 +29,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Switch } from '../../src/components/primitives/Switch';
 import { haptic } from '../../src/lib/haptics';
+import { unregisterPushToken } from '../../src/lib/push';
 import { useAuth } from '../../src/stores/auth';
 import { usePrefs } from '../../src/stores/prefs';
 
@@ -363,9 +364,12 @@ export default function ProfilRoute() {
         {/* ===== Logout ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
           <Pressable
-            onPress={() => {
+            onPress={async () => {
               haptic.light();
-              signOut();
+              // Needs the still-valid bearer, so it runs BEFORE signOut wipes
+              // the tokens. Internally capped + catch-all : never blocks logout.
+              await unregisterPushToken();
+              await signOut();
               router.replace('/(onboarding)/welcome');
             }}
             style={{

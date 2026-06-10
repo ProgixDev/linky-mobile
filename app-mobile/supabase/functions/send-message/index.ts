@@ -30,6 +30,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { notifyDetached, displayNameOf } from '@shared/push.ts';
 
 interface Body {
   recipient_id?: string;
@@ -128,6 +129,20 @@ Deno.serve(makePost<Body>('/v1/messages/send', valid, async ({ sb, body, req }) 
     console.error('[send-message] message select error:', msgErr);
     throwApi('INTERNAL_ERROR', 500, 'Erreur lecture message.');
   }
+
+  const senderName = await displayNameOf(sb, userId);
+  const text = body.body.trim();
+  const preview = text.length > 120 ? `${text.slice(0, 119).trimEnd()}…` : text;
+  notifyDetached(sb, {
+    userIds: [recipientId],
+    category: 'message',
+    title: senderName,
+    body: preview,
+    iconHint: 'msg',
+    deeplink: `/messages/${result.conversation_id}`,
+    refType: 'conversation',
+    refId: result.conversation_id,
+  });
 
   return {
     body: {
