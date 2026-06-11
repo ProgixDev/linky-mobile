@@ -11,6 +11,10 @@ export interface AuthUser {
   locale: string;
   city?: string | null;
   kyc_status?: string | null;
+  // Phase T.1: returned by otp-verify / email-signin / email-signup /
+  // update-profile so the auth store rehydrates roles from the server (the
+  // single source of truth ; MMKV is the offline cache).
+  roles?: ('buyer' | 'seller' | 'agent')[];
   // Phase K.4: returned by email-signin so the Next.js admin shell can gate
   // on it without a separate get-me round-trip. Mobile users always see
   // is_admin = false; the mobile UI never reads it.
@@ -81,5 +85,25 @@ export async function refreshSession(refreshToken: string): Promise<TokenBundle>
     path: '/session-refresh',
     authed: false,
     body: { refresh_token: refreshToken },
+  });
+}
+
+// Phase T.1 — single endpoint that powers onboarding's profile-setup finish,
+// the new "Mes rôles" screen, and the "Devenir vendeur" upgrade pitch. Every
+// field is optional ; the server applies whichever subset is sent.
+export interface UpdateProfileInput {
+  display_name?: string;
+  city?: string;
+  roles?: ('buyer' | 'seller' | 'agent')[];
+}
+export function useUpdateProfile() {
+  return useMutation({
+    mutationFn: async (input: UpdateProfileInput): Promise<{ user: AuthUser }> => {
+      return apiPost({
+        path: '/update-profile',
+        authed: true,
+        body: input,
+      });
+    },
   });
 }

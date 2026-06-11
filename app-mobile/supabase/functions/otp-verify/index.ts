@@ -95,9 +95,13 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
   if (eSess || !sess) throwApi('INTERNAL_ERROR', 500, 'Erreur création session');
   const refresh_token = `${sess.id}.${refreshSecret}`;
 
+  // Phase T.1 — roles + city included so the client's auth store rehydrates
+  // from the server (server wins, MMKV is the offline cache). Without this,
+  // a reinstall or sign-in on a second device silently degrades a seller
+  // back to ['buyer'].
   const { data: user } = await sb
     .from('users')
-    .select('id, display_name, avatar_url, locale, kyc_status')
+    .select('id, display_name, avatar_url, locale, kyc_status, city, roles')
     .eq('id', userId)
     .single();
 

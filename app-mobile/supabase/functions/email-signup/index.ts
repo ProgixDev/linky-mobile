@@ -56,7 +56,15 @@ Deno.serve(makePost<Body>('/v1/auth/email/signup', valid, async ({ sb, body, req
   }).select('id').single();
   if (eSess || !sess) throwApi('INTERNAL_ERROR', 500, 'Erreur création session');
 
-  // kyc_status aligned with otp-verify / email-signin payloads ; a fresh
-  // account is always 'none' (the RPC doesn't return the column).
-  return { body: { access_token, refresh_token: `${sess.id}.${refreshSecret}`, user: { ...user, kyc_status: 'none' } } };
+  // Phase T.1 — auth payload now carries roles + city so the client's auth
+  // store rehydrates from the server on every fresh signin/signup. A new
+  // account always defaults to ['buyer'] / null city ; the DB CHECK
+  // (users_roles_nonempty_check) guarantees the array is never empty.
+  return {
+    body: {
+      access_token,
+      refresh_token: `${sess.id}.${refreshSecret}`,
+      user: { ...user, kyc_status: 'none', city: null, roles: ['buyer'] },
+    },
+  };
 }, stripTokens));

@@ -103,7 +103,19 @@ export const useAuth = create<AuthState>((set) => ({
     // Real auth only — caller (otp-verify / email-signin) passes the backend AuthUser.
     storage.set(STORAGE_KEYS.currentUserId, user.id);
     saveAuthUser(user);
-    set({ user, authUserId: user.id });
+    // Phase T.1 — server wins on roles. The auth payloads carry the
+    // canonical roles array ; MMKV only stays as the offline cache. If the
+    // server payload omits roles (older fn, mid-deploy state), fall back to
+    // whatever was last cached locally rather than wiping to ['buyer'].
+    const serverRoles = Array.isArray(user.roles) && user.roles.length > 0
+      ? (user.roles as UserRole[])
+      : null;
+    if (serverRoles) {
+      saveRoles(serverRoles);
+      set({ user, authUserId: user.id, roles: serverRoles });
+    } else {
+      set({ user, authUserId: user.id });
+    }
   },
   signOut: async () => {
     // V1: clears local credentials + persisted user + roles + cart. The remote

@@ -85,6 +85,23 @@ function valid(b: unknown): b is Body {
 Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
 
+  // Phase T.1 — gate on role + KYC BEFORE the (auto-creating) shop work, so
+  // a pure buyer probing this endpoint can never end up with a phantom
+  // "Mon agence" row. Both checks are pulled in a single read.
+  const { data: caller, error: eCaller } = await sb
+    .from('users')
+    .select('roles, kyc_status')
+    .eq('id', userId)
+    .single();
+  if (eCaller || !caller) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+  const roles: string[] = Array.isArray(caller.roles) ? (caller.roles as string[]) : [];
+  if (!roles.includes('agent')) {
+    throwApi('ROLE_REQUIRED', 403, 'Active le rôle agent dans ton profil pour publier.');
+  }
+  if (caller.kyc_status !== 'approved') {
+    throwApi('KYC_REQUIRED', 403, "Vérifie ton identité pour publier — c'est rapide.");
+  }
+
   // Resolve or create the seller's shop. V1 ties products + properties to a single shop
   // per user; if "Ma boutique" already exists from a product publish, reuse it.
   let shopId = body.shop_id;

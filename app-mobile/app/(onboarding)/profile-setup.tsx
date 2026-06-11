@@ -17,6 +17,8 @@ import { I, type IconKey } from '../../src/icons/Icon';
 import { roleHeroes } from '../../src/data/photos';
 import { CityMapPicker } from '../../src/components/onboarding/CityMapPicker';
 import { ROLE_FROM_UI, useAuth } from '../../src/stores/auth';
+import { useUpdateProfile } from '../../src/data/queries/auth';
+import { useToast } from '../../src/components/feedback/Toast';
 
 type RoleId = 'buy' | 'sell' | 'agent';
 
@@ -40,6 +42,10 @@ const TITLES = ['Dis-nous qui tu es.', 'Tu es où en Guinée ?', 'Tu veux faire 
 export default function ProfileSetupRoute() {
   const { colors, radii } = useTheme();
   const setRolesInStore = useAuth((s) => s.setRoles);
+  const signIn = useAuth((s) => s.signIn);
+  const currentUser = useAuth((s) => s.user);
+  const updateProfile = useUpdateProfile();
+  const toast = useToast();
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
@@ -55,16 +61,31 @@ export default function ProfileSetupRoute() {
     });
   };
 
-  const next = () => {
+  const next = async () => {
     if (step < 2) {
       setStep((s) => s + 1);
       return;
     }
-    // Persist roles before routing to done.
+    // Phase T.1 — persist BOTH locally (for instant UI) AND on the server
+    // (so a reinstall / second device rehydrates from the source of truth).
+    // Best-effort: server failure toasts but doesn't block onboarding, because
+    // the user already has a valid session and roles are also kept in MMKV.
     const canonical = Array.from(roles).map(
       (id) => ROLE_FROM_UI[id as 'buy' | 'sell' | 'agent'],
     );
     setRolesInStore(canonical);
+    try {
+      const res = await updateProfile.mutateAsync({
+        display_name: name.trim(),
+        city: city.trim(),
+        roles: canonical,
+      });
+      if (currentUser) {
+        signIn({ ...currentUser, ...res.user });
+      }
+    } catch {
+      toast.show('Profil enregistré localement — on retentera plus tard.', 'info');
+    }
     router.replace('/(onboarding)/done');
   };
 

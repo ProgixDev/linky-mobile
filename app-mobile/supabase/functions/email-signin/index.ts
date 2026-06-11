@@ -79,9 +79,12 @@ Deno.serve(makePost<Body>('/v1/auth/email/signin', valid, async ({ sb, body, req
   // can never match a real email. This keeps the DB roundtrip on both branches — same query plan,
   // same network shape — so an attacker can't time-distinguish "invalid format" from "not found".
   const lookupAddress = normalizedEmail ?? '\x00invalid\x00';
+  // Phase T.1 — roles + city included so the client's auth store rehydrates
+  // from the server (server wins, MMKV is the offline cache). Without these,
+  // a sign-in on a second device or a reinstall silently degrades the user.
   const { data: row } = await sb
     .from('emails')
-    .select('user_id, users:users(id, display_name, avatar_url, locale, kyc_status, password_hash, status, is_admin)')
+    .select('user_id, users:users(id, display_name, avatar_url, locale, kyc_status, city, roles, password_hash, status, is_admin)')
     .eq('address', lookupAddress)
     .maybeSingle();
 
@@ -96,6 +99,8 @@ Deno.serve(makePost<Body>('/v1/auth/email/signin', valid, async ({ sb, body, req
     avatar_url: string | null;
     locale: string;
     kyc_status: string;
+    city: string | null;
+    roles: string[];
     password_hash: string | null;
     status: string;
     is_admin: boolean;

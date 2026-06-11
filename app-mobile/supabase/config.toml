@@ -607,6 +607,9 @@ verify_jwt = false
 [functions.unregister-push-token]
 verify_jwt = false
 
+[functions.update-profile]
+verify_jwt = false
+
 [functions.view-track]
 verify_jwt = false
 
