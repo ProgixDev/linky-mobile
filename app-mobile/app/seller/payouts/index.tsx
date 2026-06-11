@@ -1,3 +1,16 @@
+// Phase T.3 — real seller payouts. Pre-T3 this screen rendered a hardcoded
+// PAYOUTS array (fake 432 600 GNF pending, fake Orange/MTN payouts) linked
+// from BOTH dashboards — the single worst trust hazard on the app.
+//
+// New shape:
+//   - Hero = wallet balance (useWallet), the actual money the seller owns
+//     today (after sales + minus prior withdrawals).
+//   - List = useMyWithdrawals (Phase S), the only real "payout" history.
+//     Statuses: pending / paid / rejected / cancelled.
+//   - CTA  = "Retirer" → /wallet/retirer (the existing withdrawal flow).
+//
+// No "pending payout" computation — V1 doesn't auto-batch sales into payouts.
+// Every payout is a manual withdrawal request the seller files themselves.
 import { ScrollView, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -7,36 +20,44 @@ import {
   ArrowDownToLine,
   Clock,
   CheckCircle2,
-  Calendar,
+  XCircle,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
+import { Button } from '../../../src/components/primitives/Button';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { NoiseOverlay } from '../../../src/components/visuals/NoiseOverlay';
+import { EmptyState, ErrorStateView } from '../../../src/components/feedback/EmptyState';
 import { haptic } from '../../../src/lib/haptics';
 import { formatGNF } from '../../../src/lib/format';
+import {
+  useWallet,
+  useMyWithdrawals,
+  type WithdrawalRequestItem,
+} from '../../../src/data/queries/wallet';
 
-interface Payout {
-  id: string;
-  amountGnf: number;
-  status: 'pending' | 'paid';
-  method: string;
-  date: string;
-  orders: number;
+const STATUS_LABEL: Record<WithdrawalRequestItem['status'], string> = {
+  pending: 'En attente',
+  approved: 'Approuvé',
+  paid: 'Payé',
+  rejected: 'Refusé',
+  cancelled: 'Annulé',
+};
+
+function statusVisual(s: WithdrawalRequestItem['status']) {
+  if (s === 'paid') return { Icon: CheckCircle2, tint: 'success' as const };
+  if (s === 'rejected' || s === 'cancelled') return { Icon: XCircle, tint: 'danger' as const };
+  return { Icon: Clock, tint: 'pending' as const };
 }
-
-const PAYOUTS: Payout[] = [
-  { id: 'p1', amountGnf: 432_600, status: 'pending', method: 'Orange Money', date: 'Dans 2 j', orders: 1 },
-  { id: 'p2', amountGnf: 1_842_000, status: 'paid', method: 'Orange Money', date: '12 mai', orders: 6 },
-  { id: 'p3', amountGnf: 985_000, status: 'paid', method: 'MTN Money', date: '8 mai', orders: 3 },
-  { id: 'p4', amountGnf: 2_410_500, status: 'paid', method: 'Orange Money', date: '2 mai', orders: 9 },
-];
 
 export default function PayoutsRoute() {
   const { colors } = useTheme();
-  const pending = PAYOUTS.filter((p) => p.status === 'pending').reduce((s, p) => s + p.amountGnf, 0);
-  const lifetime = PAYOUTS.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amountGnf, 0);
+  const wallet = useWallet();
+  const withdrawals = useMyWithdrawals();
+
+  const balanceGnf = wallet.data?.balanceGnf ?? 0;
+  const items = withdrawals.data ?? [];
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -44,9 +65,9 @@ export default function PayoutsRoute() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <ScreenHeader title="Versements" subtitle="L'argent libéré arrive sur ton Mobile Money." />
+        <ScreenHeader title="Retraits" subtitle="L'argent libéré atterrit sur ton Mobile Money." />
 
-        {/* Hero */}
+        {/* Hero — solde disponible */}
         <View style={{ paddingHorizontal: 24 }}>
           <View style={{ borderRadius: 22, overflow: 'hidden', backgroundColor: '#0A5240' }}>
             <LinearGradient
@@ -78,7 +99,7 @@ export default function PayoutsRoute() {
                   letterSpacing: 0.5,
                 }}
               >
-                EN ATTENTE
+                SOLDE DISPONIBLE
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
                 <Text
@@ -92,27 +113,39 @@ export default function PayoutsRoute() {
                     includeFontPadding: false,
                   }}
                 >
-                  {formatGNF(pending).replace(' GNF', '')}
+                  {formatGNF(balanceGnf).replace(' GNF', '')}
                 </Text>
                 <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
                   GNF
                 </Text>
               </View>
-              <Text
+              <Pressable
+                onPress={() => {
+                  haptic.light();
+                  router.push('/wallet/retirer');
+                }}
                 style={{
-                  fontSize: 12.5,
-                  color: 'rgba(255,255,255,0.6)',
-                  marginTop: 4,
-                  letterSpacing: 0,
+                  marginTop: 16,
+                  alignSelf: 'flex-start',
+                  height: 40,
+                  paddingHorizontal: 16,
+                  borderRadius: 999,
+                  backgroundColor: '#FFFFFF',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                Total reçu cette année · {formatGNF(lifetime)}
-              </Text>
+                <ArrowDownToLine size={14} color="#0A5240" strokeWidth={2.5} />
+                <Text style={{ color: '#0A5240', fontWeight: '700', fontSize: 13.5 }}>
+                  Retirer
+                </Text>
+              </Pressable>
             </View>
           </View>
         </View>
 
-        {/* List */}
+        {/* History — pending first */}
         <View style={{ paddingHorizontal: 24, paddingTop: 22, gap: 10 }}>
           <Text
             style={{
@@ -126,8 +159,33 @@ export default function PayoutsRoute() {
           >
             HISTORIQUE
           </Text>
-          {PAYOUTS.map((p) => (
-            <PayoutRow key={p.id} payout={p} />
+
+          {withdrawals.isError && (
+            <View style={{ paddingVertical: 28 }}>
+              <ErrorStateView onRetry={() => withdrawals.refetch()} />
+            </View>
+          )}
+
+          {!withdrawals.isError && withdrawals.isLoading && (
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 4 }}>
+              Chargement…
+            </Text>
+          )}
+
+          {!withdrawals.isError && !withdrawals.isLoading && items.length === 0 && (
+            <View style={{ paddingVertical: 28 }}>
+              <EmptyState
+                icon="package"
+                title="Aucun retrait pour le moment"
+                description="Quand tes ventes seront libérées, tu pourras les transférer vers ton Mobile Money."
+                ctaLabel={balanceGnf > 0 ? 'Faire mon premier retrait' : undefined}
+                onCta={balanceGnf > 0 ? () => router.push('/wallet/retirer') : undefined}
+              />
+            </View>
+          )}
+
+          {items.map((w) => (
+            <WithdrawalRow key={w.id} item={w} />
           ))}
         </View>
       </ScrollView>
@@ -135,10 +193,19 @@ export default function PayoutsRoute() {
   );
 }
 
-function PayoutRow({ payout }: { payout: Payout }) {
+function WithdrawalRow({ item }: { item: WithdrawalRequestItem }) {
   const { colors } = useTheme();
-  const pending = payout.status === 'pending';
-  const StatusIcon: LucideIcon = pending ? Clock : CheckCircle2;
+  const { Icon, tint } = statusVisual(item.status);
+  const palette =
+    tint === 'success'
+      ? { bg: colors.primarySoft, fg: colors.primary }
+      : tint === 'danger'
+        ? { bg: 'rgba(209,79,60,0.1)', fg: colors.danger }
+        : { bg: colors.accentSoft, fg: colors.accentText };
+  const dateStr = new Date(item.decided_at ?? item.created_at).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+  });
   return (
     <View
       style={{
@@ -157,16 +224,12 @@ function PayoutRow({ payout }: { payout: Payout }) {
           width: 44,
           height: 44,
           borderRadius: 12,
-          backgroundColor: pending ? colors.accentSoft : colors.primarySoft,
+          backgroundColor: palette.bg,
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <StatusIcon
-          size={18}
-          color={pending ? colors.accentText : colors.primary}
-          strokeWidth={2}
-        />
+        <Icon size={18} color={palette.fg} strokeWidth={2} />
       </View>
       <View style={{ flex: 1 }}>
         <Text
@@ -180,7 +243,7 @@ function PayoutRow({ payout }: { payout: Payout }) {
             includeFontPadding: false,
           }}
         >
-          {formatGNF(payout.amountGnf)}
+          {formatGNF(item.amount_minor)}
         </Text>
         <Text
           style={{
@@ -189,19 +252,21 @@ function PayoutRow({ payout }: { payout: Payout }) {
             marginTop: 2,
             letterSpacing: 0,
           }}
+          numberOfLines={1}
         >
-          {payout.method} · {payout.orders} commande{payout.orders > 1 ? 's' : ''}
+          {STATUS_LABEL[item.status]}
+          {item.destination ? ` · ${item.destination}` : ''}
         </Text>
       </View>
       <Text
         style={{
           fontSize: 12,
           fontWeight: '600',
-          color: pending ? colors.accentText : colors.textMuted,
+          color: palette.fg,
           letterSpacing: 0,
         }}
       >
-        {payout.date}
+        {dateStr}
       </Text>
     </View>
   );

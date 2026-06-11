@@ -239,6 +239,9 @@ export function ShopDashboard() {
 
       <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
         <View style={{ flexDirection: 'row', gap: 10 }}>
+          {/* Phase T.3 — Booster, Promo, Avis removed (fake / unwired);
+              entry links suppressed so nobody routes there organically.
+              The screens themselves serve a Bientot disponible state. */}
           <QuickAction
             Icon={Package}
             label="Commandes"
@@ -250,31 +253,14 @@ export function ShopDashboard() {
             onPress={() => router.push('/pro/demandes')}
           />
           <QuickAction
-            Icon={Zap}
-            label="Booster"
-            onPress={() => router.push('/pro/boost')}
+            Icon={ArrowUpRight}
+            label="Retraits"
+            onPress={() => router.push('/seller/payouts')}
           />
           <QuickAction
             Icon={BarChart3}
             label="Stats"
             onPress={() => router.push('/pro/stats')}
-          />
-        </View>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-          <QuickAction
-            Icon={Megaphone}
-            label="Promo"
-            onPress={() => router.push('/pro/promo')}
-          />
-          <QuickAction
-            Icon={ArrowUpRight}
-            label="Versements"
-            onPress={() => router.push('/seller/payouts')}
-          />
-          <QuickAction
-            Icon={Star}
-            label="Avis"
-            onPress={() => {}}
           />
         </View>
       </View>
@@ -655,6 +641,10 @@ export function EstateDashboard() {
 
       <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
         <View style={{ flexDirection: 'row', gap: 10 }}>
+          {/* Phase T.3 — Baux, Booster, Avis, Mes biens removed (fake /
+              dead onPress); the Baux and Booster screens themselves serve
+              a Bientot disponible state and Mes biens duplicates the list
+              just below. */}
           <QuickAction
             Icon={CalendarDays}
             label="Visites"
@@ -666,36 +656,14 @@ export function EstateDashboard() {
             onPress={() => router.push('/pro/demandes')}
           />
           <QuickAction
-            Icon={KeyRound}
-            label="Baux"
-            onPress={() => router.push('/agent/leases')}
+            Icon={ArrowUpRight}
+            label="Retraits"
+            onPress={() => router.push('/seller/payouts')}
           />
           <QuickAction
             Icon={BarChart3}
             label="Stats"
             onPress={() => router.push('/pro/stats')}
-          />
-        </View>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-          <QuickAction
-            Icon={Zap}
-            label="Booster"
-            onPress={() => router.push('/pro/boost')}
-          />
-          <QuickAction
-            Icon={ArrowUpRight}
-            label="Versements"
-            onPress={() => router.push('/seller/payouts')}
-          />
-          <QuickAction
-            Icon={Star}
-            label="Avis"
-            onPress={() => {}}
-          />
-          <QuickAction
-            Icon={Building2}
-            label="Mes biens"
-            onPress={() => {}}
           />
         </View>
       </View>

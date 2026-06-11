@@ -1,41 +1,35 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+// Phase T.3 — real-lite stats. Pre-T3 this screen rendered fake bars / fake
+// metrics (4 280 vues, +18 %, 2,4M GNF) and a leaderboard of mock products
+// the seller doesn't own. Now: the seller's actual products, ranked by their
+// REAL view_count, with a true total. No fake deltas, no chart, no fake
+// revenue — only data we can prove.
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import {
-  TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
-  Eye,
-  MessageCircle,
-  ShoppingBag,
-  Wallet,
-} from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
+import { Eye, TrendingUp } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
-import { haptic } from '../../../src/lib/haptics';
-import { mockProducts } from '../../../src/data/mockProducts';
+import { EmptyState, ErrorStateView } from '../../../src/components/feedback/EmptyState';
 import { formatGNF } from '../../../src/lib/format';
-
-type Period = '7j' | '30j' | '90j' | 'an';
-
-const PERIODS: { id: Period; label: string }[] = [
-  { id: '7j', label: '7 j' },
-  { id: '30j', label: '30 j' },
-  { id: '90j', label: '90 j' },
-  { id: 'an', label: '1 an' },
-];
-
-const VIEW_BARS = [
-  40, 55, 35, 70, 60, 80, 45, 90, 75, 60, 95, 70, 85, 100, 80, 75, 90, 65, 50, 85, 95, 70, 80, 100,
-  90, 75, 65, 90, 85, 100,
-];
+import { useMyShops } from '../../../src/data/queries/shops';
+import { useProducts } from '../../../src/data/queries';
 
 export default function StatsRoute() {
   const { colors } = useTheme();
-  const [period, setPeriod] = useState<Period>('30j');
+  const myShops = useMyShops();
+  const firstShopId = myShops.data?.[0]?.id;
+  const products = useProducts({ shopId: firstShopId });
+
+  const isLoading = myShops.isLoading || (!!firstShopId && products.isLoading);
+  const isError = myShops.isError || products.isError;
+
+  // The seller's full list — list-products defaults to 'recent', so we sort
+  // client-side by view_count. V1 volumes per shop are small, no pagination
+  // needed yet.
+  const ranked = [...(products.data ?? [])].sort((a, b) => b.viewCount - a.viewCount);
+  const totalViews = ranked.reduce((s, p) => s + p.viewCount, 0);
+  const activeCount = ranked.filter((p) => p.status === 'active').length;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -43,350 +37,194 @@ export default function StatsRoute() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <ScreenHeader title="Statistiques" subtitle="Tes performances en un coup d'œil." />
+        <ScreenHeader
+          title="Statistiques"
+          subtitle="Tes annonces et leurs vues — données réelles."
+        />
 
-        {/* Period tabs */}
-        <View
-          style={{
-            paddingHorizontal: 24,
-            marginBottom: 18,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              gap: 6,
-              padding: 4,
-              borderRadius: 999,
-              backgroundColor: colors.bgSunken,
-            }}
-          >
-            {PERIODS.map((p) => {
-              const active = period === p.id;
-              return (
-                <Pressable
-                  key={p.id}
-                  onPress={() => {
-                    haptic.selection();
-                    setPeriod(p.id);
-                  }}
-                  style={{
-                    flex: 1,
-                    height: 36,
-                    borderRadius: 999,
-                    backgroundColor: active ? colors.bg : 'transparent',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12.5,
-                      fontWeight: '700',
-                      color: active ? colors.text : colors.textMuted,
-                      letterSpacing: 0,
-                      lineHeight: 15,
-                      includeFontPadding: false,
-                    }}
-                  >
-                    {p.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+        {isError && (
+          <View style={{ paddingVertical: 28 }}>
+            <ErrorStateView
+              onRetry={() => {
+                myShops.refetch();
+                products.refetch();
+              }}
+            />
           </View>
-        </View>
+        )}
 
-        {/* Revenue hero */}
-        <View style={{ paddingHorizontal: 24 }}>
-          <View
-            style={{
-              padding: 20,
-              borderRadius: 22,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: '700',
-                color: colors.textFaint,
-                letterSpacing: 0.5,
-              }}
-            >
-              REVENUS · 30 JOURS
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'baseline',
-                gap: 8,
-                marginTop: 6,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 30,
-                  fontWeight: '700',
-                  color: colors.text,
-                  fontVariant: ['tabular-nums'],
-                  letterSpacing: -0.6,
-                  lineHeight: 34,
-                  includeFontPadding: false,
-                }}
-              >
-                2,4M
-              </Text>
-              <Text
-                style={{
-                  fontSize: 16,
-                  color: colors.textMuted,
-                  fontWeight: '600',
-                }}
-              >
-                GNF
-              </Text>
+        {!isError && (
+          <>
+            {/* Top-of-screen summary, real numbers only. */}
+            <View style={{ paddingHorizontal: 24 }}>
               <View
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 3,
-                  paddingHorizontal: 8,
-                  height: 22,
-                  borderRadius: 999,
-                  backgroundColor: colors.primarySoft,
+                  padding: 20,
+                  borderRadius: 22,
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
                 }}
               >
-                <ArrowUpRight size={11} color={colors.primaryDeep} strokeWidth={2.5} />
                 <Text
                   style={{
                     fontSize: 11,
                     fontWeight: '700',
-                    color: colors.primaryDeep,
-                    lineHeight: 13,
-                    includeFontPadding: false,
-                  }}
-                >
-                  +18 %
-                </Text>
-              </View>
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                gap: 3,
-                height: 70,
-                alignItems: 'flex-end',
-                marginTop: 20,
-              }}
-            >
-              {VIEW_BARS.map((h, i) => (
-                <View
-                  key={i}
-                  style={{
-                    flex: 1,
-                    height: `${h}%`,
-                    backgroundColor: i > 22 ? colors.primary : colors.primarySoft,
-                    borderRadius: 3,
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Metric grid */}
-        <View
-          style={{
-            paddingHorizontal: 24,
-            paddingTop: 14,
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 10,
-          }}
-        >
-          <Metric Icon={Eye} label="Vues" value="4 280" delta="+24 %" trend="up" />
-          <Metric Icon={MessageCircle} label="Messages" value="86" delta="+12 %" trend="up" />
-          <Metric Icon={ShoppingBag} label="Commandes" value="18" delta="+18 %" trend="up" />
-          <Metric Icon={Wallet} label="Panier moyen" value="133k" delta="−3 %" trend="down" />
-        </View>
-
-        {/* Top listings */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 26 }}>
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: '700',
-              color: colors.text,
-              letterSpacing: -0.2,
-              marginBottom: 12,
-            }}
-          >
-            Annonces les plus performantes
-          </Text>
-          <View style={{ gap: 10 }}>
-            {mockProducts.slice(0, 4).map((p, idx) => (
-              <View
-                key={p.id}
-                style={{
-                  padding: 12,
-                  borderRadius: 18,
-                  backgroundColor: colors.card,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  flexDirection: 'row',
-                  gap: 12,
-                  alignItems: 'center',
-                }}
-              >
-                <Text
-                  style={{
-                    width: 22,
-                    textAlign: 'center',
-                    fontSize: 14,
-                    fontWeight: '800',
                     color: colors.textFaint,
-                    fontVariant: ['tabular-nums'],
+                    letterSpacing: 0.5,
                   }}
                 >
-                  {idx + 1}
+                  VUES TOTALES · TES ANNONCES
                 </Text>
-                <Image
-                  source={p.photos[0]}
+                <View
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 10,
-                    backgroundColor: colors.bgSunken,
+                    flexDirection: 'row',
+                    alignItems: 'baseline',
+                    gap: 8,
+                    marginTop: 6,
                   }}
-                  contentFit="cover"
-                />
-                <View style={{ flex: 1 }}>
+                >
                   <Text
                     style={{
-                      fontSize: 13.5,
-                      fontWeight: '600',
+                      fontSize: 32,
+                      fontWeight: '700',
                       color: colors.text,
-                      letterSpacing: 0,
-                      lineHeight: 17,
+                      fontVariant: ['tabular-nums'],
+                      letterSpacing: -0.6,
+                      lineHeight: 38,
                       includeFontPadding: false,
                     }}
-                    numberOfLines={1}
                   >
-                    {p.title}
+                    {totalViews.toLocaleString('fr-FR')}
                   </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: colors.textMuted,
-                      marginTop: 3,
-                      letterSpacing: 0,
-                    }}
-                  >
-                    {formatGNF(p.priceGnf)} · {p.viewCount} vues
-                  </Text>
+                  <Eye size={18} color={colors.textMuted} strokeWidth={1.75} />
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <TrendingUp size={12} color={colors.success} strokeWidth={2.25} />
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: '700',
-                      color: colors.success,
-                    }}
-                  >
-                    +×{(1.5 + idx * 0.4).toFixed(1)}
-                  </Text>
-                </View>
+                <Text
+                  style={{
+                    fontSize: 12.5,
+                    color: colors.textMuted,
+                    marginTop: 4,
+                  }}
+                >
+                  {activeCount} annonce{activeCount > 1 ? 's' : ''} active
+                  {activeCount > 1 ? 's' : ''}
+                </Text>
               </View>
-            ))}
-          </View>
-        </View>
+            </View>
+
+            {/* Ranked list */}
+            <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '700',
+                  color: colors.textFaint,
+                  letterSpacing: 0.6,
+                  marginLeft: 4,
+                  marginBottom: 12,
+                }}
+              >
+                VUES PAR ANNONCE
+              </Text>
+
+              {isLoading && (
+                <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 4 }}>
+                  Chargement…
+                </Text>
+              )}
+
+              {!isLoading && ranked.length === 0 && (
+                <View style={{ paddingVertical: 28 }}>
+                  <EmptyState
+                    icon="package"
+                    title="Pas encore d'annonce"
+                    description="Publie un produit depuis ta boutique pour voir tes vues s'afficher ici."
+                  />
+                </View>
+              )}
+
+              <View style={{ gap: 10 }}>
+                {ranked.map((p, idx) => (
+                  <View
+                    key={p.id}
+                    style={{
+                      padding: 12,
+                      borderRadius: 18,
+                      backgroundColor: colors.card,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      flexDirection: 'row',
+                      gap: 12,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        width: 22,
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontWeight: '800',
+                        color: colors.textFaint,
+                        fontVariant: ['tabular-nums'],
+                      }}
+                    >
+                      {idx + 1}
+                    </Text>
+                    <Image
+                      source={p.photos[0]}
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 10,
+                        backgroundColor: colors.bgSunken,
+                      }}
+                      contentFit="cover"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 13.5,
+                          fontWeight: '600',
+                          color: colors.text,
+                          letterSpacing: 0,
+                          lineHeight: 17,
+                          includeFontPadding: false,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {p.title}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: colors.textMuted,
+                          marginTop: 3,
+                          letterSpacing: 0,
+                        }}
+                      >
+                        {formatGNF(p.priceGnf)}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Eye size={12} color={colors.textMuted} strokeWidth={2} />
+                      <Text
+                        style={{
+                          fontSize: 12.5,
+                          fontWeight: '700',
+                          color: colors.text,
+                          fontVariant: ['tabular-nums'],
+                        }}
+                      >
+                        {p.viewCount}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function Metric({
-  Icon,
-  label,
-  value,
-  delta,
-  trend,
-}: {
-  Icon: LucideIcon;
-  label: string;
-  value: string;
-  delta: string;
-  trend: 'up' | 'down';
-}) {
-  const { colors } = useTheme();
-  const trendColor = trend === 'up' ? colors.success : colors.danger;
-  const TrendIcon = trend === 'up' ? ArrowUpRight : ArrowDownRight;
-  return (
-    <View
-      style={{
-        flexBasis: '47%',
-        flexGrow: 1,
-        padding: 14,
-        borderRadius: 18,
-        backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: colors.border,
-      }}
-    >
-      <Icon size={16} color={colors.textMuted} strokeWidth={1.75} />
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: '700',
-          color: colors.textFaint,
-          letterSpacing: 0.5,
-          marginTop: 10,
-        }}
-      >
-        {label.toUpperCase()}
-      </Text>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'baseline',
-          gap: 8,
-          marginTop: 2,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 22,
-            fontWeight: '700',
-            color: colors.text,
-            letterSpacing: -0.3,
-            fontVariant: ['tabular-nums'],
-          }}
-        >
-          {value}
-        </Text>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 2,
-          }}
-        >
-          <TrendIcon size={11} color={trendColor} strokeWidth={2.5} />
-          <Text
-            style={{
-              fontSize: 11.5,
-              fontWeight: '700',
-              color: trendColor,
-            }}
-          >
-            {delta}
-          </Text>
-        </View>
-      </View>
-    </View>
   );
 }
