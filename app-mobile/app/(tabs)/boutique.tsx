@@ -13,6 +13,7 @@ import {
 } from '../../src/components/dashboards/ProDashboard';
 import { haptic } from '../../src/lib/haptics';
 import { useAuth } from '../../src/stores/auth';
+import { useRoleGuard, RoleGateView } from '../../src/lib/useRoleGuard';
 
 export default function BoutiqueRoute() {
   const { colors } = useTheme();
@@ -20,7 +21,14 @@ export default function BoutiqueRoute() {
   const isSeller = roles.includes('seller');
   const isAgent = roles.includes('agent');
   const hasBoth = isSeller && isAgent;
+  // Phase T.2 — direct-nav to /(tabs)/boutique used to render the agent or
+  // shop dashboard for ANY user (the boutique tab is hidden via href:null for
+  // pure buyers, but a deep link bypassed that). Inline-gate here.
+  const guard = useRoleGuard(['seller', 'agent']);
   const [mode, setMode] = useState<ProMode>(isSeller ? 'shop' : 'estate');
+  if (!guard.allowed) {
+    return <RoleGateView required={guard.required} surfaceLabel="ton tableau de bord" />;
+  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>

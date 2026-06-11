@@ -19,10 +19,15 @@ import {
   LogOut,
   Package,
   CalendarDays,
-  ListOrdered,
   Heart,
   Wallet,
   Pencil,
+  Store,
+  Building2,
+  CalendarCheck,
+  Banknote,
+  UserCog,
+  Home as HomeIcon,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -30,7 +35,7 @@ import { Text } from '../../src/components/primitives/Text';
 import { Switch } from '../../src/components/primitives/Switch';
 import { haptic } from '../../src/lib/haptics';
 import { unregisterPushToken } from '../../src/lib/push';
-import { useAuth } from '../../src/stores/auth';
+import { useAuth, type UserRole } from '../../src/stores/auth';
 import { usePrefs } from '../../src/stores/prefs';
 import { useKycStatus } from '../../src/data/queries';
 
@@ -41,23 +46,45 @@ interface QuickAction {
   href?: string;
 }
 
-const QUICK_ACTIONS: QuickAction[] = [
-  { Icon: Package, label: 'Commandes', href: '/orders' },
-  { Icon: CalendarDays, label: 'Demandes', href: '/buyer/requests' },
-  { Icon: Heart, label: 'Favoris', href: '/favorites' },
-  { Icon: Wallet, label: 'Wallet', href: '/wallet' },
-  { Icon: ShieldCheck, label: 'KYC', href: '/kyc/intro' },
-];
+// Phase T.2 — quick actions filtered per role. Multi-role users get the
+// union, ordered: buyer-side first (most common), then seller, then agent.
+// Pure buyers no longer see zero pro shortcuts (KYC stays universal since
+// it gates publishing AND high-value buyer flows).
+function buildQuickActions(roles: UserRole[]): QuickAction[] {
+  const isBuyer = roles.includes('buyer');
+  const isSeller = roles.includes('seller');
+  const isAgent = roles.includes('agent');
+  const out: QuickAction[] = [];
+  if (isBuyer) {
+    out.push({ Icon: Package, label: 'Commandes', href: '/orders' });
+    out.push({ Icon: CalendarDays, label: 'Demandes', href: '/buyer/requests' });
+    out.push({ Icon: Heart, label: 'Favoris', href: '/favorites' });
+  }
+  if (isSeller) {
+    out.push({ Icon: Store, label: 'Ventes', href: '/seller/orders' });
+    out.push({ Icon: Banknote, label: 'Retraits', href: '/wallet/retirer' });
+    out.push({ Icon: HomeIcon, label: 'Boutique', href: '/(tabs)/boutique' });
+  }
+  if (isAgent) {
+    out.push({ Icon: CalendarCheck, label: 'Visites', href: '/pro/visites' });
+    out.push({ Icon: Building2, label: 'Mes biens', href: '/(tabs)/boutique' });
+  }
+  out.push({ Icon: Wallet, label: 'Wallet', href: '/wallet' });
+  out.push({ Icon: ShieldCheck, label: 'KYC', href: '/kyc/intro' });
+  return out;
+}
 
 export default function ProfilRoute() {
   const { colors } = useTheme();
   const user = useAuth((s) => s.user);
+  const roles = useAuth((s) => s.roles);
   const signOut = useAuth((s) => s.signOut);
   const { dataSaver, setDataSaver, notifications, setNotifications } = usePrefs();
   // Live status beats the MMKV-cached user snapshot (which only refreshes at
   // sign-in) — a KYC approval should light the chip on the next profile visit.
   const { data: kyc } = useKycStatus();
   const kycApproved = (kyc?.kycStatus ?? user?.kyc_status) === 'approved';
+  const quickActions = buildQuickActions(roles);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -164,6 +191,10 @@ export default function ProfilRoute() {
               ) : null}
               <Pressable
                 hitSlop={6}
+                onPress={() => {
+                  haptic.light();
+                  router.push('/profil/edit' as never);
+                }}
                 style={{
                   marginTop: 8,
                   flexDirection: 'row',
@@ -198,7 +229,7 @@ export default function ProfilRoute() {
             gap: 8,
           }}
         >
-          {QUICK_ACTIONS.map((a) => (
+          {quickActions.map((a) => (
             <Pressable
               key={a.label}
               onPress={() => {
@@ -272,6 +303,12 @@ export default function ProfilRoute() {
               Icon={MapPin}
               label="Adresses"
               onPress={() => router.push('/settings/addresses')}
+            />
+            <Row
+              Icon={UserCog}
+              label="Mes rôles"
+              value={roles.length > 1 ? `${roles.length} rôles` : '1 rôle'}
+              onPress={() => router.push('/profil/roles' as never)}
             />
             <Row
               Icon={ShieldCheck}

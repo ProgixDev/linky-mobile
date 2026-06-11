@@ -36,18 +36,24 @@ export default function CreateTypeRoute() {
           Que veux-tu publier ?
         </Text>
         {visibleOptions.length === 0 && (
-          <Card padding={16}>
-            <Text variant="titleM" style={{ fontSize: 14 }}>
-              Active un rôle pour publier
-            </Text>
-            <Text
-              variant="micro"
-              tone="muted"
-              style={{ letterSpacing: 0, textTransform: 'none', marginTop: 4 }}
-            >
-              Va dans Profil → Rôles pour devenir vendeur ou agent immobilier.
-            </Text>
-          </Card>
+          <Pressable
+            onPress={() => router.push('/profil/devenir?role=seller' as never)}
+            style={{ marginBottom: 10 }}
+          >
+            <Card padding={16}>
+              <Text variant="titleM" style={{ fontSize: 14 }}>
+                Active un rôle pour publier
+              </Text>
+              <Text
+                variant="micro"
+                tone="muted"
+                style={{ letterSpacing: 0, textTransform: 'none', marginTop: 4 }}
+              >
+                Touche ici pour devenir vendeur ou agent immobilier — on
+                t'explique comment ça marche.
+              </Text>
+            </Card>
+          </Pressable>
         )}
         {visibleOptions.map((o) => {
           const Icon = I[o.icon];

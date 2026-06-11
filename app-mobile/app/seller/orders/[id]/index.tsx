@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   PackageX,
 } from 'lucide-react-native';
+import { useEffect } from 'react';
 import { useTheme } from '../../../../src/theme/ThemeProvider';
 import { Text } from '../../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../../src/components/nav/ScreenHeader';
@@ -15,13 +16,29 @@ import { haptic } from '../../../../src/lib/haptics';
 import { useOrder } from '../../../../src/data/queries';
 import { formatGNF } from '../../../../src/lib/format';
 import { OrderResolutionBanner } from '../../../../src/components/orders/OrderResolutionBanner';
+import { useAuth } from '../../../../src/stores/auth';
+import { useToast } from '../../../../src/components/feedback/Toast';
 
 export default function SellerOrderDetailRoute() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: order, isLoading } = useOrder(id);
+  const meId = useAuth((s) => s.user?.id ?? s.authUserId);
+  const toast = useToast();
 
-  if (isLoading) {
+  // Phase T.2 — owner check. confirm.tsx already guards buyer-side ; this
+  // mirror covers the seller side. Wrong owner → bounce to home with a
+  // calm toast, not an authoritative-looking 403 screen ; the user reached
+  // here via a stale link, not a hostile probe.
+  const wrongOwner = !isLoading && !!order && !!meId && order.sellerId !== meId;
+  useEffect(() => {
+    if (wrongOwner) {
+      toast.show("Cette commande ne fait pas partie de tes ventes.", 'info');
+      router.replace('/(tabs)');
+    }
+  }, [wrongOwner, toast]);
+
+  if (isLoading || wrongOwner) {
     return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
   if (!order) {

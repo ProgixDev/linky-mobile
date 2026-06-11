@@ -11,7 +11,6 @@ import {
   Plus,
   ArrowDownToLine,
   QrCode,
-  Send,
   Store,
   Wallet,
   ChevronRight,
@@ -336,17 +335,27 @@ function BuyerHome() {
             <QuickAction
               Icon={QrCode}
               label="Scanner"
-              onPress={() => router.push('/wallet')}
+              onPress={() => router.push('/scan')}
             />
             <QuickAction
-              Icon={Send}
-              label="Envoyer"
+              Icon={ArrowDownToLine}
+              label="Retirer"
               onPress={() => router.push('/wallet/retirer')}
             />
             <QuickAction
               Icon={Store}
               label="Vendre"
-              onPress={() => router.push('/create')}
+              onPress={() => {
+                // Phase T.2 — pure buyer used to dead-end into the create
+                // modal's "Va dans Profil → Rôles" copy (a screen that
+                // didn't exist). Route the upgrade pitch instead ; sellers
+                // and agents continue straight into the wizard.
+                if (roles.includes('seller') || roles.includes('agent')) {
+                  router.push('/create');
+                } else {
+                  router.push('/profil/devenir?role=seller' as never);
+                }
+              }}
             />
             <QuickAction
               Icon={Wallet}

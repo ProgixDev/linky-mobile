@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -8,6 +8,9 @@ import { useTheme } from '../../../../src/theme/ThemeProvider';
 import { Text } from '../../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../../src/lib/haptics';
+import { useOrder } from '../../../../src/data/queries';
+import { useAuth } from '../../../../src/stores/auth';
+import { useToast } from '../../../../src/components/feedback/Toast';
 
 interface Carrier {
   id: 'jefa' | 'sopex' | 'self' | 'pickup';
@@ -28,9 +31,25 @@ export default function ShipRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [carrier, setCarrier] = useState<Carrier['id']>('jefa');
   const [tracking, setTracking] = useState('');
+  const { data: order, isLoading } = useOrder(id);
+  const meId = useAuth((s) => s.user?.id ?? s.authUserId);
+  const toast = useToast();
+
+  // Phase T.2 — owner check. Same pattern as the order-detail mirror.
+  const wrongOwner = !isLoading && !!order && !!meId && order.sellerId !== meId;
+  useEffect(() => {
+    if (wrongOwner) {
+      toast.show("Cette commande ne fait pas partie de tes ventes.", 'info');
+      router.replace('/(tabs)');
+    }
+  }, [wrongOwner, toast]);
 
   const trackingRequired = carrier === 'jefa' || carrier === 'sopex';
   const valid = !trackingRequired || tracking.length >= 4;
+
+  if (isLoading || wrongOwner) {
+    return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }} />;
+  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
