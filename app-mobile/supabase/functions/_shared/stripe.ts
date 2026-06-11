@@ -15,8 +15,13 @@ import Stripe from 'stripe';
 
 let _client: Stripe | null = null;
 
+// Gate requires BOTH keys (review hardening 2026-06-11) : with the secret key
+// alone, buyers can pay on Stripe but the webhook 401s every delivery and the
+// order stays 'placed' forever — stripe intents are excluded from the
+// Lengopay polls/sweeps by design, so nothing else would ever flip it.
 export function stripeConfigured(): boolean {
-  return Boolean(Deno.env.get('LINKY_STRIPE_SECRET_KEY'));
+  return Boolean(Deno.env.get('LINKY_STRIPE_SECRET_KEY')) &&
+         Boolean(Deno.env.get('LINKY_STRIPE_WEBHOOK_SECRET'));
 }
 
 export function stripeClient(): Stripe {

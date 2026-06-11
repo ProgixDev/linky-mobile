@@ -64,6 +64,38 @@ This document is the client-shareable mirror of the internal memory `project_pha
 
 ---
 
+# Phase Q (Stripe card rail) — V1.1 additions (2026-06-11 review)
+
+## Q-1. Stale stripe-PI sweep
+
+- **V1 today** — stripe intents are excluded from `expire_stale_intents` by design (a TTL'd order could still be charged through a stale payment sheet). Abandoned card orders sit at `placed` + intent `pending` until the buyer cancels.
+- **Limit** — stale rows accumulate; the buyer's order list keeps a zombie entry.
+- **V1.1 target** — server-side sweep that cancels the Stripe PI FIRST (API call — closes the charge window), then expires the intent + cancels the order locally. Order of operations is the safety property.
+- **Effort** — M.
+
+## Q-2. `charge.refunded` / `dispute.*` alerting before live mode
+
+- **V1 today** — the webhook handles only `payment_intent.succeeded/payment_failed/canceled`. Refunds or card disputes issued from the Stripe dashboard would not touch the ledger and would go unnoticed.
+- **Limit** — acceptable in test mode; in live mode an unnoticed refund means the ledger says escrowed while Stripe clawed the money back.
+- **V1.1 target** — handle `charge.refunded` + `charge.dispute.*` with CRITICAL logging/alerting (no auto-ledger action — humans arbitrate), gate before the `sk_live_` swap.
+- **Effort** — S (log + ack) / M (alert channel).
+
+## Q-3. Cart-clear-before-payment dead-end
+
+- **V1 today** — `usePlaceOrder` clears the cart on order creation (before payment). After a sheet cancel, « Recommencer » routes to `/checkout` with an empty cart.
+- **Limit** — buyer has to re-find the product to retry a cancelled card payment.
+- **V1.1 target** — either clear the cart only on paid/wallet success, or make « Recommencer » deep-link back to the product. Touches the Lengopay retry flow too — shared fix.
+- **Effort** — S/M.
+
+## Q-4. Server-returned `publishable_key` unused client-side
+
+- **V1 today** — place-order returns `payment.publishable_key` but the mobile `StripeProvider` reads `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` from env at build time.
+- **Limit** — rotating the publishable key requires an app release; the server-driven rotation path exists but is dead code.
+- **V1.1 target** — initialize/override the Stripe SDK with the server-returned key (e.g. `initStripe` on first card checkout), env value as fallback only.
+- **Effort** — S.
+
+---
+
 ## Cross-references
 
 - `CLIENT_STATUS_REPORT_2026-06-01.html` — last full status report at repo root; client-facing context.

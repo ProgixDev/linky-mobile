@@ -55,8 +55,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     event = await constructWebhookEvent(rawBody, signature);
   } catch (e) {
-    console.error('[stripe-webhook] signature verification failed:', e);
+    // Distinguish "we can't verify ANYTHING" (secret unset — config problem,
+    // every order will stall) from an actual bad signature (probe / wrong env).
+    if (e instanceof Error && e.message === 'stripe_webhook_secret_unset') {
+      console.error('[stripe-webhook] LINKY_STRIPE_WEBHOOK_SECRET unset — all deliveries rejected until set');
+    } else {
+      console.error('[stripe-webhook] signature verification failed:', e);
+    }
     return json({ error: 'invalid_signature' }, 401);
+  }
+
+  // Env cross-check : a live event hitting a test-keyed deployment (or vice
+  // versa) is misrouted traffic — ack + ignore, never process.
+  const expectLive = (Deno.env.get('LINKY_STRIPE_SECRET_KEY') ?? '').startsWith('sk_live_');
+  if (event.livemode !== expectLive) {
+    console.error('[stripe-webhook] livemode mismatch — event ignored', {
+      event_livemode: event.livemode, expect_live: expectLive, event_type: event.type,
+    });
+    return json({ received: true, ignored: true }, 200);
   }
 
   if (!HANDLED.has(event.type)) {
@@ -68,7 +84,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const { data: intent, error: lookupErr } = await sb
     .from('payment_intents')
-    .select('id, status')
+    .select('id, status, amount_minor')
     .eq('rail', 'stripe')
     .eq('rail_intent_id', pi.id)
     .maybeSingle();
@@ -82,6 +98,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.error('[stripe-webhook] no payment_intents row for', pi.id, event.type);
     return json({ received: true, ignored: true }, 200);
   }
+  // Settlement integrity : the PI Stripe settled must match what we asked
+  // for. A mismatch (tampered amount, wrong currency, reused PI id across
+  // envs) must NOT credit escrow — leave the intent pending for manual
+  // reconcile and ack so Stripe stops retrying.
+  if (pi.amount !== Number(intent.amount_minor) || pi.currency !== 'gnf') {
+    console.error('[stripe-webhook] CRITICAL amount/currency mismatch — intent left pending for manual reconcile', {
+      intent_id: intent.id, stripe_pi: pi.id, event_type: event.type,
+      pi_amount: pi.amount, pi_currency: pi.currency, intent_amount_minor: intent.amount_minor,
+    });
+    return json({ received: true, mismatch: true }, 200);
+  }
+
   if (intent.status !== 'pending') {
     if (event.type === 'payment_intent.succeeded' && intent.status !== 'completed') {
       // Money landed on Stripe for an intent we already closed otherwise

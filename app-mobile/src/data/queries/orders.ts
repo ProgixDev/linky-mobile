@@ -90,7 +90,13 @@ export function useOrderWithIntent(id: string | undefined) {
     enabled: !!id,
     queryFn: () => fetchOrderEnvelope(id),
     refetchOnWindowFocus: true,
-    refetchInterval: 5000,
+    // Stripe confirmations land via webhook in ~1-3s — poll a pending stripe
+    // intent at 2s so the buyer sees « payé » fast ; everything else stays at
+    // the 5s Lengopay cadence.
+    refetchInterval: (query) => {
+      const env = query.state.data;
+      return env?.intent?.rail === 'stripe' && env.intent.status === 'pending' ? 2000 : 5000;
+    },
     refetchIntervalInBackground: false,
   });
 }

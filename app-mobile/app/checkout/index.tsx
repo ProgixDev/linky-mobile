@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useStripe } from '@stripe/stripe-react-native';
+import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
 import { useQueries } from '@tanstack/react-query';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
@@ -27,6 +27,10 @@ interface MethodOption {
   badgeColor: string;
   iconKey?: IconKey;
 }
+
+// Google Pay test mode must follow the KEY, not a hardcoded flag — otherwise
+// the prod key swap would silently leave Google Pay in test mode.
+const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').startsWith('pk_test_');
 
 const METHODS: MethodOption[] = [
   { id: 'orange-money', name: 'Orange Money', hint: 'Tu confirmes au prochain écran', badge: 'OM', badgeColor: '#FF7900' },
@@ -68,7 +72,7 @@ export default function CheckoutRoute() {
       const { error: initErr } = await initPaymentSheet({
         merchantDisplayName: 'Linky',
         paymentIntentClientSecret: payment.client_secret,
-        googlePay: { merchantCountryCode: 'US', testEnv: true },
+        googlePay: { merchantCountryCode: 'US', testEnv: STRIPE_TEST_MODE },
         returnURL: 'linky://stripe-redirect',
       });
       if (initErr) {
@@ -77,7 +81,7 @@ export default function CheckoutRoute() {
         return;
       }
       const { error: payErr } = await presentPaymentSheet();
-      if (payErr && payErr.code !== 'Canceled') {
+      if (payErr && payErr.code !== PaymentSheetError.Canceled) {
         show(payErr.message || 'Paiement échoué', 'danger');
       }
       // Success : webhook flips the order to paid in ~1-3s, the confirmation

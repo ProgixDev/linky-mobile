@@ -46,6 +46,17 @@ function valid(b: unknown): b is Body {
   return true;
 }
 
+// Idempotency-cache filter (wrap.ts contract, same idea as stripTokens) : the
+// Stripe client_secret must NOT sit in idempotency_keys.response_body for the
+// 24h window — a service-role DB read could replay a live payment credential.
+// A replayed idempotent call gets { order, intent } back without the sheet
+// bundle ; the live (first) response is unaffected.
+function stripPaymentSecret(body: unknown): unknown {
+  if (!body || typeof body !== 'object') return body;
+  const { payment: _payment, ...rest } = body as Record<string, unknown>;
+  return rest;
+}
+
 Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
 
@@ -113,6 +124,21 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     // Lengopay cron (pick/expire filter rail='lengopay' since 20260610_03).
     // ───────────────────────────────────────────────────────────────────────
     const orderRow = row as OrderRow;
+
+    // GNF-only guard : Stripe amount = total_minor with currency 'gnf'. The
+    // payment_intents CHECK admits EUR — an EUR order reaching this branch
+    // would charge the EUR total AS GNF. Cancel the just-created order
+    // (pre-intent failure path) and reject.
+    if (orderRow.currency !== 'GNF') {
+      console.error('[place-order] card branch refused non-GNF order', {
+        order_id: orderRow.id, currency: orderRow.currency,
+      });
+      await sb.from('orders').update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString(),
+      }).eq('id', orderRow.id);
+      throwApi('CURRENCY_NOT_SUPPORTED', 400, 'Le paiement par carte est disponible en GNF uniquement.');
+    }
 
     // S2 Step 1: intent row FIRST with a placeholder rail_intent_id (unique
     // per attempt via embedded uuid). payer_phone stays NULL for cards.
@@ -319,4 +345,4 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   // Buyer-only response path (rail flow); never add scan_token to the SELECT
   // or pass opts to mapOrder — scanToken stays undefined.
   return { body: { order: mapOrder(orderRow), intent: mapPaymentIntent(finalIntent) } };
-}));
+}, stripPaymentSecret));

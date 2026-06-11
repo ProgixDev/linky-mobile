@@ -174,7 +174,14 @@ export default function CheckoutConfirmRoute() {
       await cancel.mutateAsync({ orderId: order!.id });
       show('Paiement annulé', 'info');
       router.replace('/(tabs)');
-    } catch {
+    } catch (e: unknown) {
+      const err = e as { code?: string; message_fr?: string };
+      if (err.code === 'PAYMENT_ALREADY_COMPLETED') {
+        // The cancel raced the payment and the payment won — that's a success,
+        // not an error. Stay here ; polling flips the screen to SUCCESS.
+        show(err.message_fr ?? "Le paiement vient d'aboutir — ta commande est confirmée.", 'info');
+        return;
+      }
       show("Erreur lors de l'annulation", 'danger');
     }
   }
