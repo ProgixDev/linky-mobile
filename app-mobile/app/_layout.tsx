@@ -91,13 +91,16 @@ export default function RootLayout() {
                       <Stack.Screen name="wallet/recharger" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="wallet/retirer" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="create/index" options={{ presentation: 'modal' }} />
-                      <Stack.Screen name="create/product/seller" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="create/product/category" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="create/product/details" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="create/product/photos" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="create/product/preview" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="create/property/details" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="create/property/location" options={{ animation: 'slide_from_right' }} />
+                      {/* Phase T.2 fix — the create/product/* and
+                          create/property/* per-step Stack.Screen entries
+                          are now owned by the role-gated _layout.tsx files
+                          under those subdirs (see
+                          app/create/product/_layout.tsx +
+                          app/create/property/_layout.tsx) ; the wizard
+                          layouts set animation: 'slide_from_right' in
+                          their screenOptions. Keeping the entries here
+                          would clash with the nested Stack and expo-router
+                          would warn + drop the animation. */}
                       <Stack.Screen name="messages/index" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="messages/[id]" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />

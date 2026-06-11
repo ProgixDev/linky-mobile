@@ -1,7 +1,7 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button, IconButton } from '../../src/components/primitives/Button';
@@ -11,6 +11,7 @@ import { I } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useWallet, useMyWithdrawals, type WithdrawalRequestItem } from '../../src/data/queries';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
+import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 
 const STATUS_LABEL: Record<string, string> = {
   received: 'Reçu',
@@ -31,11 +32,31 @@ const WITHDRAWAL_STATUS: Record<WithdrawalRequestItem['status'], { label: string
 
 export default function WalletRoute() {
   const { colors } = useTheme();
-  const { data: wallet, isLoading } = useWallet();
-  const { data: myWithdrawals } = useMyWithdrawals();
+  const walletQuery = useWallet();
+  const withdrawalsQuery = useMyWithdrawals();
+  const wallet = walletQuery.data;
+  const myWithdrawals = withdrawalsQuery.data;
   const [tab, setTab] = useState<'movements' | 'pending'>('movements');
 
-  if (isLoading || !wallet) {
+  const onRefresh = useCallback(async () => {
+    await Promise.all([walletQuery.refetch(), withdrawalsQuery.refetch()]);
+  }, [walletQuery, withdrawalsQuery]);
+
+  // Phase T.4 — error state distinguished from loading. Pre-T4, an
+  // API failure on /wallet-balance kept this screen in the skeleton
+  // loop forever ("if (isLoading || !wallet) return skeleton") — the
+  // single most trust-sensitive surface in the app had no error
+  // affordance at all.
+  if (walletQuery.isError) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+        <TopBar title="Mon portefeuille" back />
+        <ErrorStateView onRetry={() => walletQuery.refetch()} />
+      </SafeAreaView>
+    );
+  }
+
+  if (walletQuery.isLoading || !wallet) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
         <TopBar title="Mon portefeuille" back />
@@ -62,7 +83,17 @@ export default function WalletRoute() {
           </IconButton>
         }
       />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={walletQuery.isFetching && !walletQuery.isLoading}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <View style={{ paddingHorizontal: 16 }}>
           <WalletGlanceCard
             balanceGnf={wallet.balanceGnf}

@@ -36,7 +36,9 @@ export default function ShipRoute() {
   const toast = useToast();
 
   // Phase T.2 — owner check. Same pattern as the order-detail mirror.
-  const wrongOwner = !isLoading && !!order && !!meId && order.sellerId !== meId;
+  // T.2.fix — also treat null meId as NOT owner ; fails open today only
+  // because every seller-side caller is authed, but cheap to harden.
+  const wrongOwner = !isLoading && !!order && (!meId || order.sellerId !== meId);
   useEffect(() => {
     if (wrongOwner) {
       toast.show("Cette commande ne fait pas partie de tes ventes.", 'info');

@@ -743,8 +743,10 @@ function HomeWalletCard({
               GNF
             </Text>
           </View>
+          {/* Phase T.4 — formatEUR already prefixes "≈" ; pre-fix this rendered
+              "≈ ≈" doubled. */}
           <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
-            ≈ {formatEUR(gnfToEur(balanceGnf))}
+            {formatEUR(gnfToEur(balanceGnf))}
           </Text>
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>

@@ -3,7 +3,7 @@
 // display_name + city via the existing update-profile endpoint, no avatar
 // upload yet (deferred to V1.1 — needs the photo-upload-url storage flow).
 import { useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ChevronLeft, User as UserIcon } from 'lucide-react-native';
@@ -42,7 +42,8 @@ export default function ProfilEditRoute() {
       });
       if (currentUser) signIn({ ...currentUser, ...res.user });
       toast.show('Profil mis à jour.', 'success');
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/(tabs)/profil');
     } catch (e) {
       toast.show(toToastMessage(e, 'Impossible de mettre à jour le profil.'), 'danger');
     }
@@ -50,6 +51,10 @@ export default function ProfilEditRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <View
         style={{
           paddingHorizontal: 20,
@@ -61,7 +66,7 @@ export default function ProfilEditRoute() {
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/profil'))}
           hitSlop={12}
           accessibilityLabel="Retour"
           style={{
@@ -193,6 +198,7 @@ export default function ProfilEditRoute() {
           disabled={!canSave}
         />
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

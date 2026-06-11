@@ -7,5 +7,9 @@ import { useRoleGuard, RoleGateView } from '../../../src/lib/useRoleGuard';
 export default function CreateProductLayout() {
   const { allowed, required } = useRoleGuard('seller');
   if (!allowed) return <RoleGateView required={required} surfaceLabel="publier un produit" />;
-  return <Stack screenOptions={{ headerShown: false }} />;
+  // Phase T.2 fix — animation moved here from app/_layout.tsx so every
+  // step in the wizard slides in consistently.
+  return (
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }} />
+  );
 }

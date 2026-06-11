@@ -29,6 +29,11 @@ export default function BoutiqueRoute() {
   if (!guard.allowed) {
     return <RoleGateView required={guard.required} surfaceLabel="ton tableau de bord" />;
   }
+  // Phase T.2 fix — `mode` is captured at first mount ; after a role change
+  // while this tab stays mounted (devenir / roles flows), a pure seller
+  // could be stuck on EstateDashboard with no switcher. Derive instead so
+  // the rendered dashboard always matches the current role set.
+  const effectiveMode: ProMode = hasBoth ? mode : isSeller ? 'shop' : 'estate';
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -51,7 +56,7 @@ export default function BoutiqueRoute() {
           <Pressable
             onPress={() => {
               haptic.light();
-              router.push(mode === 'shop' ? '/create/product/seller' : '/create/property/details');
+              router.push(effectiveMode === 'shop' ? '/create/product/seller' : '/create/property/details');
             }}
             style={{
               width: 48,
@@ -61,7 +66,7 @@ export default function BoutiqueRoute() {
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            accessibilityLabel={mode === 'shop' ? 'Nouvelle annonce' : 'Nouveau bien'}
+            accessibilityLabel={effectiveMode === 'shop' ? 'Nouvelle annonce' : 'Nouveau bien'}
           >
             <Plus size={20} color={colors.bg} strokeWidth={2.25} />
           </Pressable>
@@ -81,20 +86,20 @@ export default function BoutiqueRoute() {
               <ModeTab
                 Icon={HomeIcon}
                 label="Boutique"
-                active={mode === 'shop'}
+                active={effectiveMode === 'shop'}
                 onPress={() => setMode('shop')}
               />
               <ModeTab
                 Icon={Building2}
                 label="Immobilier"
-                active={mode === 'estate'}
+                active={effectiveMode === 'estate'}
                 onPress={() => setMode('estate')}
               />
             </View>
           </View>
         )}
 
-        {mode === 'shop' ? <ShopDashboard /> : <EstateDashboard />}
+        {effectiveMode === 'shop' ? <ShopDashboard /> : <EstateDashboard />}
       </ScrollView>
     </SafeAreaView>
   );

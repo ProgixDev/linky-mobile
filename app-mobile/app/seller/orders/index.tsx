@@ -214,10 +214,16 @@ function SellerOrderRow({ order, onPress }: { order: Order; onPress: () => void 
                 fontVariant: ['tabular-nums'],
               }}
             >
-              {formatGNF(order.amountGnf - order.feesGnf)}
+              {/* Phase T.4 — fee model fix. Verified 2026-06-10: the buyer
+                  pays the 3% on top ; the seller receives the FULL
+                  amount_minor. The previous "amount - fees" + "net après
+                  frais" label was misleading and conflicted with the
+                  detail screen below (BreakLine "Tu recevras" already
+                  shows order.amountGnf). */}
+              {formatGNF(order.amountGnf)}
             </Text>
             <Text style={{ fontSize: 11, color: colors.textMuted }}>
-              · net après frais
+              · tu reçois
             </Text>
           </View>
         </View>

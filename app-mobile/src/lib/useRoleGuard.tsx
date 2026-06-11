@@ -37,6 +37,16 @@ export function useRoleGuard(required: UserRole | UserRole[]): RoleGuardResult {
 
 // In-page gate that explains the requirement and routes to the upgrade pitch.
 // Used both by _layout.tsx (full-section block) and inline guards (boutique tab).
+//
+// T.2.fix — explicit plural labels per role ; the old `${roleLabel}s`
+// produced "agent immobiliers". Also: when the gate accepts EITHER seller
+// or agent, offer both Devenir CTAs so a pure buyer doesn't have to guess
+// which role they actually need.
+const ROLE_LABELS: Record<'seller' | 'agent', { sg: string; pl: string }> = {
+  seller: { sg: 'vendeur', pl: 'vendeurs' },
+  agent:  { sg: 'agent immobilier', pl: 'agents immobiliers' },
+};
+
 export function RoleGateView({
   required,
   surfaceLabel,
@@ -49,9 +59,21 @@ export function RoleGateView({
   const { colors } = useTheme();
   const wantsSeller = required.includes('seller');
   const wantsAgent = required.includes('agent');
-  const icon: IconKey = wantsSeller ? 'store' : 'building';
-  const role: UserRole = wantsSeller ? 'seller' : 'agent';
-  const roleLabel = wantsSeller ? 'vendeur' : 'agent immobilier';
+  // Both-allowed gate (e.g. /pro/*) uses the shop icon as a calm default and
+  // offers BOTH Devenir CTAs in the action stack below.
+  const icon: IconKey = wantsSeller && !wantsAgent ? 'store' : wantsAgent && !wantsSeller ? 'building' : 'store';
+  const titleLabel =
+    wantsSeller && wantsAgent
+      ? `${ROLE_LABELS.seller.pl} ou ${ROLE_LABELS.agent.pl}`
+      : wantsSeller
+        ? ROLE_LABELS.seller.pl
+        : ROLE_LABELS.agent.pl;
+  const bodyRoles =
+    wantsSeller && wantsAgent
+      ? `le rôle ${ROLE_LABELS.seller.sg} ou ${ROLE_LABELS.agent.sg}`
+      : wantsSeller
+        ? `le rôle ${ROLE_LABELS.seller.sg}`
+        : `le rôle ${ROLE_LABELS.agent.sg}`;
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ paddingHorizontal: 20, paddingTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -92,7 +114,7 @@ export function RoleGateView({
           })()}
         </View>
         <Text variant="dispL" center style={{ fontSize: 22, lineHeight: 28 }}>
-          Réservé aux {roleLabel}s
+          Réservé aux {titleLabel}
         </Text>
         <Text
           variant="bodyM"
@@ -100,17 +122,28 @@ export function RoleGateView({
           center
           style={{ marginTop: 10, maxWidth: 300, lineHeight: 21 }}
         >
-          Pour accéder à {surfaceLabel}, active le rôle {roleLabel} dans ton profil.
+          Pour accéder à {surfaceLabel}, active {bodyRoles} dans ton profil.
           {' '}C'est gratuit et tu peux désactiver à tout moment.
         </Text>
         <View style={{ marginTop: 28, width: '100%', gap: 10, maxWidth: 320 }}>
-          <Button
-            variant="dark"
-            size="lg"
-            block
-            label={`Devenir ${roleLabel}`}
-            onPress={() => router.push(`/profil/devenir?role=${role}` as never)}
-          />
+          {wantsSeller && (
+            <Button
+              variant="dark"
+              size="lg"
+              block
+              label={`Devenir ${ROLE_LABELS.seller.sg}`}
+              onPress={() => router.push(`/profil/devenir?role=seller` as never)}
+            />
+          )}
+          {wantsAgent && (
+            <Button
+              variant={wantsSeller ? 'outline' : 'dark'}
+              size="lg"
+              block
+              label={`Devenir ${ROLE_LABELS.agent.sg}`}
+              onPress={() => router.push(`/profil/devenir?role=agent` as never)}
+            />
+          )}
           <Button
             variant="ghost"
             size="md"

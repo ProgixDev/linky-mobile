@@ -30,7 +30,10 @@ export default function SellerOrderDetailRoute() {
   // mirror covers the seller side. Wrong owner → bounce to home with a
   // calm toast, not an authoritative-looking 403 screen ; the user reached
   // here via a stale link, not a hostile probe.
-  const wrongOwner = !isLoading && !!order && !!meId && order.sellerId !== meId;
+  //
+  // T.2.fix — also treat null meId as NOT owner. Fails open today only
+  // because every seller-side caller is authed, but cheap to harden.
+  const wrongOwner = !isLoading && !!order && (!meId || order.sellerId !== meId);
   useEffect(() => {
     if (wrongOwner) {
       toast.show("Cette commande ne fait pas partie de tes ventes.", 'info');

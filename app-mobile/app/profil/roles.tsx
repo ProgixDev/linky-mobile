@@ -68,7 +68,8 @@ export default function RolesRoute() {
       setRoles(arr);
       if (currentUser) signIn({ ...currentUser, ...res.user });
       toast.show('Rôles mis à jour.', 'success');
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/(tabs)/profil');
     } catch (e) {
       toast.show(toToastMessage(e, 'Impossible de mettre à jour les rôles.'), 'danger');
     } finally {
@@ -89,7 +90,7 @@ export default function RolesRoute() {
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           hitSlop={12}
           accessibilityLabel="Retour"
           style={{

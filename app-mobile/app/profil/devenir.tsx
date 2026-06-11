@@ -19,6 +19,7 @@ import { useAuth, type UserRole } from '../../src/stores/auth';
 import { useUpdateProfile } from '../../src/data/queries/auth';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
+import { useKycStatus } from '../../src/data/queries';
 
 const ROLE_COPY: Record<'seller' | 'agent', {
   title: string;
@@ -85,7 +86,11 @@ export default function DevenirRoute() {
   const setRoles = useAuth((s) => s.setRoles);
   const signIn = useAuth((s) => s.signIn);
   const currentUser = useAuth((s) => s.user);
-  const kycStatus = currentUser?.kyc_status ?? null;
+  // T.2.fix — live KYC beats the cached snapshot ; without this a
+  // fresh-approved user gets sent through kyc/intro again on the next
+  // upgrade pitch because the MMKV-cached user only refreshes at sign-in.
+  const { data: kyc } = useKycStatus();
+  const cachedKyc = currentUser?.kyc_status ?? null;
   const updateProfile = useUpdateProfile();
   const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -102,14 +107,21 @@ export default function DevenirRoute() {
   const onActivate = async () => {
     setSubmitting(true);
     try {
+      // Live KYC : prefer the freshly-mutated response (update-profile
+      // returns the user row including kyc_status), then the live useKycStatus
+      // poll, and only fall back to the cached AuthUser snapshot. This avoids
+      // the "cached-stale → kyc/intro detour" for users who just got approved.
+      let freshKyc: string | null = kyc?.kycStatus ?? cachedKyc;
       if (!alreadyHas) {
         const res = await updateProfile.mutateAsync({ roles: nextRoles });
         setRoles(nextRoles);
         if (currentUser) signIn({ ...currentUser, ...res.user });
+        if (res.user.kyc_status !== undefined && res.user.kyc_status !== null) {
+          freshKyc = res.user.kyc_status;
+        }
       }
-      // Route onward: KYC if needed (mandatory for publish), else straight
-      // into the create wizard.
-      if (kycStatus !== 'approved') {
+      // KYC mandatory for publish ; sellers/agents go through Didit once.
+      if (freshKyc !== 'approved') {
         router.replace('/kyc/intro');
       } else {
         router.replace('/create');
@@ -217,7 +229,7 @@ export default function DevenirRoute() {
           ))}
         </View>
 
-        {kycStatus !== 'approved' && (
+        {(kyc?.kycStatus ?? cachedKyc) !== 'approved' && (
           <View
             style={{
               marginTop: 22,
