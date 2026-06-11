@@ -47,10 +47,16 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
 
   // Ownership check: product → shop → owner. Single join via the FK.
   const { data: own, error: eOwn } = await sb
-    .from('products').select('id, shop_id, shops!inner(owner_id)')
+    .from('products').select('id, shop_id, status, shops!inner(owner_id)')
     .eq('id', body.id).maybeSingle();
   if (eOwn) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   if (!own) throwApi('PRODUCT_NOT_FOUND', 404, 'Produit introuvable.');
+  // Moderation takedown is admin-final : a removed listing accepts NO seller
+  // edits (otherwise status could be flipped back to 'active'). Reinstatement
+  // goes through the admin moderate-listing 'approve'.
+  if ((own as { status?: string }).status === 'removed') {
+    throwApi('LISTING_REMOVED', 403, 'Cette annonce a été retirée par la modération.');
+  }
   // PostgREST hints: inner-joined column path is shops.owner_id; tolerate object or array shapes.
   const ownerId = Array.isArray((own as { shops: unknown }).shops)
     ? ((own as { shops: { owner_id: string }[] }).shops[0]?.owner_id)

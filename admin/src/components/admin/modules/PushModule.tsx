@@ -5,7 +5,30 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Send, Smartphone, Calendar, Users, Bell } from 'lucide-react';
-import { pushData } from '@/data/mock';
+// V1.1 — this module is NOT routed (route + sidebar entry removed in the
+// final-sprint mock purge). Local sample data so no app code imports
+// @/data/mock ; becomes a real fetcher when the push-campaign backend lands.
+interface PushCampaign {
+  id: string;
+  title: string;
+  body: string;
+  audience: 'all' | 'buyers' | 'sellers' | 'agents';
+  scheduled: string;
+  sent?: number;
+  opened?: number;
+  status: 'scheduled' | 'sent' | 'draft';
+}
+
+const pushData: PushCampaign[] = [
+  {
+    id: 'p1',
+    title: 'Tabaski : des promos limitées',
+    body: 'Les meilleures boutiques ont préparé leurs offres. Découvre.',
+    audience: 'buyers',
+    scheduled: '17/05/2026 09:00',
+    status: 'scheduled',
+  },
+];
 
 const schema = z.object({
   title: z.string().min(3).max(60),

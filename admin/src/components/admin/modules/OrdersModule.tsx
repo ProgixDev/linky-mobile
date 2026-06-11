@@ -1,49 +1,59 @@
 'use client';
 
+// Final sprint §2 — the orders table now reads real production orders
+// (list-orders-admin, read-only). The disputes Kanban was already live.
+
 import { useState } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
+import { Loader2 } from 'lucide-react';
 import { DataTable } from '@/components/admin/DataTable';
 import { DisputesKanban } from './DisputesKanban';
-import { ordersData, type Order, type OrderStatus } from '@/data/mock';
+import { useAdminOrders, type AdminOrder, type AdminOrderStatus } from '@/data/queries/orders-admin';
 
-const STATUS_META: Record<OrderStatus, { label: string; cls: string }> = {
+const STATUS_META: Record<AdminOrderStatus, { label: string; cls: string }> = {
   placed: { label: 'PASSÉE', cls: 'bg-sunken text-muted' },
   paid: { label: 'PAYÉE', cls: 'bg-accent-soft text-accent-text' },
   preparing: { label: 'EN COURS', cls: 'bg-accent-soft text-accent-text' },
   delivered: { label: 'LIVRÉE', cls: 'bg-primary-soft text-primary-deep' },
   released: { label: 'TERMINÉE', cls: 'bg-success/12 text-success' },
   disputed: { label: 'LITIGE', cls: 'bg-danger/12 text-danger' },
+  cancelled: { label: 'ANNULÉE', cls: 'bg-sunken text-muted' },
+  refunded: { label: 'REMBOURSÉE', cls: 'bg-danger/12 text-danger' },
 };
 
-const columns: ColumnDef<Order>[] = [
+const columns: ColumnDef<AdminOrder>[] = [
   {
-    accessorKey: 'ref',
+    accessorKey: 'reference',
     header: 'Référence',
     cell: ({ row }) => (
-      <span className="font-bold tabular-nums">{row.original.ref}</span>
+      <span className="font-bold tabular-nums">{row.original.reference}</span>
     ),
   },
   {
-    accessorKey: 'product',
+    id: 'product',
     header: 'Article',
     cell: ({ row }) => (
-      <div className="max-w-[260px] truncate">{row.original.product}</div>
+      <div className="max-w-[260px] truncate">
+        {row.original.product_snapshot?.title ?? '—'}
+      </div>
     ),
   },
   {
-    accessorKey: 'buyer',
+    id: 'buyer',
     header: 'Acheteur',
+    cell: ({ row }) => row.original.buyer?.display_name ?? '—',
   },
   {
-    accessorKey: 'seller',
+    id: 'seller',
     header: 'Vendeur',
+    cell: ({ row }) => row.original.seller?.display_name ?? '—',
   },
   {
-    accessorKey: 'totalGnf',
+    accessorKey: 'total_minor',
     header: 'Montant',
     cell: ({ row }) => (
       <span className="font-bold tabular-nums">
-        {(row.original.totalGnf / 1000).toLocaleString('fr-FR')} k
+        {Number(row.original.total_minor).toLocaleString('fr-FR')} GNF
       </span>
     ),
   },
@@ -51,7 +61,7 @@ const columns: ColumnDef<Order>[] = [
     accessorKey: 'status',
     header: 'Statut',
     cell: ({ row }) => {
-      const m = STATUS_META[row.original.status];
+      const m = STATUS_META[row.original.status] ?? STATUS_META.placed;
       return (
         <span
           className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${m.cls}`}
@@ -62,10 +72,10 @@ const columns: ColumnDef<Order>[] = [
     },
   },
   {
-    accessorKey: 'createdAt',
+    accessorKey: 'created_at',
     header: 'Date',
     cell: ({ row }) =>
-      new Date(row.original.createdAt).toLocaleDateString('fr-FR', {
+      new Date(row.original.created_at).toLocaleDateString('fr-FR', {
         day: '2-digit',
         month: 'short',
       }),
@@ -74,6 +84,8 @@ const columns: ColumnDef<Order>[] = [
 
 export function OrdersModule() {
   const [tab, setTab] = useState<'kanban' | 'table'>('kanban');
+  const { data: orders, isLoading, isError } = useAdminOrders();
+
   return (
     <div className="space-y-6">
       <div className="flex w-fit gap-1 rounded-full bg-surface p-1.5 ring-1 ring-border">
@@ -87,11 +99,19 @@ export function OrdersModule() {
 
       {tab === 'kanban' ? (
         <DisputesKanban />
+      ) : isLoading ? (
+        <div className="flex h-64 items-center justify-center rounded-2xl border border-line bg-surface text-sm text-muted">
+          <Loader2 size={16} className="mr-2 animate-spin" /> Chargement des commandes…
+        </div>
+      ) : isError ? (
+        <div className="flex h-64 items-center justify-center rounded-2xl border border-line bg-surface text-sm text-danger">
+          Impossible de charger les commandes. Réessaie.
+        </div>
       ) : (
-        <DataTable<Order, unknown>
-          data={ordersData}
+        <DataTable<AdminOrder, unknown>
+          data={orders ?? []}
           columns={columns}
-          searchKey="ref"
+          searchKey="reference"
           searchPlaceholder="Rechercher par référence…"
         />
       )}

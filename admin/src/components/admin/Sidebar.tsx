@@ -10,13 +10,12 @@ import {
   ShoppingBag,
   ShieldCheck,
   Banknote,
-  Megaphone,
   Settings,
   LogOut,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/stores/auth';
-import { useWithdrawals } from '@/data/queries/withdrawals';
+import { useAdminOverview } from '@/data/queries/overview';
 
 interface Item {
   href: string;
@@ -25,23 +24,19 @@ interface Item {
   badge?: string;
 }
 
+// Bannières + Push composer are V1.1 — their routes were removed with the
+// mock purge (an honest absent feature beats a fake one). Badges are LIVE
+// counts from admin-overview ; rendered only when > 0.
 const NAV: { section: string; items: Item[] }[] = [
   {
     section: 'Opérations',
     items: [
       { href: '/', label: "Vue d'ensemble", Icon: LayoutDashboard },
       { href: '/users', label: 'Utilisateurs', Icon: Users },
-      { href: '/listings', label: 'Annonces', Icon: ListChecks, badge: '3' },
-      { href: '/orders', label: 'Commandes & litiges', Icon: ShoppingBag, badge: '6' },
-      { href: '/kyc', label: 'KYC en attente', Icon: ShieldCheck, badge: '12' },
+      { href: '/listings', label: 'Annonces', Icon: ListChecks },
+      { href: '/orders', label: 'Commandes & litiges', Icon: ShoppingBag },
+      { href: '/kyc', label: 'KYC en attente', Icon: ShieldCheck },
       { href: '/withdrawals', label: 'Retraits', Icon: Banknote },
-    ],
-  },
-  {
-    section: 'Marketing',
-    items: [
-      { href: '/banners', label: 'Bannières', Icon: Megaphone },
-      { href: '/push', label: 'Push notifications', Icon: Megaphone },
     ],
   },
 ];
@@ -51,14 +46,17 @@ export function Sidebar() {
   const router = useRouter();
   const session = useAuth((s) => s.session);
   const clearSession = useAuth((s) => s.clearSession);
-  // Real pending count for the Retraits badge (shares the module's query
-  // cache — no extra HTTP when the withdrawals page is open). Errors / empty
-  // simply hide the badge.
-  const { data: pendingWithdrawals } = useWithdrawals('pending');
-  const withdrawalsBadge =
-    pendingWithdrawals && pendingWithdrawals.length > 0
-      ? String(pendingWithdrawals.length)
-      : undefined;
+  // Live queue counts (shared cache with the Overview page, 30s poll).
+  // Errors / zero counts simply hide the badges.
+  const { data: overview } = useAdminOverview();
+  const badgeOf = (n: number | undefined): string | undefined =>
+    n && n > 0 ? String(n) : undefined;
+  const LIVE_BADGES: Record<string, string | undefined> = {
+    '/listings': badgeOf(overview?.listings_pending),
+    '/orders': badgeOf(overview?.orders_disputed),
+    '/kyc': badgeOf(overview?.kyc_pending),
+    '/withdrawals': badgeOf(overview?.withdrawals_pending),
+  };
   // Initials for the avatar — prefer the explicit displayName, fall back to
   // the email's local-part, finally a placeholder. Keeps the chip rendered
   // even on a freshly-promoted account with display_name=null in DB.
@@ -100,7 +98,7 @@ export function Sidebar() {
               {sec.items.map((it) => {
                 const active =
                   it.href === '/' ? pathname === '/' : pathname.startsWith(it.href);
-                const badge = it.href === '/withdrawals' ? withdrawalsBadge : it.badge;
+                const badge = it.href in LIVE_BADGES ? LIVE_BADGES[it.href] : it.badge;
                 return (
                   <Link
                     key={it.href}

@@ -1,66 +1,47 @@
 'use client';
 
-import { type ColumnDef } from '@tanstack/react-table';
-import { MoreVertical, Mail, ShieldOff } from 'lucide-react';
-import { DataTable } from '@/components/admin/DataTable';
-import { usersData, type User, type UserStatus } from '@/data/mock';
+// Final sprint §2 — users table on real data. READ-ONLY in V1 : no suspend /
+// email / role mutations until a moderation policy exists.
 
-const STATUS_META: Record<UserStatus, { label: string; cls: string }> = {
-  active: { label: 'Actif', cls: 'bg-success/12 text-success' },
-  pending: { label: 'En attente', cls: 'bg-accent-soft text-accent-text' },
-  suspended: { label: 'Suspendu', cls: 'bg-danger/12 text-danger' },
+import { type ColumnDef } from '@tanstack/react-table';
+import { Loader2, ShieldCheck } from 'lucide-react';
+import { DataTable } from '@/components/admin/DataTable';
+import { useAdminUsers, type AdminUser } from '@/data/queries/users';
+
+const KYC_META: Record<AdminUser['kyc_status'], { label: string; cls: string }> = {
+  approved: { label: 'Vérifié', cls: 'bg-success/12 text-success' },
+  pending: { label: 'KYC en cours', cls: 'bg-accent-soft text-accent-text' },
+  in_review: { label: 'KYC en examen', cls: 'bg-accent-soft text-accent-text' },
+  declined: { label: 'KYC refusé', cls: 'bg-danger/12 text-danger' },
+  none: { label: 'Non vérifié', cls: 'bg-sunken text-muted' },
 };
 
-const columns: ColumnDef<User>[] = [
+const columns: ColumnDef<AdminUser>[] = [
   {
-    id: 'name',
-    accessorKey: 'name',
+    id: 'display_name',
+    accessorFn: (u) => u.display_name ?? '',
     header: 'Utilisateur',
     cell: ({ row }) => {
       const u = row.original;
+      const name = u.display_name ?? 'Utilisateur Linky';
       return (
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sunken text-xs font-bold">
-            {u.name
-              .split(' ')
-              .map((p) => p[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase()}
+            {name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <div className="font-bold">{u.name}</div>
-            <div className="text-xs text-muted">{u.email}</div>
+            <div className="font-bold">{name}</div>
+            <div className="text-xs text-muted tabular-nums">{u.id.slice(0, 8)}…</div>
           </div>
         </div>
       );
     },
   },
   {
-    accessorKey: 'roles',
-    header: 'Rôles',
-    cell: ({ row }) => (
-      <div className="flex flex-wrap gap-1">
-        {row.original.roles.map((r) => (
-          <span
-            key={r}
-            className="rounded-full bg-sunken px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted"
-          >
-            {r}
-          </span>
-        ))}
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'city',
-    header: 'Ville',
-  },
-  {
-    accessorKey: 'status',
-    header: 'Statut',
+    accessorKey: 'kyc_status',
+    header: 'KYC',
     cell: ({ row }) => {
-      const m = STATUS_META[row.original.status];
+      const m = KYC_META[row.original.kyc_status] ?? KYC_META.none;
       return (
         <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${m.cls}`}>
           {m.label}
@@ -69,66 +50,53 @@ const columns: ColumnDef<User>[] = [
     },
   },
   {
-    accessorKey: 'ordersCount',
-    header: 'Commandes',
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.original.ordersCount}</span>
-    ),
+    accessorKey: 'is_admin',
+    header: 'Rôle',
+    cell: ({ row }) =>
+      row.original.is_admin ? (
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-deep">
+          <ShieldCheck size={10} /> Admin
+        </span>
+      ) : (
+        <span className="text-xs text-muted">Membre</span>
+      ),
   },
   {
-    accessorKey: 'listingsCount',
-    header: 'Annonces',
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.original.listingsCount}</span>
-    ),
-  },
-  {
-    id: 'actions',
-    header: '',
-    cell: () => (
-      <div className="flex items-center justify-end gap-1">
-        <IconButton title="Envoyer un email">
-          <Mail size={15} />
-        </IconButton>
-        <IconButton title="Suspendre" danger>
-          <ShieldOff size={15} />
-        </IconButton>
-        <IconButton title="Plus">
-          <MoreVertical size={15} />
-        </IconButton>
-      </div>
-    ),
+    accessorKey: 'created_at',
+    header: 'Inscrit le',
+    cell: ({ row }) =>
+      new Date(row.original.created_at).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }),
   },
 ];
 
-function IconButton({
-  children,
-  title,
-  danger,
-}: {
-  children: React.ReactNode;
-  title: string;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      title={title}
-      className={`flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-sunken ${
-        danger ? 'hover:text-danger' : 'hover:text-[#0E1311]'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 export function UsersModule() {
+  const { data: users, isLoading, isError } = useAdminUsers();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-line bg-surface text-sm text-muted">
+        <Loader2 size={16} className="mr-2 animate-spin" /> Chargement des utilisateurs…
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-line bg-surface text-sm text-danger">
+        Impossible de charger les utilisateurs. Réessaie.
+      </div>
+    );
+  }
+
   return (
-    <DataTable<User, unknown>
-      data={usersData}
+    <DataTable<AdminUser, unknown>
+      data={users ?? []}
       columns={columns}
-      searchKey="name"
-      searchPlaceholder="Rechercher par nom ou email…"
+      searchKey="display_name"
+      searchPlaceholder="Rechercher par nom…"
     />
   );
 }

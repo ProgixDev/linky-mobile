@@ -421,6 +421,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # manual deploy anyway; these sections make the default safe.
 # ============================================================================
 
+[functions.admin-overview]
+verify_jwt = false
+
 [functions.cancel-pending-payment]
 verify_jwt = false
 
@@ -490,6 +493,9 @@ verify_jwt = false
 [functions.list-kyc-sessions]
 verify_jwt = false
 
+[functions.list-listings-admin]
+verify_jwt = false
+
 [functions.list-my-orders]
 verify_jwt = false
 
@@ -497,6 +503,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.list-notifications]
+verify_jwt = false
+
+[functions.list-orders-admin]
 verify_jwt = false
 
 [functions.list-products]
@@ -509,6 +518,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.list-shops]
+verify_jwt = false
+
+[functions.list-users-admin]
 verify_jwt = false
 
 [functions.list-withdrawals]
@@ -524,6 +536,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.mock-lengopay]
+verify_jwt = false
+
+[functions.moderate-listing]
 verify_jwt = false
 
 [functions.otp-request]

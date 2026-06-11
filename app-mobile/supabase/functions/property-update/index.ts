@@ -81,11 +81,16 @@ Deno.serve(makePost<Body>('/v1/properties/update', valid, async ({ sb, body, req
 
   // Ownership: properties.owner_id is required, so a single fetch is enough.
   const { data: own, error: eOwn } = await sb
-    .from('properties').select('id, owner_id')
+    .from('properties').select('id, owner_id, status')
     .eq('id', body.id).maybeSingle();
   if (eOwn) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   if (!own) throwApi('PROPERTY_NOT_FOUND', 404, 'Annonce introuvable.');
   if ((own as { owner_id: string }).owner_id !== userId) throwApi('FORBIDDEN', 403, 'Action refusée.');
+  // Moderation takedown is admin-final : no seller edits on a removed listing
+  // (reinstatement = admin moderate-listing 'approve').
+  if ((own as { status?: string }).status === 'removed') {
+    throwApi('LISTING_REMOVED', 403, 'Cette annonce a été retirée par la modération.');
+  }
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (body.type !== undefined) {

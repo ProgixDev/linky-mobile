@@ -6,7 +6,32 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Megaphone, Calendar, Smartphone, Users, Send, Sparkles } from 'lucide-react';
-import { bannersData } from '@/data/mock';
+// V1.1 — this module is NOT routed (route + sidebar entry removed in the
+// final-sprint mock purge). Local sample data so no app code imports
+// @/data/mock ; becomes a real fetcher when the banners backend lands.
+interface Banner {
+  id: string;
+  title: string;
+  body: string;
+  ctaLabel: string;
+  audience: 'all' | 'buyers' | 'sellers' | 'agents';
+  status: 'live' | 'scheduled' | 'draft';
+  startsAt: string;
+  endsAt: string;
+}
+
+const bannersData: Banner[] = [
+  {
+    id: 'b1',
+    title: 'Black Friday — -30 %',
+    body: "Jusqu'à -30 % sur l'électronique. Du 25 au 30 novembre.",
+    ctaLabel: 'Voir les offres',
+    audience: 'buyers',
+    status: 'scheduled',
+    startsAt: '25/11/2026',
+    endsAt: '30/11/2026',
+  },
+];
 
 const schema = z.object({
   title: z.string().min(3, '3 caractères minimum'),
