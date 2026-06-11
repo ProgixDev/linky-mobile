@@ -493,6 +493,9 @@ verify_jwt = false
 [functions.list-my-orders]
 verify_jwt = false
 
+[functions.list-my-withdrawals]
+verify_jwt = false
+
 [functions.list-notifications]
 verify_jwt = false
 
@@ -506,6 +509,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.list-shops]
+verify_jwt = false
+
+[functions.list-withdrawals]
 verify_jwt = false
 
 [functions.mark-notifications-read]
@@ -530,6 +536,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.place-order]
+verify_jwt = false
+
+[functions.process-withdrawal]
 verify_jwt = false
 
 [functions.product-create]

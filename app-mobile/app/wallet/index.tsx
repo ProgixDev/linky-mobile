@@ -9,7 +9,7 @@ import { TopBar } from '../../src/components/nav/TopBar';
 import { WalletGlanceCard } from '../../src/components/lists/WalletCard';
 import { I } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
-import { useWallet } from '../../src/data/queries';
+import { useWallet, useMyWithdrawals, type WithdrawalRequestItem } from '../../src/data/queries';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -19,9 +19,20 @@ const STATUS_LABEL: Record<string, string> = {
   pending: 'En attente',
 };
 
+// Phase S — chips for the « Retraits » tab. 'approved' is an intermediate the
+// V1 manual flow doesn't produce ; map it to the waiting label just in case.
+const WITHDRAWAL_STATUS: Record<WithdrawalRequestItem['status'], { label: string; tone: 'wait' | 'ok' | 'bad' | 'off' }> = {
+  pending: { label: 'En attente', tone: 'wait' },
+  approved: { label: 'En attente', tone: 'wait' },
+  paid: { label: 'Payé', tone: 'ok' },
+  rejected: { label: 'Refusé', tone: 'bad' },
+  cancelled: { label: 'Annulé', tone: 'off' },
+};
+
 export default function WalletRoute() {
   const { colors } = useTheme();
   const { data: wallet, isLoading } = useWallet();
+  const { data: myWithdrawals } = useMyWithdrawals();
   const [tab, setTab] = useState<'movements' | 'pending'>('movements');
 
   if (isLoading || !wallet) {
@@ -67,14 +78,85 @@ export default function WalletRoute() {
             return (
               <Pressable key={t} onPress={() => setTab(t)} style={{ paddingBottom: 12, borderBottomWidth: active ? 2 : 0, borderBottomColor: colors.primary }}>
                 <Text style={{ fontSize: 13, fontWeight: active ? '600' : '400', color: active ? colors.text : colors.textMuted }}>
-                  {t === 'movements' ? 'Mouvements' : 'Retraits en attente'}
+                  {t === 'movements' ? 'Mouvements' : 'Retraits'}
                 </Text>
               </Pressable>
             );
           })}
         </View>
 
-        <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        {tab === 'pending' && (
+          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+            {(myWithdrawals ?? []).length === 0 ? (
+              <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', paddingVertical: 24 }}>
+                Aucun retrait pour le moment.
+              </Text>
+            ) : (
+              (myWithdrawals ?? []).map((w) => {
+                const st = WITHDRAWAL_STATUS[w.status];
+                const chipColor =
+                  st.tone === 'ok' ? colors.success
+                  : st.tone === 'bad' ? colors.danger
+                  : st.tone === 'wait' ? colors.info
+                  : colors.textMuted;
+                return (
+                  <View
+                    key={w.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      paddingVertical: 10,
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.border,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 999,
+                        backgroundColor: colors.bgSunken,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <I.upload size={16} color={colors.text} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '600' }}>
+                        {w.destination ? `Retrait vers ${w.destination}` : 'Retrait'}
+                      </Text>
+                      <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                        {new Date(w.created_at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        {w.status === 'rejected' && w.reason ? ` · ${w.reason}` : ''}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 3 }}>
+                      <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
+                        {formatGNF(Number(w.amount_minor))}
+                      </Text>
+                      <View
+                        style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 999,
+                          backgroundColor: colors.bgSunken,
+                        }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: chipColor }}>
+                          {st.label}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        )}
+
+        <View style={{ paddingHorizontal: 16, paddingTop: 12, display: tab === 'movements' ? 'flex' : 'none' }}>
           {wallet.movements.map((m) => (
             <View
               key={m.id}

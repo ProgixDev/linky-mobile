@@ -18,13 +18,16 @@ interface HistoryEntry {
   created_at: string;
 }
 
+// Keys = actual ledger ref_type values (see migrations: confirm_topup,
+// place_order, confirm_order_receipt, resolve_dispute, process_withdrawal).
 const REF_LABEL: Record<string, string> = {
   topup: 'Recharge',
-  withdrawal: 'Retrait',
-  order: 'Commande',
-  escrow: 'Séquestre',
-  transfer: 'Transfert',
-  refund: 'Remboursement',
+  withdrawal_payout: 'Retrait',
+  order_escrow: 'Paiement commande',
+  order_release: 'Vente encaissée',
+  order_platform_fee: 'Frais de service',
+  order_refund: 'Remboursement',
+  order_fee_refund: 'Remboursement des frais',
 };
 
 function toMovement(e: HistoryEntry): WalletMovement {
@@ -79,6 +82,31 @@ export function useRechargeWallet() {
   });
 }
 
+export interface WithdrawalRequestItem {
+  id: string;
+  currency: string;
+  amount_minor: number;
+  status: 'pending' | 'approved' | 'paid' | 'rejected' | 'cancelled';
+  destination: string | null;
+  reason: string | null;
+  created_at: string;
+  decided_at: string | null;
+}
+
+// The seller's own withdrawal requests — feeds the « Retraits » tab.
+export function useMyWithdrawals() {
+  return useQuery({
+    queryKey: ['my-withdrawals'],
+    queryFn: async (): Promise<WithdrawalRequestItem[]> => {
+      const { withdrawals } = await apiPost<{ withdrawals: WithdrawalRequestItem[] }>({
+        path: '/list-my-withdrawals',
+        body: {},
+      });
+      return withdrawals;
+    },
+  });
+}
+
 interface WithdrawArgs {
   amountGnf: number;
   destination?: string;
@@ -93,6 +121,9 @@ export function useWithdrawWallet() {
         path: '/wallet-withdraw-request',
         body: { currency: 'GNF', amount_minor: amountGnf, destination },
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wallet'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wallet'] });
+      qc.invalidateQueries({ queryKey: ['my-withdrawals'] });
+    },
   });
 }

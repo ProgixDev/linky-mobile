@@ -9,12 +9,14 @@ import {
   ListChecks,
   ShoppingBag,
   ShieldCheck,
+  Banknote,
   Megaphone,
   Settings,
   LogOut,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/stores/auth';
+import { useWithdrawals } from '@/data/queries/withdrawals';
 
 interface Item {
   href: string;
@@ -32,6 +34,7 @@ const NAV: { section: string; items: Item[] }[] = [
       { href: '/listings', label: 'Annonces', Icon: ListChecks, badge: '3' },
       { href: '/orders', label: 'Commandes & litiges', Icon: ShoppingBag, badge: '6' },
       { href: '/kyc', label: 'KYC en attente', Icon: ShieldCheck, badge: '12' },
+      { href: '/withdrawals', label: 'Retraits', Icon: Banknote },
     ],
   },
   {
@@ -48,6 +51,14 @@ export function Sidebar() {
   const router = useRouter();
   const session = useAuth((s) => s.session);
   const clearSession = useAuth((s) => s.clearSession);
+  // Real pending count for the Retraits badge (shares the module's query
+  // cache — no extra HTTP when the withdrawals page is open). Errors / empty
+  // simply hide the badge.
+  const { data: pendingWithdrawals } = useWithdrawals('pending');
+  const withdrawalsBadge =
+    pendingWithdrawals && pendingWithdrawals.length > 0
+      ? String(pendingWithdrawals.length)
+      : undefined;
   // Initials for the avatar — prefer the explicit displayName, fall back to
   // the email's local-part, finally a placeholder. Keeps the chip rendered
   // even on a freshly-promoted account with display_name=null in DB.
@@ -89,6 +100,7 @@ export function Sidebar() {
               {sec.items.map((it) => {
                 const active =
                   it.href === '/' ? pathname === '/' : pathname.startsWith(it.href);
+                const badge = it.href === '/withdrawals' ? withdrawalsBadge : it.badge;
                 return (
                   <Link
                     key={it.href}
@@ -101,7 +113,7 @@ export function Sidebar() {
                   >
                     <it.Icon size={16} strokeWidth={1.75} />
                     <span className="flex-1">{it.label}</span>
-                    {it.badge && (
+                    {badge && (
                       <span
                         className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
                           active
@@ -109,7 +121,7 @@ export function Sidebar() {
                             : 'bg-accent-soft text-accent-text'
                         }`}
                       >
-                        {it.badge}
+                        {badge}
                       </span>
                     )}
                   </Link>

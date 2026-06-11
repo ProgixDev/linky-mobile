@@ -16,9 +16,32 @@ import { useToast } from '../../src/components/feedback/Toast';
 import { useWithdrawWallet } from '../../src/data/queries';
 import { toToastMessage } from '../../src/lib/api';
 
+type Operator = 'Orange Money' | 'MTN Mobile Money';
+
+function Radio({ active }: { active: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        width: 22,
+        height: 22,
+        borderRadius: 999,
+        backgroundColor: active ? colors.primary : 'transparent',
+        borderWidth: active ? 0 : 1.5,
+        borderColor: colors.borderStrong,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {active && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
+    </View>
+  );
+}
+
 export default function RetirerRoute() {
   const { colors } = useTheme();
   const [amount, setAmount] = useState(200_000);
+  const [operator, setOperator] = useState<Operator>('Orange Money');
   const { show } = useToast();
   const withdraw = useWithdrawWallet();
 
@@ -28,8 +51,21 @@ export default function RetirerRoute() {
       <View style={{ paddingHorizontal: 16, paddingBottom: 120 }}>
         <MicroLabel label="Vers" />
         <Card padding={0} style={{ overflow: 'hidden', marginBottom: 18 }}>
-          <SettingsRow icon="phone" label="Orange Money" sub="+224 622 •• 12 88" />
-          <SettingsRow icon="phone" label="MTN Mobile Money" sub="+224 657 •• 44 02" divider={false} />
+          <SettingsRow
+            icon="phone"
+            label="Orange Money"
+            sub="Sur ton numéro Orange Money"
+            onPress={() => setOperator('Orange Money')}
+            right={<Radio active={operator === 'Orange Money'} />}
+          />
+          <SettingsRow
+            icon="phone"
+            label="MTN Mobile Money"
+            sub="Sur ton numéro MTN"
+            divider={false}
+            onPress={() => setOperator('MTN Mobile Money')}
+            right={<Radio active={operator === 'MTN Mobile Money'} />}
+          />
         </Card>
 
         <MicroLabel label="Montant" />
@@ -66,7 +102,7 @@ export default function RetirerRoute() {
           label={`Retirer ${formatGNF(amount)}`}
           onPress={() =>
             withdraw.mutate(
-              { amountGnf: amount },
+              { amountGnf: amount, destination: operator },
               {
                 onSuccess: () => {
                   show('Retrait en cours de traitement', 'info');
