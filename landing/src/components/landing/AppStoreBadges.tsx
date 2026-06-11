@@ -70,6 +70,9 @@ function PlayLogo({ size = 22 }: { size?: number }) {
   );
 }
 
+// The stores have no Linky listing yet (launch < Sep 2026) — the badges are
+// a DISABLED preview with an honest « Bientôt disponible », never '#' links.
+// Swap to real store URLs at release.
 export function AppStoreBadges({
   variant = 'dark',
 }: {
@@ -89,13 +92,14 @@ export function AppStoreBadges({
     boxShadow: isDark
       ? 'inset 0 0 0 1px rgba(255,255,255,0.06)'
       : 'inset 0 0 0 1px rgba(14,19,17,0.15)',
-    transition: 'opacity 150ms',
-    textDecoration: 'none',
+    opacity: 0.75,
+    cursor: 'default',
+    userSelect: 'none',
   };
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-      <a href="#" style={buttonStyle}>
+      <div style={buttonStyle} title="Bientôt disponible sur l'App Store" aria-disabled>
         <AppleLogo size={28} />
         <span style={{ lineHeight: 1.1, color: 'inherit' }}>
           <span
@@ -108,7 +112,7 @@ export function AppStoreBadges({
               color: 'inherit',
             }}
           >
-            Disponible sur
+            Bientôt sur
           </span>
           <span
             style={{
@@ -122,9 +126,9 @@ export function AppStoreBadges({
             App Store
           </span>
         </span>
-      </a>
+      </div>
 
-      <a href="#" style={buttonStyle}>
+      <div style={buttonStyle} title="Bientôt disponible sur Google Play" aria-disabled>
         <PlayLogo size={26} />
         <span style={{ lineHeight: 1.1, color: 'inherit' }}>
           <span
@@ -137,7 +141,7 @@ export function AppStoreBadges({
               color: 'inherit',
             }}
           >
-            Disponible sur
+            Bientôt sur
           </span>
           <span
             style={{
@@ -151,7 +155,7 @@ export function AppStoreBadges({
             Google Play
           </span>
         </span>
-      </a>
+      </div>
     </div>
   );
 }

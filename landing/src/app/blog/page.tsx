@@ -17,22 +17,13 @@ interface Post {
 
 const POSTS: Post[] = [
   {
-    slug: 'lancement-public-linky',
-    title: 'Linky est officiellement disponible en Guinée 🎉',
+    slug: 'linky-arrive-en-guinee',
+    title: 'Linky arrive en Guinée',
     excerpt:
-      'Après 18 mois de bêta privée et 3 200 utilisateurs testeurs, on ouvre la marketplace et l\'immobilier à tout le pays.',
+      'Marketplace et immobilier, paiement Mobile Money protégé par séquestre, vendeurs vérifiés : voilà ce qu\'on prépare pour le lancement.',
     category: 'Produit',
     date: '12 mai 2026',
     read: '4 min',
-  },
-  {
-    slug: 'maison-aissatou-x3-ventes',
-    title: '« Mes ventes ont triplé en trois mois » — Aïssatou',
-    excerpt:
-      'On a discuté avec Aïssatou Bah, qui a transformé sa boutique de parfums à Kaloum en l\'une des plus suivies sur Linky.',
-    category: 'Histoires',
-    date: '8 mai 2026',
-    read: '6 min',
   },
   {
     slug: 'guide-premiere-vente',

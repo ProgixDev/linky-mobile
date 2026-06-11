@@ -7,36 +7,14 @@ export const metadata: Metadata = {
     'Kit presse Linky : logos, captures d\'écran, faits clés, contact relations presse.',
 };
 
+// Facts kept strictly verifiable — no invented metrics, founders, or rounds.
 const FACTS = [
-  { l: 'Fondée', v: '2025 · Conakry' },
-  { l: 'Co-fondateurs', v: 'Aïssatou Diallo, Mamadou Bah' },
-  { l: 'Utilisateurs actifs', v: '18 420 (mai 2026)' },
-  { l: 'GMV mensuel', v: '184 M GNF (~16 700 €)' },
-  { l: 'Couverture', v: '17 villes en Guinée + diaspora' },
-  { l: 'Levée seed', v: '600 k€ (février 2026)' },
-];
-
-const COVERAGE = [
-  {
-    outlet: 'Africanews',
-    title: 'En Guinée, Linky veut sécuriser le commerce en ligne',
-    date: 'Avril 2026',
-  },
-  {
-    outlet: 'TechCabal',
-    title: 'Linky raises $650k to bring escrow to Guinea\'s marketplace',
-    date: 'Mars 2026',
-  },
-  {
-    outlet: 'Jeune Afrique',
-    title: 'L\'app guinéenne qui rivalise avec Jumia',
-    date: 'Mars 2026',
-  },
-  {
-    outlet: 'RFI Afrique',
-    title: 'Interview avec Aïssatou Diallo, CEO de Linky',
-    date: 'Février 2026',
-  },
+  { l: 'Siège', v: 'Conakry, Guinée' },
+  { l: 'Lancement', v: '2026' },
+  { l: 'Produit', v: 'Marketplace + immobilier' },
+  { l: 'Paiement', v: 'Mobile Money & carte, séquestre intégré' },
+  { l: 'Confiance', v: 'Vendeurs vérifiés (KYC)' },
+  { l: 'Langue', v: 'Français' },
 ];
 
 export default function PressPage() {
@@ -91,12 +69,12 @@ export default function PressPage() {
       <div className="mt-8 grid gap-4 md:grid-cols-3">
         {[
           { t: 'Logos (SVG + PNG)', s: 'Versions claire et foncée, monochrome.' },
-          { t: 'Captures écran', s: '12 captures HD : home, marketplace, KYC.' },
-          { t: 'Vidéo produit', s: '90 secondes · 1080p · sous-titres FR/EN.' },
+          { t: 'Captures écran', s: 'Captures HD : home, marketplace, KYC.' },
+          { t: 'Faits & visuels', s: 'Dossier complet, mis à jour au lancement.' },
         ].map((k) => (
           <a
             key={k.t}
-            href="#"
+            href="mailto:press@linky.gn?subject=Kit%20de%20marque%20Linky"
             className="block rounded-2xl bg-white p-6 ring-1 ring-[#E5DED1] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-16px_rgba(14,19,17,0.15)]"
           >
             <h3 className="font-display text-lg font-bold tracking-tight">
@@ -104,29 +82,8 @@ export default function PressPage() {
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-[#5e6864]">{k.s}</p>
             <div className="mt-4 text-xs font-bold text-[#0e6e55]">
-              Télécharger →
+              Sur demande →
             </div>
-          </a>
-        ))}
-      </div>
-
-      {/* Coverage */}
-      <h2 className="font-display mt-16 text-3xl font-bold tracking-tight md:text-4xl">
-        On en parle.
-      </h2>
-      <div className="mt-8 space-y-3">
-        {COVERAGE.map((c) => (
-          <a
-            key={c.title}
-            href="#"
-            className="flex items-center gap-4 rounded-xl bg-white p-5 ring-1 ring-[#E5DED1] hover:ring-[#0e6e55]/50"
-          >
-            <div className="text-xs font-bold uppercase tracking-wider text-[#0e6e55]">
-              {c.outlet}
-            </div>
-            <div className="h-1 w-1 rounded-full bg-[#D4CCBA]" />
-            <div className="flex-1 font-medium">{c.title}</div>
-            <div className="text-xs text-[#8C9590]">{c.date}</div>
           </a>
         ))}
       </div>

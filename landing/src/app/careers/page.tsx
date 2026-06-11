@@ -68,10 +68,10 @@ export default function CareersPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 rounded-3xl bg-[#0E1311] p-8 text-white md:grid-cols-4 md:p-10">
         {[
-          { n: '9', l: 'Personnes' },
-          { n: '3', l: 'Pays' },
-          { n: '5', l: 'Postes ouverts' },
-          { n: '2025', l: 'Fondée en' },
+          { n: 'Conakry', l: 'Siège' },
+          { n: '2026', l: 'Lancement' },
+          { n: 'FR', l: 'Langue de travail' },
+          { n: 'Remote OK', l: 'Selon le poste' },
         ].map((s) => (
           <div key={s.l}>
             <div className="font-display text-3xl font-bold tracking-tight">
@@ -92,7 +92,7 @@ export default function CareersPage() {
         {JOBS.map((j) => (
           <a
             key={j.title}
-            href="#"
+            href={`mailto:jobs@linky.gn?subject=${encodeURIComponent(`Candidature — ${j.title}`)}`}
             className="flex items-center gap-4 rounded-2xl bg-white p-5 ring-1 ring-[#E5DED1] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-16px_rgba(14,19,17,0.15)] md:p-6"
           >
             <div className="flex-1">
