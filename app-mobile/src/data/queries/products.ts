@@ -62,6 +62,9 @@ export interface ProductFilters {
   category?: string;
   query?: string;
   shopId?: string;
+  /** 'recent' (default) pages with the keyset cursor ; 'popular' is single-page
+      by design — list-products returns no cursor for view_count ordering. */
+  sort?: 'recent' | 'popular';
 }
 
 export function useProducts(filters: ProductFilters = {}) {
@@ -233,6 +236,7 @@ export function useProductsInfinite(filters: ProductFilters = {}) {
           category: filters.category && filters.category !== 'all' ? filters.category : undefined,
           query: filters.query || undefined,
           shop_id: filters.shopId || undefined,
+          sort: filters.sort === 'popular' ? 'popular' : undefined,
           cursor: pageParam,
         },
       });

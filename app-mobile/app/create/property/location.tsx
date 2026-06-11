@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import Svg, { Line, Rect } from 'react-native-svg';
+import Mapbox, { MapView, Camera, PointAnnotation, type ScreenPointPayload } from '@rnmapbox/maps';
+import type { Feature, Point } from 'geojson';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Button } from '../../../src/components/primitives/Button';
@@ -13,6 +14,12 @@ import { Sheet } from '../../../src/components/sheets/Sheet';
 import { I } from '../../../src/icons/Icon';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useCreateListing } from '../../../src/stores/createListing';
+import { haptic } from '../../../src/lib/haptics';
+
+// Idempotent — same init as CityMapPicker / PropertyLocationMap.
+Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? null);
+
+const CONAKRY: [number, number] = [-13.5784, 9.6412]; // [lng, lat]
 
 // Formats e.g. (9.5092, 'N', 'S') -> "9.5092° N"; negative latitudes flip to S.
 function formatCoord(n: number, posLabel: string, negLabel: string): string {
@@ -29,6 +36,30 @@ export default function CreatePropertyLocationRoute() {
   const [manualOpen, setManualOpen] = useState(false);
   const [latInput, setLatInput] = useState(lat != null ? String(lat) : '');
   const [lngInput, setLngInput] = useState(lng != null ? String(lng) : '');
+  const cameraRef = useRef<Camera>(null);
+
+  // Phase R.2 — tap the real map to drop the pin. Mapbox onPress delivers a
+  // GeoJSON Point ; coordinates can be 3D, so both values are runtime-checked.
+  function handleMapPress(feature: Feature<Point, ScreenPointPayload>) {
+    const coords = feature.geometry?.coordinates;
+    if (!coords || coords.length < 2) return;
+    const tappedLng = coords[0];
+    const tappedLat = coords[1];
+    if (typeof tappedLng !== 'number' || typeof tappedLat !== 'number') return;
+    haptic.selection();
+    setVal('lat', tappedLat);
+    setVal('lng', tappedLng);
+  }
+
+  // Recenter when coords change from ANY source (tap, GPS, manual entry).
+  useEffect(() => {
+    if (lat == null || lng == null || !cameraRef.current) return;
+    cameraRef.current.setCamera({
+      centerCoordinate: [lng, lat],
+      zoomLevel: 15,
+      animationDuration: 500,
+    });
+  }, [lat, lng]);
 
   async function handleMyPosition() {
     if (busy) return;
@@ -93,40 +124,51 @@ export default function CreatePropertyLocationRoute() {
           Place l'épingle sur ta carte
         </Text>
 
-        <View style={{ aspectRatio: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: '#C4D9C8', position: 'relative' }}>
-          <Svg width="100%" height="100%" viewBox="0 0 300 300" preserveAspectRatio="none">
-            <Line x1="0" y1="150" x2="300" y2="170" stroke="rgba(255,255,255,0.9)" strokeWidth={14} />
-            <Line x1="100" y1="0" x2="120" y2="300" stroke="rgba(255,255,255,0.7)" strokeWidth={10} />
-            <Line x1="220" y1="0" x2="200" y2="300" stroke="rgba(255,255,255,0.5)" strokeWidth={6} />
-            {[
-              [60, 80, 28],
-              [150, 90, 22],
-              [240, 80, 32],
-              [180, 200, 28],
-              [70, 230, 24],
-            ].map(([x, y, s], i) => (
-              <Rect key={i} x={x} y={y} width={s} height={s} fill="rgba(14,110,85,0.18)" rx={3} />
-            ))}
-          </Svg>
-          <View
-            style={{
-              position: 'absolute',
-              top: '47%',
-              left: '50%',
-              transform: [{ translateX: -18 }, { translateY: -36 }],
-            }}
-          >
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 999,
-                backgroundColor: hasCoords ? colors.primary : colors.bgElev,
-                borderWidth: 4,
-                borderColor: '#FFFFFF',
-              }}
-            />
-          </View>
+        <View style={{ aspectRatio: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.bgSunken, position: 'relative' }}>
+          {Platform.OS === 'web' ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+              <Text variant="caption" tone="muted" center style={{ letterSpacing: 0 }}>
+                La carte n'est pas disponible sur le web — utilise « Saisir manuellement ».
+              </Text>
+            </View>
+          ) : (
+            <MapView
+              style={{ flex: 1 }}
+              styleURL="mapbox://styles/mapbox/streets-v12"
+              compassEnabled={false}
+              scaleBarEnabled={false}
+              logoEnabled={true}
+              attributionEnabled={true}
+              onPress={handleMapPress}
+            >
+              <Camera
+                ref={cameraRef}
+                defaultSettings={{
+                  centerCoordinate: hasCoords ? [lng!, lat!] : CONAKRY,
+                  zoomLevel: hasCoords ? 15 : 11,
+                }}
+              />
+              {hasCoords && (
+                <PointAnnotation id="listing-pin" coordinate={[lng!, lat!]}>
+                  <View
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 999,
+                      backgroundColor: colors.primary,
+                      borderWidth: 4,
+                      borderColor: '#FFFFFF',
+                      shadowColor: '#000',
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                      shadowOffset: { width: 0, height: 2 },
+                      elevation: 4,
+                    }}
+                  />
+                </PointAnnotation>
+              )}
+            </MapView>
+          )}
           <View
             style={{
               position: 'absolute',
@@ -138,7 +180,7 @@ export default function CreatePropertyLocationRoute() {
               borderRadius: 8,
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{coordsLabel}</Text>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: '#13251C', fontVariant: ['tabular-nums'] }}>{coordsLabel}</Text>
           </View>
         </View>
 

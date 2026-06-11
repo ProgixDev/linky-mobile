@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
-import Svg, { Path, Line } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -15,6 +14,7 @@ import { MicroLabel } from '../../../src/components/lists/SectionHeader';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
+import { PropertyLocationMap } from '../../../src/components/property/PropertyLocationMap';
 import { formatDistance } from '../../../src/lib/format';
 import { toToastMessage } from '../../../src/lib/api';
 import { useToast } from '../../../src/components/feedback/Toast';
@@ -176,90 +176,58 @@ export default function PropertyDetailRoute() {
             })}
           </View>
 
-          {!isTerrain && (
-            <>
-              <View style={{ marginTop: 14 }}>
-                <MicroLabel label="Localisation" />
-                <Card padding={12}>
-                  <View
-                    style={{
-                      aspectRatio: 16 / 9,
-                      borderRadius: 10,
-                      overflow: 'hidden',
-                      backgroundColor: '#C4D9C8',
-                      marginBottom: 10,
-                    }}
-                  >
-                    <Svg width="100%" height="100%" viewBox="0 0 280 160" preserveAspectRatio="none">
-                      <Path d="M0 100 Q70 80 140 100 T280 110" fill="none" stroke="#0E6E55" strokeWidth="6" opacity={0.4} />
-                      <Path d="M0 110 Q70 90 140 110 T280 120" fill="none" stroke="#0E6E55" strokeWidth="3" opacity={0.6} />
-                      <Line x1="100" y1="0" x2="80" y2="160" stroke="rgba(255,255,255,0.7)" strokeWidth="2" />
-                      <Line x1="200" y1="0" x2="220" y2="160" stroke="rgba(255,255,255,0.7)" strokeWidth="2" />
-                    </Svg>
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: '40%',
-                        left: '50%',
-                        transform: [{ translateX: -15 }, { translateY: -30 }],
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 30,
-                          height: 30,
-                          borderRadius: 999,
-                          backgroundColor: colors.primary,
-                          borderWidth: 3,
-                          borderColor: '#FFFFFF',
-                        }}
-                      />
-                    </View>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <I.pin size={16} color={colors.primary} />
-                    <View>
-                      <Text style={{ fontSize: 13, fontWeight: '600' }}>
-                        {prop.district}, {prop.city}
-                      </Text>
-                      <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                        Quartier résidentiel
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={{
-                      marginTop: 12,
-                      padding: 10,
-                      borderRadius: radii.md,
-                      backgroundColor: colors.accentSoft,
-                      flexDirection: 'row',
-                      gap: 10,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <I.road size={20} color={colors.accentText} />
-                    <View>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accentText, fontVariant: ['tabular-nums'] }}>
-                        {formatDistance(prop.distanceToRoadMeters)}
-                      </Text>
-                      <Text style={{ fontSize: 10, color: colors.accentText, opacity: 0.85 }}>
-                        Accès facile en taxi ou moto
-                      </Text>
-                    </View>
-                  </View>
-                </Card>
-              </View>
-
-              <View style={{ marginTop: 14 }}>
-                <TrustStrip tone="primary">
-                  <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-                    <Text style={{ fontWeight: '700' }}>Visite avant signature. </Text>
-                    Tu ne paies aucun acompte tant que tu n'as pas visité le bien et confirmé.
+          {/* Phase R.1 — Localisation for ALL property types : real Mapbox map
+              from the listing's GPS (was a decorative SVG, and terrain — where
+              location IS the product — had no map at all). Itinéraire hands
+              off to the device maps app. */}
+          <View style={{ marginTop: 14 }}>
+            <MicroLabel label="Localisation" />
+            <Card padding={12}>
+              <PropertyLocationMap lat={prop.gps.lat} lng={prop.gps.lng} label={prop.title} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <I.pin size={16} color={colors.primary} />
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '600' }}>
+                    {prop.district}, {prop.city}
                   </Text>
-                </TrustStrip>
+                  <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                    {isTerrain ? 'Terrain · parcelle' : 'Quartier résidentiel'}
+                  </Text>
+                </View>
               </View>
-            </>
+              <View
+                style={{
+                  marginTop: 12,
+                  padding: 10,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.accentSoft,
+                  flexDirection: 'row',
+                  gap: 10,
+                  alignItems: 'center',
+                }}
+              >
+                <I.road size={20} color={colors.accentText} />
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accentText, fontVariant: ['tabular-nums'] }}>
+                    {formatDistance(prop.distanceToRoadMeters)}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: colors.accentText, opacity: 0.85 }}>
+                    Accès facile en taxi ou moto
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          </View>
+
+          {!isTerrain && (
+            <View style={{ marginTop: 14 }}>
+              <TrustStrip tone="primary">
+                <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
+                  <Text style={{ fontWeight: '700' }}>Visite avant signature. </Text>
+                  Tu ne paies aucun acompte tant que tu n'as pas visité le bien et confirmé.
+                </Text>
+              </TrustStrip>
+            </View>
           )}
 
           <View style={{ marginTop: 18 }}>

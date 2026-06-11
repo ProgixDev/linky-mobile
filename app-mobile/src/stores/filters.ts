@@ -6,6 +6,7 @@ export type PropertyTypeFilter = 'location' | 'vente' | 'terrain';
 interface FiltersState {
   marcheTab: MarcheTab;
   productCategory: string; // 'all' | category name
+  productSort: 'recent' | 'popular';
   propertyType: PropertyTypeFilter;
   city: string | null;
   rooms: string | null; // 'studio' | '1' | '2' | '3' | '4+'
@@ -16,6 +17,7 @@ interface FiltersState {
   searchQuery: string;
   setMarcheTab: (t: MarcheTab) => void;
   setProductCategory: (c: string) => void;
+  setProductSort: (s: 'recent' | 'popular') => void;
   setPropertyType: (t: PropertyTypeFilter) => void;
   setCity: (c: string | null) => void;
   setRooms: (r: string | null) => void;
@@ -29,6 +31,7 @@ interface FiltersState {
 const DEFAULTS = {
   marcheTab: 'articles' as MarcheTab,
   productCategory: 'all',
+  productSort: 'recent' as 'recent' | 'popular',
   propertyType: 'location' as PropertyTypeFilter,
   city: null as string | null,
   rooms: null as string | null,
@@ -48,6 +51,7 @@ export const useFilters = create<FiltersState>((set) => ({
   ...DEFAULTS,
   setMarcheTab: (marcheTab) => set({ marcheTab }),
   setProductCategory: (productCategory) => set({ productCategory }),
+  setProductSort: (productSort) => set({ productSort }),
   setPropertyType: (propertyType) => set({ propertyType }),
   setCity: (city) => set({ city }),
   setRooms: (rooms) => set({ rooms }),

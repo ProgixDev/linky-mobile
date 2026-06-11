@@ -34,6 +34,7 @@ import { haptic } from '../../src/lib/haptics';
 import { useFilters } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
 import { useProductsInfinite, useInfiniteProperties } from '../../src/data/queries';
+import { GUINEA_CITIES } from '../../src/components/onboarding/CityMapPicker';
 import { haversineKm } from '../../src/lib/distance';
 
 const PRODUCT_CATEGORIES = ['Tout', 'Mode', 'Électronique', 'Maison', 'Beauté', 'Auto'];
@@ -112,6 +113,7 @@ export default function MarcheRoute() {
   const productsQuery = useProductsInfinite({
     category: filters.productCategory === 'all' ? undefined : filters.productCategory,
     query: debouncedSearch || undefined,
+    sort: filters.productSort,
   });
   const propertiesQuery = useInfiniteProperties({
     type: filters.propertyType,
@@ -411,34 +413,47 @@ export default function MarcheRoute() {
               résultats
             </Text>
           </View>
-          <Pressable
-            hitSlop={8}
-            style={{
-              flexDirection: 'row',
-              gap: 6,
-              alignItems: 'center',
-              paddingHorizontal: 12,
-              height: 32,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.card,
-            }}
-          >
-            <ArrowUpDown size={13} color={colors.text} strokeWidth={2} />
-            <Text
+          {/* Phase R.3 — the sort pill was decorative ; it now toggles
+              récent ⇄ populaire (articles only ; properties sort server-side
+              by recency). 'popular' is single-page by design. */}
+          {isArticles && (
+            <Pressable
+              hitSlop={8}
+              onPress={() => {
+                haptic.selection();
+                filters.setProductSort(filters.productSort === 'popular' ? 'recent' : 'popular');
+              }}
               style={{
-                fontSize: 12.5,
-                fontWeight: '600',
-                color: colors.text,
-                letterSpacing: 0,
-                lineHeight: 14,
-                includeFontPadding: false,
+                flexDirection: 'row',
+                gap: 6,
+                alignItems: 'center',
+                paddingHorizontal: 12,
+                height: 32,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: filters.productSort === 'popular' ? colors.primary : colors.border,
+                backgroundColor: filters.productSort === 'popular' ? colors.primarySoft : colors.card,
               }}
             >
-              Pertinence
-            </Text>
-          </Pressable>
+              <ArrowUpDown
+                size={13}
+                color={filters.productSort === 'popular' ? colors.primaryDeep : colors.text}
+                strokeWidth={2}
+              />
+              <Text
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: '600',
+                  color: filters.productSort === 'popular' ? colors.primaryDeep : colors.text,
+                  letterSpacing: 0,
+                  lineHeight: 14,
+                  includeFontPadding: false,
+                }}
+              >
+                {filters.productSort === 'popular' ? 'Populaires' : 'Récents'}
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {/* ===== Grid ===== */}
@@ -536,13 +551,16 @@ export default function MarcheRoute() {
           </View>
 
           <MicroLabel label="Ville" />
+          {/* Phase R.3 — full 39-city list (was the 8 regional capitals only :
+              a property saved with city='Ratoma' was unreachable via filter).
+              Same list the onboarding + création wizards use. */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-            {['Conakry', 'Boké', 'Kindia', 'Labé', 'Mamou', 'Faranah', 'Kankan', 'Nzérékoré'].map((c) => (
+            {GUINEA_CITIES.map((c) => (
               <Chip
-                key={c}
-                label={c}
-                active={filters.city === c}
-                onPress={() => filters.setCity(filters.city === c ? null : c)}
+                key={c.name}
+                label={c.name}
+                active={filters.city === c.name}
+                onPress={() => filters.setCity(filters.city === c.name ? null : c.name)}
               />
             ))}
           </View>
