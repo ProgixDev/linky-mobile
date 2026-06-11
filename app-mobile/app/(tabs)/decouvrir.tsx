@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Dimensions, View } from 'react-native';
+import { Dimensions, RefreshControl, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -29,7 +29,21 @@ export default function DecouvrirRoute() {
 
   const { items, isLoading, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useDiscoverInfinite(feedFilter);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<FlashListRef<FeedRow>>(null);
+
+  // Phase U.0 should-fix — pull-to-refresh. Pre-U0 there was NO refresh
+  // affordance until the feed was exhausted ; on the dark bg use a white
+  // tint so the spinner is visible.
+  const onPullRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+      listRef.current?.scrollToIndex({ index: 0, animated: false });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   const rows: FeedRow[] = items.map((d, i) => ({
     kind: 'item' as const,
@@ -125,6 +139,13 @@ export default function DecouvrirRoute() {
           showsVerticalScrollIndicator={false}
           viewabilityConfig={{ itemVisiblePercentThreshold: 70 }}
           onViewableItemsChanged={onViewableItemsChanged}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onPullRefresh}
+              tintColor="#FFFFFF"
+            />
+          }
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
           }}

@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ErrorStateView } from '../../../src/components/feedback/EmptyState';
+import { Skeleton } from '../../../src/components/primitives/Skeleton';
 import { Image } from 'expo-image';
 import {
   Package,
@@ -75,76 +76,94 @@ export default function SellerOrdersIndex() {
           subtitle="Prépare, expédie et reçois ton paiement."
         />
 
-        {ordersQuery.isError && (
+        {/* Phase U.0 should-fix — exclusive error : was co-rendering with
+            the chips + an "Aucune commande reçue" empty state, all at once.
+            Now the error replaces the list region entirely while keeping
+            the header. */}
+        {ordersQuery.isError ? (
           <View style={{ paddingTop: 20 }}>
             <ErrorStateView onRetry={() => void ordersQuery.refetch()} />
           </View>
-        )}
+        ) : (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingBottom: 14 }}
+            >
+              {FILTERS.map((f) => {
+                const active = filter === f.id;
+                return (
+                  <Pressable
+                    key={f.id}
+                    onPress={() => {
+                      haptic.selection();
+                      setFilter(f.id);
+                    }}
+                    style={{
+                      height: 36,
+                      paddingHorizontal: 14,
+                      borderRadius: 999,
+                      backgroundColor: active ? colors.text : colors.card,
+                      borderWidth: 1,
+                      borderColor: active ? colors.text : colors.border,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '600',
+                        color: active ? colors.bg : colors.text,
+                        letterSpacing: 0,
+                        lineHeight: 15,
+                        includeFontPadding: false,
+                      }}
+                    >
+                      {f.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingBottom: 14 }}
-        >
-          {FILTERS.map((f) => {
-            const active = filter === f.id;
-            return (
-              <Pressable
-                key={f.id}
-                onPress={() => {
-                  haptic.selection();
-                  setFilter(f.id);
-                }}
-                style={{
-                  height: 36,
-                  paddingHorizontal: 14,
-                  borderRadius: 999,
-                  backgroundColor: active ? colors.text : colors.card,
-                  borderWidth: 1,
-                  borderColor: active ? colors.text : colors.border,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: active ? colors.bg : colors.text,
-                    letterSpacing: 0,
-                    lineHeight: 15,
-                    includeFontPadding: false,
-                  }}
-                >
-                  {f.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        <View style={{ paddingHorizontal: 24, gap: 10 }}>
-          {filtered.map((o) => (
-            <SellerOrderRow
-              key={o.id}
-              order={o}
-              onPress={() => router.push(`/seller/orders/${o.id}`)}
-            />
-          ))}
-          {filtered.length === 0 && (
-            <View style={{ paddingVertical: 40, alignItems: 'center', gap: 6 }}>
-              <Package size={22} color={colors.textFaint} strokeWidth={1.75} />
-              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                {ordersQuery.isLoading ? 'Chargement…' : 'Aucune commande reçue'}
-              </Text>
-              {!ordersQuery.isLoading && (
-                <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                  Les commandes apparaîtront ici dès qu'un client passera commande.
-                </Text>
+            <View style={{ paddingHorizontal: 24, gap: 10 }}>
+              {ordersQuery.isLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} height={84} radius={18} />
+                ))
+              ) : (
+                <>
+                  {filtered.map((o) => (
+                    <SellerOrderRow
+                      key={o.id}
+                      order={o}
+                      onPress={() => router.push(`/seller/orders/${o.id}`)}
+                    />
+                  ))}
+                  {filtered.length === 0 && (
+                    <View style={{ paddingVertical: 40, alignItems: 'center', gap: 6 }}>
+                      <Package size={22} color={colors.textFaint} strokeWidth={1.75} />
+                      <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+                        {/* U.0 should-fix — copy was wrong when a filter
+                            other than "Toutes" was active. */}
+                        {(orders?.length ?? 0) > 0
+                          ? 'Aucune commande dans ce filtre'
+                          : 'Aucune commande reçue'}
+                      </Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+                        {(orders?.length ?? 0) > 0
+                          ? 'Bascule sur Toutes pour voir tes autres ventes.'
+                          : "Les commandes apparaîtront ici dès qu'un client passera commande."}
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
             </View>
-          )}
-        </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

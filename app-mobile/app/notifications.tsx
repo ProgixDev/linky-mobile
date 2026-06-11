@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { Text } from '../src/components/primitives/Text';
 import { Chip } from '../src/components/primitives/Chip';
@@ -11,6 +12,7 @@ import { useNotifications, useMarkNotificationsRead } from '../src/data/queries'
 import { formatRelativeFR } from '../src/lib/format';
 import type { AppNotification } from '../src/data/types';
 import { EmptyState, ErrorStateView } from '../src/components/feedback/EmptyState';
+import { Skeleton } from '../src/components/primitives/Skeleton';
 
 type Tab = 'all' | 'order' | 'message' | 'visit' | 'promo';
 
@@ -54,7 +56,13 @@ export default function NotificationsRoute() {
         title="Notifications"
         back
         right={
-          <IconButton variant="secondary" size={36}>
+          // Phase U.0 should-fix — was IconButton with no onPress ; wired to /settings.
+          <IconButton
+            variant="secondary"
+            size={36}
+            onPress={() => router.push('/settings')}
+            accessibilityLabel="Préférences de notifications"
+          >
             <I.settings size={16} color={colors.text} />
           </IconButton>
         }
@@ -80,40 +88,52 @@ export default function NotificationsRoute() {
           />
         }
       >
+        {/* Phase U.0 should-fix — exclusive error : grouped sections must
+            NOT render alongside the error view, and loading state shows
+            real skeleton rows instead of nothing. */}
         {notifQuery.isError ? (
           <View style={{ paddingTop: 40 }}>
             <ErrorStateView onRetry={() => void notifQuery.refetch()} />
           </View>
-        ) : !notifQuery.isLoading && filtered.length === 0 ? (
-          <EmptyState
-            icon="bell"
-            title={items && items.length === 0 ? 'Pas de notifications' : 'Rien dans ce filtre'}
-            description={
-              items && items.length === 0
-                ? 'Tes alertes (commandes, messages, visites) apparaîtront ici.'
-                : 'Bascule sur Toutes pour voir tes autres notifications.'
-            }
-          />
-        ) : null}
-
-        {grouped.today.length > 0 && (
-          <>
-            <Text variant="micro" tone="muted" style={{ marginTop: 6, marginBottom: 8 }}>
-              AUJOURD'HUI
-            </Text>
-            {grouped.today.map((n) => (
-              <NotificationRow key={n.id} item={n} />
+        ) : notifQuery.isLoading ? (
+          <View style={{ gap: 10, paddingTop: 8 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} height={64} radius={16} />
             ))}
-          </>
-        )}
-        {grouped.week.length > 0 && (
+          </View>
+        ) : (
           <>
-            <Text variant="micro" tone="muted" style={{ marginTop: 16, marginBottom: 8 }}>
-              CETTE SEMAINE
-            </Text>
-            {grouped.week.map((n) => (
-              <NotificationRow key={n.id} item={n} />
-            ))}
+            {filtered.length === 0 && (
+              <EmptyState
+                icon="bell"
+                title={items && items.length === 0 ? 'Pas de notifications' : 'Rien dans ce filtre'}
+                description={
+                  items && items.length === 0
+                    ? 'Tes alertes (commandes, messages, visites) apparaîtront ici.'
+                    : 'Bascule sur Toutes pour voir tes autres notifications.'
+                }
+              />
+            )}
+            {grouped.today.length > 0 && (
+              <>
+                <Text variant="micro" tone="muted" style={{ marginTop: 6, marginBottom: 8 }}>
+                  AUJOURD'HUI
+                </Text>
+                {grouped.today.map((n) => (
+                  <NotificationRow key={n.id} item={n} />
+                ))}
+              </>
+            )}
+            {grouped.week.length > 0 && (
+              <>
+                <Text variant="micro" tone="muted" style={{ marginTop: 16, marginBottom: 8 }}>
+                  CETTE SEMAINE
+                </Text>
+                {grouped.week.map((n) => (
+                  <NotificationRow key={n.id} item={n} />
+                ))}
+              </>
+            )}
           </>
         )}
       </ScrollView>

@@ -197,7 +197,9 @@ function BuyerHome() {
   const { data: shops } = useShops(3);
   const { data: products, isLoading: prodLoading } = usePopularProducts(4);
   const { data: properties } = useNearbyProperties(3);
-  const { data: wallet } = useWallet();
+  const walletQuery = useWallet();
+  const wallet = walletQuery.data;
+  const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!wallet;
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
 
   const firstName = (user?.display_name ?? 'Toi').split(' ')[0];
@@ -321,8 +323,12 @@ function BuyerHome() {
 
         {/* Wallet hero */}
         <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
+          {/* Phase U.0 should-fix — pre-U0 a cold 3G start showed a
+              confident "0 GNF / ≈ 0 €" for seconds. Pass ready state so
+              the hero shows "—" until the wallet query resolves. */}
           <HomeWalletCard
             balanceGnf={wallet?.balanceGnf ?? 0}
+            ready={walletReady}
             onRecharger={() => router.push('/wallet/recharger')}
             onRetirer={() => router.push('/wallet/retirer')}
             onTap={() => router.push('/wallet')}
@@ -645,11 +651,13 @@ function CircleAction({
 
 function HomeWalletCard({
   balanceGnf,
+  ready,
   onRecharger,
   onRetirer,
   onTap,
 }: {
   balanceGnf: number;
+  ready: boolean;
   onRecharger: () => void;
   onRetirer: () => void;
   onTap: () => void;
@@ -731,7 +739,7 @@ function HomeWalletCard({
                 includeFontPadding: false,
               }}
             >
-              {formatGNF(balanceGnf).replace(' GNF', '')}
+              {ready ? formatGNF(balanceGnf).replace(' GNF', '') : '—'}
             </Text>
             <Text
               style={{
@@ -744,9 +752,10 @@ function HomeWalletCard({
             </Text>
           </View>
           {/* Phase T.4 — formatEUR already prefixes "≈" ; pre-fix this rendered
-              "≈ ≈" doubled. */}
+              "≈ ≈" doubled. U.0 — and "—" while loading/error so we don't
+              confidently show ≈ 0 € on a cold 3G start. */}
           <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
-            {formatEUR(gnfToEur(balanceGnf))}
+            {ready ? formatEUR(gnfToEur(balanceGnf)) : '—'}
           </Text>
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>

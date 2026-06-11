@@ -78,7 +78,13 @@ export default function WalletRoute() {
         title="Mon portefeuille"
         back
         right={
-          <IconButton variant="secondary" size={36}>
+          // Phase U.0 should-fix — was IconButton with no onPress ; wired to /scan.
+          <IconButton
+            variant="secondary"
+            size={36}
+            onPress={() => router.push('/scan')}
+            accessibilityLabel="Scanner un QR"
+          >
             <I.qr size={16} color={colors.text} />
           </IconButton>
         }
@@ -201,6 +207,12 @@ export default function WalletRoute() {
         )}
 
         <View style={{ paddingHorizontal: 16, paddingTop: 12, display: tab === 'movements' ? 'flex' : 'none' }}>
+          {/* Phase U.0 should-fix — new wallets used to see a blank area. */}
+          {wallet.movements.length === 0 && (
+            <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', paddingVertical: 24 }}>
+              Aucun mouvement pour le moment.
+            </Text>
+          )}
           {wallet.movements.map((m) => (
             <View
               key={m.id}

@@ -162,13 +162,9 @@ export default function CartRoute() {
           </Card>
         ))}
 
-        <Card padding={12}>
-          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-            <I.bolt size={18} color={colors.accent} />
-            <Text style={{ flex: 1, fontSize: 13, fontWeight: '500' }}>Code promo</Text>
-            <I.chevronD size={16} color={colors.textMuted} />
-          </View>
-        </Card>
+        {/* Phase U.0 should-fix — promo codes are a V1.1 feature (the screen
+            itself is now a ComingSoonScreen) ; the inert "Code promo" Card
+            in the live purchase flow used to imply they were available. */}
 
         <Card padding={14}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>

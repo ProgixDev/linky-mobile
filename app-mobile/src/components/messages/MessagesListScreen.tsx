@@ -1,13 +1,19 @@
-// Phase T.4 — wire what was previously dead UI on this screen :
-//   - the 4 filter chips (Toutes/Achats/Ventes/Immobilier) set state that
-//     was never applied → now actually filter the conversation list off
-//     pinnedListingKind + lastMessageSenderId vs the current user,
-//   - the trailing « search » icon button had no onPress → toggles an
-//     inline client-side search input that matches against the other
-//     user's display name and the last message snippet,
-//   - error + loading + empty states + RefreshControl now match the rest
-//     of the app.
-import { useMemo, useState } from 'react';
+// Phase T.4 / U.0 — production-grade messages list.
+//
+// U.0 should-fixes incorporated (S1-S5):
+//   S1: chips become Toutes / Annonces / Immobilier. The Achats/Ventes
+//       split based on lastMessageSenderId was wrong (drops a sale the
+//       moment the buyer replies, which is exactly when it's unread).
+//       Real split needs server-side listing-owner stitching - V1.1.
+//   S2: error doesn't wipe the cached list ; only show ErrorStateView
+//       when there's no data to fall back on.
+//   S3: real skeleton rows during isLoading instead of rendering null.
+//   S4: refresh state is local (try/finally) — the polling 60s
+//       isFetching was making the spinner self-fire forever.
+//   S5: keyboardShouldPersistTaps='handled' so a tap on a conversation
+//       while the search input is focused goes through on the first
+//       tap (default 'never' eats it dismissing the keyboard).
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -17,48 +23,38 @@ import { Avatar } from '../primitives/Avatar';
 import { Chip } from '../primitives/Chip';
 import { TopBar } from '../nav/TopBar';
 import { IconButton } from '../primitives/Button';
+import { Skeleton } from '../primitives/Skeleton';
 import { I } from '../../icons/Icon';
 import { useConversations } from '../../data/queries';
 import { formatRelativeFR } from '../../lib/format';
 import { EmptyState, ErrorStateView } from '../feedback/EmptyState';
-import { useAuth } from '../../stores/auth';
 
-type Filter = 'all' | 'purchases' | 'sales' | 'real-estate';
+type Filter = 'all' | 'product' | 'real-estate';
 
 export default function MessagesListScreen() {
   const { colors } = useTheme();
   const convQuery = useConversations();
   const convs = convQuery.data;
-  const meId = useAuth((s) => s.user?.id ?? s.authUserId);
   const [filter, setFilter] = useState<Filter>('all');
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  // T.4 — filters applied off conversation shape. "Achats" / "Ventes" are
-  // disambiguated by who SENT the last message vs me (last sender being me
-  // → I was responding to a seller's prior message means it's typically a
-  // purchase ; the heuristic is intentionally loose because conversations
-  // don't carry a role yet ; the lastMessageSenderId === meId rule is a
-  // pragmatic V1 cut). "Immobilier" filters on pinnedListingKind.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await convQuery.refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [convQuery]);
+
   const filtered = useMemo(() => {
     const base = convs ?? [];
     const trimmed = search.trim().toLowerCase();
     return base.filter((c) => {
       if (filter === 'real-estate' && c.pinnedListingKind !== 'property') return false;
-      if (filter === 'purchases') {
-        // Conversations about a product where I was the buyer = the pinned
-        // listing is a product AND the last sender wasn't me OR I started
-        // it. Approximate: pinned kind product AND I'm not always the
-        // sender. V1.1 will derive from an orders join.
-        if (c.pinnedListingKind !== 'product') return false;
-      }
-      if (filter === 'sales') {
-        if (c.pinnedListingKind !== 'product') return false;
-        // Heuristic: last message sender being me OR me being a participant
-        // with the property unset and the other user matching a buyer flow ;
-        // for V1 we keep it as pinned product + lastMessageSenderId === meId.
-        if (c.lastMessageSenderId !== meId) return false;
-      }
+      if (filter === 'product' && c.pinnedListingKind !== 'product') return false;
       if (trimmed.length > 0) {
         const name = (c.otherUserDisplayName ?? '').toLowerCase();
         const last = (c.lastMessage ?? '').toLowerCase();
@@ -66,7 +62,12 @@ export default function MessagesListScreen() {
       }
       return true;
     });
-  }, [convs, filter, search, meId]);
+  }, [convs, filter, search]);
+
+  const toggleSearch = () => {
+    if (searchOpen) setSearch('');
+    setSearchOpen((o) => !o);
+  };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -77,12 +78,8 @@ export default function MessagesListScreen() {
           <IconButton
             variant="secondary"
             size={36}
-            onPress={() => {
-              setSearchOpen((o) => {
-                if (o) setSearch('');
-                return !o;
-              });
-            }}
+            hitSlop={6}
+            onPress={toggleSearch}
           >
             <I.search size={16} color={colors.text} />
           </IconButton>
@@ -114,7 +111,7 @@ export default function MessagesListScreen() {
               style={{ flex: 1, fontSize: 14, color: colors.text, padding: 0 }}
             />
             {search.length > 0 && (
-              <Pressable onPress={() => setSearch('')} hitSlop={10}>
+              <Pressable onPress={() => setSearch('')} hitSlop={14}>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>
                   Effacer
                 </Text>
@@ -127,41 +124,53 @@ export default function MessagesListScreen() {
       <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
           <Chip label="Toutes" active={filter === 'all'} onPress={() => setFilter('all')} />
-          <Chip label="Achats" active={filter === 'purchases'} onPress={() => setFilter('purchases')} />
-          <Chip label="Ventes" active={filter === 'sales'} onPress={() => setFilter('sales')} />
+          <Chip label="Annonces" active={filter === 'product'} onPress={() => setFilter('product')} />
           <Chip label="Immobilier" active={filter === 'real-estate'} onPress={() => setFilter('real-estate')} />
         </ScrollView>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
         refreshControl={
           <RefreshControl
-            refreshing={convQuery.isFetching && !convQuery.isLoading}
-            onRefresh={() => void convQuery.refetch()}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             tintColor={colors.primary}
           />
         }
       >
-        {convQuery.isError ? (
+        {convQuery.isError && !convs ? (
           <View style={{ paddingTop: 40 }}>
             <ErrorStateView onRetry={() => void convQuery.refetch()} />
           </View>
-        ) : !convs ? null : filtered.length === 0 ? (
+        ) : convQuery.isLoading && !convs ? (
+          <View style={{ gap: 14, paddingVertical: 8 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                <Skeleton height={48} width={48} radius={24} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Skeleton height={12} radius={4} />
+                  <Skeleton height={10} radius={4} />
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon="msg"
             title={
               search.trim().length > 0
                 ? 'Aucun résultat'
-                : convs.length === 0
+                : (convs?.length ?? 0) === 0
                   ? 'Aucune conversation'
                   : 'Aucune conversation dans ce filtre'
             }
             description={
               search.trim().length > 0
                 ? 'Essaie un autre mot-clé.'
-                : convs.length === 0
+                : (convs?.length ?? 0) === 0
                   ? 'Contacte un vendeur depuis une annonce pour démarrer une discussion.'
                   : 'Bascule sur Toutes pour voir tes autres discussions.'
             }

@@ -172,6 +172,11 @@ export function IconButton({
   children,
   variant = 'secondary',
   size = 44,
+  // Phase U.0 — pass-through hitSlop so 36px icon buttons can grow their
+  // touch target (Chip already follows this default). MessagesListScreen
+  // search toggle uses 6 ; sub-44px primary actions should set hitSlop
+  // to bring the effective target to ≥44px.
+  hitSlop = 4,
   disabled,
   accessibilityLabel,
   style,
@@ -180,6 +185,7 @@ export function IconButton({
   children: ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost' | 'glass';
   size?: number;
+  hitSlop?: number;
   disabled?: boolean;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
@@ -206,6 +212,7 @@ export function IconButton({
         haptic.light();
         onPress?.();
       }}
+      hitSlop={hitSlop}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       style={[

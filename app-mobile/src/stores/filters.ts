@@ -59,5 +59,8 @@ export const useFilters = create<FiltersState>((set) => ({
   setDistanceMax: (distanceToRoadMaxM) => set({ distanceToRoadMaxM }),
   setFurnishedOnly: (furnishedOnly) => set({ furnishedOnly }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
-  reset: () => set(DEFAULTS),
+  // Phase U.0 should-fix — "Effacer les filtres" from the Immobilier tab
+  // used to yank the user to Articles (DEFAULTS sets marcheTab='articles').
+  // Preserve the current tab so the user stays where they were.
+  reset: () => set((s) => ({ ...DEFAULTS, marcheTab: s.marcheTab })),
 }));

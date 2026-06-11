@@ -1,7 +1,8 @@
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ErrorStateView } from '../../../src/components/feedback/EmptyState';
+import { Skeleton } from '../../../src/components/primitives/Skeleton';
 import { Check, MapPin, X } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -76,55 +77,62 @@ export default function VisitesIndex() {
       >
         <ScreenHeader title="Visites" subtitle="Tes demandes de visite et confirmations." />
 
-        <View style={{ paddingHorizontal: 24, flexDirection: 'row', gap: 10, marginBottom: 22 }}>
-          <SummaryStat label="Aujourd'hui" value={String(todayCount)} tone="accent" />
-          <SummaryStat label="Confirmées" value={String(acceptedCount)} />
-          <SummaryStat label="En attente" value={String(pendingCount)} />
-        </View>
-
-        {visitsQuery.isError && (
+        {/* Phase U.0 should-fix — exclusive error : hide the zeroed summary
+            row + list during error so the user doesn't read a confident
+            "0 Aujourd'hui / 0 Confirmées" alongside the failure. */}
+        {visitsQuery.isError ? (
           <View style={{ paddingTop: 20 }}>
             <ErrorStateView onRetry={() => void visitsQuery.refetch()} />
           </View>
-        )}
-
-        {isLoading && (
-          <View style={{ paddingVertical: 32, alignItems: 'center' }}>
-            <ActivityIndicator size="small" color={colors.textMuted} />
-          </View>
-        )}
-
-        {!isLoading && visits.length === 0 && (
-          <View style={{ paddingHorizontal: 24, paddingVertical: 32 }}>
-            <Text tone="muted" style={{ textAlign: 'center' }}>
-              Aucune demande de visite pour l&apos;instant.
-            </Text>
-          </View>
-        )}
-
-        {Object.entries(grouped).map(([key, group]) => (
-          <View key={key} style={{ marginBottom: 22 }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'baseline',
-                gap: 8,
-                paddingHorizontal: 24,
-                marginBottom: 10,
-              }}
-            >
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, letterSpacing: -0.2 }}>
-                {group.label}
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.textMuted, letterSpacing: 0 }}>· {group.sub}</Text>
+        ) : (
+          <>
+            <View style={{ paddingHorizontal: 24, flexDirection: 'row', gap: 10, marginBottom: 22 }}>
+              <SummaryStat label="Aujourd'hui" value={String(todayCount)} tone="accent" />
+              <SummaryStat label="Confirmées" value={String(acceptedCount)} />
+              <SummaryStat label="En attente" value={String(pendingCount)} />
             </View>
-            <View style={{ paddingHorizontal: 24, gap: 10 }}>
-              {group.items.map((v) => (
-                <VisitCard key={v.id} visit={v} />
-              ))}
-            </View>
-          </View>
-        ))}
+
+            {isLoading && (
+              <View style={{ paddingHorizontal: 24, gap: 10 }}>
+                <Skeleton height={80} radius={16} />
+                <Skeleton height={80} radius={16} />
+                <Skeleton height={80} radius={16} />
+              </View>
+            )}
+
+            {!isLoading && visits.length === 0 && (
+              <View style={{ paddingHorizontal: 24, paddingVertical: 32 }}>
+                <Text tone="muted" style={{ textAlign: 'center' }}>
+                  Aucune demande de visite pour l&apos;instant.
+                </Text>
+              </View>
+            )}
+
+            {Object.entries(grouped).map(([key, group]) => (
+              <View key={key} style={{ marginBottom: 22 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'baseline',
+                    gap: 8,
+                    paddingHorizontal: 24,
+                    marginBottom: 10,
+                  }}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, letterSpacing: -0.2 }}>
+                    {group.label}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: colors.textMuted, letterSpacing: 0 }}>· {group.sub}</Text>
+                </View>
+                <View style={{ paddingHorizontal: 24, gap: 10 }}>
+                  {group.items.map((v) => (
+                    <VisitCard key={v.id} visit={v} />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
