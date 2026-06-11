@@ -115,6 +115,13 @@ export function useNotificationTapRouting(): void {
   const navState = useRootNavigationState();
   const navReady = !!navState?.key;
   const handledId = useRef<string | null>(null);
+  // Phase U.4 — guard on auth. Pre-U4 a tap from a stale notification
+  // received before the user signed in would push the deeplink over
+  // onboarding into an authed route ; the first authed API call would
+  // 401 and the user landed on a back-less blank view. Drop the
+  // deeplink in that case (stashing-until-signin is V1.1).
+  const isOnboarded = useAuth((s) => s.isOnboarded);
+  const authUserId = useAuth((s) => s.authUserId);
 
   useEffect(() => {
     if (!navReady) return;
@@ -124,6 +131,9 @@ export function useNotificationTapRouting(): void {
       const id = response.notification.request.identifier;
       if (handledId.current === id) return;
       handledId.current = id;
+      // Authed routes only ; if the user isn't signed in, DROP the
+      // deeplink rather than push it into a 401 loop.
+      if (!isOnboarded || !authUserId) return;
       const deeplink = response.notification.request.content.data?.deeplink;
       if (typeof deeplink === 'string' && deeplink.startsWith('/')) {
         router.push(deeplink as never);
@@ -133,5 +143,5 @@ export function useNotificationTapRouting(): void {
     void Notifications.getLastNotificationResponseAsync().then(handle).catch(() => {});
     const sub = Notifications.addNotificationResponseReceivedListener(handle);
     return () => sub.remove();
-  }, [navReady]);
+  }, [navReady, isOnboarded, authUserId]);
 }

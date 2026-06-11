@@ -5,7 +5,7 @@
 // WebSocket is unavailable (network issue, JWT expiry, etc).
 
 import { useEffect } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
 import { getRealtimeClient, ensureRealtimeAuth } from '../../lib/realtime';
 import { useAuth } from '../../stores/auth';
@@ -262,6 +262,18 @@ interface NotificationsFeed {
   unreadCount: number;
 }
 
+function mapNotificationRow(n: NotificationRowWire): AppNotification {
+  return {
+    id: n.id,
+    category: n.category,
+    title: n.title,
+    body: n.body,
+    at: n.created_at,
+    read: n.read_at !== null,
+    iconHint: n.icon_hint,
+  };
+}
+
 // One fetch, one cache entry (['notifications']) — the screen and the bell
 // dots are `select` views over the same data, so invalidating the key after
 // mark-notifications-read refreshes both.
@@ -271,15 +283,7 @@ async function fetchNotificationsFeed(): Promise<NotificationsFeed> {
     body: {},
   });
   return {
-    items: r.notifications.map((n) => ({
-      id: n.id,
-      category: n.category,
-      title: n.title,
-      body: n.body,
-      at: n.created_at,
-      read: n.read_at !== null,
-      iconHint: n.icon_hint,
-    })),
+    items: r.notifications.map(mapNotificationRow),
     unreadCount: r.unread_count,
   };
 }
@@ -297,6 +301,29 @@ export function useUnreadNotificationsCount() {
     queryKey: ['notifications'],
     queryFn: fetchNotificationsFeed,
     select: (d) => d.unreadCount,
+  });
+}
+
+// Phase U.5 — infinite query for the notifications screen so the user can
+// load past the first page (30 newest). Mark-read still hits the same
+// ['notifications'] key so the bell dot + screen stay in sync.
+//
+// Note : the unreadCount is sourced ONLY from the first page (the server
+// returns the global total in the same response). Subsequent pages don't
+// carry it ; the infinite query exposes the first-page total via the
+// returned `unreadCount`.
+export function useNotificationsInfinite() {
+  return useInfiniteQuery({
+    queryKey: ['notifications-infinite'],
+    initialPageParam: undefined as { created_at: string; id: string } | undefined,
+    queryFn: async ({ pageParam }) => {
+      const r = await apiPost<ListNotificationsResponse>({
+        path: '/list-notifications',
+        body: pageParam ? { cursor: pageParam } : {},
+      });
+      return r;
+    },
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   });
 }
 

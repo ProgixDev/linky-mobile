@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -8,7 +8,9 @@ import { Chip } from '../src/components/primitives/Chip';
 import { TopBar } from '../src/components/nav/TopBar';
 import { IconButton } from '../src/components/primitives/Button';
 import { I, type IconKey } from '../src/icons/Icon';
-import { useNotifications, useMarkNotificationsRead } from '../src/data/queries';
+import { useMarkNotificationsRead } from '../src/data/queries';
+import { useNotificationsInfinite } from '../src/data/queries/messages';
+import { Button } from '../src/components/primitives/Button';
 import { formatRelativeFR } from '../src/lib/format';
 import type { AppNotification } from '../src/data/types';
 import { EmptyState, ErrorStateView } from '../src/components/feedback/EmptyState';
@@ -27,8 +29,23 @@ const ICON_FOR: Record<string, IconKey> = {
 
 export default function NotificationsRoute() {
   const { colors } = useTheme();
-  const notifQuery = useNotifications();
-  const items = notifQuery.data;
+  // Phase U.5 — infinite pagination. The screen used to cap at the newest
+  // 30 (the first page) and discarded the next_cursor.
+  const notifQuery = useNotificationsInfinite();
+  const items: AppNotification[] = useMemo(() => {
+    const pages = notifQuery.data?.pages ?? [];
+    return pages.flatMap((p) =>
+      p.notifications.map((n) => ({
+        id: n.id,
+        category: n.category,
+        title: n.title,
+        body: n.body,
+        at: n.created_at,
+        read: n.read_at !== null,
+        iconHint: n.icon_hint,
+      })),
+    );
+  }, [notifQuery.data]);
   const markRead = useMarkNotificationsRead();
   const [tab, setTab] = useState<Tab>('all');
 
@@ -38,7 +55,7 @@ export default function NotificationsRoute() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filtered = items?.filter((n) => (tab === 'all' ? true : n.category === tab)) ?? [];
+  const filtered = items.filter((n) => (tab === 'all' ? true : n.category === tab));
 
   const grouped: { today: AppNotification[]; week: AppNotification[] } = {
     today: [],
@@ -106,9 +123,9 @@ export default function NotificationsRoute() {
             {filtered.length === 0 && (
               <EmptyState
                 icon="bell"
-                title={items && items.length === 0 ? 'Pas de notifications' : 'Rien dans ce filtre'}
+                title={items.length === 0 ? 'Pas de notifications' : 'Rien dans ce filtre'}
                 description={
-                  items && items.length === 0
+                  items.length === 0
                     ? 'Tes alertes (commandes, messages, visites) apparaîtront ici.'
                     : 'Bascule sur Toutes pour voir tes autres notifications.'
                 }
@@ -133,6 +150,21 @@ export default function NotificationsRoute() {
                   <NotificationRow key={n.id} item={n} />
                 ))}
               </>
+            )}
+            {/* Phase U.5 — pagination via next_cursor. Hidden when there's
+                no next page. Loading state ensures the user knows it's
+                fetching ; mark-read semantics untouched. */}
+            {notifQuery.hasNextPage && (
+              <View style={{ paddingTop: 18, alignItems: 'center' }}>
+                <Button
+                  variant="outline"
+                  size="md"
+                  label="Charger plus"
+                  loading={notifQuery.isFetchingNextPage}
+                  disabled={notifQuery.isFetchingNextPage}
+                  onPress={() => void notifQuery.fetchNextPage()}
+                />
+              </View>
             )}
           </>
         )}
