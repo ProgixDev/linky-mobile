@@ -79,8 +79,10 @@ export default function VisitesIndex() {
 
         {/* Phase U.0 should-fix — exclusive error : hide the zeroed summary
             row + list during error so the user doesn't read a confident
-            "0 Aujourd'hui / 0 Confirmées" alongside the failure. */}
-        {visitsQuery.isError ? (
+            "0 Aujourd'hui / 0 Confirmées" alongside the failure. U.0d —
+            gate also on "no cached data" so a failed pull-to-refresh
+            doesn't nuke a populated list. */}
+        {visitsQuery.isError && visits.length === 0 ? (
           <View style={{ paddingTop: 20 }}>
             <ErrorStateView onRetry={() => void visitsQuery.refetch()} />
           </View>

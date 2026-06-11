@@ -5,21 +5,13 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ChevronDown,
-  TrendingUp,
   Star,
-  Eye,
-  Heart,
-  MoreVertical,
-  Megaphone,
   MessageSquare,
-  Sparkles as SparklesIcon,
   BarChart3,
-  Zap,
   ArrowUpRight,
   Package,
   Clock,
   Building2,
-  Home as HomeIcon,
   CalendarDays,
   KeyRound,
   MapPin,
@@ -991,106 +983,7 @@ function StatTile({
   );
 }
 
-function ViewsChart({
-  bars,
-  title,
-  value,
-  trend,
-}: {
-  bars: number[];
-  title: string;
-  value: string;
-  trend: string;
-}) {
-  const { colors } = useTheme();
-  return (
-    <View
-      style={{
-        paddingHorizontal: 18,
-        paddingTop: 20,
-        paddingBottom: 18,
-        borderRadius: 20,
-        backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: colors.border,
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: '700',
-          color: colors.textFaint,
-          letterSpacing: 0.5,
-          lineHeight: 14,
-          includeFontPadding: false,
-        }}
-      >
-        {title}
-      </Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-        <Text
-          style={{
-            fontSize: 26,
-            fontWeight: '700',
-            color: colors.text,
-            letterSpacing: -0.5,
-            lineHeight: 30,
-            includeFontPadding: false,
-            fontVariant: ['tabular-nums'],
-          }}
-        >
-          {value}
-        </Text>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 3,
-            paddingHorizontal: 8,
-            height: 22,
-            borderRadius: 999,
-            backgroundColor: colors.primarySoft,
-          }}
-        >
-          <ArrowUpRight size={11} color={colors.primaryDeep} strokeWidth={2.5} />
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: colors.primaryDeep,
-              lineHeight: 13,
-              includeFontPadding: false,
-            }}
-          >
-            {trend}
-          </Text>
-        </View>
-      </View>
-
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: 3,
-          height: 56,
-          alignItems: 'flex-end',
-          marginTop: 18,
-        }}
-      >
-        {bars.map((h, i) => (
-          <View
-            key={i}
-            style={{
-              flex: 1,
-              height: `${h}%`,
-              backgroundColor: i > 22 ? colors.primary : colors.primarySoft,
-              borderRadius: 3,
-            }}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
+// Phase U.0d — dead ViewsChart (zero call sites) removed.
 
 function SectionTitle({ title }: { title: string }) {
   const { colors } = useTheme();

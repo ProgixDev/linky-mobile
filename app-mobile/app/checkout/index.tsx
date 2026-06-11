@@ -43,7 +43,13 @@ export default function CheckoutRoute() {
   const lines = useCart((s) => s.lines);
   const placeOrder = usePlaceOrder();
   const { show } = useToast();
-  const { data: wallet } = useWallet();
+  const walletQuery = useWallet();
+  const wallet = walletQuery.data;
+  // Phase U.0d — most decision-sensitive money surface on the app ; the
+  // bare wallet?.balanceGnf ?? 0 read 0 GNF confidently while the query
+  // was still loading or had errored, framing a wallet payment as
+  // impossible.
+  const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!wallet;
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   // Keeps the Payer button busy across the whole sheet flow (place-order →
   // init → present), not just the mutation.
@@ -197,7 +203,7 @@ export default function CheckoutRoute() {
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, fontWeight: '600' }}>Wallet Linky</Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', fontVariant: ['tabular-nums'] }}>
-                Solde {formatGNF(wallet?.balanceGnf ?? 0)}
+                Solde {walletReady ? formatGNF(wallet!.balanceGnf) : '—'}
               </Text>
             </View>
             <View

@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { Text } from '../src/components/primitives/Text';
 import { Chip } from '../src/components/primitives/Chip';
 import { TopBar } from '../src/components/nav/TopBar';
-import { IconButton } from '../src/components/primitives/Button';
 import { I, type IconKey } from '../src/icons/Icon';
 import { useMarkNotificationsRead } from '../src/data/queries';
 import { useNotificationsInfinite } from '../src/data/queries/messages';
@@ -72,28 +70,10 @@ export default function NotificationsRoute() {
       <TopBar
         title="Notifications"
         back
-        right={
-          // Phase U.0 should-fix — was IconButton with no onPress ; wired to /settings.
-          <IconButton
-            variant="secondary"
-            size={36}
-            onPress={() => router.push('/settings')}
-            accessibilityLabel="Préférences de notifications"
-          >
-            <I.settings size={16} color={colors.text} />
-          </IconButton>
-        }
+        /* Phase U.0d — the gear lied : /settings is the Language picker,
+            no notification-prefs screen exists in V1. Removed rather
+            than mislabelled. */
       />
-      <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-          <Chip label="Toutes" active={tab === 'all'} onPress={() => setTab('all')} />
-          <Chip label="Commandes" active={tab === 'order'} onPress={() => setTab('order')} />
-          <Chip label="Messages" active={tab === 'message'} onPress={() => setTab('message')} />
-          <Chip label="Visites" active={tab === 'visit'} onPress={() => setTab('visit')} />
-          <Chip label="Promos" active={tab === 'promo'} onPress={() => setTab('promo')} />
-        </ScrollView>
-      </View>
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
@@ -107,8 +87,10 @@ export default function NotificationsRoute() {
       >
         {/* Phase U.0 should-fix — exclusive error : grouped sections must
             NOT render alongside the error view, and loading state shows
-            real skeleton rows instead of nothing. */}
-        {notifQuery.isError ? (
+            real skeleton rows instead of nothing. U.0d — gate on "no
+            cached data" so a failed pull-to-refresh keeps the cached
+            list visible. */}
+        {notifQuery.isError && items.length === 0 ? (
           <View style={{ paddingTop: 40 }}>
             <ErrorStateView onRetry={() => void notifQuery.refetch()} />
           </View>
@@ -120,6 +102,17 @@ export default function NotificationsRoute() {
           </View>
         ) : (
           <>
+            {/* Phase U.0d — chips inside the non-error arm. They were
+                rendering interactive-but-useless above the error state. */}
+            <View style={{ paddingBottom: 12 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                <Chip label="Toutes" active={tab === 'all'} onPress={() => setTab('all')} />
+                <Chip label="Commandes" active={tab === 'order'} onPress={() => setTab('order')} />
+                <Chip label="Messages" active={tab === 'message'} onPress={() => setTab('message')} />
+                <Chip label="Visites" active={tab === 'visit'} onPress={() => setTab('visit')} />
+                <Chip label="Promos" active={tab === 'promo'} onPress={() => setTab('promo')} />
+              </ScrollView>
+            </View>
             {filtered.length === 0 && (
               <EmptyState
                 icon="bell"

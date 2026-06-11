@@ -50,7 +50,9 @@ export default function DemandesIndex() {
   }, [visits, filter]);
 
   const unreadCount = (visits ?? []).filter((v) => v.status === 'pending').length;
-  const subtitle = visitsQuery.isError
+  // U.0d — subtitle error arm gated on "no cached data" so a failed
+  // pull-to-refresh keeps the unread count visible.
+  const subtitle = visitsQuery.isError && (!visits || visits.length === 0)
     ? "Impossible de charger tes demandes."
     : isLoading
       ? 'Chargement…'
@@ -75,8 +77,10 @@ export default function DemandesIndex() {
 
         {/* Phase U.0 should-fix — exclusive error : chips + empty state
             stopped rendering during the error so the user sees one clear
-            "Une erreur est survenue" affordance. */}
-        {visitsQuery.isError ? (
+            "Une erreur est survenue" affordance. U.0d — gate also on
+            "no cached data" so a failed pull-to-refresh doesn't nuke
+            a populated list. */}
+        {visitsQuery.isError && (!visits || visits.length === 0) ? (
           <View style={{ paddingTop: 20 }}>
             <ErrorStateView onRetry={() => void visitsQuery.refetch()} />
           </View>

@@ -18,7 +18,6 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Skeleton } from '../../../src/components/primitives/Skeleton';
 import {
-  Wallet,
   ArrowDownToLine,
   Clock,
   CheckCircle2,
@@ -27,7 +26,6 @@ import {
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
-import { Button } from '../../../src/components/primitives/Button';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { NoiseOverlay } from '../../../src/components/visuals/NoiseOverlay';
 import { EmptyState, ErrorStateView } from '../../../src/components/feedback/EmptyState';

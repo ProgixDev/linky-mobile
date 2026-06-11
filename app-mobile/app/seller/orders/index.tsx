@@ -79,8 +79,10 @@ export default function SellerOrdersIndex() {
         {/* Phase U.0 should-fix — exclusive error : was co-rendering with
             the chips + an "Aucune commande reçue" empty state, all at once.
             Now the error replaces the list region entirely while keeping
-            the header. */}
-        {ordersQuery.isError ? (
+            the header. U.0d — gate also on "no cached data" so a failed
+            pull-to-refresh doesn't nuke a populated list (TanStack v5
+            sets isError on a failed REFETCH even with cached data). */}
+        {ordersQuery.isError && !(orders && orders.length > 0) ? (
           <View style={{ paddingTop: 20 }}>
             <ErrorStateView onRetry={() => void ordersQuery.refetch()} />
           </View>

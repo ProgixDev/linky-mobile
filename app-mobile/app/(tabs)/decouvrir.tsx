@@ -74,7 +74,7 @@ export default function DecouvrirRoute() {
             <ProductCardSkeleton />
           </View>
         </View>
-      ) : isError ? (
+      ) : isError && items.length === 0 ? (
         <View
           style={{
             flex: 1,
