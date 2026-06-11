@@ -28,3 +28,4 @@ supabase/.temp/
 
 # PDF regen backups
 *.previous.pdf.bak
+.git-commit-msg.tmp
