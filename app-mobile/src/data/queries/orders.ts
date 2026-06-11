@@ -79,6 +79,19 @@ export function useOrder(id: string | undefined) {
     enabled: !!id,
     queryFn: () => fetchOrderEnvelope(id),
     select: (env) => env.order,
+    // Phase U.6 — live dispute banner. The OrderResolutionBanner only
+    // updates when useOrder refetches ; pre-U6 a buyer staring at the
+    // detail screen at the moment of resolution saw nothing until they
+    // navigated back or pulled to refresh. Cheap fix : poll the order
+    // envelope every 20s while it's actively contested. No interval on
+    // terminal states (released / refunded / cancelled / paid /
+    // delivered / preparing / placed) so the typical case is unaffected
+    // and the 3G bill stays flat. Payload is tiny.
+    refetchInterval: (query) => {
+      const env = query.state.data;
+      return env?.order?.status === 'disputed' ? 20_000 : false;
+    },
+    refetchIntervalInBackground: false,
   });
 }
 
