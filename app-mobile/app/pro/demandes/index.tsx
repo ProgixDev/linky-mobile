@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { ErrorStateView } from '../../../src/components/feedback/EmptyState';
 import { Image } from 'expo-image';
 import { CalendarDays, Clock, CheckCircle2, X } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
@@ -36,7 +37,9 @@ const STATUS_META: Record<
 export default function DemandesIndex() {
   const { colors } = useTheme();
   const [filter, setFilter] = useState<Filter>('all');
-  const { data: visits, isLoading } = useAgentVisits();
+  const visitsQuery = useAgentVisits();
+  const visits = visitsQuery.data;
+  const isLoading = visitsQuery.isLoading;
 
   const filtered = useMemo(() => {
     const list = visits ?? [];
@@ -57,8 +60,21 @@ export default function DemandesIndex() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={visitsQuery.isFetching && !isLoading}
+            onRefresh={() => void visitsQuery.refetch()}
+            tintColor={colors.primary}
+          />
+        }
       >
         <ScreenHeader title="Demandes" subtitle={subtitle} />
+
+        {visitsQuery.isError && (
+          <View style={{ paddingTop: 20 }}>
+            <ErrorStateView onRetry={() => void visitsQuery.refetch()} />
+          </View>
+        )}
 
         {/* Filter chips */}
         <ScrollView

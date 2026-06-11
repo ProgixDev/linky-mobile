@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   View,
   Pressable,
@@ -30,6 +31,7 @@ import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { Switch } from '../../src/components/primitives/Switch';
 import { Button } from '../../src/components/primitives/Button';
 import { Chip } from '../../src/components/primitives/Chip';
+import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { haptic } from '../../src/lib/haptics';
 import { useFilters } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
@@ -162,6 +164,15 @@ export default function MarcheRoute() {
         stickyHeaderIndices={[]}
         onScroll={handleScroll}
         scrollEventThrottle={300}
+        refreshControl={
+          <RefreshControl
+            refreshing={(isArticles ? productsQuery.isFetching : propertiesQuery.isFetching) && !(isArticles ? productsQuery.isLoading : propertiesQuery.isLoading)}
+            onRefresh={() => {
+              void (isArticles ? productsQuery.refetch() : propertiesQuery.refetch());
+            }}
+            tintColor={colors.primary}
+          />
+        }
       >
         {/* ===== Header ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
@@ -456,56 +467,103 @@ export default function MarcheRoute() {
           )}
         </View>
 
-        {/* ===== Grid ===== */}
+        {/* ===== Grid =====
+            Phase T.4 — error + filters-empty CTAs. Pre-T4, a /list-products
+            failure rendered like an empty grid (no affordance) and a
+            filters-only-empty rendered a bare "Aucun résultat" line with no
+            way to clear the filters that hid the inventory. */}
         {isArticles ? (
-          <View
-            style={{
-              paddingHorizontal: 24,
-              marginTop: 14,
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 14,
-            }}
-          >
-            {prodLoading
-              ? Array.from({ length: 6 }).map((_, i) => (
+          productsQuery.isError ? (
+            <View style={{ paddingTop: 40 }}>
+              <ErrorStateView onRetry={() => void productsQuery.refetch()} />
+            </View>
+          ) : (
+            <View
+              style={{
+                paddingHorizontal: 24,
+                marginTop: 14,
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 14,
+              }}
+            >
+              {prodLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
                   <View key={i} style={{ flexBasis: '47%', flexGrow: 1 }}>
                     <ProductCardSkeleton />
                   </View>
                 ))
-              : products && products.length > 0
-                ? products.map((p) => (
-                    <View key={p.id} style={{ flexBasis: '47%', flexGrow: 1 }}>
-                      <ProductCard product={p} />
-                    </View>
-                  ))
-                : debouncedSearch ? (
-                  <View style={{ width: '100%', paddingVertical: 40, alignItems: 'center' }}>
-                    <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
+              ) : products && products.length > 0 ? (
+                products.map((p) => (
+                  <View key={p.id} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                    <ProductCard product={p} />
                   </View>
-                ) : null}
+                ))
+              ) : debouncedSearch ? (
+                <View style={{ width: '100%', paddingVertical: 40, alignItems: 'center' }}>
+                  <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
+                </View>
+              ) : (
+                <View
+                  style={{
+                    width: '100%',
+                    paddingVertical: 40,
+                    alignItems: 'center',
+                    gap: 14,
+                  }}
+                >
+                  <Text tone="muted">Aucun résultat</Text>
+                  <Button
+                    variant="outline"
+                    size="md"
+                    label="Effacer les filtres"
+                    onPress={() => {
+                      filters.reset();
+                      setSearch('');
+                    }}
+                  />
+                </View>
+              )}
+            </View>
+          )
+        ) : propertiesQuery.isError ? (
+          <View style={{ paddingTop: 40 }}>
+            <ErrorStateView onRetry={() => void propertiesQuery.refetch()} />
           </View>
         ) : (
           <View style={{ paddingHorizontal: 24, marginTop: 14, gap: 14 }}>
-            {propLoading
-              ? Array.from({ length: 3 }).map((_, i) => <ProductCardSkeleton key={i} />)
-              : properties && properties.length > 0
-                ? properties.map((p) => {
-                    let dKm: number | undefined;
-                    if (
-                      userLocation &&
-                      p.gps &&
-                      !(p.gps.lat === 0 && p.gps.lng === 0)
-                    ) {
-                      dKm = haversineKm(userLocation, p.gps);
-                    }
-                    return <PropertyCard key={p.id} property={p} distanceFromUserKm={dKm} />;
-                  })
-                : debouncedSearch ? (
-                  <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                    <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
-                  </View>
-                ) : null}
+            {propLoading ? (
+              Array.from({ length: 3 }).map((_, i) => <ProductCardSkeleton key={i} />)
+            ) : properties && properties.length > 0 ? (
+              properties.map((p) => {
+                let dKm: number | undefined;
+                if (
+                  userLocation &&
+                  p.gps &&
+                  !(p.gps.lat === 0 && p.gps.lng === 0)
+                ) {
+                  dKm = haversineKm(userLocation, p.gps);
+                }
+                return <PropertyCard key={p.id} property={p} distanceFromUserKm={dKm} />;
+              })
+            ) : debouncedSearch ? (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
+              </View>
+            ) : (
+              <View style={{ paddingVertical: 40, alignItems: 'center', gap: 14 }}>
+                <Text tone="muted">Aucun résultat</Text>
+                <Button
+                  variant="outline"
+                  size="md"
+                  label="Effacer les filtres"
+                  onPress={() => {
+                    filters.reset();
+                    setSearch('');
+                  }}
+                />
+              </View>
+            )}
           </View>
         )}
 

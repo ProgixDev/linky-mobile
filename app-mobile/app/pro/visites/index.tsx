@@ -1,6 +1,7 @@
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { ErrorStateView } from '../../../src/components/feedback/EmptyState';
 import { Check, MapPin, X } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -42,7 +43,9 @@ function timeFr(iso: string): string {
 
 export default function VisitesIndex() {
   const { colors } = useTheme();
-  const { data: visits = [], isLoading } = useAgentVisits();
+  const visitsQuery = useAgentVisits();
+  const visits = visitsQuery.data ?? [];
+  const isLoading = visitsQuery.isLoading;
 
   const grouped = visits.reduce<Record<string, { label: string; sub: string; items: VisitRequest[] }>>(
     (acc, v) => {
@@ -60,7 +63,17 @@ export default function VisitesIndex() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={visitsQuery.isFetching && !isLoading}
+            onRefresh={() => void visitsQuery.refetch()}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <ScreenHeader title="Visites" subtitle="Tes demandes de visite et confirmations." />
 
         <View style={{ paddingHorizontal: 24, flexDirection: 'row', gap: 10, marginBottom: 22 }}>
@@ -68,6 +81,12 @@ export default function VisitesIndex() {
           <SummaryStat label="Confirmées" value={String(acceptedCount)} />
           <SummaryStat label="En attente" value={String(pendingCount)} />
         </View>
+
+        {visitsQuery.isError && (
+          <View style={{ paddingTop: 20 }}>
+            <ErrorStateView onRetry={() => void visitsQuery.refetch()} />
+          </View>
+        )}
 
         {isLoading && (
           <View style={{ paddingVertical: 32, alignItems: 'center' }}>

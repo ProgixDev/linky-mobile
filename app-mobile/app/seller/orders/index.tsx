@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { ErrorStateView } from '../../../src/components/feedback/EmptyState';
 import { Image } from 'expo-image';
 import {
   Package,
@@ -47,7 +48,8 @@ const STATUS_FALLBACK = { label: '—', Icon: CircleAlert, bg: '#EEEEEE', fg: '#
 export default function SellerOrdersIndex() {
   const { colors } = useTheme();
   const [filter, setFilter] = useState<Filter>('todo');
-  const { data: orders, isLoading } = useSellerOrders();
+  const ordersQuery = useSellerOrders();
+  const orders = ordersQuery.data;
 
   const filtered = (orders ?? []).filter((o) => {
     const f = FILTERS.find((x) => x.id === filter);
@@ -60,11 +62,24 @@ export default function SellerOrdersIndex() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={ordersQuery.isFetching && !ordersQuery.isLoading}
+            onRefresh={() => void ordersQuery.refetch()}
+            tintColor={colors.primary}
+          />
+        }
       >
         <ScreenHeader
           title="Commandes reçues"
           subtitle="Prépare, expédie et reçois ton paiement."
         />
+
+        {ordersQuery.isError && (
+          <View style={{ paddingTop: 20 }}>
+            <ErrorStateView onRetry={() => void ordersQuery.refetch()} />
+          </View>
+        )}
 
         <ScrollView
           horizontal
@@ -120,9 +135,9 @@ export default function SellerOrdersIndex() {
             <View style={{ paddingVertical: 40, alignItems: 'center', gap: 6 }}>
               <Package size={22} color={colors.textFaint} strokeWidth={1.75} />
               <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                {isLoading ? 'Chargement…' : 'Aucune commande reçue'}
+                {ordersQuery.isLoading ? 'Chargement…' : 'Aucune commande reçue'}
               </Text>
-              {!isLoading && (
+              {!ordersQuery.isLoading && (
                 <Text style={{ color: colors.textMuted, fontSize: 12 }}>
                   Les commandes apparaîtront ici dès qu'un client passera commande.
                 </Text>

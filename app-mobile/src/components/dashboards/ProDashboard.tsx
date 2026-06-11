@@ -1123,6 +1123,8 @@ function ViewsChart({
 
 function SectionTitle({ title }: { title: string }) {
   const { colors } = useTheme();
+  // Phase T.4 — the trailing "Tout voir" Pressable had no onPress and no
+  // target list screen exists yet ; remove rather than ship dead UI.
   return (
     <View
       style={{
@@ -1133,13 +1135,6 @@ function SectionTitle({ title }: { title: string }) {
       }}
     >
       <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>{title}</Text>
-      <Pressable>
-        <Text
-          style={{ fontSize: 13, fontWeight: '600', color: colors.primary, letterSpacing: 0 }}
-        >
-          Tout voir
-        </Text>
-      </Pressable>
     </View>
   );
 }
@@ -1402,12 +1397,9 @@ function PropertyRow({
           </View>
         </View>
       </View>
-      <Pressable
-        hitSlop={6}
-        style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
-      >
-        <MoreVertical size={16} color={colors.textMuted} strokeWidth={1.75} />
-      </Pressable>
+      {/* Phase T.4 — the trailing kebab had no onPress ; the status
+          change / delete actions live on ManagementRow (used in the
+          "Mes annonces" list further up) ; remove dead control. */}
     </Pressable>
   );
 }

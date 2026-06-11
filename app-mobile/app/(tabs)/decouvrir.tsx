@@ -8,7 +8,9 @@ import { DiscoverCard, DiscoverEnd } from '../../src/components/discover/Discove
 import { useDiscoverInfinite } from '../../src/data/queries';
 import type { DiscoverItem } from '../../src/data/types';
 import { Text } from '../../src/components/primitives/Text';
+import { Button } from '../../src/components/primitives/Button';
 import { useAuth } from '../../src/stores/auth';
+import { ProductCardSkeleton } from '../../src/components/primitives/Skeleton';
 
 const { height: SH } = Dimensions.get('window');
 
@@ -25,7 +27,7 @@ export default function DecouvrirRoute() {
   const isPureSeller = isSeller && !isAgent && !isBuyer;
   const feedFilter = isPureAgent ? 'properties' : isPureSeller ? 'products' : 'all';
 
-  const { items, isLoading, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useDiscoverInfinite(feedFilter);
+  const { items, isLoading, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useDiscoverInfinite(feedFilter);
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef<FlashListRef<FeedRow>>(null);
 
@@ -48,9 +50,61 @@ export default function DecouvrirRoute() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.discoverBg }}>
       <StatusBar style="light" />
+      {/* Phase T.4 — distinct loading / error / empty states. Pre-T4 the
+          loading was a bare text line and any failure rendered the
+          end-of-feed card ("Tu as tout vu") immediately, which lies. */}
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: '#FFFFFF', opacity: 0.6 }}>Chargement du feed…</Text>
+        <View style={{ flex: 1, padding: 16 }}>
+          <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
+            <ProductCardSkeleton />
+            <ProductCardSkeleton />
+          </View>
+        </View>
+      ) : isError ? (
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            gap: 14,
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+            Pas pu charger le feed
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
+            Vérifie ta connexion et réessaie.
+          </Text>
+          <Button
+            variant="primary"
+            size="md"
+            label="Réessayer"
+            onPress={() => void refetch()}
+          />
+        </View>
+      ) : items.length === 0 ? (
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            gap: 12,
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+            Rien à découvrir pour l'instant
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
+            Reviens dans quelques minutes — le feed est mis à jour en continu.
+          </Text>
+          <Button
+            variant="primary"
+            size="md"
+            label="Réessayer"
+            onPress={() => void refetch()}
+          />
         </View>
       ) : (
         <FlashList
