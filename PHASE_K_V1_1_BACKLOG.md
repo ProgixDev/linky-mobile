@@ -96,6 +96,33 @@ This document is the client-shareable mirror of the internal memory `project_pha
 
 ---
 
+# Shipped post-T (Phase U, 2026-06-11)
+
+The accumulated review backlogs were consolidated into Phase U and shipped today. The items below were promoted out of the V1.1 list — they are now part of V1.
+
+## K item 4 — Live banner mobile updates → SHIPPED (U.6, 331d538)
+
+`useOrder` now sets `refetchInterval: 20_000` while `order.status === 'disputed'` (false on every other status, so the typical case is unaffected). Both order-detail screens (buyer view `app/order/[id].tsx` + seller view `app/seller/orders/[id]/index.tsx`) read off the same hook and so both update live when admin resolves. No realtime infra — that path stays in V1.1 if/when the volume warrants it.
+
+## Q-3 — Cart-clear-before-payment dead-end → SHIPPED (U.3, af4b756)
+
+`useCart.getState().clear()` moved out of `usePlaceOrder.onSuccess`. Three clear sites, each at a proven-paid moment: wallet branch in `app/checkout/index.tsx`, SUCCESS arm in `app/checkout/confirm/[orderId].tsx`, defensive wallet-path arm in the same file. A buyer can now retry a cancelled card / mobile-money payment without having to re-find the product.
+
+## Phase O review items folded in (review batches 2026-06-10 → 2026-06-11)
+
+The Phase O review items U.1, U.2, U.4, U.5 were superseded by the broader U.0 fix bundle (review-of-T review) plus targeted U.2/U.4/U.5 fixes:
+
+- **U.1 (Phase O #1)** Real visit detail card — superseded by **U.0-B4** (548cf98). Pre-fix `pro/visites/[id].tsx` rendered `mockProperties[0]` ; now renders from the real joined `useAgentVisits` row (property, buyer, note, requestedAt). Mock imports deleted from the screen.
+- **U.2 (Phase O #2)** Self-visit guard → SHIPPED (U.2, af4b756). `request-visit` 403s `SELF_VISIT_FORBIDDEN` when `prop.owner_id === userId`. Deployed v13 + probed (Linky envelope).
+- **U.4 (Phase O #4)** Deeplink hygiene → SHIPPED (U.4, 0ffd8fb). New `app/+not-found.tsx` branded 404 ; `useNotificationTapRouting` now drops the deeplink when not signed in (instead of pushing it over onboarding into a 401 + back-less blank view).
+- **U.5 (Phase O #5)** Notifications "Charger plus" → SHIPPED (U.5, 0ffd8fb). New `useNotificationsInfinite` wraps `useInfiniteQuery` over `/list-notifications` with cursor support ; the screen flattens pages and renders a Button at list end when `hasNextPage`. Mark-read semantics untouched.
+
+## Cross-references — review batches consolidated into U.0
+
+The U.0a / U.0b / U.0c / U.0d commits closed the T.3 + T.4 external adversarial review : 7 blockers, 18 should-fixes, 11 nits, 8 verification-round items. Highest-impact fixes were `useProducts` strip-own-products bug (B1, 548cf98), the fake `offer.tsx` / `pro/visites/[id].tsx` / `pro/demandes/[id].tsx` / RevenueHero replacements (B2-B5, 548cf98), the wallet money-state gates on home / checkout / payouts (B6 + U.0d, 548cf98 + 293ef56), and the cached-list regression guards on the exclusive-error pattern (U.0d, 293ef56 + 55cd1eb).
+
+---
+
 ## Cross-references
 
 - `CLIENT_STATUS_REPORT_2026-06-01.html` — last full status report at repo root; client-facing context.
