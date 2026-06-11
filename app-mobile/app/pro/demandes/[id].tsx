@@ -54,7 +54,12 @@ export default function DemandDetailRoute() {
   const toast = useToast();
   const [submitting, setSubmitting] = useState<'accept' | 'reject' | null>(null);
 
-  if (visitsQuery.isError) {
+  // Phase U.0d follow-up — resolve the cached visit BEFORE the
+  // error/loading checks so a failed background refetch doesn't hide a
+  // visit the user just tapped from the rendered list.
+  const visit = (visitsQuery.data ?? []).find((v) => v.id === id);
+
+  if (visitsQuery.isError && !visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
         <ScreenHeader title="Demande" />
@@ -63,7 +68,7 @@ export default function DemandDetailRoute() {
     );
   }
 
-  if (visitsQuery.isLoading) {
+  if (visitsQuery.isLoading && !visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
         <ScreenHeader title="Demande" />
@@ -76,7 +81,6 @@ export default function DemandDetailRoute() {
     );
   }
 
-  const visit = (visitsQuery.data ?? []).find((v) => v.id === id);
   if (!visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>

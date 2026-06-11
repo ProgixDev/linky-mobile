@@ -50,7 +50,10 @@ export default function VisitDetailRoute() {
   const visits = visitsQuery.data ?? [];
   const visit = visits.find((v) => v.id === id);
 
-  if (visitsQuery.isError) {
+  // Phase U.0d follow-up — gate error early-return on !visit so a failed
+  // background refetch doesn't hide a cached visit the user just tapped
+  // from the (rendered) list screen. Same pattern as the list-side guards.
+  if (visitsQuery.isError && !visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
         <ScreenHeader title="Visite" />
@@ -59,7 +62,7 @@ export default function VisitDetailRoute() {
     );
   }
 
-  if (visitsQuery.isLoading) {
+  if (visitsQuery.isLoading && !visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
         <ScreenHeader title="Visite" />
