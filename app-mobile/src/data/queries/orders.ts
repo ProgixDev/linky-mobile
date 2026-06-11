@@ -6,7 +6,6 @@
 // order at status='disputed' pending admin resolution (Phase K).
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
-import { useCart } from '../../stores/cart';
 import type { Order, OrderStatus, PaymentIntent, PaymentMethod } from '../types';
 
 interface Cursor { created_at: string; id: string }
@@ -134,7 +133,14 @@ export function usePlaceOrder() {
       qc.invalidateQueries({ queryKey: ['my-orders'] });
       qc.invalidateQueries({ queryKey: ['my-orders-infinite'] });
       qc.invalidateQueries({ queryKey: ['wallet'] });
-      useCart.getState().clear();
+      // Phase U.3 — DO NOT clear the cart here. Order creation precedes
+      // payment for both the card rail (Stripe payment sheet) and the
+      // mobile-money rail (cron poll / Lengopay webhook flips status to
+      // 'paid' later). Clearing at creation meant a sheet cancel or rail
+      // failure left the buyer at /checkout with an empty cart and no
+      // way to retry. Callers now clear at the moment the order is
+      // actually paid (wallet branch in app/checkout/index.tsx,
+      // SUCCESS state in app/checkout/confirm/[orderId].tsx).
     },
   });
 }

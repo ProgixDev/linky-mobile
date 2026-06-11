@@ -74,6 +74,13 @@ Deno.serve(makePost<Body>('/v1/visits/request', valid, async ({ sb, body, req })
   if ((prop as { status: string }).status !== 'active') {
     throwApi('PROPERTY_INACTIVE', 400, "Cette annonce n'est plus disponible.");
   }
+  // Phase U.2 — self-visit guard. Pre-U2 a property owner could book a
+  // visit on their own listing and self-notify ; harmless in dev, but a
+  // trust hazard and noise the moment an agent has more than a couple
+  // of biens.
+  if ((prop as { owner_id: string }).owner_id === userId) {
+    throwApi('SELF_VISIT_FORBIDDEN', 403, 'Tu ne peux pas réserver une visite de ton propre bien.');
+  }
 
   // Insert; idempotent on (property_id, buyer_id, requested_at). On duplicate, fetch
   // the existing row and return it unchanged.

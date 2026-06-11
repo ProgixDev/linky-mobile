@@ -12,6 +12,7 @@ import { formatGNF } from '../../../src/lib/format';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useOrderWithIntent, usePlaceOrder } from '../../../src/data/queries/orders';
 import { useCancelPendingPayment } from '../../../src/data/queries/payments';
+import { useCart } from '../../../src/stores/cart';
 import type { PaymentMethod } from '../../../src/data/types';
 
 const TTL_MS = 15 * 60 * 1000;
@@ -104,10 +105,19 @@ export default function CheckoutConfirmRoute() {
     if (!data || !order) return;
     if (!intent) {
       // Wallet orders shouldn't reach this screen; defensively route to success.
+      // Phase U.3 — clear here too as a safety net ; the wallet onSuccess in
+      // checkout/index.tsx already cleared, but a hard refresh could land
+      // a wallet-paid order on this screen with the cart still populated.
+      useCart.getState().clear();
       router.replace(`/checkout/success?orderId=${order.id}`);
       return;
     }
     if (stateClass === 'SUCCESS') {
+      // Phase U.3 — payment actually completed (order paid + intent
+      // completed). Safe to clear the cart now ; any prior cancel /
+      // failure left it intact so the buyer could retry without
+      // re-finding the product.
+      useCart.getState().clear();
       router.replace(`/checkout/success?orderId=${order.id}`);
       return;
     }

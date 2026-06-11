@@ -290,10 +290,17 @@ export default function CheckoutRoute() {
                 onSuccess: ({ order, intent }) => {
                   if (intent) {
                     // Rail path: route to confirmation screen with spinner + cron polling.
+                    // Phase U.3 — DO NOT clear cart yet ; the rail can still
+                    // fail or be cancelled. Clear lives in the SUCCESS branch
+                    // of confirm/[orderId].tsx.
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
                     router.replace(`/checkout/confirm/${order.id}` as any);
                   } else {
-                    // Wallet path (no intent): order already at status='paid'; existing flow.
+                    // Wallet path (no intent): order already at status='paid'.
+                    // Phase U.3 — wallet payment is instant + non-cancellable
+                    // from the buyer side, so this is the actual moment of
+                    // payment success → safe to clear.
+                    useCart.getState().clear();
                     show('Commande créée', 'success');
                     router.replace(`/checkout/success?orderId=${order.id}`);
                   }
