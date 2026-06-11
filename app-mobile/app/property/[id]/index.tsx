@@ -237,38 +237,31 @@ export default function PropertyDetailRoute() {
         </View>
       </ScrollView>
 
+      {/* Phase U.0-B2 — offers have no V1 backend ; the «Faire une offre» /
+          «Offre» CTAs were sending nothing and the target screen was 100 %
+          mock. Removed until the offers backend lands. Buyers contact the
+          agent via Message (Contacter) and book a visit instead. */}
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
         {isTerrain ? (
           <>
-            <IconButton
-              variant="secondary"
-              size={44}
+            <Button
+              variant="outline"
+              style={{ flex: 1 }}
+              label="Contacter"
+              leading={<I.msg size={16} color={colors.text} />}
               onPress={onChatPress}
               disabled={findOrCreate.isPending || !prop.ownerId}
-            >
-              <I.msg size={18} color={colors.text} />
-            </IconButton>
-            <Button
-              style={{ flex: 1 }}
-              label="Faire une offre"
-              onPress={() => router.push(`/property/${prop.id}/offer`)}
             />
           </>
         ) : (
           <>
-            <IconButton
-              variant="secondary"
-              size={44}
-              onPress={onChatPress}
-              disabled={findOrCreate.isPending || !prop.ownerId}
-            >
-              <I.msg size={18} color={colors.text} />
-            </IconButton>
             <Button
               variant="outline"
               style={{ flex: 1 }}
-              label="Offre"
-              onPress={() => router.push(`/property/${prop.id}/offer`)}
+              label="Contacter"
+              leading={<I.msg size={16} color={colors.text} />}
+              onPress={onChatPress}
+              disabled={findOrCreate.isPending || !prop.ownerId}
             />
             <Button
               style={{ flex: 1.4 }}

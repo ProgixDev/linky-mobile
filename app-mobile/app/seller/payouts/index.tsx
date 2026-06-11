@@ -11,10 +11,12 @@
 //
 // No "pending payout" computation — V1 doesn't auto-batch sales into payouts.
 // Every payout is a manual withdrawal request the seller files themselves.
-import { ScrollView, View, Pressable } from 'react-native';
+import { useCallback } from 'react';
+import { RefreshControl, ScrollView, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Skeleton } from '../../../src/components/primitives/Skeleton';
 import {
   Wallet,
   ArrowDownToLine,
@@ -56,14 +58,31 @@ export default function PayoutsRoute() {
   const wallet = useWallet();
   const withdrawals = useMyWithdrawals();
 
+  // Phase U.0-B6 — pre-U0 the hero asserted "SOLDE DISPONIBLE 0 GNF" on
+  // loading AND on error (unconditional `wallet.data?.balanceGnf ?? 0` next
+  // to a live Retirer CTA). Refresh on cold start (5min staleTime served
+  // cache) was unrecoverable from this screen. The HISTORIQUE empty CTA
+  // also disappeared in the failure case because the gate read 0 GNF.
+  const balanceReady = !wallet.isLoading && !wallet.isError && !!wallet.data;
   const balanceGnf = wallet.data?.balanceGnf ?? 0;
   const items = withdrawals.data ?? [];
+
+  const onRefresh = useCallback(async () => {
+    await Promise.all([wallet.refetch(), withdrawals.refetch()]);
+  }, [wallet, withdrawals]);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={(wallet.isFetching && !wallet.isLoading) || (withdrawals.isFetching && !withdrawals.isLoading)}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
         <ScreenHeader title="Retraits" subtitle="L'argent libéré atterrit sur ton Mobile Money." />
 
@@ -101,46 +120,74 @@ export default function PayoutsRoute() {
               >
                 SOLDE DISPONIBLE
               </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
-                <Text
+              {wallet.isLoading ? (
+                <View style={{ marginTop: 10 }}>
+                  <Skeleton height={32} radius={6} />
+                </View>
+              ) : wallet.isError ? (
+                <>
+                  <Text
+                    style={{
+                      fontSize: 34,
+                      fontWeight: '700',
+                      color: '#FFFFFF',
+                      letterSpacing: -0.6,
+                      lineHeight: 38,
+                      marginTop: 6,
+                    }}
+                  >
+                    —
+                  </Text>
+                  <Pressable onPress={() => void wallet.refetch()} hitSlop={8} style={{ marginTop: 6 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>
+                      Réessayer
+                    </Text>
+                  </Pressable>
+                </>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
+                  <Text
+                    style={{
+                      fontSize: 34,
+                      fontWeight: '700',
+                      color: '#FFFFFF',
+                      fontVariant: ['tabular-nums'],
+                      letterSpacing: -0.6,
+                      lineHeight: 38,
+                      includeFontPadding: false,
+                    }}
+                  >
+                    {formatGNF(balanceGnf).replace(' GNF', '')}
+                  </Text>
+                  <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
+                    GNF
+                  </Text>
+                </View>
+              )}
+              {balanceReady && (
+                <Pressable
+                  onPress={() => {
+                    haptic.light();
+                    router.push('/wallet/retirer');
+                  }}
                   style={{
-                    fontSize: 34,
-                    fontWeight: '700',
-                    color: '#FFFFFF',
-                    fontVariant: ['tabular-nums'],
-                    letterSpacing: -0.6,
-                    lineHeight: 38,
-                    includeFontPadding: false,
+                    marginTop: 16,
+                    alignSelf: 'flex-start',
+                    height: 40,
+                    paddingHorizontal: 16,
+                    borderRadius: 999,
+                    backgroundColor: '#FFFFFF',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
                   }}
                 >
-                  {formatGNF(balanceGnf).replace(' GNF', '')}
-                </Text>
-                <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
-                  GNF
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => {
-                  haptic.light();
-                  router.push('/wallet/retirer');
-                }}
-                style={{
-                  marginTop: 16,
-                  alignSelf: 'flex-start',
-                  height: 40,
-                  paddingHorizontal: 16,
-                  borderRadius: 999,
-                  backgroundColor: '#FFFFFF',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <ArrowDownToLine size={14} color="#0A5240" strokeWidth={2.5} />
-                <Text style={{ color: '#0A5240', fontWeight: '700', fontSize: 13.5 }}>
-                  Retirer
-                </Text>
-              </Pressable>
+                  <ArrowDownToLine size={14} color="#0A5240" strokeWidth={2.5} />
+                  <Text style={{ color: '#0A5240', fontWeight: '700', fontSize: 13.5 }}>
+                    Retirer
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </View>
         </View>
@@ -178,8 +225,8 @@ export default function PayoutsRoute() {
                 icon="package"
                 title="Aucun retrait pour le moment"
                 description="Quand tes ventes seront libérées, tu pourras les transférer vers ton Mobile Money."
-                ctaLabel={balanceGnf > 0 ? 'Faire mon premier retrait' : undefined}
-                onCta={balanceGnf > 0 ? () => router.push('/wallet/retirer') : undefined}
+                ctaLabel={balanceReady && balanceGnf > 0 ? 'Faire mon premier retrait' : undefined}
+                onCta={balanceReady && balanceGnf > 0 ? () => router.push('/wallet/retirer') : undefined}
               />
             </View>
           )}

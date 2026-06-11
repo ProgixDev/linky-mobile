@@ -1,62 +1,127 @@
+// Phase U.0-B5 — pre-U0 this rendered a fully fabricated negotiation chat
+// reachable from REAL rows: hardcoded Mariama messages with fake GNF amounts
+// (3 800 000 / 4 000 000), mockProperties[0], an "OFFRE REÇUE" card off the
+// mock price, dead Accepter/Refuser, route param `id` read but never used.
+// Now: render the real visit (useAgentVisits row : buyer.displayName, note,
+// requestedAt, joined property), with accept/reject wired to the real
+// visit-respond mutation. The fake "messages" UI and composer are deleted —
+// messaging-to-visits linkage is a V1.1 feature.
 import { useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Image } from 'expo-image';
-import { Check, X, Send } from 'lucide-react-native';
+import { Check, X, CalendarDays, MapPin, User as UserIcon } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
+import { Button } from '../../../src/components/primitives/Button';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
-import { haptic } from '../../../src/lib/haptics';
-import { photos } from '../../../src/data/photos';
-import { mockProperties } from '../../../src/data/mockProperties';
-import { formatGNF } from '../../../src/lib/format';
+import { EmptyState, ErrorStateView } from '../../../src/components/feedback/EmptyState';
+import { Skeleton } from '../../../src/components/primitives/Skeleton';
+import {
+  useAgentVisits,
+  useRespondVisitRequest,
+} from '../../../src/data/queries/properties';
+import { useToast } from '../../../src/components/feedback/Toast';
+import { toToastMessage } from '../../../src/lib/api';
 
-interface Msg {
-  id: string;
-  from: 'me' | 'client';
-  text: string;
-  time: string;
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'EN ATTENTE',
+  accepted: 'ACCEPTÉE',
+  rejected: 'REFUSÉE',
+  cancelled: 'ANNULÉE',
+  completed: 'TERMINÉE',
+};
+
+function formatWhen(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(d);
+  target.setHours(0, 0, 0, 0);
+  const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  if (diff === 0) return `Aujourd'hui · ${time}`;
+  if (diff === 1) return `Demain · ${time}`;
+  const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
+  return `${dayLabel} · ${time}`;
 }
-
-const MESSAGES: Msg[] = [
-  {
-    id: 'm1',
-    from: 'client',
-    text: 'Bonjour, votre annonce m\'intéresse beaucoup. Je propose 3 800 000 GNF/mois pour 6 mois de bail.',
-    time: '10:42',
-  },
-  {
-    id: 'm2',
-    from: 'client',
-    text: 'Je peux fournir une caution de 2 mois immédiatement.',
-    time: '10:43',
-  },
-  {
-    id: 'm3',
-    from: 'me',
-    text: 'Bonjour Mariama, merci pour votre intérêt. Le tarif minimum est de 4 000 000 GNF/mois. Une visite est possible cette semaine.',
-    time: '11:14',
-  },
-];
 
 export default function DemandDetailRoute() {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [draft, setDraft] = useState('');
-  const property = mockProperties[0]!;
+  const visitsQuery = useAgentVisits();
+  const respond = useRespondVisitRequest();
+  const toast = useToast();
+  const [submitting, setSubmitting] = useState<'accept' | 'reject' | null>(null);
+
+  if (visitsQuery.isError) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ScreenHeader title="Demande" />
+        <ErrorStateView onRetry={() => void visitsQuery.refetch()} />
+      </SafeAreaView>
+    );
+  }
+
+  if (visitsQuery.isLoading) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ScreenHeader title="Demande" />
+        <View style={{ paddingHorizontal: 24, gap: 14, paddingTop: 8 }}>
+          <Skeleton height={72} radius={18} />
+          <Skeleton height={90} radius={18} />
+          <Skeleton height={90} radius={18} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const visit = (visitsQuery.data ?? []).find((v) => v.id === id);
+  if (!visit) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ScreenHeader title="Demande" />
+        <EmptyState
+          icon="package"
+          title="Demande introuvable"
+          description="Cette demande n'existe plus ou a été retirée."
+          ctaLabel="Retour"
+          onCta={() => (router.canGoBack() ? router.back() : router.replace('/pro/demandes'))}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const buyerName = visit.buyer?.displayName ?? 'Demandeur';
+  const whenLabel = formatWhen(visit.requestedAt);
+  const propertyTitle = visit.property?.title;
+  const locationLabel = [visit.property?.district, visit.property?.city].filter(Boolean).join(', ');
+  const canDecide = visit.status === 'pending';
+
+  const onRespond = async (decision: 'accept' | 'reject') => {
+    if (!canDecide || respond.isPending) return;
+    setSubmitting(decision);
+    try {
+      await respond.mutateAsync({ visit_request_id: visit.id, decision });
+      toast.show(decision === 'accept' ? 'Visite acceptée.' : 'Visite refusée.', 'success');
+      if (router.canGoBack()) router.back();
+      else router.replace('/pro/demandes');
+    } catch (e) {
+      toast.show(toToastMessage(e, "Impossible d'enregistrer la réponse."), 'danger');
+    } finally {
+      setSubmitting(null);
+    }
+  };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScreenHeader title="Demande" />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 16 }}
-        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 32 }}
       >
-        {/* Client header */}
+        <ScreenHeader title="Demande" subtitle={STATUS_LABEL[visit.status] ?? visit.status.toUpperCase()} />
+
+        {/* Demandeur */}
         <View style={{ paddingHorizontal: 24 }}>
           <View
             style={{
@@ -70,15 +135,22 @@ export default function DemandDetailRoute() {
               alignItems: 'center',
             }}
           >
-            <Image
-              source={photos.woman1}
-              style={{ width: 44, height: 44, borderRadius: 999, backgroundColor: colors.bgSunken }}
-              contentFit="cover"
-            />
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 999,
+                backgroundColor: colors.bgSunken,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <UserIcon size={22} color={colors.textMuted} strokeWidth={1.75} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text
                 style={{
-                  fontSize: 14.5,
+                  fontSize: 15,
                   fontWeight: '700',
                   color: colors.text,
                   letterSpacing: 0,
@@ -86,273 +158,149 @@ export default function DemandDetailRoute() {
                   includeFontPadding: false,
                 }}
               >
-                Mariama Diallo
+                {buyerName}
               </Text>
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: colors.textMuted,
-                  marginTop: 2,
-                  letterSpacing: 0,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                Membre depuis 2024 · 4 transactions
+              <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                Contact via la messagerie Linky
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Offer summary */}
-        <View style={{ paddingHorizontal: 24, marginTop: 14 }}>
+        {/* Date demandée */}
+        <Section title="Date souhaitée">
           <View
             style={{
               padding: 14,
               borderRadius: 18,
-              backgroundColor: colors.accentSoft,
-              borderWidth: 1,
-              borderColor: 'rgba(232,165,61,0.25)',
+              backgroundColor: colors.primarySoft,
               flexDirection: 'row',
               gap: 12,
               alignItems: 'center',
             }}
           >
-            <Image
-              source={property.photos[0]}
-              style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: colors.bgSunken }}
-              contentFit="cover"
-            />
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 11,
-                  fontWeight: '700',
-                  color: colors.accentText,
-                  letterSpacing: 0.5,
-                }}
-              >
-                OFFRE REÇUE
-              </Text>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: colors.accentText,
-                  marginTop: 1,
-                  letterSpacing: 0,
-                  lineHeight: 17,
-                }}
-                numberOfLines={1}
-              >
-                {property.title}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: '700',
-                  color: colors.accentText,
-                  marginTop: 4,
-                  fontVariant: ['tabular-nums'],
-                  letterSpacing: -0.3,
-                }}
-              >
-                3 800 000 GNF{' '}
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: '500',
-                    color: colors.accentText,
-                    opacity: 0.7,
-                  }}
-                >
-                  · listé à {formatGNF(property.priceGnf)}
-                </Text>
+            <CalendarDays size={18} color={colors.primaryDeep} strokeWidth={2} />
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primaryDeep }}>
+              {whenLabel}
+            </Text>
+          </View>
+        </Section>
+
+        {/* Note */}
+        {visit.note ? (
+          <Section title="Message">
+            <View
+              style={{
+                padding: 14,
+                borderRadius: 18,
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Text variant="bodyM" style={{ lineHeight: 21 }}>
+                {visit.note}
               </Text>
             </View>
-          </View>
-        </View>
+          </Section>
+        ) : null}
 
-        {/* Quick actions */}
-        <View
-          style={{ paddingHorizontal: 24, marginTop: 14, flexDirection: 'row', gap: 10 }}
-        >
+        {/* Bien */}
+        <Section title="Bien concerné">
           <Pressable
-            onPress={() => haptic.medium()}
+            onPress={() => router.push(`/property/${visit.propertyId}`)}
             style={{
-              flex: 1,
-              height: 46,
-              borderRadius: 14,
-              backgroundColor: colors.text,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-            }}
-          >
-            <Check size={14} color={colors.bg} strokeWidth={2.25} />
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: '700',
-                color: colors.bg,
-                lineHeight: 16,
-                includeFontPadding: false,
-              }}
-            >
-              Accepter
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => haptic.light()}
-            style={{
-              flex: 1,
-              height: 46,
-              borderRadius: 14,
-              backgroundColor: 'rgba(209,79,60,0.08)',
+              padding: 14,
+              borderRadius: 18,
+              backgroundColor: colors.card,
               borderWidth: 1,
-              borderColor: 'rgba(209,79,60,0.25)',
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
+              borderColor: colors.border,
               gap: 6,
             }}
           >
-            <X size={14} color={colors.danger} strokeWidth={2.25} />
             <Text
               style={{
-                fontSize: 13,
-                fontWeight: '700',
-                color: colors.danger,
-                lineHeight: 16,
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.text,
+                letterSpacing: 0,
+                lineHeight: 18,
                 includeFontPadding: false,
               }}
+              numberOfLines={2}
             >
-              Refuser
+              {propertyTitle ?? "Voir l'annonce"}
+            </Text>
+            {locationLabel.length > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <MapPin size={11} color={colors.textMuted} strokeWidth={2} />
+                <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                  {locationLabel}
+                </Text>
+              </View>
+            )}
+            <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.primary, marginTop: 4 }}>
+              Voir l'annonce →
             </Text>
           </Pressable>
-        </View>
+        </Section>
+      </ScrollView>
 
-        {/* Conversation */}
+      {canDecide && (
         <View
           style={{
             paddingHorizontal: 24,
-            paddingTop: 22,
+            paddingVertical: 14,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            backgroundColor: colors.bg,
+            flexDirection: 'row',
             gap: 10,
           }}
         >
-          {MESSAGES.map((m) => (
-            <MessageBubble key={m.id} msg={m} />
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Composer */}
-      <View
-        style={{
-          paddingHorizontal: 16,
-          paddingTop: 10,
-          paddingBottom: Math.max(insets.bottom, 12),
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          backgroundColor: colors.bg,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
-        <View
-          style={{
-            flex: 1,
-            height: 44,
-            paddingHorizontal: 14,
-            borderRadius: 999,
-            backgroundColor: colors.bgSunken,
-            justifyContent: 'center',
-          }}
-        >
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Réponds à Mariama…"
-            placeholderTextColor={colors.textFaint}
-            style={{
-              fontSize: 14,
-              color: colors.text,
-              padding: 0,
-              letterSpacing: 0,
-            }}
+          <Button
+            variant="outline"
+            size="lg"
+            style={{ flex: 1 }}
+            label="Refuser"
+            leading={<X size={16} color={colors.danger} strokeWidth={2} />}
+            onPress={() => onRespond('reject')}
+            loading={submitting === 'reject'}
+            disabled={respond.isPending}
+          />
+          <Button
+            variant="dark"
+            size="lg"
+            style={{ flex: 1.4 }}
+            label="Accepter"
+            leading={<Check size={16} color={colors.bg} strokeWidth={2.25} />}
+            onPress={() => onRespond('accept')}
+            loading={submitting === 'accept'}
+            disabled={respond.isPending}
           />
         </View>
-        <Pressable
-          disabled={!draft.trim()}
-          onPress={() => {
-            haptic.light();
-            setDraft('');
-          }}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 999,
-            backgroundColor: draft.trim() ? colors.primary : colors.bgSunken,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: draft.trim() ? 1 : 0.6,
-          }}
-        >
-          <Send
-            size={16}
-            color={draft.trim() ? '#FFFFFF' : colors.textFaint}
-            strokeWidth={2}
-          />
-        </Pressable>
-      </View>
+      )}
     </SafeAreaView>
   );
 }
 
-function MessageBubble({ msg }: { msg: Msg }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const { colors } = useTheme();
-  const isMe = msg.from === 'me';
   return (
-    <View
-      style={{
-        maxWidth: '80%',
-        alignSelf: isMe ? 'flex-end' : 'flex-start',
-      }}
-    >
-      <View
-        style={{
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-          borderRadius: 18,
-          borderTopLeftRadius: isMe ? 18 : 4,
-          borderTopRightRadius: isMe ? 4 : 18,
-          backgroundColor: isMe ? colors.text : colors.card,
-          borderWidth: isMe ? 0 : 1,
-          borderColor: colors.border,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 13.5,
-            color: isMe ? colors.bg : colors.text,
-            lineHeight: 19,
-            letterSpacing: 0,
-          }}
-        >
-          {msg.text}
-        </Text>
-      </View>
+    <View style={{ paddingTop: 22 }}>
       <Text
         style={{
-          fontSize: 10.5,
+          fontSize: 11,
+          fontWeight: '700',
           color: colors.textFaint,
-          marginTop: 4,
-          paddingHorizontal: 8,
-          textAlign: isMe ? 'right' : 'left',
+          letterSpacing: 0.6,
+          paddingHorizontal: 28,
+          marginBottom: 10,
         }}
       >
-        {msg.time}
+        {title.toUpperCase()}
       </Text>
+      <View style={{ paddingHorizontal: 24 }}>{children}</View>
     </View>
   );
 }

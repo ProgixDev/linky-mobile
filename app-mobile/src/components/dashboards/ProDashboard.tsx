@@ -44,6 +44,7 @@ import {
   useDeleteProduct,
   useDeleteProperty,
 } from '../../data/queries';
+import { useWallet } from '../../data/queries/wallet';
 import { useAuth } from '../../stores/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sheet } from '../sheets/Sheet';
@@ -52,10 +53,8 @@ import { ApiError, toToastMessage } from '../../lib/api';
 
 export type ProMode = 'shop' | 'estate';
 
-// Empty 30-day bars used while metrics endpoint is not wired. Flat baseline so
-// the hero card still has its shape but communicates "no activity yet" rather
-// than fake growth.
-const EMPTY_BARS: number[] = Array(30).fill(8);
+// Phase U.0-B3 — EMPTY_BARS removed with the fake RevenueHero. The new
+// WalletHero (defined below) shows real wallet balance from useWallet.
 
 // =================================================================
 // Identity pill — shared header element
@@ -229,12 +228,7 @@ export function ShopDashboard() {
   return (
     <View>
       <View style={{ paddingHorizontal: 20 }}>
-        <RevenueHero
-          label="REVENUS · 30 JOURS"
-          value="0"
-          unit="GNF"
-          subline="Pas encore de ventes ce mois"
-        />
+        <WalletHero onTap={() => router.push('/seller/payouts')} />
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
@@ -631,12 +625,10 @@ export function EstateDashboard() {
   return (
     <View>
       <View style={{ paddingHorizontal: 20 }}>
-        <RevenueHero
-          label="REVENUS LOCATIFS · 30 JOURS"
-          value="0"
-          unit="GNF"
-          subline="Pas encore de loyer encaissé"
-        />
+        {/* Phase U.0-B3 — Estate shares the wallet hero (the wallet is per-user,
+            not per-mode) ; drops the «LOCATIFS» framing since there's no
+            rentals-only ledger split in V1. */}
+        <WalletHero onTap={() => router.push('/wallet')} />
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
@@ -658,7 +650,10 @@ export function EstateDashboard() {
           <QuickAction
             Icon={ArrowUpRight}
             label="Retraits"
-            onPress={() => router.push('/seller/payouts')}
+            /* Phase U.0 should-fix — pure agents land on the seller-gated
+               /seller/payouts otherwise (Réservé aux vendeurs from their
+               OWN dashboard) ; route to the wallet retrait flow directly. */
+            onPress={() => router.push('/wallet/retirer')}
           />
           <QuickAction
             Icon={BarChart3}
@@ -736,26 +731,27 @@ export function EstateDashboard() {
 // Shared subcomponents
 // =================================================================
 
-function RevenueHero({
-  label,
-  value,
-  unit,
-  subline,
-  trend,
-  bars,
+// Phase U.0-B3 — was "RevenueHero" rendering literal "0" GNF + a fabricated
+// flat bar chart (EMPTY_BARS) as «REVENUS · 30 JOURS» / «REVENUS LOCATIFS».
+// Wrong money for any seller with released orders. Now: real wallet balance
+// labelled SOLDE DISPONIBLE, same figure as seller/payouts. Loading/error
+// degrade gracefully to "—" with a small retry.
+function WalletHero({
+  onTap,
 }: {
-  label: string;
-  value: string;
-  unit: string;
-  subline: string;
-  // Trend pill hidden when omitted — used during welcome state before any real
-  // metric has been computed for this seller/agent.
-  trend?: string;
-  bars?: number[];
+  onTap?: () => void;
 }) {
-  const barData = bars ?? EMPTY_BARS;
+  const wallet = useWallet();
+  const isLoading = wallet.isLoading;
+  const isError = wallet.isError;
+  const value = isLoading || isError ? '—' : formatGNF(wallet.data?.balanceGnf ?? 0).replace(' GNF', '');
+  const subline = isError
+    ? 'Erreur — touche Réessayer'
+    : isLoading
+      ? 'Chargement…'
+      : 'Disponible pour retrait';
   return (
-    <Pressable>
+    <Pressable onPress={onTap} disabled={!onTap}>
       <View
         style={{
           borderRadius: 24,
@@ -798,36 +794,16 @@ function RevenueHero({
         <NoiseOverlay />
 
         <View style={{ padding: 20 }}>
-          <View
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+          <Text
+            style={{
+              fontSize: 11,
+              fontWeight: '700',
+              color: 'rgba(255,255,255,0.65)',
+              letterSpacing: 0.6,
+            }}
           >
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: '700',
-                color: 'rgba(255,255,255,0.65)',
-                letterSpacing: 0.6,
-              }}
-            >
-              {label}
-            </Text>
-            {trend ? (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(255,255,255,0.18)',
-                }}
-              >
-                <TrendingUp size={11} color="#FFFFFF" strokeWidth={2.25} />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{trend}</Text>
-              </View>
-            ) : null}
-          </View>
+            SOLDE DISPONIBLE
+          </Text>
 
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 14 }}>
             <Text
@@ -844,34 +820,20 @@ function RevenueHero({
               {value}
             </Text>
             <Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
-              {unit}
+              GNF
             </Text>
           </View>
-          <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>
-            {subline}
-          </Text>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              gap: 3,
-              height: 32,
-              alignItems: 'flex-end',
-              marginTop: 18,
-            }}
-          >
-            {barData.slice(0, 24).map((h, i) => (
-              <View
-                key={i}
-                style={{
-                  flex: 1,
-                  height: `${h}%`,
-                  backgroundColor:
-                    i > 18 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.32)',
-                  borderRadius: 2,
-                }}
-              />
-            ))}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
+            <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)' }}>
+              {subline}
+            </Text>
+            {isError && (
+              <Pressable onPress={() => void wallet.refetch()} hitSlop={8}>
+                <Text style={{ fontSize: 12.5, color: '#FFFFFF', fontWeight: '700' }}>
+                  Réessayer
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>

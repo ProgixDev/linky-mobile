@@ -84,9 +84,20 @@ export function useProducts(filters: ProductFilters = {}) {
       return products;
     },
   });
+  // Phase U.0-B1 — the hide-own-listings filter exists for BUYER feeds
+  // (marche, home featured) so a seller doesn't see their own product back.
+  // When a shopId is explicitly requested, the caller IS the owner asking
+  // for their own products (pro/stats, ShopDashboard "Mes annonces",
+  // shop preview) — stripping them here turned T.3's stats deliverable
+  // into a permanent empty state AND blocked sellers from
+  // pause/mark-sold/delete on the dashboard. Skip the strip when shopId
+  // is explicit ; rely on the server filter alone.
   const data = useMemo(
-    () => query.data?.filter((p) => !myShopIds.has(p.shopId)),
-    [query.data, myShopIds],
+    () =>
+      filters.shopId
+        ? query.data
+        : query.data?.filter((p) => !myShopIds.has(p.shopId)),
+    [query.data, myShopIds, filters.shopId],
   );
   return { ...query, data };
 }
@@ -248,10 +259,13 @@ export function useProductsInfinite(filters: ProductFilters = {}) {
   // even if they were in a page we already pulled. Per pre-fetch filtering is
   // server-side only — see the V1.1 follow-up to add owner-aware filtering at
   // list-products to avoid client-side waste.
+  //
+  // Phase U.0-B1 — when shopId is explicit the caller IS the owner asking
+  // for their own products (same fix as useProducts above).
   const products = useMemo(() => {
     const all = query.data?.pages.flatMap((p) => p.products) ?? [];
-    return all.filter((p) => !myShopIds.has(p.shopId));
-  }, [query.data, myShopIds]);
+    return filters.shopId ? all : all.filter((p) => !myShopIds.has(p.shopId));
+  }, [query.data, myShopIds, filters.shopId]);
   return { ...query, products };
 }
 

@@ -21,13 +21,19 @@ export default function StatsRoute() {
   const firstShopId = myShops.data?.[0]?.id;
   const products = useProducts({ shopId: firstShopId });
 
+  // U.0-B1 — without the firstShopId gate, useProducts({}) hits the public
+  // feed before myShops resolves and stats would briefly render the WHOLE
+  // marketplace as "tes annonces".
   const isLoading = myShops.isLoading || (!!firstShopId && products.isLoading);
-  const isError = myShops.isError || products.isError;
+  const isError = myShops.isError || (!!firstShopId && products.isError);
+  const shopReady = !myShops.isLoading && !!firstShopId;
 
   // The seller's full list — list-products defaults to 'recent', so we sort
   // client-side by view_count. V1 volumes per shop are small, no pagination
-  // needed yet.
-  const ranked = [...(products.data ?? [])].sort((a, b) => b.viewCount - a.viewCount);
+  // needed yet. Only computed once the shop id is resolved (B1 gate).
+  const ranked = shopReady
+    ? [...(products.data ?? [])].sort((a, b) => b.viewCount - a.viewCount)
+    : [];
   const totalViews = ranked.reduce((s, p) => s + p.viewCount, 0);
   const activeCount = ranked.filter((p) => p.status === 'active').length;
 

@@ -1,37 +1,98 @@
-import { Pressable, ScrollView, View } from 'react-native';
+// Phase U.0-B4 — pre-U0 this rendered mockProperties[0] as the property
+// card (client saw a fabricated bien with a fake price), photos.woman1 +
+// Mariama Diallo as the client, AUJOURD'HUI · 15 MAI / 14:30 hardcoded,
+// and "Marquer comme terminée" / "Annuler" buttons that were
+// haptic-only no-ops. Now: real data from useAgentVisits (joined
+// property + buyer + note + requestedAt), real /property/${id} link,
+// real date+time. Terminate / Reschedule / Cancel are HIDDEN until a
+// real backend endpoint exists ; the list screen handles pending
+// accept/reject via the existing visit-respond fn.
+import { ScrollView, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Image } from 'expo-image';
-import {
-  CalendarDays,
-  Clock,
-  MapPin,
-  Phone,
-  MessageCircle,
-  CalendarClock,
-  X,
-  Check,
-} from 'lucide-react-native';
+import { CalendarDays, Clock, MapPin, User as UserIcon } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
-import { haptic } from '../../../src/lib/haptics';
-import { mockProperties } from '../../../src/data/mockProperties';
-import { photos } from '../../../src/data/photos';
-import { formatGNF } from '../../../src/lib/format';
+import { EmptyState, ErrorStateView } from '../../../src/components/feedback/EmptyState';
+import { Skeleton } from '../../../src/components/primitives/Skeleton';
 import { useAgentVisits } from '../../../src/data/queries/properties';
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'EN ATTENTE',
+  accepted: 'CONFIRMÉE',
+  rejected: 'REFUSÉE',
+  cancelled: 'ANNULÉE',
+  completed: 'TERMINÉE',
+};
+
+function formatDayLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(d);
+  target.setHours(0, 0, 0, 0);
+  const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+  if (diff === 0) return "AUJOURD'HUI";
+  if (diff === 1) return 'DEMAIN';
+  if (diff === -1) return 'HIER';
+  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase();
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
 
 export default function VisitDetailRoute() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const property = mockProperties[0]!;
-  // Status drives whether the post-acceptance action area renders.
-  // The list-screen accept/reject buttons handle the pending decision; once
-  // a visit is accepted, the agent comes here to mark it completed / reschedule
-  // / cancel. For non-accepted statuses we hide the action area entirely.
-  const { data: visits = [] } = useAgentVisits();
+  const visitsQuery = useAgentVisits();
+  const visits = visitsQuery.data ?? [];
   const visit = visits.find((v) => v.id === id);
-  const isAccepted = visit?.status === 'accepted';
+
+  if (visitsQuery.isError) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ScreenHeader title="Visite" />
+        <ErrorStateView onRetry={() => void visitsQuery.refetch()} />
+      </SafeAreaView>
+    );
+  }
+
+  if (visitsQuery.isLoading) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ScreenHeader title="Visite" />
+        <View style={{ paddingHorizontal: 24, gap: 14, paddingTop: 8 }}>
+          <Skeleton height={90} radius={20} />
+          <Skeleton height={72} radius={18} />
+          <Skeleton height={90} radius={18} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!visit) {
+    return (
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ScreenHeader title="Visite" />
+        <EmptyState
+          icon="package"
+          title="Visite introuvable"
+          description="Cette demande de visite n'existe plus ou a été retirée."
+          ctaLabel="Retour"
+          onCta={() => (router.canGoBack() ? router.back() : router.replace('/pro/visites'))}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const dayLabel = formatDayLabel(visit.requestedAt);
+  const timeLabel = formatTime(visit.requestedAt);
+  const statusLabel = STATUS_LABEL[visit.status] ?? visit.status.toUpperCase();
+  const buyerName = visit.buyer?.displayName ?? 'Acheteur';
+  const propertyTitle = visit.property?.title;
+  const locationLabel = [visit.property?.district, visit.property?.city].filter(Boolean).join(', ');
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -39,7 +100,7 @@ export default function VisitDetailRoute() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <ScreenHeader title="Visite" />
+        <ScreenHeader title="Visite" subtitle={statusLabel} />
 
         {/* When */}
         <View style={{ paddingHorizontal: 24 }}>
@@ -75,28 +136,30 @@ export default function VisitDetailRoute() {
                   opacity: 0.75,
                 }}
               >
-                AUJOURD'HUI · 15 MAI
+                {dayLabel}
               </Text>
-              <Text
-                style={{
-                  fontSize: 26,
-                  fontWeight: '700',
-                  color: colors.primaryDeep,
-                  marginTop: 4,
-                  letterSpacing: -0.4,
-                  fontVariant: ['tabular-nums'],
-                  lineHeight: 30,
-                  includeFontPadding: false,
-                }}
-              >
-                14:30
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
+                <Clock size={18} color={colors.primaryDeep} strokeWidth={2} />
+                <Text
+                  style={{
+                    fontSize: 26,
+                    fontWeight: '700',
+                    color: colors.primaryDeep,
+                    letterSpacing: -0.4,
+                    fontVariant: ['tabular-nums'],
+                    lineHeight: 30,
+                    includeFontPadding: false,
+                  }}
+                >
+                  {timeLabel}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* Client */}
-        <Section title="Client">
+        {/* Buyer */}
+        <Section title="Demandeur">
           <View
             style={{
               padding: 14,
@@ -109,16 +172,18 @@ export default function VisitDetailRoute() {
               alignItems: 'center',
             }}
           >
-            <Image
-              source={photos.woman1}
+            <View
               style={{
                 width: 52,
                 height: 52,
                 borderRadius: 999,
                 backgroundColor: colors.bgSunken,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
-              contentFit="cover"
-            />
+            >
+              <UserIcon size={22} color={colors.textMuted} strokeWidth={1.75} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text
                 style={{
@@ -130,7 +195,7 @@ export default function VisitDetailRoute() {
                   includeFontPadding: false,
                 }}
               >
-                Mariama Diallo
+                {buyerName}
               </Text>
               <Text
                 style={{
@@ -138,180 +203,72 @@ export default function VisitDetailRoute() {
                   color: colors.textMuted,
                   marginTop: 2,
                   letterSpacing: 0,
-                  fontVariant: ['tabular-nums'],
                 }}
               >
-                +224 622 55 12 88
+                Contact via la messagerie Linky
               </Text>
             </View>
           </View>
-
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-            <ContactButton Icon={Phone} label="Appeler" />
-            <ContactButton Icon={MessageCircle} label="Message" />
-          </View>
         </Section>
+
+        {/* Note */}
+        {visit.note ? (
+          <Section title="Note du demandeur">
+            <View
+              style={{
+                padding: 14,
+                borderRadius: 18,
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Text variant="bodyM" style={{ lineHeight: 21 }}>
+                {visit.note}
+              </Text>
+            </View>
+          </Section>
+        ) : null}
 
         {/* Property */}
         <Section title="Bien à visiter">
           <Pressable
-            onPress={() => router.push(`/property/${property.id}`)}
+            onPress={() => router.push(`/property/${visit.propertyId}`)}
             style={{
-              padding: 12,
+              padding: 14,
               borderRadius: 18,
               backgroundColor: colors.card,
               borderWidth: 1,
               borderColor: colors.border,
-              flexDirection: 'row',
-              gap: 12,
-              alignItems: 'center',
+              gap: 6,
             }}
           >
-            <Image
-              source={property.photos[0]}
-              style={{ width: 72, height: 72, borderRadius: 14, backgroundColor: colors.bgSunken }}
-              contentFit="cover"
-            />
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: colors.text,
-                  letterSpacing: 0,
-                  lineHeight: 18,
-                  includeFontPadding: false,
-                }}
-                numberOfLines={2}
-              >
-                {property.title}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '700',
-                  color: colors.text,
-                  marginTop: 4,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                {formatGNF(property.priceGnf)}
-                {property.perMonth && (
-                  <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '500' }}>
-                    {' '}
-                    /mois
-                  </Text>
-                )}
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                  marginTop: 4,
-                }}
-              >
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.text,
+                letterSpacing: 0,
+                lineHeight: 18,
+                includeFontPadding: false,
+              }}
+              numberOfLines={2}
+            >
+              {propertyTitle ?? 'Voir le bien'}
+            </Text>
+            {locationLabel.length > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <MapPin size={11} color={colors.textMuted} strokeWidth={2} />
-                <Text style={{ fontSize: 11.5, color: colors.textMuted, letterSpacing: 0 }}>
-                  {property.district}, {property.city}
+                <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                  {locationLabel}
                 </Text>
               </View>
-            </View>
+            )}
+            <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.primary, marginTop: 4 }}>
+              Voir l'annonce →
+            </Text>
           </Pressable>
         </Section>
-
-        {/* Actions — only for accepted visits. Pending decisions live on the list screen. */}
-        {isAccepted && (
-          <View style={{ paddingHorizontal: 24, paddingTop: 18, gap: 10 }}>
-            <Pressable
-              onPress={() => haptic.medium()}
-              style={{
-                height: 54,
-                borderRadius: 16,
-                backgroundColor: colors.text,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <Check size={16} color={colors.bg} strokeWidth={2.25} />
-              <Text
-                style={{
-                  fontSize: 14.5,
-                  fontWeight: '700',
-                  color: colors.bg,
-                  lineHeight: 17,
-                  includeFontPadding: false,
-                }}
-              >
-                Marquer comme terminée
-              </Text>
-            </Pressable>
-
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Pressable
-                onPress={() => haptic.light()}
-                style={{
-                  flex: 1,
-                  height: 50,
-                  borderRadius: 16,
-                  backgroundColor: colors.card,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                }}
-              >
-                <CalendarClock size={14} color={colors.text} strokeWidth={2} />
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: colors.text,
-                    lineHeight: 16,
-                    includeFontPadding: false,
-                  }}
-                >
-                  Reporter
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  haptic.medium();
-                  router.back();
-                }}
-                style={{
-                  flex: 1,
-                  height: 50,
-                  borderRadius: 16,
-                  backgroundColor: 'rgba(209,79,60,0.08)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(209,79,60,0.25)',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                }}
-              >
-                <X size={14} color={colors.danger} strokeWidth={2} />
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '700',
-                    color: colors.danger,
-                    lineHeight: 16,
-                    includeFontPadding: false,
-                  }}
-                >
-                  Annuler
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -335,45 +292,5 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </Text>
       <View style={{ paddingHorizontal: 24 }}>{children}</View>
     </View>
-  );
-}
-
-function ContactButton({
-  Icon,
-  label,
-}: {
-  Icon: typeof Phone;
-  label: string;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      onPress={() => haptic.light()}
-      style={{
-        flex: 1,
-        height: 48,
-        borderRadius: 14,
-        backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: colors.border,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-      }}
-    >
-      <Icon size={14} color={colors.text} strokeWidth={2} />
-      <Text
-        style={{
-          fontSize: 13,
-          fontWeight: '600',
-          color: colors.text,
-          lineHeight: 16,
-          includeFontPadding: false,
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
   );
 }

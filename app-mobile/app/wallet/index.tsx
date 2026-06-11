@@ -118,7 +118,20 @@ export default function WalletRoute() {
 
         {tab === 'pending' && (
           <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-            {(myWithdrawals ?? []).length === 0 ? (
+            {/* Phase U.0-B7 — withdrawalsQuery failing (independent fn from
+                wallet-balance) used to render "Aucun retrait pour le
+                moment." even to a seller with an in-flight withdrawal.
+                Branch on isError → ErrorStateView with its own retry. */}
+            {withdrawalsQuery.isError ? (
+              <View style={{ paddingVertical: 12 }}>
+                <ErrorStateView onRetry={() => void withdrawalsQuery.refetch()} />
+              </View>
+            ) : withdrawalsQuery.isLoading ? (
+              <View style={{ gap: 12, paddingVertical: 8 }}>
+                <Skeleton height={48} radius={8} />
+                <Skeleton height={48} radius={8} />
+              </View>
+            ) : (myWithdrawals ?? []).length === 0 ? (
               <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', paddingVertical: 24 }}>
                 Aucun retrait pour le moment.
               </Text>

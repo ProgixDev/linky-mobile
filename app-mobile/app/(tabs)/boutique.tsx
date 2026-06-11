@@ -51,7 +51,9 @@ export default function BoutiqueRoute() {
             gap: 10,
           }}
         >
-          <IdentityPill mode={mode} />
+          {/* Phase U.0 should-fix — IdentityPill missed the T.2 effectiveMode
+              swap ; after a role change the pill contradicted the dashboard. */}
+          <IdentityPill mode={effectiveMode} />
           <View style={{ flex: 1 }} />
           <Pressable
             onPress={() => {
