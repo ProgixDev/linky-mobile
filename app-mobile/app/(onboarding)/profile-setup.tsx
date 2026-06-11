@@ -66,25 +66,43 @@ export default function ProfileSetupRoute() {
       setStep((s) => s + 1);
       return;
     }
+    // T.1.fix — re-entrancy guard. Without this, a double-tap on Terminer
+    // (or Retour mid-await) fires two update-profile mutations and the
+    // second one can race with router.replace.
+    if (updateProfile.isPending) return;
     // Phase T.1 — persist BOTH locally (for instant UI) AND on the server
     // (so a reinstall / second device rehydrates from the source of truth).
-    // Best-effort: server failure toasts but doesn't block onboarding, because
-    // the user already has a valid session and roles are also kept in MMKV.
+    // Best-effort: server failure does NOT block onboarding ; we still
+    // preserve every field locally via the auth store so MMKV is the
+    // recovery path on next boot.
+    const trimmedName = name.trim();
+    const trimmedCity = city.trim();
     const canonical = Array.from(roles).map(
       (id) => ROLE_FROM_UI[id as 'buy' | 'sell' | 'agent'],
     );
     setRolesInStore(canonical);
     try {
       const res = await updateProfile.mutateAsync({
-        display_name: name.trim(),
-        city: city.trim(),
+        display_name: trimmedName,
+        city: trimmedCity,
         roles: canonical,
       });
       if (currentUser) {
         signIn({ ...currentUser, ...res.user });
       }
     } catch {
-      toast.show('Profil enregistré localement — on retentera plus tard.', 'info');
+      // T.1.fix — also persist display_name + city locally so the toast
+      // message is true. Without this, MMKV holds nothing for those fields
+      // and the user sees their name vanish on the next screen.
+      if (currentUser) {
+        signIn({
+          ...currentUser,
+          display_name: trimmedName || currentUser.display_name,
+          city: trimmedCity || (currentUser.city ?? null),
+          roles: canonical,
+        });
+      }
+      toast.show('Profil sauvegardé sur cet appareil — vérifie ta connexion.', 'info');
     }
     router.replace('/(onboarding)/done');
   };
@@ -167,6 +185,7 @@ export default function ProfileSetupRoute() {
             label="Retour"
             style={{ flex: 1 }}
             onPress={() => (step === 0 ? router.back() : setStep((s) => s - 1))}
+            disabled={updateProfile.isPending}
           />
           <Button
             variant="dark"
@@ -174,7 +193,13 @@ export default function ProfileSetupRoute() {
             label={step === 2 ? 'Terminer' : 'Continuer'}
             style={{ flex: 2 }}
             onPress={next}
-            disabled={(step === 0 && !name) || (step === 1 && !city) || (step === 2 && roles.size === 0)}
+            loading={step === 2 && updateProfile.isPending}
+            disabled={
+              (step === 0 && !name.trim()) ||
+              (step === 1 && !city) ||
+              (step === 2 && roles.size === 0) ||
+              updateProfile.isPending
+            }
           />
         </View>
       </View>

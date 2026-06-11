@@ -82,11 +82,22 @@ Deno.serve(makePost<Body>('/v1/auth/email/signin', valid, async ({ sb, body, req
   // Phase T.1 — roles + city included so the client's auth store rehydrates
   // from the server (server wins, MMKV is the offline cache). Without these,
   // a sign-in on a second device or a reinstall silently degrades the user.
-  const { data: row } = await sb
+  //
+  // T.1.fix — surface the select error. A schema or transport hiccup here
+  // previously got destructured to undefined and the next branch turned it
+  // into an AUTH_INVALID_CREDENTIALS — wrong code, wrong root cause, wrong
+  // user message. Real misses (no such email) still pass through to the
+  // constant-time bcrypt + invalid-credentials response below ; only true
+  // server faults get the 500.
+  const { data: row, error: eRow } = await sb
     .from('emails')
     .select('user_id, users:users(id, display_name, avatar_url, locale, kyc_status, city, roles, password_hash, status, is_admin)')
     .eq('address', lookupAddress)
     .maybeSingle();
+  if (eRow) {
+    console.error('[email-signin] emails select error:', eRow);
+    throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+  }
 
   // is_admin is exposed in the response (defaults false) so the admin shell can
   // gate on it without a second round-trip. Non-admin callers (every mobile

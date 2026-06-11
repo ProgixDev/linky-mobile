@@ -99,11 +99,20 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
   // from the server (server wins, MMKV is the offline cache). Without this,
   // a reinstall or sign-in on a second device silently degrades a seller
   // back to ['buyer'].
-  const { data: user } = await sb
+  //
+  // T.1.fix — surface the select error instead of silently returning a null
+  // user inside a 200 body. A schema or transport hiccup here previously
+  // masqueraded as a successful sign-in with no profile, which the mobile
+  // app then turned into a confusing "Toi" state.
+  const { data: user, error: eUser } = await sb
     .from('users')
     .select('id, display_name, avatar_url, locale, kyc_status, city, roles')
     .eq('id', userId)
     .single();
+  if (eUser || !user) {
+    console.error('[otp-verify] user select error:', eUser);
+    throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+  }
 
   return { body: { access_token, refresh_token, user } };
 }, stripTokens));

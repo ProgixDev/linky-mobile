@@ -92,8 +92,18 @@ export const useAuth = create<AuthState>((set) => ({
   setPendingOtpId: (pendingOtpId) => set({ pendingOtpId }),
   setPendingDevCode: (pendingDevCode) => set({ pendingDevCode }),
   setRoles: (roles) => {
+    // T.1.fix — also patch the persisted AuthUser snapshot so an app boot
+    // reads matching roles from BOTH MMKV slots (auth.roles AND
+    // auth.userJson). Without this the snapshot drifts: a user toggles a
+    // role, the boutique tab reads from auth.roles (correct), but the
+    // user object (rehydrated into useAuth.user on boot) keeps the
+    // old roles array. Server payloads supersede this on next sign-in.
     saveRoles(roles);
-    set({ roles });
+    set((state) => {
+      const nextUser = state.user ? { ...state.user, roles } : state.user;
+      if (nextUser) saveAuthUser(nextUser);
+      return { roles, user: nextUser };
+    });
   },
   setTokens: async (access, refresh) => {
     await secure.set(SECURE_KEYS.authToken, access);
