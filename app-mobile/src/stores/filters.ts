@@ -47,6 +47,25 @@ const DEFAULTS = {
   searchQuery: '',
 };
 
+// Phase U.0 nit — used by marche's "Effacer les filtres" CTA to decide
+// whether to show "Aucun résultat / Effacer les filtres" or a truly-empty
+// "Aucune annonce pour le moment" copy. Returns true if any user-touched
+// filter differs from its default (we ignore marcheTab + searchQuery which
+// the caller manages separately).
+export function hasActiveFilters(s: FiltersState, isArticles: boolean): boolean {
+  if (isArticles) {
+    return s.productCategory !== DEFAULTS.productCategory || s.productSort !== DEFAULTS.productSort;
+  }
+  return (
+    s.propertyType !== DEFAULTS.propertyType ||
+    s.city !== DEFAULTS.city ||
+    s.rooms !== DEFAULTS.rooms ||
+    s.priceMaxGnf !== DEFAULTS.priceMaxGnf ||
+    s.distanceToRoadMaxM !== DEFAULTS.distanceToRoadMaxM ||
+    s.furnishedOnly !== DEFAULTS.furnishedOnly
+  );
+}
+
 export const useFilters = create<FiltersState>((set) => ({
   ...DEFAULTS,
   setMarcheTab: (marcheTab) => set({ marcheTab }),

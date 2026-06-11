@@ -85,7 +85,7 @@ export default function DecouvrirRoute() {
           }}
         >
           <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-            Pas pu charger le feed
+            Impossible de charger le feed
           </Text>
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
             Vérifie ta connexion et réessaie.

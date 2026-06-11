@@ -64,9 +64,11 @@ export default function MessagesListScreen() {
     });
   }, [convs, filter, search]);
 
+  // Phase U.0 nit — setSearch lives outside the setSearchOpen updater for
+  // updater purity ; React 18+ may invoke the updater twice in dev.
   const toggleSearch = () => {
+    setSearchOpen(!searchOpen);
     if (searchOpen) setSearch('');
-    setSearchOpen((o) => !o);
   };
 
   return (

@@ -223,7 +223,12 @@ export function ShopDashboard() {
   const pendingCount =
     (products?.filter((p) => p.status === 'pending').length ?? 0) +
     (properties?.filter((p) => p.status === 'pending').length ?? 0);
-  const boostedCount = products?.filter((p) => p.boosted).length ?? 0;
+  // Phase U.0 nit — boost is a V1.1 feature so p.boosted is never true in
+  // V1 ; the "Aucune boostée" subline was a permanent-zero metric.
+  // Replaced with "actives" count (the real available signal).
+  const activeListingsCount =
+    (products?.filter((p) => p.status === 'active').length ?? 0) +
+    (properties?.filter((p) => p.status === 'active').length ?? 0);
 
   return (
     <View>
@@ -264,7 +269,11 @@ export function ShopDashboard() {
           Icon={Package}
           label="Annonces"
           value={String(listingCount)}
-          sub={boostedCount > 0 ? `${boostedCount} boostée${boostedCount > 1 ? 's' : ''}` : 'Aucune boostée'}
+          sub={
+            activeListingsCount > 0
+              ? `${activeListingsCount} active${activeListingsCount > 1 ? 's' : ''}`
+              : 'Aucune active'
+          }
         />
         <StatTile
           Icon={Clock}
@@ -1101,123 +1110,9 @@ function SectionTitle({ title }: { title: string }) {
   );
 }
 
-function ProductRow({
-  title,
-  price,
-  cover,
-  views,
-  favs,
-  boosted,
-  onPress,
-}: {
-  title: string;
-  price: string;
-  cover: string;
-  views: number;
-  favs: number;
-  boosted?: boolean;
-  onPress: () => void;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        padding: 12,
-        borderRadius: 18,
-        backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: colors.border,
-        flexDirection: 'row',
-        gap: 12,
-        alignItems: 'center',
-      }}
-    >
-      <Image
-        source={cover}
-        style={{ width: 72, height: 72, borderRadius: 14, backgroundColor: colors.bgSunken }}
-        contentFit="cover"
-      />
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{ fontSize: 14.5, fontWeight: '600', color: colors.text, letterSpacing: 0 }}
-          numberOfLines={2}
-        >
-          {title}
-        </Text>
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: '700',
-            color: colors.text,
-            marginTop: 4,
-            fontVariant: ['tabular-nums'],
-            letterSpacing: 0,
-          }}
-        >
-          {price}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Eye size={12} color={colors.textMuted} strokeWidth={1.75} />
-            <Text
-              style={{
-                fontSize: 11.5,
-                color: colors.textMuted,
-                fontVariant: ['tabular-nums'],
-                letterSpacing: 0,
-              }}
-            >
-              {views}
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Heart size={12} color={colors.textMuted} strokeWidth={1.75} />
-            <Text
-              style={{
-                fontSize: 11.5,
-                color: colors.textMuted,
-                fontVariant: ['tabular-nums'],
-                letterSpacing: 0,
-              }}
-            >
-              {favs}
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              borderRadius: 999,
-              backgroundColor: boosted ? colors.accentSoft : colors.primarySoft,
-            }}
-          >
-            {boosted && <SparklesIcon size={10} color={colors.accentText} strokeWidth={2.25} />}
-            <Text
-              style={{
-                fontSize: 10.5,
-                fontWeight: '700',
-                color: boosted ? colors.accentText : colors.primaryDeep,
-                letterSpacing: 0.3,
-              }}
-            >
-              {boosted ? 'BOOSTÉE' : 'ACTIVE'}
-            </Text>
-          </View>
-        </View>
-      </View>
-      <Pressable
-        hitSlop={6}
-        style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
-      >
-        <MoreVertical size={16} color={colors.textMuted} strokeWidth={1.75} />
-      </Pressable>
-    </Pressable>
-  );
-}
+// Phase U.0 nit — dead unexported ProductRow (still carried the old dead
+// kebab + boosted state) removed ; the rendered card is ManagementRow,
+// defined elsewhere.
 
 function PropertyRow({
   title,

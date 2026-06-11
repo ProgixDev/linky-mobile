@@ -47,6 +47,7 @@ import { haptic } from '../../src/lib/haptics';
 import { photos } from '../../src/data/photos';
 import { useAuth } from '../../src/stores/auth';
 import { useCart } from '../../src/stores/cart';
+import { useCreateListing } from '../../src/stores/createListing';
 import {
   useShops,
   usePopularProducts,
@@ -78,6 +79,8 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
   const hasBoth = isSeller && isAgent;
   const [mode, setMode] = useState<ProMode>(isSeller ? 'shop' : 'estate');
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
+  const resetDraft = useCreateListing((s) => s.reset);
+  const setKind = useCreateListing((s) => s.setKind);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -134,6 +137,10 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
           <Pressable
             onPress={() => {
               haptic.light();
+              // Phase U.0 nit — mirror the chooser's reset+setKind so the
+              // ProHome FAB doesn't resume a stale abandoned draft.
+              resetDraft();
+              setKind(mode === 'shop' ? 'product' : 'property');
               router.push(mode === 'shop' ? '/create/product/seller' : '/create/property/details');
             }}
             style={{

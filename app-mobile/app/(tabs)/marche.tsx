@@ -33,7 +33,7 @@ import { Button } from '../../src/components/primitives/Button';
 import { Chip } from '../../src/components/primitives/Chip';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { haptic } from '../../src/lib/haptics';
-import { useFilters } from '../../src/stores/filters';
+import { useFilters, hasActiveFilters } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
 import { useProductsInfinite, useInfiniteProperties } from '../../src/data/queries';
 import { GUINEA_CITIES } from '../../src/components/onboarding/CityMapPicker';
@@ -409,6 +409,8 @@ export default function MarcheRoute() {
             alignItems: 'center',
           }}
         >
+          {/* Phase U.0 nit — pre-U0 the count rendered "0 résultats" above
+              the error/loading view ; hide it (show "—") in those states. */}
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
             <Text
               style={{
@@ -418,7 +420,9 @@ export default function MarcheRoute() {
                 fontVariant: ['tabular-nums'],
               }}
             >
-              {(isArticles ? products?.length : properties?.length) ?? 0}
+              {(isArticles ? productsQuery.isError || productsQuery.isLoading : propertiesQuery.isError || propertiesQuery.isLoading)
+                ? '—'
+                : (isArticles ? products?.length : properties?.length) ?? 0}
             </Text>
             <Text style={{ fontSize: 13.5, color: colors.textMuted, letterSpacing: 0 }}>
               résultats
@@ -503,7 +507,7 @@ export default function MarcheRoute() {
                 <View style={{ width: '100%', paddingVertical: 40, alignItems: 'center' }}>
                   <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
                 </View>
-              ) : (
+              ) : hasActiveFilters(filters, true) ? (
                 <View
                   style={{
                     width: '100%',
@@ -522,6 +526,10 @@ export default function MarcheRoute() {
                       setSearch('');
                     }}
                   />
+                </View>
+              ) : (
+                <View style={{ width: '100%', paddingVertical: 40, alignItems: 'center' }}>
+                  <Text tone="muted">Aucune annonce pour le moment. Reviens bientôt.</Text>
                 </View>
               )}
             </View>
@@ -550,7 +558,7 @@ export default function MarcheRoute() {
               <View style={{ paddingVertical: 40, alignItems: 'center' }}>
                 <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
               </View>
-            ) : (
+            ) : hasActiveFilters(filters, false) ? (
               <View style={{ paddingVertical: 40, alignItems: 'center', gap: 14 }}>
                 <Text tone="muted">Aucun résultat</Text>
                 <Button
@@ -562,6 +570,10 @@ export default function MarcheRoute() {
                     setSearch('');
                   }}
                 />
+              </View>
+            ) : (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <Text tone="muted">Aucune annonce pour le moment. Reviens bientôt.</Text>
               </View>
             )}
           </View>

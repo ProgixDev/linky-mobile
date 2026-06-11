@@ -14,6 +14,7 @@ import {
 import { haptic } from '../../src/lib/haptics';
 import { useAuth } from '../../src/stores/auth';
 import { useRoleGuard, RoleGateView } from '../../src/lib/useRoleGuard';
+import { useCreateListing } from '../../src/stores/createListing';
 
 export default function BoutiqueRoute() {
   const { colors } = useTheme();
@@ -25,6 +26,8 @@ export default function BoutiqueRoute() {
   // shop dashboard for ANY user (the boutique tab is hidden via href:null for
   // pure buyers, but a deep link bypassed that). Inline-gate here.
   const guard = useRoleGuard(['seller', 'agent']);
+  const resetDraft = useCreateListing((s) => s.reset);
+  const setKind = useCreateListing((s) => s.setKind);
   const [mode, setMode] = useState<ProMode>(isSeller ? 'shop' : 'estate');
   if (!guard.allowed) {
     return <RoleGateView required={guard.required} surfaceLabel="ton tableau de bord" />;
@@ -58,6 +61,10 @@ export default function BoutiqueRoute() {
           <Pressable
             onPress={() => {
               haptic.light();
+              // Phase U.0 nit — match the chooser's reset+setKind so a FAB
+              // deep-entry doesn't resume a stale abandoned draft.
+              resetDraft();
+              setKind(effectiveMode === 'shop' ? 'product' : 'property');
               router.push(effectiveMode === 'shop' ? '/create/product/seller' : '/create/property/details');
             }}
             style={{

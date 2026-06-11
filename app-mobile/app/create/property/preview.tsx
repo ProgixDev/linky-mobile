@@ -17,7 +17,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
-import { mockProperties } from '../../../src/data/mockProperties';
+import { Building2 } from 'lucide-react-native';
 import { formatGNF } from '../../../src/lib/format';
 import { useCreateListing } from '../../../src/stores/createListing';
 import { useCreateProperty } from '../../../src/data/queries/properties';
@@ -26,7 +26,9 @@ import { toToastMessage } from '../../../src/lib/api';
 
 export default function PreviewRoute() {
   const { colors } = useTheme();
-  const sample = mockProperties[0]!;
+  // Phase U.0 nit — photo-less draft used to fall back to mockProperties[0]
+  // Unsplash, suggesting the listing carried a real photo. Now: neutral
+  // placeholder (bgSunken + Building2 icon).
   const state = useCreateListing();
   const reset = useCreateListing((s) => s.reset);
   const createProperty = useCreateProperty();
@@ -61,11 +63,24 @@ export default function PreviewRoute() {
                 position: 'relative',
               }}
             >
-              <Image
-                source={state.propertyPhotos[0] ? { uri: state.propertyPhotos[0].url } : sample.photos[0]}
-                style={{ flex: 1 }}
-                contentFit="cover"
-              />
+              {state.propertyPhotos[0] ? (
+                <Image
+                  source={{ uri: state.propertyPhotos[0].url }}
+                  style={{ flex: 1 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <View
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.bgSunken,
+                  }}
+                >
+                  <Building2 size={40} color={colors.textFaint} strokeWidth={1.5} />
+                </View>
+              )}
               <View
                 style={{
                   position: 'absolute',

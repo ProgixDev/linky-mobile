@@ -39,9 +39,13 @@ import {
   type WithdrawalRequestItem,
 } from '../../../src/data/queries/wallet';
 
+// Phase U.0 nit — align "approved" label with wallet ("En attente"). The
+// V1 manual payout flow doesn't surface the intermediate "approved" state
+// anyway ; aligning prevents the same withdrawal from reading two
+// different statuses across screens.
 const STATUS_LABEL: Record<WithdrawalRequestItem['status'], string> = {
   pending: 'En attente',
-  approved: 'Approuvé',
+  approved: 'En attente',
   paid: 'Payé',
   rejected: 'Refusé',
   cancelled: 'Annulé',
