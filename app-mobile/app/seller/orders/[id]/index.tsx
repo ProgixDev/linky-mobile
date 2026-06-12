@@ -60,7 +60,10 @@ export default function SellerOrderDetailRoute() {
     );
   }
 
-  const needsShip = order.status === 'paid' || order.status === 'placed';
+  // Phase X.9 — only 'paid' can be shipped. 'placed' = unpaid (mobile-money or
+  // card pending) and the server rejects the transition ; if the seller saw the
+  // CTA there they'd fill the whole form for a 400.
+  const needsShip = order.status === 'paid';
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>

@@ -1,7 +1,6 @@
 import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  MessageCircle,
   Mail,
   Phone,
   ChevronRight,
@@ -15,7 +14,6 @@ import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
-import { haptic } from '../../src/lib/haptics';
 
 const FAQ: { q: string; a: string }[] = [
   {

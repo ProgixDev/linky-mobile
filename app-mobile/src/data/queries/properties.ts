@@ -299,10 +299,20 @@ export function useSetPropertyStatus() {
 }
 
 export function useRequestVisit() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: RequestVisitInput) => {
       const r = await apiPost<{ visit_request: VisitRequest }>({ path: '/request-visit', body: input });
       return r.visit_request;
+    },
+    // Phase X.9 — buyer is replaced onto /buyer/requests right after submit ;
+    // without this invalidation the destination list is the previous fetch
+    // (no new visit visible), contradicting the success toast. Invalidate also
+    // ['property', propertyId] so the property detail's "demande envoyée" badge
+    // re-renders without a navigation round-trip.
+    onSuccess: (visit) => {
+      qc.invalidateQueries({ queryKey: ['my-visit-requests'] });
+      qc.invalidateQueries({ queryKey: ['property', visit.propertyId] });
     },
   });
 }
@@ -329,7 +339,11 @@ export interface BuyerVisitRequest extends VisitRequest {
     title: string;
     district: string | null;
     city: string;
-    priceMinor: number;
+    // GNF is integer-only — minor units = major units. Naming the field
+    // priceGnf (instead of priceMinor) matches the project-wide convention
+    // used by `Product.priceGnf` and prevents a future /100 division bug if a
+    // currency with fractional units ever gets bolted on. Values identical.
+    priceGnf: number;
     perMonth: boolean;
     coverUrl?: string;
   };
@@ -344,6 +358,10 @@ export function useMyVisitRequests(status?: VisitStatus | string) {
       });
       return r.visits;
     },
+    // Phase X.9 — guarantee the post-request screen shows the fresh row.
+    // refetchOnMount: 'always' is fine here because the list is small (≤ 100
+    // server-side limit) and buyer-side traffic to /buyer/requests is low.
+    refetchOnMount: 'always',
   });
 }
 

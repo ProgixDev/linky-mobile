@@ -248,7 +248,7 @@ function VisitRow({ visit }: { visit: BuyerVisitRequest }) {
                 .join(', ') || visit.property.city}
               {' · '}
               <Text style={{ fontWeight: '700', color: colors.text }}>
-                {formatGNF(visit.property.priceMinor)}
+                {formatGNF(visit.property.priceGnf)}
                 {visit.property.perMonth ? ' /mois' : ''}
               </Text>
             </Text>

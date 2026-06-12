@@ -63,7 +63,10 @@ function mapVisit(r: Row) {
           title: r.property.title,
           district: r.property.district,
           city: r.property.city,
-          priceMinor: Number(r.property.price_minor),
+          // GNF is integer-only — minor units = major units. The client-wide
+          // convention names the field priceGnf (matches Product.priceGnf) to
+          // pre-empt a future /100 bug if a fractional currency ever lands.
+          priceGnf: Number(r.property.price_minor),
           perMonth: r.property.per_month,
           coverUrl: photoUrl,
         }

@@ -98,6 +98,17 @@ Deno.serve(makePost<Body>('/v1/orders/set-tracking', valid, async ({ sb, body, r
   // 2. Atomic transition under the (status='paid') guard. A concurrent
   // confirm-receipt that already flipped the order to 'released' (or anything
   // not 'paid') will see 0 rows updated here and we'll return a clean 409.
+  //
+  // The events append is a read-modify-write — load events from row, push the
+  // shipEvent, send the whole array back in the UPDATE. This pattern is safe
+  // ONLY because the .eq('status','paid') condition turns the operation into
+  // a single-shot effective by status : after the first successful ship, no
+  // other path can re-enter this branch for the same order (status is no
+  // longer 'paid'). V1.1 hardening : push to events via a SQL-side
+  // `jsonb_set(events, '{n}', $1, true)` or a `jsonb || $1` expression in an
+  // RPC so concurrent appenders never overwrite each other on orders whose
+  // events list can grow from multiple sources (it currently can't ; this is
+  // future-proofing).
   const { data: updated, error: upErr } = await sb
     .from('orders')
     .update({

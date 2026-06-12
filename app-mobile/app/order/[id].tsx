@@ -15,11 +15,24 @@ import { useOrder } from '../../src/data/queries';
 import { useAuth } from '../../src/stores/auth';
 import { OrderResolutionBanner } from '../../src/components/orders/OrderResolutionBanner';
 
-const STAGES = [
-  { key: 'placed', t: 'Commande passée' },
-  { key: 'paid', t: 'Paiement reçu en séquestre' },
-  { key: 'preparing', t: 'En cours de remise' },
-  { key: 'released', t: 'Réception confirmée' },
+// Each stage carries both its visible label (`t`) and the identity of the
+// `orders.events` row that marks it as reached (`eventKind` or `eventLabel`).
+// Pre-X9 we tried to match events by visible label, but the X.6b shipped event
+// uses label 'Commande expédiée' (matching the buyer push) while this UI's
+// 'preparing' row reads 'En cours de remise' — the labels never lined up so
+// the shipped timestamp + tracking number never rendered under the stage. Now
+// the stage matches events by identity (kind or label) instead.
+const STAGES: Array<{
+  key: string;
+  t: string;
+  // either of these matches an event row :
+  eventKind?: string;
+  eventLabel?: string;
+}> = [
+  { key: 'placed', t: 'Commande passée', eventLabel: 'Commande passée' },
+  { key: 'paid', t: 'Paiement reçu en séquestre', eventLabel: 'Paiement reçu en séquestre' },
+  { key: 'preparing', t: 'En cours de remise', eventKind: 'shipped' },
+  { key: 'released', t: 'Réception confirmée', eventLabel: 'Réception confirmée' },
 ];
 
 export default function OrderRoute() {
@@ -35,7 +48,13 @@ export default function OrderRoute() {
 
   const isBuyer = !!meId && meId === order.buyerId;
   const isSeller = !!meId && meId === order.sellerId;
-  const inHandoffWindow = order.status === 'paid' || order.status === 'delivered';
+  // Phase X.9 — 'preparing' added. set-order-tracking (X.6b) flips paid orders
+  // to 'preparing' the moment the seller marks them shipped ; without this
+  // widening the buyer's scan CTA and the seller's QR card both vanish the
+  // instant the package leaves, which is exactly when both surfaces matter
+  // most. confirm_order_receipt + dispute_order accept 'preparing' too post-X9.
+  const inHandoffWindow =
+    order.status === 'paid' || order.status === 'preparing' || order.status === 'delivered';
   // QR payload includes the scan_token secret as a query param. Only the seller
   // receives scanToken in the get-order response (PII gate, server-side), so
   // this branch only renders when the seller is viewing their own order.
@@ -84,6 +103,14 @@ export default function OrderRoute() {
               const done = i < idx;
               const current = i === idx;
               const action = i === arr.length - 1 && !done && !current;
+              // Match by event identity (kind/label), not by array index — events
+              // can arrive out of expected order or skip stages (place→pay→ship
+              // can fold to a single batch on offline replays).
+              const stageEvent = order.events.find(
+                (ev) =>
+                  (s.eventKind && (ev as { kind?: string }).kind === s.eventKind) ||
+                  (s.eventLabel && ev.label === s.eventLabel),
+              ) as { at: string; label?: string; tracking?: string; carrier?: string } | undefined;
               return (
                 <View key={s.key} style={{ flexDirection: 'row', gap: 12 }}>
                   <View style={{ alignItems: 'center' }}>
@@ -111,12 +138,22 @@ export default function OrderRoute() {
                       {s.t}
                     </Text>
                     <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
-                      {order.events[i]?.label === s.t
-                        ? new Date(order.events[i]!.at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                      {stageEvent
+                        ? new Date(stageEvent.at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
                         : action
                           ? 'Action requise dès remise'
                           : ''}
                     </Text>
+                    {stageEvent?.tracking && (
+                      <Text
+                        variant="micro"
+                        tone="muted"
+                        style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}
+                      >
+                        Suivi · {stageEvent.tracking}
+                        {stageEvent.carrier ? ` · ${stageEvent.carrier}` : ''}
+                      </Text>
+                    )}
                   </View>
                 </View>
               );

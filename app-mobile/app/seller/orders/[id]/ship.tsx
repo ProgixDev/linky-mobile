@@ -116,6 +116,9 @@ export default function ShipRoute() {
                 placeholderTextColor={colors.textFaint}
                 autoCapitalize="characters"
                 autoCorrect={false}
+                // Server validates ≤ 60 chars (set-order-tracking valid()) ;
+                // mirror here so we never pop a 400 for a runaway paste.
+                maxLength={60}
                 style={{
                   flex: 1,
                   fontSize: 15,
