@@ -15,6 +15,23 @@ function valid(b: unknown): b is Body {
   return !!x && typeof x.id === 'string' && /^[0-9a-f-]{36}$/i.test(x.id);
 }
 
+// Phase V.3a -- strip scanToken from the idempotency cache before
+// persistence. The LIVE response a seller gets in the current request
+// still carries scanToken (that's the whole point — they need it to
+// print the QR). But the cached copy a service-role DB read could pull
+// up over the 24h TTL window must NOT carry the secret : a future
+// audit-log or admin replay path that reads idempotency_keys.response_body
+// would otherwise expose the QR token via the cached row.
+function stripScanToken(body: unknown): unknown {
+  if (!body || typeof body !== 'object') return body;
+  const x = body as Record<string, unknown>;
+  if (x.order && typeof x.order === 'object') {
+    const { scanToken: _t, ...orderRest } = x.order as Record<string, unknown>;
+    return { ...x, order: orderRest };
+  }
+  return body;
+}
+
 Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
 
@@ -64,4 +81,4 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
       intent: intentRow ? mapPaymentIntent(intentRow as PaymentIntentRow) : null,
     },
   };
-}));
+}, stripScanToken));

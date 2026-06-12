@@ -38,7 +38,24 @@ Deno.serve(makePost<Body>('/v1/orders/confirm-receipt', valid, async ({ sb, body
   });
   if (rpcErr) {
     const msg = (rpcErr as { message?: string } | null)?.message ?? '';
-    console.error('[confirm-receipt] rpc error:', rpcErr);
+    // Phase V.3b -- sanitize before logging. The RPC body today never
+    // RAISEs scan_token, but the audit (2026-06-01) flagged the
+    // possibility of a future SQL edit accidentally embedding it in a
+    // RAISE -- which would land verbatim in the function log via the
+    // unsanitized object dump. Log only the code/hint/details/message
+    // fields, all of which we control, and strip anything that looks
+    // like a UUID token to belt-and-braces it.
+    const errShape = rpcErr as { code?: string; message?: string; details?: string; hint?: string };
+    function scrub(s: string | undefined): string | undefined {
+      if (!s) return s;
+      return s.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '<uuid-redacted>');
+    }
+    console.error('[confirm-receipt] rpc error:', {
+      code:    errShape.code,
+      message: scrub(errShape.message),
+      details: scrub(errShape.details),
+      hint:    scrub(errShape.hint),
+    });
     if (msg.includes('ORDER_NOT_FOUND'))     throwApi('ORDER_NOT_FOUND',     404, 'Commande introuvable.');
     if (msg.includes('ORDER_NOT_BUYER'))     throwApi('FORBIDDEN',           403, "Tu n'es pas l'acheteur de cette commande.");
     if (msg.includes('INVALID_STATUS'))      throwApi('INVALID_STATUS',      400, 'État de commande invalide pour cette action.');

@@ -15,14 +15,23 @@ import { useOrder, useConfirmReception } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useAuth } from '../../../src/stores/auth';
 
+// Phase V.3c — strict UUID check on the token query param. The previous
+// falsy `if (!token)` accepted ANY truthy string and also let a
+// duplicate-query-param array slip through (useLocalSearchParams returns
+// string | string[] | undefined per param). Narrowing to typeof === 'string'
+// + UUID format rejects '?token=&token=evil' tampering at the client edge
+// before the server-side INVALID_SCAN_TOKEN gate fires.
+const SCAN_TOKEN_RE = /^[0-9a-f-]{36}$/i;
+
 export default function OrderConfirmRoute() {
   // typedRoutes doesn't model query params on dynamic routes — cast to read
   // `token` alongside `id`. The token comes from the scanner (or a deep-link
   // tap) and is the QR-gate secret; without it we render the "scan required"
   // state instead of letting the buyer hold-confirm.
-  const params = useLocalSearchParams() as { id?: string; token?: string };
+  const params = useLocalSearchParams() as { id?: string; token?: string | string[] };
   const id = params.id;
-  const token = params.token;
+  const rawToken = params.token;
+  const token = typeof rawToken === 'string' && SCAN_TOKEN_RE.test(rawToken) ? rawToken : undefined;
   const { colors } = useTheme();
   const { data: order, isLoading } = useOrder(id);
   const confirm = useConfirmReception();

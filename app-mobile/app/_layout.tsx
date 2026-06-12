@@ -86,6 +86,9 @@ export default function RootLayout() {
                       <Stack.Screen name="shop/[id]" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="cart" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="checkout" options={{ animation: 'slide_from_right' }} />
+                      {/* Phase V.3d -- /order/[id]/confirm is the SOLE QR-flow deep link.
+                          The legacy /orders/[id]/confirm-receipt route was deleted
+                          (zero internal callers ; deep-linkable mock screen). */}
                       <Stack.Screen name="order/[id]" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="wallet/index" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="wallet/recharger" options={{ animation: 'slide_from_right' }} />
