@@ -96,6 +96,96 @@ This document is the client-shareable mirror of the internal memory `project_pha
 
 ---
 
+# Shipped post-U (Phase V, 2026-06-12) — server hardening
+
+V.1 closed the big idempotency race ; V.2-V.8 cleared the rest of the
+pre-launch server backlog. Per-item status :
+
+## K-3 — list-disputes widen for resolved entries → SHIPPED (V.8, 4525600)
+
+New optional body field `include_resolved: { since_days: number }`
+(validated 1..90). When present, the status filter widens to PostgREST
+.or() `status=disputed OR (status IN (refunded,released) AND updated_at
+>= cutoff)`. Admin Kanban defaults to 7 days ; the Remboursés and
+Libérés columns now fill on first page load.
+
+## K-5 — self-deal assertion in resolve_dispute → SHIPPED (V.4, 5e55bfc)
+
+Migration 20260611_06 inserts a fast-fail check after admin + outcome
+validation : if `p_admin_id` equals `orders.buyer_id` or `seller_id`,
+raise `self_deal_forbidden` P0001 BEFORE the row lock. Edge fn maps to
+FORBIDDEN_SELF_DEAL 400 with vous-form admin copy. Pairs with the
+threshold sign-off memory.
+
+## Q-1 — Stale Stripe PI sweep → SHIPPED (V.6, a4f5291)
+
+Migration 20260611_07 adds `pick_stale_stripe_intents(p_limit)` — FOR
+UPDATE SKIP LOCKED picker for pending stripe intents older than 15
+minutes whose rail_intent_id isn't the `pending-init-` placeholder.
+cron-poll-intents v12 sweeps in a cancel-first / local-flip-second
+order : `paymentIntents.cancel()` first, then on confirmed
+`canceled` status, `process_intent_outcome('cancelled')` flips the
+local intent + order atomically. Order of operations IS the safety
+property.
+
+## Q-2 — charge.refunded / charge.dispute.* alerting → SHIPPED (V.5, bf45862)
+
+stripe-webhook v7 handles `charge.refunded`,
+`charge.dispute.{created, funds_withdrawn, funds_reinstated, updated,
+closed}` with **ack 200 + CRITICAL structured log + linky_intent_id /
+linky_order_id context from the local payment_intents lookup**. NO
+auto-ledger action — humans arbitrate (the Linky escrow exists
+precisely for this). Hard precondition for the future sk_live swap.
+
+## Q-3 — already shipped in Phase U.3 (af4b756). Listed here for cross-ref.
+
+## V.1 idempotency reserve-first → SHIPPED (V.1, a5ba05f)
+
+Migration 20260611_05 adds `status text` to idempotency_keys ; new
+`reserveIdempotency` does INSERT-first-then-handler with optimistic
+concurrency reaping on stale rows. Deploy order : list-notifications
+first (probed conflict + replay via DB-inserted canned row), then
+place-order, confirm-receipt, wallet-withdraw-request,
+cancel-pending-payment, resolve-dispute. Old wrap stays on the auth /
+list / get fns and non-money mutations (commit lists them
+explicitly).
+
+## V.2 ISO_RE anchor sweep → SHIPPED (V.2, c7a1fa3)
+
+Eight cursor-based list endpoints + request-visit body validator now
+use the trailing-anchored regex `/^\d{4}-\d{2}-\d{2}T...Z$/`. Benign
+trailing garbage rejected 400 INVALID_BODY ; valid Z + .123Z still
+pass.
+
+## V.3 QR-gate quick wins → SHIPPED (V.3, 0c38834)
+
+Items 1, 2, 3, 5 of the 2026-06-01 QR-gate audit :
+ - get-order v13 strips `scanToken` from the idempotency cache via
+   the existing cacheResponseFilter slot. Live response unchanged.
+ - confirm-receipt v15 sanitizes Postgrest error logging
+   (structured fields + UUID-redaction) so a future SQL RAISE
+   accidentally embedding scan_token wouldn't leak to logs.
+ - app/order/[id]/confirm.tsx narrows the token query param to
+   `typeof === 'string' && /^[0-9a-f-]{36}$/i` — closes
+   duplicate-query-param array slip-through.
+ - app/orders/[id]/confirm-receipt.tsx DELETED (zero in-app
+   callers ; deep-linkable mock screen).
+
+QR-gate items 4 / 6 / 7 / 8 (token rotation, SELECT narrowing on
+get-order, rate-limit on confirm-receipt, entropy review) stay V1.1.
+
+## V.7 confirm_topup RPC fix → SHIPPED (V.7, 06f362d)
+
+Migration 20260611_08 qualifies every column reference in the
+function body (`le.wallet_id`, `t.id`, `w.user_id`). Pre-fix the bare
+`wallet_id` resolved to the function's OUT parameter (shadowing
+bug) — v_balance silently fell back to 0 and the credit posted
+balance_after = 0 + amount even on a non-empty wallet. Lengopay rail
+is still contract-blocked, but our side is now correct so the contract
+becomes the only blocker.
+
+---
+
 # Shipped post-T (Phase U, 2026-06-11)
 
 The accumulated review backlogs were consolidated into Phase U and shipped today. The items below were promoted out of the V1.1 list — they are now part of V1.
