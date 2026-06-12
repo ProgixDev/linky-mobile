@@ -17,8 +17,10 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { ProductCard } from '../../src/components/lists/ProductCard';
-import { useShop, useProducts } from '../../src/data/queries';
+import { useShop, useProducts, useFindOrCreateConversation } from '../../src/data/queries';
 import { haptic } from '../../src/lib/haptics';
+import { useToast } from '../../src/components/feedback/Toast';
+import { toToastMessage } from '../../src/lib/api';
 
 type Tab = 'articles' | 'reviews' | 'about';
 
@@ -31,6 +33,21 @@ export default function ShopRoute() {
   const { data: products } = useProducts({ shopId: id });
   const [tab, setTab] = useState<Tab>('articles');
   const [following, setFollowing] = useState(false);
+  // Phase X.2 — shop "Message" wires the same find-or-create-conversation
+  // pattern as product/property detail. No pinned listing : the contact is
+  // shop-level, not about a specific item.
+  const findOrCreate = useFindOrCreateConversation();
+  const toast = useToast();
+  const onMessagePress = async () => {
+    if (!shop?.ownerId || findOrCreate.isPending) return;
+    try {
+      haptic.light();
+      const r = await findOrCreate.mutateAsync({ recipient_id: shop.ownerId });
+      router.push(`/messages/${r.conversation_id}`);
+    } catch (e) {
+      toast.show(toToastMessage(e, "Impossible d'ouvrir la conversation."), 'danger');
+    }
+  };
 
   if (!shop) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
 
@@ -201,7 +218,8 @@ export default function ShopRoute() {
                 }}
               />
               <Pressable
-                onPress={() => haptic.light()}
+                onPress={onMessagePress}
+                disabled={findOrCreate.isPending || !shop?.ownerId}
                 style={{
                   flex: 1,
                   height: 44,
@@ -213,7 +231,9 @@ export default function ShopRoute() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
+                  opacity: findOrCreate.isPending || !shop?.ownerId ? 0.5 : 1,
                 }}
+                accessibilityLabel="Contacter le vendeur"
               >
                 <MessageCircle size={15} color={colors.text} strokeWidth={2} />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>

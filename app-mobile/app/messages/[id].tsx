@@ -43,20 +43,33 @@ export default function ChatRoute() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* Phase X.2 — header cleanup. The static "En ligne · répond en ~2h"
+          subtitle was a lie (recipient not necessarily online, response time
+          invented). Replaced with the pinned listing title when present
+          (honest context : what the chat is about) ; else no subtitle.
+          The trailing moreV kebab had no onPress — V1 has no
+          per-conversation menu — so it was dead UI ; removed. The Avatar's
+          `online` presence dot is gone for the same reason. */}
       <View style={{ paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <IconButton variant="ghost" size={32} onPress={() => router.back()}>
           <I.arrowLeft size={18} color={colors.text} />
         </IconButton>
-        <Avatar source={otherAvatar ?? undefined} size="md" online />
+        <Avatar source={otherAvatar ?? undefined} size="md" />
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 13, fontWeight: '600' }}>{otherName}</Text>
-          <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-            En ligne · répond en ~2h
+          <Text style={{ fontSize: 13, fontWeight: '600' }} numberOfLines={1}>
+            {otherName}
           </Text>
+          {pinned ? (
+            <Text
+              variant="micro"
+              tone="muted"
+              style={{ letterSpacing: 0, textTransform: 'none' }}
+              numberOfLines={1}
+            >
+              {pinned.title}
+            </Text>
+          ) : null}
         </View>
-        <IconButton variant="ghost" size={32}>
-          <I.moreV size={18} color={colors.textMuted} />
-        </IconButton>
       </View>
 
       {pinned && (
@@ -90,13 +103,14 @@ export default function ChatRoute() {
         </Pressable>
       )}
 
+      {/* Phase X.2 — hardcoded "Aujourd'hui" separator dropped. The text
+          didn't reflect the actual messages' dates — a minor visual lie
+          when a conversation spanned days. V1 chat volumes don't justify
+          a real per-day group header. */}
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 14, gap: 8 }}
         showsVerticalScrollIndicator={false}
       >
-        <Text variant="micro" tone="faint" center style={{ marginVertical: 8 }}>
-          Aujourd'hui
-        </Text>
         {data?.messages.map((m) => {
           const isMine = m.senderId === me;
           return (
@@ -146,9 +160,8 @@ export default function ChatRoute() {
           backgroundColor: colors.card,
         }}
       >
-        <IconButton variant="ghost" size={36}>
-          <I.paperclip size={18} color={colors.textMuted} />
-        </IconButton>
+        {/* Phase X.2 — paperclip attachment button had no onPress.
+            V1 has no message attachments — removed rather than leave dead UI. */}
         <TextInput
           value={text}
           onChangeText={setText}
