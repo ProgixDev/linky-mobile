@@ -1,0 +1,10 @@
+<resources>
+  <color name="splashscreen_background">#F0E0CF</color>
+  <color name="iconBackground">#F7F3EC</color>
+  <color name="colorPrimary">#023c69</color>
+  <!-- Phase X.6 - tint applied by expo-notifications to incoming Android
+       push notifications. Linky primary green (#0A5240). Referenced from
+       AndroidManifest's expo.modules.notifications.default_notification_color
+       meta-data. -->
+  <color name="notification_icon_color">#0A5240</color>
+</resources>
