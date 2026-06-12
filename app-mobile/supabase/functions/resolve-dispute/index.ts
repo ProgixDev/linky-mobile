@@ -67,11 +67,15 @@ Deno.serve(makePost<Body>('/v1/admin/disputes/resolve', valid, async ({ sb, body
   if (rpcErr) {
     const msg = (rpcErr as { message?: string } | null)?.message ?? '';
     console.error('[resolve-dispute] rpc error:', rpcErr);
-    if (msg.includes('not_admin'))        throwApi('FORBIDDEN_ADMIN',   403, 'Accès admin requis.');
-    if (msg.includes('user_not_found'))   throwApi('USER_NOT_FOUND',    404, 'Utilisateur inconnu.');
-    if (msg.includes('invalid_outcome'))  throwApi('INVALID_OUTCOME',   400, 'Verdict invalide (refund ou release).');
-    if (msg.includes('order_not_found'))  throwApi('ORDER_NOT_FOUND',   404, 'Commande introuvable.');
-    if (msg.includes('invalid_status'))   throwApi('INVALID_STATUS',    400, 'La commande n\'est pas en litige.');
+    if (msg.includes('not_admin'))            throwApi('FORBIDDEN_ADMIN',       403, 'Accès admin requis.');
+    if (msg.includes('user_not_found'))       throwApi('USER_NOT_FOUND',        404, 'Utilisateur inconnu.');
+    if (msg.includes('invalid_outcome'))      throwApi('INVALID_OUTCOME',       400, 'Verdict invalide (refund ou release).');
+    if (msg.includes('order_not_found'))      throwApi('ORDER_NOT_FOUND',       404, 'Commande introuvable.');
+    if (msg.includes('invalid_status'))       throwApi('INVALID_STATUS',        400, "La commande n'est pas en litige.");
+    // Phase V.4 -- admin is buyer or seller on the order. Admin-facing
+    // copy uses "vous-form" since the admin console is a separate
+    // surface from the mobile tu-form app.
+    if (msg.includes('self_deal_forbidden')) throwApi('FORBIDDEN_SELF_DEAL',   400, "Vous ne pouvez pas trancher un litige sur une commande dont vous etes acheteur ou vendeur.");
     throwApi('INTERNAL_ERROR', 500, 'Erreur résolution litige');
   }
 
