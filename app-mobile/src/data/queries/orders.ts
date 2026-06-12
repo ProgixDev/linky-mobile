@@ -168,6 +168,37 @@ export interface ConfirmReceptionInput {
   scanToken: string;
 }
 
+// Phase X.6b — seller marks an order as shipped. Atomic transition
+// status='paid' -> 'preparing' server-side ; tracking + carrier are optional
+// (many Guinea deliveries are hand-carried). On success the buyer gets a push
+// "Commande expédiée" with the tracking number in the body when set.
+export interface SetOrderTrackingInput {
+  orderId: string;
+  trackingNumber?: string;
+  carrier?: string;
+}
+export function useSetOrderTracking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: SetOrderTrackingInput): Promise<Order> => {
+      const body: Record<string, unknown> = { order_id: input.orderId };
+      if (input.trackingNumber) body.tracking_number = input.trackingNumber;
+      if (input.carrier) body.carrier = input.carrier;
+      const { order } = await apiPost<{ order: Order }>({
+        path: '/set-order-tracking',
+        body,
+      });
+      return order;
+    },
+    onSuccess: (order) => {
+      qc.invalidateQueries({ queryKey: ['order', order.id] });
+      qc.invalidateQueries({ queryKey: ['seller-orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders-infinite'] });
+    },
+  });
+}
+
 export function useConfirmReception() {
   const qc = useQueryClient();
   return useMutation({

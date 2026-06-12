@@ -8,9 +8,11 @@ import { useTheme } from '../../../../src/theme/ThemeProvider';
 import { Text } from '../../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../../src/lib/haptics';
-import { useOrder } from '../../../../src/data/queries';
+import { useOrder, useSetOrderTracking } from '../../../../src/data/queries';
 import { useAuth } from '../../../../src/stores/auth';
 import { useToast } from '../../../../src/components/feedback/Toast';
+import { toToastMessage } from '../../../../src/lib/api';
+import { ActivityIndicator } from 'react-native';
 
 interface Carrier {
   id: 'jefa' | 'sopex' | 'self' | 'pickup';
@@ -34,6 +36,10 @@ export default function ShipRoute() {
   const { data: order, isLoading } = useOrder(id);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
   const toast = useToast();
+  // Phase X.6b — real submit. Pre-X6b the button was haptic + router.replace
+  // with no backend call ; the buyer never got the promised notification and
+  // the order never flipped to 'preparing'.
+  const shipMutation = useSetOrderTracking();
 
   // Phase T.2 — owner check. Same pattern as the order-detail mirror.
   // T.2.fix — also treat null meId as NOT owner ; fails open today only
@@ -151,30 +157,47 @@ export default function ShipRoute() {
         }}
       >
         <Pressable
-          disabled={!valid}
-          onPress={() => {
+          disabled={!valid || shipMutation.isPending || !id}
+          onPress={async () => {
+            if (!id || shipMutation.isPending) return;
             haptic.medium();
-            router.replace(`/seller/orders/${id}`);
+            try {
+              const trimmed = tracking.trim();
+              await shipMutation.mutateAsync({
+                orderId: id,
+                trackingNumber: trimmed.length > 0 ? trimmed : undefined,
+                carrier,
+              });
+              toast.show("Commande marquée expédiée. Acheteur notifié.", 'success');
+              router.replace(`/seller/orders/${id}`);
+            } catch (e) {
+              toast.show(toToastMessage(e, "Impossible d'enregistrer l'expédition."), 'danger');
+            }
           }}
           style={{
             height: 56,
             borderRadius: 16,
-            backgroundColor: valid ? colors.text : colors.bgSunken,
+            backgroundColor: valid && !shipMutation.isPending ? colors.text : colors.bgSunken,
             alignItems: 'center',
             justifyContent: 'center',
-            opacity: valid ? 1 : 0.6,
+            opacity: valid && !shipMutation.isPending ? 1 : 0.6,
+            flexDirection: 'row',
+            gap: 8,
           }}
         >
+          {shipMutation.isPending && (
+            <ActivityIndicator size="small" color={valid ? colors.bg : colors.textFaint} />
+          )}
           <Text
             style={{
               fontSize: 15,
               fontWeight: '700',
-              color: valid ? colors.bg : colors.textFaint,
+              color: valid && !shipMutation.isPending ? colors.bg : colors.textFaint,
               lineHeight: 18,
               includeFontPadding: false,
             }}
           >
-            Confirmer l'expédition
+            {shipMutation.isPending ? 'Envoi…' : "Confirmer l'expédition"}
           </Text>
         </Pressable>
       </SafeAreaView>

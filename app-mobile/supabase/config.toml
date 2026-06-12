@@ -595,6 +595,9 @@ verify_jwt = false
 [functions.session-refresh]
 verify_jwt = false
 
+[functions.set-order-tracking]
+verify_jwt = false
+
 [functions.shop-get-mine]
 verify_jwt = false
 
