@@ -149,6 +149,40 @@ Phone needs airplane mode toggleable.
 
 ---
 
+## Scenario 7 — Phase X end-to-end (visit ↔ buyer, shipped notif, share, contact, honest recharger)
+
+Needs the Scenario-2 seller (with KYC approved) PLUS an agent account with a published property AND a buyer who has filed a visit request on that property. Push notifications work only on builds AFTER `google-services.json` lands — on the test APK without it, verify via the in-app Notifications screen instead.
+
+| # | Step | Expected | Actual | P/F |
+|---|---|---|---|---|
+| 7.1 | Sign in as the agent. /pro/demandes → tap a pending visit → Accepter (or Refuser) with optional note. | Server returns 200. Notification dispatched server-side (notifyDetached). |   |   |
+| 7.2 | Sign in as the buyer who filed that visit. Open the Notifications screen. | New row "Visite acceptée" (or "Visite refusée") visible. Tap → routes to `/buyer/requests` (NOT `/property/<id>` — X.1 deeplink flip). |   |   |
+| 7.3 | `/buyer/requests` screen loads. | Header "Mes demandes". Status groups: "En attente", "Acceptées", "Refusées", "Annulées", "Terminées". The just-decided visit appears in the right group with the property snapshot card (title, district, price). |   |   |
+| 7.4 | SQL: `select status, decided_at, agent_note from public.visit_requests where id='<visit_id>';` | status matches the agent's decision; decided_at not null; agent_note matches if entered. |   |   |
+| 7.5 | Sign in as the seller from Scenario 2. /seller/orders → open a paid (not-yet-released) order → "Marquer expédiée" → enter tracking number "TEST-12345" + carrier "Manuel" → Submit. | Loading state visible. Toast "Commande marquée comme expédiée". Routes back to /seller/orders. Order pill flips from "À PRÉPARER" to "EN PRÉPARATION". |   |   |
+| 7.6 | SQL: `select status, events from public.orders where id='<order_id>';` | status='preparing'. events JSON array contains one new element `{kind:'shipped', label:'Commande expédiée', tracking:'TEST-12345', carrier:'Manuel', at: <ISO>}`. |   |   |
+| 7.7 | Sign in as the buyer who placed that order. Open Notifications. | "Commande expédiée" row with tracking number in body. Tap → routes to `/order/<id>`. Order detail shows status "En préparation" with the shipped event in the timeline, AND the tracking number "TEST-12345 · Manuel" renders on its own line under the "En cours de remise" stage (X.9 event-identity matcher). |   |   |
+| 7.8 | Same order detail, still as buyer. Verify the handoff window UI. | "Scanner le QR" CTA + "Signaler un problème" button BOTH visible (X.9 inHandoffWindow widening — pre-X9 they'd vanish the instant the seller marked the package shipped, leaving the buyer with no path to release escrow or open a dispute). |   |   |
+| 7.9 | Same buyer, tap "Scanner le QR" → scan the QR printed for that order (or paste `linky://order/<id>/confirm?token=<scan_token>`). | /order/<id>/confirm loads with valid token ; hold-to-confirm enabled. |   |   |
+| 7.10 | 5-second hold → confirmation animation. SQL: `select status from public.orders where id='<orderId>';` | status='released'. **This step proves the X.9 fix** : pre-X9 the RPC raised INVALID_STATUS because the order was in 'preparing', not 'paid'/'delivered'. The buyer's wallet credits + the seller's release credit land normally. |   |   |
+| 7.11 | SQL ledger check: `select wallet_id, direction, amount_minor, ref_type from public.ledger_entries where ref_id='<orderId>' order by created_at;` | One credit to SELLER wallet for `amount_minor` (ref_type='order_release') ; one credit to PLATFORM wallet for `fees_minor` (ref_type='order_platform_fee'). Same ledger shape as Scenario 3.9 — `preparing` did NOT change the escrow split semantics. |   |   |
+| 7.12 | **X.9 dispute path verification** : repeat 7.5 on a SECOND order, then as the buyer file a dispute (Order detail → "Signaler un problème" → pick a reason → submit). SQL: `select status from public.orders where id='<orderId>';` | status='disputed'. Pre-X9 the RPC would have raised INVALID_STATUS. |   |   |
+| 7.13 | Probe: a non-seller user calls `/set-order-tracking` on the same order (use a logged-in buyer session). | Server returns 403 FORBIDDEN (only the order's seller can ship). |   |   |
+| 7.14 | Probe: seller calls `/set-order-tracking` on an order whose status is NOT `paid` (e.g. an already-shipped or already-released one). | Server returns 400 INVALID_STATUS with French message. |   |   |
+| 7.15 | From a product detail page, tap the share icon. | Native Share sheet opens. Message body contains the title + price; no URL line (intentional message-only until web/universal links exist). |   |   |
+| 7.16 | From a shop page (multiple annonces), tap the share icon. | Same Share sheet pattern. |   |   |
+| 7.17 | From the same shop page, tap "Message". | Routes to /messages/<convId> with the seller. Sending a test message persists (verify via SQL or other side). |   |   |
+| 7.18 | Wallet → "Recharger". | Honest "Bientôt disponible" surface (badge "BIENTÔT", title, explanatory copy). NO amount picker, NO method picker, NO submit button. Two CTAs: "Voir le marché" + "Retour au portefeuille". The "pay by card at checkout" pointer is visible. |   |   |
+| 7.19 | Settings → Adresses (and Settings → Téléphones). | Both show the honest "Bientôt" card with dashed border + BIENTÔT badge. No dead "Ajouter" button. |   |   |
+| 7.20 | Settings → Aide → "Signaler un bug" (or "Signaler un problème de sécurité"). | OS mail client opens with `support@linky.gn` (or `security@linky.gn`) and a structured subject pre-filled. |   |   |
+| 7.21 | Settings → Confidentialité → "Télécharger mes données" (and "Supprimer mon compte"). | OS mail client opens with `support@linky.gn` and the GDPR-styled subject pre-filled. |   |   |
+| 7.22 | Settings → Aide → status banner (linky.gn/status). | Browser opens `https://linky.gn/status`. |   |   |
+| 7.23 | Settings → Préférences → Économiseur de données → toggle ON. | Open Découvrir; any property card with a video URL shows the "Visite vidéo · en pause" hint and does NOT autoplay. Toggle OFF → autoplay resumes on next card surface. |   |   |
+| 7.24 | Settings → Apparence → switch to Sombre. | Navigation, cards, text colors invert through useTheme. No screen with a hardcoded light background remains visible (audited screens: buyer/requests, recharger, payouts, messagerie, ship). |   |   |
+| 7.25 | **X.9 visit-request cache refresh**. Sign in as a buyer who has NEVER filed a visit before. Open a property → "Demander une visite" → submit. After the success toast, the buyer is replaced onto `/buyer/requests`. | The new visit request appears immediately in the "En attente" group with the property snapshot card. Pre-X9 the cached pre-request fetch was reused and the new row was missing, silently contradicting the toast. |   |   |
+
+---
+
 ## Tally
 
 | Scenario | Passes | Fails | Skips |
@@ -159,6 +193,7 @@ Phone needs airplane mode toggleable.
 | 4 Dispute |   |   |   |
 | 5 States |   |   |   |
 | 6 Deeplinks |   |   |   |
+| 7 Phase X e2e |   |   |   |
 | **TOTAL** |   |   |   |
 
 Date run: ____ Tester: ____ Build: ____

@@ -131,6 +131,192 @@ Items deliberately deferred during the Phase X audit-then-fix sweep. Each carrie
 
 ---
 
+# Shipped post-W (Phase X, 2026-06-12) — functionality sweep
+
+Phase X was the end-to-end audit-then-fix pass : "every feature the
+client asked for works end to end — frontend wired to backend, no dead
+buttons, no mock data reachable, no UI that promises something the
+server can't do." Audit-first methodology ; report VERIFIED-OK /
+FIXED / DEFERRED per item ; fix only what's actually broken.
+
+## X.1 — Visit-respond flow → FIXED (5a0eb39)
+
+The pre-X buyer side was a stubbed empty state ; an agent's accept /
+reject decision had no buyer-facing surface, and the notification
+deeplink (`/property/<id>`) dropped the user on the listing instead
+of the request. New `list-my-visit-requests` edge fn pivots on
+`buyer_id` with a property snapshot join ; new `useMyVisitRequests`
+hook + buyer/requests.tsx rewrite groups by status (pending /
+accepted / rejected / cancelled / completed) following the U.0d
+state pattern. `visit-respond` deeplink flipped to `/buyer/requests`.
+Read-only V1 (no buyer-cancel — scope discipline).
+
+## X.2 — Messaging contact on all three surfaces → FIXED (2ea16a9)
+
+`/shop/<id>` had a dead "Message" button + dead kebab. Wired through
+`useFindOrCreateConversation({ recipient_id: shop.ownerId })`.
+Messaging contact now reachable from product, shop, AND shop-owner
+profile — the three surfaces a buyer might use. `/messages/<id>`
+fake "En ligne · répond en ~2h" subtitle removed (no presence
+backend exists — it was a lie). Dead paperclip + kebab + hardcoded
+"Aujourd'hui" separator dropped.
+
+## X.3 — Mapbox directions → VERIFIED-OK
+
+Property detail "Itinéraire" already routes through native `Linking`
+to `geo:` / Apple Maps URLs with district-name fallback when the
+lat/lng pair is missing. No change.
+
+## X.4 — Wallet topup demoability → FIXED (adb281e)
+
+`/wallet/recharger` collapsed to an honest "Bientôt disponible"
+surface (no picker, no amount, no false success toast). Two CTAs
+("Voir le marché", "Retour au portefeuille") + the working-today
+pointer : "En attendant, tu peux payer par carte directement au
+moment de l'achat". Wallet seeding for demos goes through SQL
+(`confirm_topup` RPC ; documented in SMOKE_MATRIX). Stripe
+card-topup full sizing in the V1.1 table above.
+
+## X.5 — Admin manual-payout UI → VERIFIED-OK
+
+Apparent mojibake (`payÃ©e`) in `withdrawals/page.tsx` traced to
+PowerShell 5.1 console rendering UTF-8 as Windows-1252. Byte
+inspection (`c3 a9` = valid UTF-8 `é`) confirmed the file is clean.
+Tree-wide grep across `admin/src` + `app-mobile` returned no real
+mojibake clusters. No change.
+
+## X.6 — Android push setup + order-shipped flow → FIXED (X.6a bc024d1 + 1d8b6e9 + da1792d, X.6b 9b5705c)
+
+**X.6a — Push wiring (bare-build aware)**. Three layers to handle
+both the current `gradlew assembleRelease` flow AND a future
+`expo prebuild` reset :
+- `android/build.gradle` adds the `com.google.gms:google-services`
+  classpath ; `android/app/build.gradle` applies the plugin
+  conditionally (`if (new File(projectDir, 'google-services.json').exists())`)
+  so the build stays green pre-Firebase-setup.
+- `android/app/src/main/res/values/colors.xml` declares
+  `notification_icon_color = #0A5240` ; AndroidManifest meta-data
+  `expo.modules.notifications.default_notification_color` points
+  at it.
+- `app.json` plugin entry converted to tuple form
+  `["expo-notifications", { "color": "#0A5240" }]` so a future
+  prebuild yields the same posture without manual re-edits.
+- `PUSH_SETUP.md` documents the user-side console steps (Firebase
+  project + Android app for `com.linky.app` + download
+  `google-services.json` + FCM V1 service-account key + upload to
+  Expo for projectId `5154ed32-fa42-448f-ae1e-c99722101c76`) and
+  the "remote push only works on builds made AFTER
+  google-services.json lands" caveat.
+- Native files force-added (`git add -f`) so a fresh clone still
+  carries the hand-maintained gradle / manifest / colors config
+  even though `android/` is gitignored.
+
+**X.6b — Order-shipped flow end-to-end**. New `set-order-tracking`
+edge fn : owner-guarded, atomic `.eq('status','paid')` transition
+to `'preparing'` (race-safe like visit-respond), appends to
+`orders.events` JSON `{at, kind:'shipped', label, tracking?,
+carrier?}` (no migration — JSON array). `tracking_number`
+OPTIONAL (≤ 60 chars — many Guinea deliveries are hand-carried) ;
+`carrier` OPTIONAL. notifyDetached fires a buyer push "Commande
+expédiée" with tracking in the body when set + deeplink to the
+order detail. Mobile `useSetOrderTracking` hook + `ship.tsx`
+wired with loading state, ActivityIndicator, success/error toast,
+route-back on success.
+
+## X.7 — Final dead-end + mock sweep → FIXED (a3984f2 + 2ce33ae)
+
+12 dead-onPress handlers triaged. "Wire or remove, no third
+option" rule :
+
+- **Wired** : product/shop Share buttons → native Share API
+  (message-only, no `url` field until a universal-link domain
+  exists — the deeplink would surface as a dead link on devices
+  without the app, especially since Android ignores the `url`
+  field on share intents). shop "Message" → useFindOrCreateConversation.
+  about/help/privacy buttons → mailto:support@linky.gn /
+  security@linky.gn with structured subjects. about "Partager
+  Linky" → Share. help status row → `https://linky.gn/status`.
+- **Honest "Bientôt"** : settings/addresses + settings/phones
+  (no backend in V1 — login number stays active for phones).
+- **Removed** : about "Noter sur l'App Store" row (no V1 store
+  presence). help "Chat avec l'équipe" with fake "En ligne" badge
+  (no live-chat backend — the badge actively lied). seller/orders
+  "Voir le reçu" alternative branch (order detail IS the receipt).
+  Orphan `useRechargeWallet` hook (no consumer left after X.4).
+
+Verified wired (no change) : data-saver toggle is consumed by
+`DiscoverCard.tsx:84` (gates video autoplay AND flips the badge
+to "en pause") ; theme picker wired through `useTheme()
+.setPreference` ; dark-mode spot-check of buyer/requests,
+recharger, payouts, messagerie, ship clean (the two `#FFFFFF`
+hits are intentional white-on-green chip / radio fills, not
+breakage).
+
+## X.8 — Verify, deploy probes, launch docs → CLOSED (this commit)
+
+Mobile + admin typechecks exit=0. Garbage-bearer probes against
+the three X-touched edge fns (`list-my-visit-requests`,
+`visit-respond`, `set-order-tracking`) all return the Linky
+envelope (`IDEMPOTENCY_KEY_REQUIRED`) — fns are deployed AND
+`verify_jwt=false` posture intact (no platform-level 401). No
+redeploys needed. PHASE_K_V1_1_BACKLOG.md, RAPPORT_CLIENT_FINAL.html,
+SMOKE_MATRIX_2026-06-12.md updated.
+
+## X.9 — Hotfix : widen RPC status gates for 'preparing' → SHIPPED (540912b)
+
+External verification of X.6b caught an escrow-bricking miss : the
+"NO MIGRATION required" claim in `set-order-tracking` was wrong.
+`confirm_order_receipt` (20260531_05:36) and `dispute_order`
+(20260531_06:38) both gate on `status not in ('paid','delivered')`.
+The X.6b transition `paid → preparing` therefore stopped any
+shipped order from being confirmed OR disputed — funds locked the
+moment the seller pressed "Confirmer l'expédition".
+
+Fixed in one bundle :
+
+- Migration `20260612_01_preparing_status_widening.sql` re-creates
+  both RPCs verbatim with `'preparing'` added to the accept list.
+  Applied via `scripts/x9-apply-preparing-widening.ps1` (Management
+  API ; pattern from t1-apply-migration.ps1). Verified via
+  `pg_get_functiondef(...) ilike '%preparing%'` returning true for
+  both fns.
+- `app/order/[id].tsx:38` — `inHandoffWindow` now includes
+  `'preparing'`. Buyer scan CTA + dispute button + seller QR card
+  stay visible while the package is in transit.
+- `app/order/[id].tsx` timeline — STAGES match events by identity
+  (`kind: 'shipped'` or `eventLabel`) instead of array index +
+  visible-label string compare. Pre-fix the stage label
+  `'En cours de remise'` never matched the X.6b event label
+  `'Commande expédiée'`, so the shipped timestamp + tracking
+  number never rendered. Tracking now also renders on a second
+  line under the stage.
+- `app/seller/orders/[id]/index.tsx:63` — `needsShip` narrowed to
+  `status === 'paid'` only (pre-fix included `'placed'` which =
+  unpaid, the fn rejects it).
+- `useRequestVisit` — `qc.invalidateQueries(['my-visit-requests'])`
+  + `['property', visit.propertyId]` onSuccess.
+  `useMyVisitRequests` — `refetchOnMount: 'always'`. Pre-fix a
+  buyer-side request submission silently contradicted the success
+  toast (the destination /buyer/requests list was cached pre-
+  request and the new row didn't appear).
+- `list-my-visit-requests` + `BuyerVisitRequest` +
+  `buyer/requests.tsx:251` — rename `priceMinor → priceGnf`. Values
+  identical (GNF is integer-only) ; matches the project-wide
+  `Product.priceGnf` convention ; pre-empts a future /100 bug if a
+  fractional currency ever lands. Redeployed v2 ACTIVE
+  verify_jwt=False, garbage-bearer probe returns the Linky
+  envelope.
+- `ship.tsx` tracking TextInput `maxLength={60}` mirrors the
+  server-side validator.
+- `settings/help.tsx` orphan `MessageCircle` + `haptic` imports
+  removed (orphaned after the X.7 fake-chat-row removal).
+- `set-order-tracking/index.ts` — doc-comment safety note on the
+  events array read-modify-write : safe ONLY because the
+  `.eq('status','paid')` condition makes the path single-shot per
+  order ; SQL-side `jsonb || $1` in an RPC is the V1.1 hardening.
+
+---
+
 # Shipped post-U (Phase V, 2026-06-12) — server hardening
 
 V.1 closed the big idempotency race ; V.2-V.8 cleared the rest of the

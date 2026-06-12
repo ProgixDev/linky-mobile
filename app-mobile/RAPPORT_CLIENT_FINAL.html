@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Linky V1 - Rapport client final - 12 juin 2026</title>
+<style>
+  :root {
+    --navy: #1F4E7A;
+    --navy-deep: #14304D;
+    --navy-soft: #E8EFF6;
+    --saffron: #E8A53D;
+    --saffron-soft: #FBEDD3;
+    --cream: #F4F6F9;
+    --cream-warm: #E3E9F1;
+    --deep: #0F1A26;
+    --text: #2A323D;
+    --text-muted: #6B7480;
+    --border: #C9D2DC;
+    --border-soft: #DDE3EB;
+    --green: #1E7A4D;
+    --green-soft: #E5F2EC;
+    --rose: #B5403A;
+    --rose-soft: #F6E6E5;
+    --gold: #B8841E;
+    --amber: #C97D1A;
+    --amber-soft: #FBE8C9;
+  }
+  @page { size: A4; margin: 10mm 12mm; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: #fff; color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Inter", Roboto, sans-serif;
+    font-size: 9pt; line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 178mm; margin: 0 auto; }
+
+  .report-banner {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding-bottom: 6px; margin-bottom: 10px;
+    border-bottom: 1.5px solid var(--navy);
+  }
+  .report-title { font-size: 20pt; font-weight: 800; color: var(--navy); letter-spacing: -0.3px; line-height: 1; }
+  .report-author { text-align: right; line-height: 1.35; }
+  .report-author .name { font-size: 11pt; font-weight: 700; color: var(--navy); }
+  .report-author .date { font-size: 9pt; color: #5A6B7E; margin-top: 2px; }
+
+  .brand-strip {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: #fff; border-radius: 6px; padding: 9px 18px; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .brand-strip .left { font-size: 9.5pt; letter-spacing: 0.16em; text-transform: uppercase; color: var(--saffron); font-weight: 700; }
+  .brand-strip .left::before { content: "\221E"; margin-right: 6px; font-size: 11pt; vertical-align: -1px; }
+  .brand-strip .right { font-size: 9.5pt; color: rgba(255,255,255,0.78); }
+  .brand-strip .right strong { color: #fff; font-weight: 600; }
+
+  .summary {
+    background: var(--green-soft); border-left: 4px solid var(--green);
+    border-radius: 4px; padding: 9px 14px; margin-bottom: 10px;
+  }
+  .summary-label { font-size: 8pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--green); margin-bottom: 4px; }
+  .summary p { margin: 0; font-size: 9.5pt; color: var(--deep); line-height: 1.5; }
+
+  h2 {
+    font-size: 12pt; font-weight: 700; color: var(--navy-deep);
+    margin: 14px 0 6px 0; padding-bottom: 3px;
+    border-bottom: 1.5px solid var(--border-soft);
+    letter-spacing: -0.2px;
+  }
+  h2 .num { color: var(--saffron); font-weight: 800; margin-right: 6px; }
+  h3 { font-size: 10pt; font-weight: 700; color: var(--navy); margin: 10px 0 4px 0; }
+  strong { font-weight: 700; color: var(--deep); }
+  em { font-style: italic; color: var(--text-muted); }
+
+  .stats { display: flex; gap: 8px; margin: 4px 0 10px 0; }
+  .stat { flex: 1; background: #fff; border: 1px solid var(--border-soft); border-radius: 6px; padding: 6px 11px; }
+  .stat .label { font-size: 7pt; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .stat .value { font-size: 13pt; font-weight: 800; color: var(--navy-deep); margin-top: 1px; }
+  .stat .sub { font-size: 7.5pt; color: var(--text-muted); margin-top: 1px; }
+
+  .feature-card {
+    background: #fff; border: 1px solid var(--border-soft);
+    border-left: 3px solid var(--green); border-radius: 5px;
+    padding: 7px 12px; margin-bottom: 5px;
+  }
+  .feature-card .name { font-size: 10pt; font-weight: 700; color: var(--deep); margin-bottom: 3px; }
+  .feature-card .name::before { content: "\2713"; color: var(--green); font-weight: 800; margin-right: 6px; }
+  .feature-card .desc { font-size: 9pt; color: var(--text); line-height: 1.5; }
+
+  .config-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .config-table th { background: var(--navy-soft); color: var(--navy-deep); font-size: 8.5pt; text-align: left; padding: 6px 9px; border-bottom: 1.5px solid var(--navy); }
+  .config-table td { font-size: 9pt; padding: 7px 9px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+  .config-table tr:last-child td { border-bottom: none; }
+  .config-table td.item { font-weight: 700; color: var(--deep); width: 22%; }
+  .config-table td.provides { color: var(--text); width: 39%; }
+  .config-table td.switches { color: var(--green); width: 39%; }
+  .config-table td.switches::before { content: "\2192"; color: var(--saffron); font-weight: 800; margin-right: 6px; }
+
+  .smoke-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .smoke-table th { background: var(--cream); color: var(--navy-deep); font-size: 8.5pt; text-align: left; padding: 5px 9px; border-bottom: 1px solid var(--border); }
+  .smoke-table td { font-size: 9pt; padding: 5px 9px; border-bottom: 1px solid var(--border-soft); }
+  .smoke-table td.ok { color: var(--green); font-weight: 700; }
+
+  .doc-footer { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 7px; text-align: center; color: var(--text-muted); font-size: 7.5pt; letter-spacing: 0.04em; }
+  .doc-footer .knot { color: var(--saffron); font-weight: 700; margin: 0 6px; }
+
+  @media print {
+    body { background: #fff; }
+    .brand-strip, .summary, .stat, .feature-card, .config-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="report-banner">
+    <div class="report-title">Rapport client final &middot; V1</div>
+    <div class="report-author">
+      <div class="name">Livr&eacute; par Progix</div>
+      <div class="date">D&eacute;veloppeur &middot; Achraf Benamrane &middot; 12 juin 2026</div>
+    </div>
+  </div>
+
+  <div class="brand-strip">
+    <div class="left">Linky &middot; Marketplace &amp; Immobilier de Guin&eacute;e</div>
+    <div class="right">V1 : <strong>fonctionnellement compl&egrave;te</strong></div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-label">R&eacute;sum&eacute;</div>
+    <p>La V1 de Linky est <strong>fonctionnellement compl&egrave;te</strong>. L'application mobile distingue clairement les trois r&ocirc;les (<strong>acheteur, vendeur, agent immobilier</strong>) avec un parcours d'inscription propre &agrave; chacun et des &eacute;crans qui n'affichent plus que ce qui concerne le r&ocirc;le actif. La cha&icirc;ne de paiement compl&egrave;te (carte 4242 en test, Google Pay, Mobile Money pr&ecirc;t c&ocirc;t&eacute; code), le s&eacute;questre escrow avec QR de r&eacute;ception scann&eacute;, les retraits vendeurs vers Mobile Money, la console admin de gestion des litiges, la v&eacute;rification d'identit&eacute; Didit, la messagerie en temps r&eacute;el, et les cartes Mapbox sont tous op&eacute;rationnels en environnement de test. Les &eacute;l&eacute;ments en attente sont <strong>strictement bloqu&eacute;s par des d&eacute;cisions ou des contrats c&ocirc;t&eacute; client</strong> et listés dans le tableau de bascule en fin de rapport.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="label">Modules livr&eacute;s</div>
+      <div class="value" style="color:#1E7A4D;">8</div>
+      <div class="sub">acheteur, vendeur, agent, admin, escrow, KYC, retraits, messagerie</div>
+    </div>
+    <div class="stat">
+      <div class="label">Fonctions backend</div>
+      <div class="value">68</div>
+      <div class="sub">auth, catalogue, commandes, paiements, litiges, admin, KYC</div>
+    </div>
+    <div class="stat">
+      <div class="label">Statut</div>
+      <div class="value" style="color:#1E7A4D;">Pr&ecirc;t pour le lancement</div>
+      <div class="sub">d&eacute;pend uniquement des bascules de configuration ci-dessous</div>
+    </div>
+  </div>
+
+  <h2><span class="num">01</span>Ce que la V1 livre</h2>
+
+  <h3>Exp&eacute;rience par r&ocirc;le</h3>
+
+  <div class="feature-card">
+    <div class="name">Espaces s&eacute;par&eacute;s acheteur / vendeur / agent</div>
+    <div class="desc">Chaque utilisateur ne voit que les fonctions qui le concernent. Un acheteur n'a pas acc&egrave;s au tableau de bord vendeur, un agent ne voit pas l'historique des achats personnels. Les permissions sont v&eacute;rifi&eacute;es c&ocirc;t&eacute; serveur sur la publication d'annonces (KYC obligatoire avant la premi&egrave;re publication).</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Devenir vendeur ou agent en deux taps</div>
+    <div class="desc">L'acheteur qui veut vendre voit un &eacute;cran d'argumentaire calme (s&eacute;questre, badge v&eacute;rifi&eacute;, retraits Mobile Money), active son nouveau r&ocirc;le, et est redirig&eacute; vers la v&eacute;rification d'identit&eacute;. Le retour en arri&egrave;re est possible &agrave; tout moment depuis Profil &gt; Mes r&ocirc;les.</div>
+  </div>
+
+  <h3>Paiements &amp; s&eacute;questre</h3>
+
+  <div class="feature-card">
+    <div class="name">Carte bancaire Stripe (test) + Google Pay</div>
+    <div class="desc">Le paiement par carte fonctionne de bout en bout. L'acheteur valide via la feuille de paiement Stripe (carte 4242 en test, Google Pay support&eacute;), la commande passe au statut "pay&eacute;" via webhook, et le vendeur est notifi&eacute;. La bascule vers les vrais paiements est une simple substitution de cl&eacute; (voir tableau en fin de rapport).</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Mobile Money pr&ecirc;t c&ocirc;t&eacute; code</div>
+    <div class="desc">L'int&eacute;gration Orange Money et MTN MoMo est compl&egrave;tement c&acirc;bl&eacute;e (parcours acheteur, polling de statut, bascule en commande pay&eacute;e, gestion des annulations). Elle attend uniquement la signature du contrat Lengopay pour s'activer.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">S&eacute;questre escrow garanti</div>
+    <div class="desc">Quand l'acheteur paie, l'argent ne va PAS chez le vendeur tout de suite : il est plac&eacute; dans un portefeuille interm&eacute;diaire (escrow). Le vendeur ne re&ccedil;oit son argent QU'APR&Egrave;S la confirmation de r&eacute;ception par l'acheteur, ou apr&egrave;s d&eacute;cision admin sur litige.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">QR de r&eacute;ception scann&eacute;</div>
+    <div class="desc">Le vendeur imprime un QR sur le colis. &Agrave; la r&eacute;ception, l'acheteur scanne ce QR pour confirmer (5 secondes de pression sur le bouton de confirmation). Sans scan, le serveur refuse la lib&eacute;ration : pas de bouton "Re&ccedil;u" sans preuve de remise.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">R&egrave;gle de commission claire</div>
+    <div class="desc">Les frais Linky (3 %) sont pay&eacute;s par l'acheteur EN PLUS du prix de l'article. Le vendeur re&ccedil;oit l'int&eacute;gralit&eacute; du prix affich&eacute;. Cette r&egrave;gle est appliqu&eacute;e par le ledger c&ocirc;t&eacute; serveur ; les libell&eacute;s mobile et admin sont align&eacute;s.</div>
+  </div>
+
+  <h3>V&eacute;rification d'identit&eacute; (KYC)</h3>
+
+  <div class="feature-card">
+    <div class="name">Didit pi&egrave;ce d'identit&eacute; + selfie</div>
+    <div class="desc">Avant la premi&egrave;re publication, un vendeur ou agent doit v&eacute;rifier son identit&eacute; via Didit (pi&egrave;ce d'identit&eacute; + selfie + d&eacute;tection de vie). Le statut est mis &agrave; jour automatiquement via webhook ; en cas de panne webhook, un m&eacute;canisme de polling de secours r&eacute;cup&egrave;re le verdict.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Badge "v&eacute;rifi&eacute;" visible</div>
+    <div class="desc">Sur la fiche profil et les annonces, un badge discret signale que l'identit&eacute; est confirm&eacute;e. Cela cr&eacute;e la confiance c&ocirc;t&eacute; acheteur sans exposer de PII inutile.</div>
+  </div>
+
+  <h3>Retraits vendeurs</h3>
+
+  <div class="feature-card">
+    <div class="name">Demande de retrait vers Mobile Money</div>
+    <div class="desc">Le vendeur consulte son solde disponible (montant qu'on lui doit r&eacute;ellement), choisit un montant, indique son num&eacute;ro Orange Money ou MTN MoMo, et soumet. La demande appara&icirc;t en "En attente" jusqu'au paiement manuel par l'&eacute;quipe Linky en V1, automatis&eacute; ult&eacute;rieurement.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Historique honn&ecirc;te</div>
+    <div class="desc">L'&eacute;cran retraits affiche les vraies demandes du vendeur (en attente, pay&eacute;, refus&eacute;) avec montants et dates r&eacute;els. Aucun chiffre fictif n'est affich&eacute;.</div>
+  </div>
+
+  <h3>Console admin &amp; litiges</h3>
+
+  <div class="feature-card">
+    <div class="name">Tableau Kanban des litiges</div>
+    <div class="desc">L'&eacute;quipe Linky se connecte au dashboard admin en ligne et voit les litiges r&eacute;cents : ouverts, en examen, rembours&eacute;s, lib&eacute;r&eacute;s. Les colonnes "rembours&eacute;s" et "lib&eacute;r&eacute;s" affichent automatiquement les d&eacute;cisions des 7 derniers jours pour conserver le contexte multi-admin.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Arbitrage atomique</div>
+    <div class="desc">Quand l'admin tranche, l'argent bouge atomiquement : remboursement complet acheteur (article + frais) ou lib&eacute;ration au vendeur avec retenue des frais Linky. Chaque d&eacute;cision est journalis&eacute;e (admin, motif, &eacute;tat avant/apr&egrave;s).</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Protection contre l'auto-arbitrage</div>
+    <div class="desc">Un admin qui serait acheteur ou vendeur sur une commande NE PEUT PAS trancher ce litige. Cette garantie est appliqu&eacute;e c&ocirc;t&eacute; base de donn&eacute;es et c&ocirc;t&eacute; console admin.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Bandeau mobile en temps proche-r&eacute;el</div>
+    <div class="desc">Quand l'admin tranche un litige, le bandeau de r&eacute;solution appara&icirc;t sur le t&eacute;l&eacute;phone de l'acheteur et du vendeur en moins de 20 secondes, sans rafra&icirc;chissement manuel.</div>
+  </div>
+
+  <h3>Annonces, recherche, immobilier</h3>
+
+  <div class="feature-card">
+    <div class="name">Cr&eacute;ation d'annonces en 5 &eacute;tapes (produit)</div>
+    <div class="desc">Cat&eacute;gorie, d&eacute;tails, photos, pr&eacute;visualisation, publication. La boutique est cr&eacute;&eacute;e automatiquement &agrave; la premi&egrave;re annonce ; pas d'&eacute;tape "configurer ma boutique" suppl&eacute;mentaire.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Bien immobilier avec carte Mapbox</div>
+    <div class="desc">L'agent saisit l'adresse, l'app pose un pointeur Mapbox sur la carte de Guin&eacute;e. C&ocirc;t&eacute; recherche, les biens s'affichent avec distance par rapport au goudron, surface, nombre de chambres, type (location, vente, terrain).</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Recherche, filtres, tri</div>
+    <div class="desc">Le March&eacute; permet de filtrer par cat&eacute;gorie, ville, prix maximum, distance au goudron, surface. Les filtres sont effa&ccedil;ables d'un tap depuis l'&eacute;cran vide ("Aucun r&eacute;sultat &gt; Effacer les filtres") et conservent l'onglet actif (Articles / Immobilier).</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">D&eacute;couvrir style flux vertical</div>
+    <div class="desc">Onglet d&eacute;di&eacute; au feed de d&eacute;couverte, m&eacute;lange produits et biens immobiliers, pull-to-refresh int&eacute;gr&eacute;.</div>
+  </div>
+
+  <h3>Messagerie</h3>
+
+  <div class="feature-card">
+    <div class="name">Conversations en temps r&eacute;el</div>
+    <div class="desc">Acheteur et vendeur peuvent &eacute;changer directement depuis une annonce. Les messages arrivent en temps r&eacute;el via Supabase Realtime ; en cas de coupure WebSocket, un polling de secours toutes les 60 secondes ram&egrave;ne les messages.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Filtres par cat&eacute;gorie d'annonce</div>
+    <div class="desc">Toutes les conversations, ou uniquement celles li&eacute;es &agrave; un produit ou &agrave; un bien immobilier. Recherche int&eacute;gr&eacute;e par nom ou contenu des messages.</div>
+  </div>
+
+  <h3>Notifications &amp; suivi</h3>
+
+  <div class="feature-card">
+    <div class="name">Centre de notifications en app</div>
+    <div class="desc">Toutes les alertes (commandes, messages, visites, paiements) sont accessibles dans un &eacute;cran d&eacute;di&eacute; avec filtres par cat&eacute;gorie, marquage automatique au lu, pagination "Charger plus".</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Suivi de visite immobili&egrave;re &mdash; aller-retour complet</div>
+    <div class="desc">L'acheteur ou le locataire potentiel demande une visite directement depuis l'annonce. L'agent re&ccedil;oit la demande dans son tableau "Demandes" avec date souhait&eacute;e + message ; il accepte ou refuse en un tap. <strong>L'acheteur voit imm&eacute;diatement la d&eacute;cision dans son onglet "Mes demandes"</strong> (group&eacute; par statut : en attente, accept&eacute;es, refus&eacute;es, annul&eacute;es, termin&eacute;es) et re&ccedil;oit une notification push qui ouvre directement sur cet &eacute;cran. Aller-retour complet acheteur-agent v&eacute;rifi&eacute; de bout en bout.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Notification "commande exp&eacute;di&eacute;e" pour l'acheteur</div>
+    <div class="desc">Quand le vendeur marque sa commande comme exp&eacute;di&eacute;e (avec num&eacute;ro de suivi optionnel &mdash; beaucoup de livraisons Guin&eacute;e sont en main propre), l'acheteur re&ccedil;oit une notification push "Commande exp&eacute;di&eacute;e" qui ouvre la fiche commande. La commande passe automatiquement du statut "pay&eacute;" &agrave; "en pr&eacute;paration" avec une trace dans l'historique &eacute;v&eacute;nementiel.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="name">Messagerie contact accessible depuis trois surfaces</div>
+    <div class="desc">L'acheteur peut entrer en conversation avec un vendeur depuis la fiche produit, depuis la page boutique (annonces multiples), <strong>et</strong> depuis la fiche profil du vendeur. La conversation est cr&eacute;&eacute;e ou retrouv&eacute;e automatiquement (m&ecirc;me fil quel que soit le point d'entr&eacute;e) ; tout passe par la m&ecirc;me messagerie temps r&eacute;el.</div>
+  </div>
+
+  <h2><span class="num">02</span>Tests effectu&eacute;s</h2>
+
+  <p style="margin-top: 0;">Les six sc&eacute;narios de la matrice de test seront ex&eacute;cut&eacute;s sur l'APK livr&eacute; en pr&eacute;sence du client, avec contre-v&eacute;rifications base de donn&eacute;es. Le journal d&eacute;taill&eacute; est livr&eacute; s&eacute;par&eacute;ment dans le fichier <em>SMOKE_MATRIX_2026-06-12</em>.</p>
+
+  <table class="smoke-table">
+    <thead>
+      <tr><th>Sc&eacute;nario</th><th>Couverture</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>1. Acheteur pur</strong></td><td>Inscription, sauvegarde nom + ville, aucun &eacute;cran vendeur ou agent accessible (12 v&eacute;rifications).</td></tr>
+      <tr><td><strong>2. Devenir vendeur</strong></td><td>Activation du r&ocirc;le, blocage publication tant que KYC non approuv&eacute;, vraie v&eacute;rification Didit, premi&egrave;re publication r&eacute;ussie (10 v&eacute;rifications).</td></tr>
+      <tr><td><strong>3. Cha&icirc;ne de paiement</strong></td><td>Carte 4242 &gt; webhook &gt; commande pay&eacute;e &gt; scan QR &gt; lib&eacute;ration au vendeur &gt; v&eacute;rification ledger : <strong>vendeur re&ccedil;oit le montant complet</strong>, plateforme garde les frais (12 v&eacute;rifications).</td></tr>
+      <tr><td><strong>4. Litige</strong></td><td>Ouverture litige c&ocirc;t&eacute; acheteur, console admin, d&eacute;cision de remboursement, bandeau mobile en moins de 20 secondes, garantie anti-auto-arbitrage (7 v&eacute;rifications).</td></tr>
+      <tr><td><strong>5. &Eacute;tats r&eacute;seau</strong></td><td>Mode avion &gt; tous les &eacute;crans affichent un &eacute;tat d'erreur avec "R&eacute;essayer" (pas de squelettes infinis ni de faux z&eacute;ros) &gt; retour en ligne &gt; pull-to-refresh r&eacute;cup&egrave;re partout (10 v&eacute;rifications).</td></tr>
+      <tr><td><strong>6. Deep-links</strong></td><td>Lien stale &gt; &eacute;cran 404 sobre avec retour accueil. Lien re&ccedil;u avant connexion &gt; supprim&eacute; (pas de blocage utilisateur) (3 v&eacute;rifications).</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="num">03</span>Tableau de bascule (configuration c&ocirc;t&eacute; client)</h2>
+
+  <p style="margin-top: 0;">Chaque ligne d&eacute;crit ce qui reste bloqu&eacute; c&ocirc;t&eacute; configuration ou contrat externe. <strong>Aucun de ces &eacute;l&eacute;ments ne demande de d&eacute;veloppement suppl&eacute;mentaire</strong> : le code est en place et attend la donn&eacute;e.</p>
+
+  <table class="config-table">
+    <thead>
+      <tr>
+        <th>&Eacute;l&eacute;ment</th>
+        <th>Ce que le client fournit</th>
+        <th>Ce qui s'active automatiquement</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="item">Contrat Lengopay</td>
+        <td class="provides">Signature du contrat Lengopay et acc&egrave;s API (cl&eacute; et webhook secret).</td>
+        <td class="switches">Paiements Orange Money + MTN Mobile Money en production. Le parcours acheteur et le polling sont d&eacute;j&agrave; en place.</td>
+      </tr>
+      <tr>
+        <td class="item">Stripe LIVE + LLC</td>
+        <td class="provides">Cr&eacute;ation de la soci&eacute;t&eacute; US LLC (pr&eacute;requis Stripe Atlas ou &eacute;quivalent), passage du compte Stripe en mode LIVE, fourniture des cl&eacute;s <em>sk_live</em> et <em>pk_live</em>.</td>
+        <td class="switches">Paiements carte r&eacute;els en production. Aucune modification de code : substitution des cl&eacute;s + bascule du webhook secret.</td>
+      </tr>
+      <tr>
+        <td class="item">Compte Apple Developer</td>
+        <td class="provides">Compte Apple Developer ($99/an), cl&eacute; APNs pour les notifications push iOS, profil de signature.</td>
+        <td class="switches">Build iOS (TestFlight puis App Store) + notifications push iOS. Le code mobile partag&eacute; React Native est d&eacute;j&agrave; compatible.</td>
+      </tr>
+      <tr>
+        <td class="item">Compte SMS exp&eacute;diteur</td>
+        <td class="provides">Compte Orange SMS API en priorit&eacute; (meilleure d&eacute;livrabilit&eacute; Guin&eacute;e), ou Twilio en fallback. Identifiant exp&eacute;diteur "Linky" ou similaire.</td>
+        <td class="switches">OTP SMS r&eacute;els pour la connexion (aujourd'hui en mode de d&eacute;veloppement avec OTP affich&eacute; &agrave; l'&eacute;cran). Aucun changement d'UX, juste la livraison du SMS.</td>
+      </tr>
+      <tr>
+        <td class="item">Assets de marque</td>
+        <td class="provides">Logotype final (le "Y" stylis&eacute;), palette jaune/vert affin&eacute;e si modif&eacute;e depuis la maquette, icone d'application 1024x1024.</td>
+        <td class="switches">Remplacement des assets dans le splash, ic&ocirc;ne app, en-t&ecirc;te admin. Aucun impact sur le code applicatif.</td>
+      </tr>
+      <tr>
+        <td class="item">Firebase Android (push)</td>
+        <td class="provides">Cr&eacute;ation du projet Firebase, fichier <em>google-services.json</em> li&eacute; au package <em>com.linky.app</em>.</td>
+        <td class="switches">Notifications push Android sur l'APK de production. Le code d'enregistrement de jeton et la cha&icirc;ne serveur sont d&eacute;j&agrave; pr&ecirc;ts.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2><span class="num">04</span>Contraintes connues</h2>
+
+  <div class="feature-card" style="border-left-color: var(--saffron);">
+    <div class="name" style="color: var(--gold);">Notifications push absentes sur cette compilation</div>
+    <div class="desc">Les notifications push distantes ne sont pas livr&eacute;es sur l'APK de test (pas de <em>google-services.json</em> Firebase). Le point de v&eacute;rification reste l'&eacute;cran Notifications dans l'app, qui re&ccedil;oit les alertes via les m&eacute;canismes temps-r&eacute;el internes.</div>
+  </div>
+
+  <div class="feature-card" style="border-left-color: var(--saffron);">
+    <div class="name" style="color: var(--gold);">iOS non livr&eacute; sur cette &eacute;tape</div>
+    <div class="desc">Bloqu&eacute; par le compte Apple Developer c&ocirc;t&eacute; client. Le code React Native est partag&eacute; ; un build iOS sera produit d&egrave;s que le compte est ouvert.</div>
+  </div>
+
+  <div class="feature-card" style="border-left-color: var(--saffron);">
+    <div class="name" style="color: var(--gold);">Mode test pour Stripe et Didit</div>
+    <div class="desc">Les paiements carte fonctionnent avec la carte de test Stripe 4242 4242 4242 4242. La v&eacute;rification d'identit&eacute; Didit utilise l'environnement sandbox. Les deux passent en production via substitution de cl&eacute;s c&ocirc;t&eacute; client (voir tableau de bascule).</div>
+  </div>
+
+  <div class="doc-footer">
+    <span class="knot">&infin;</span> Linky V1 <span class="knot">&middot;</span> Progix &middot; Achraf Benamrane <span class="knot">&middot;</span> 12 juin 2026
+  </div>
+
+</div>
+</body>
+</html>
