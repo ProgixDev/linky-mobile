@@ -18,14 +18,38 @@
 //                                   bump_intent_poll and keep the intent
 //                                   pending.
 //
+// Phase V.5 — refund / dispute events :
+//   charge.refunded               → log CRITICAL + ack 200. NO auto-ledger
+//                                   action. A Stripe-dashboard refund while
+//                                   the ledger says escrowed is exactly the
+//                                   case humans must arbitrate ; auto-touching
+//                                   the ledger from a webhook would couple a
+//                                   support action to a settlement decision
+//                                   without an admin in the loop.
+//   charge.dispute.{created,
+//     funds_withdrawn, closed,
+//     funds_reinstated}           → same posture : log CRITICAL + ack. A
+//                                   chargeback opened from Stripe doesn't move
+//                                   the buyer / seller / escrow wallets ; the
+//                                   admin reads the alert, weighs the evidence,
+//                                   triggers resolve_dispute (or whatever V1.1
+//                                   surfaces) with full audit context.
+//
+// This handler is the HARD PRECONDITION for the future sk_live swap : a live
+// refund or chargeback dropped on the floor in test mode is annoying ; in live
+// mode it's an open ledger lie ("balance says escrowed, Stripe says clawed").
+// The acked + logged + flagged-for-human-review posture matches the existing
+// CRITICAL log on the succeeded/non-pending and amount-mismatch branches.
+//
 // Idempotency : process_intent_outcome row-locks the intent and no-ops when it
 // is already terminal (verified in 20260601_01) — duplicate or out-of-order
 // deliveries can't double-credit. The status pre-check below just short-cuts
 // the common duplicate case.
 //
 // Responses : 200 on processed / already-terminal / unknown-PI / unhandled
-// event (so Stripe doesn't retry forever) ; 401 on bad signature ; 500 on DB
-// failure so Stripe DOES retry instead of dropping the outcome.
+// event / refund / dispute (so Stripe doesn't retry forever) ; 401 on bad
+// signature ; 500 on DB failure so Stripe DOES retry instead of dropping the
+// outcome.
 
 import type Stripe from 'stripe';
 import { serviceClient } from '@shared/db.ts';
@@ -42,6 +66,16 @@ const HANDLED = new Set([
   'payment_intent.succeeded',
   'payment_intent.payment_failed',
   'payment_intent.canceled',
+]);
+
+// Phase V.5 — refund + dispute events fan out to the alerting branch below.
+const ALERT_ONLY = new Set([
+  'charge.refunded',
+  'charge.dispute.created',
+  'charge.dispute.funds_withdrawn',
+  'charge.dispute.funds_reinstated',
+  'charge.dispute.updated',
+  'charge.dispute.closed',
 ]);
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -73,6 +107,38 @@ Deno.serve(async (req: Request): Promise<Response> => {
       event_livemode: event.livemode, expect_live: expectLive, event_type: event.type,
     });
     return json({ received: true, ignored: true }, 200);
+  }
+
+  // Phase V.5 — refund + dispute alerting. NO ledger action ; the structured
+  // log line is what wakes a human up. We try to attach the local intent +
+  // order id when the event references a recognizable PI / charge so the
+  // human has the immediate context, but a missed lookup must NOT block the
+  // ack (the alert is the load-bearing piece).
+  if (ALERT_ONLY.has(event.type)) {
+    const obj = event.data.object as { id?: string; payment_intent?: string; charge?: string; amount?: number; reason?: string; status?: string };
+    const piIdGuess = (obj.payment_intent as string | undefined) ?? null;
+    let alertCtx: Record<string, unknown> = {
+      event_id: event.id,
+      event_type: event.type,
+      stripe_obj_id: obj.id ?? null,
+      stripe_pi: piIdGuess,
+      stripe_charge: obj.charge ?? null,
+      stripe_amount: obj.amount ?? null,
+      stripe_reason: obj.reason ?? null,
+      stripe_status: obj.status ?? null,
+    };
+    if (piIdGuess) {
+      const sbAlert = serviceClient();
+      const { data: intent } = await sbAlert
+        .from('payment_intents')
+        .select('id, order_id, status, amount_minor, currency')
+        .eq('rail', 'stripe').eq('rail_intent_id', piIdGuess).maybeSingle();
+      if (intent) {
+        alertCtx = { ...alertCtx, linky_intent_id: intent.id, linky_order_id: intent.order_id, linky_intent_status: intent.status, linky_amount_minor: intent.amount_minor };
+      }
+    }
+    console.error('[stripe-webhook] CRITICAL refund/dispute event — human review required, NO ledger action taken', alertCtx);
+    return json({ received: true, alerted: true }, 200);
   }
 
   if (!HANDLED.has(event.type)) {
