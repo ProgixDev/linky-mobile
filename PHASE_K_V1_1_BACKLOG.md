@@ -98,6 +98,15 @@ This document is the client-shareable mirror of the internal memory `project_pha
 
 # New V1.1 items (Phase X, 2026-06-12)
 
+## X.6 — Branded monochrome notification icon (Android)
+
+**V1 today** — `app.json` plugin config + `AndroidManifest` meta-data only set the notification TINT (`#0A5240`). The notification ICON itself is intentionally NOT set (Android falls back to the launcher silhouette, which looks acceptable but unbranded). A placeholder would look worse than the default.
+
+**V1.1 target** — the client ships a proper monochrome 96×96 PNG ; we drop it at `android/app/src/main/res/drawable-{hdpi,xhdpi,xxhdpi,xxxhdpi}/notification_icon.png` and add the manifest meta-data `expo.modules.notifications.default_notification_icon` pointing at `@drawable/notification_icon` (mirror what we did for the color). Also add to `app.json` plugin tuple `{ "icon": "./assets/images/notification-icon.png", "color": "#0A5240" }` for prebuild compatibility.
+
+**Effort** — S, gated on the brand asset.
+
+
 Items deliberately deferred during the Phase X audit-then-fix sweep. Each carries the honest UI in V1 (no dead promise on the user) and an explicit sizing so the work isn't lost.
 
 ## X.4 — Stripe card-topup

@@ -1,0 +1,136 @@
+# Linky — Android remote push setup (FCM)
+
+Phase X.6 sweep. iOS APNS stays client-blocked (Apple Developer account); this doc only covers Android.
+
+The Phase X.6a commit landed the code-side wiring **directly in the native `android/` tree** (this is a bare-build project — `gradlew assembleRelease`, no EAS, no `npx expo prebuild` rerun planned). Everything below is the user-driven console work to finish the loop.
+
+---
+
+## What the code already does (X.6a)
+
+| Layer | Live now? | Where |
+|---|---|---|
+| Google Services Gradle plugin classpath | ✅ Wired in `android/build.gradle` | Loads the plugin |
+| Google Services Gradle plugin apply | ✅ **Conditional**: applied only when `android/app/google-services.json` is present | Prevents the build from failing pre-Firebase-setup |
+| Notification tint color (`#0A5240` Linky green) | ✅ Live in `android/app/src/main/res/values/colors.xml` + `AndroidManifest.xml` meta-data `expo.modules.notifications.default_notification_color` | Applied at native level — survives `gradlew assembleRelease` without a prebuild |
+| Notification monochrome icon | ⏸️ **Intentionally NOT set** — Android falls back to the launcher silhouette until the client's brand assets ship a proper monochrome PNG | Tracked in `PHASE_K_V1_1_BACKLOG.md` |
+| `app.json` `expo-notifications` plugin config | ✅ Tuple form with `color: "#0A5240"` | **Does NOTHING for the existing `android/` tree** — only takes effect on the next `npx expo prebuild` run. Native-layer changes above are the live source of truth today. |
+| Client push-token registration | ✅ `src/lib/push.ts` `usePushRegistration` calls `getExpoPushTokenAsync({ projectId })` | EAS projectId pinned in `app.json.extra.eas` |
+| Server push dispatch | ✅ `supabase/functions/_shared/push.ts` `notify()` posts to `https://exp.host/--/api/v2/push/send` with `DeviceNotRegistered` token pruning | Best-effort, fire-and-forget |
+| Notification emission coverage | ✅ 14 of 14 events emit (X.6 audit) | Includes order shipped after X.6b |
+
+### Two layers, on purpose
+
+- **Native (`android/`)** — what the *current* `gradlew assembleRelease` reads. This is the layer that matters today.
+- **`app.json`** — what a *future* `npx expo prebuild` would regenerate from. Kept in sync so a future prebuild doesn't undo the live native config silently.
+
+If the native and `app.json` ever drift, the **native files win** for the current `android/` tree; `app.json` becomes load-bearing only after a prebuild.
+
+---
+
+## Your console steps (the missing pieces)
+
+### Step 1 — Create a Firebase project
+
+1. Go to <https://console.firebase.google.com/>.
+2. **Add project** → name it `Linky` (or whatever you prefer ; not user-facing). Disable Google Analytics if you don't want it — push works without it.
+3. Once the project exists: **Build → Cloud Messaging** is the surface FCM is configured under.
+
+### Step 2 — Add an Android app to the Firebase project
+
+1. From the project overview, **Add app → Android**.
+2. **Package name**: `com.linky.app` (must match exactly — pinned in `app.json` + `android/app/build.gradle` `applicationId`).
+3. App nickname: `Linky Android`. SHA-1: skip (not required for push; only needed for Dynamic Links / Google Sign-In).
+4. Click **Register app**.
+5. Click **Download google-services.json** and **drop the file into `linky-mobile/app-mobile/android/app/google-services.json`** (NOT the project root, NOT `android/`). Add it to `.gitignore` if it's not already — it carries a project secret.
+
+> The conditional `if (new File(projectDir, 'google-services.json').exists())` in `android/app/build.gradle` means **the moment this file lands, the next `gradlew assembleRelease` wires FCM in automatically**. No further code change needed.
+
+### Step 3 — Generate the FCM V1 service-account key
+
+Expo's push service (`exp.host/--/api/v2/push/send`) needs to authenticate to FCM on Linky's behalf using the FCM HTTP V1 protocol. That requires a service-account JSON key.
+
+1. Firebase Console → **gear ⚙ → Project settings → Service accounts** tab.
+2. Click **Generate new private key** under "Firebase Admin SDK". A JSON file downloads.
+3. **Save this file somewhere private** (you'll upload it to Expo in Step 4 and never need it again locally). Don't commit it.
+
+### Step 4 — Upload the FCM key to Expo for projectId `5154ed32-fa42-448f-ae1e-c99722101c76`
+
+Two equivalent paths:
+
+**EAS CLI** (recommended if you're already logged in):
+```powershell
+cd app-mobile
+npx eas credentials --platform android
+```
+Walk the prompts to upload the FCM V1 service-account JSON.
+
+**OR Expo dashboard**:
+1. <https://expo.dev/accounts/<your-account>/projects/linky/credentials>
+2. Android → Push notifications → "Set up FCM V1" → upload the service-account JSON.
+
+### Step 5 — Rebuild
+
+Remote push only works on builds made **after** `google-services.json` is in place.
+
+```powershell
+cd app-mobile/android
+./gradlew assembleRelease
+```
+
+The build log should show the `processGoogleServices` task running (no longer skipped). The output APK in `android/app/build/outputs/apk/release/` now contains the Firebase config.
+
+Install it on a real device (not an emulator — push tokens don't generate on simulators).
+
+---
+
+## Verification
+
+### A — Token registration
+
+1. Sign in on the device.
+2. Watch the server: `select * from public.push_tokens where user_id = '<your_user_id>' order by created_at desc limit 5;`
+3. Expect one row with platform=`'android'` and a token starting with `ExponentPushToken[...]`.
+
+If no row appears, check the device logs (`adb logcat | grep push`) — `src/lib/push.ts` swallows registration errors and logs them.
+
+### B — Send a test push from Expo
+
+1. <https://expo.dev/notifications>.
+2. Paste the token from step A into "Recipients".
+3. Title `Test Linky`, body `Hello`, send.
+4. Banner appears on the device within ~5s.
+
+If the banner doesn't appear but the token registered: FCM is misconfigured (most often: wrong `google-services.json` package name, OR the FCM V1 key wasn't uploaded to the right Expo project). Re-check Steps 2-4.
+
+### C — End-to-end (in-app emission)
+
+1. From a SECOND device or admin, place an order against the seller signed in on the device.
+2. Within ~5s of the order flipping `paid` (wallet immediate, or rail webhook ~1-3s), the seller's device shows a **"Nouvelle commande payée"** banner with tint `#0A5240`.
+
+The full list of events that emit pushes (see `supabase/functions/_shared/push.ts` callers):
+
+| Event | Recipient | Title |
+|---|---|---|
+| Order paid (wallet or rail) | seller | "Nouvelle commande payée" |
+| Order shipped | buyer | "Commande expédiée" |
+| Order received/released | seller | "Fonds libérés" |
+| Dispute opened | seller | "Litige ouvert" |
+| Dispute resolved (refund) | buyer + seller | "Litige résolu" / "Litige tranché en faveur de l'acheteur" |
+| Dispute resolved (release) | buyer + seller | "Litige clos" / "Litige résolu en ta faveur" |
+| Message received | recipient | sender's display name |
+| Visit requested | property agent | "Nouvelle demande de visite" |
+| Visit responded | buyer | "Visite acceptée" / "Visite refusée" |
+| Withdrawal paid | seller | "Retrait effectué" |
+| Withdrawal rejected | seller | "Retrait refusé" |
+| Listing moderated | listing owner | "Annonce retirée" |
+| KYC decided | user | "Identité vérifiée" / "Vérification non aboutie" |
+
+---
+
+## Known constraints
+
+- **iOS** stays inert until the client's Apple Developer account provides an APNS key (uploaded via `eas credentials --platform ios`). No code change needed mobile-side.
+- **Notification icon**: Android's default monochrome icon will show the launcher silhouette inverted, which is **usually fine but not branded**. A proper monochrome 96×96 PNG should land with the client's brand assets ; tracked in the V1.1 backlog. To activate when the asset lands: place it at `android/app/src/main/res/drawable-{hdpi,xhdpi,xxhdpi,xxxhdpi}/notification_icon.png` and add the manifest meta-data `expo.modules.notifications.default_notification_icon` pointing at `@drawable/notification_icon`.
+- **Existing builds installed pre-google-services.json** won't deliver remote push. The device needs to install the post-Firebase-setup APK once.
+- The `expo-notifications` package was bumped to a tuple form in `app.json` ; this is a future-proofing change and has no effect on the current `android/` tree (a `npx expo prebuild` would regenerate from `app.json` — until then the live config is the native-layer file edits above).
