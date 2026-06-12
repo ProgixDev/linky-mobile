@@ -200,7 +200,6 @@ function BuyerHome() {
   const cartCount = useCart((s) => s.lines.length);
   const roles = useAuth((s) => s.roles);
   const hasPro = roles.includes('seller') || roles.includes('agent');
-  const showBoutiqueShortcut = roles.includes('buyer') && hasPro;
   const { data: shops } = useShops(3);
   const { data: products, isLoading: prodLoading } = usePopularProducts(4);
   const { data: properties } = useNearbyProperties(3);
@@ -259,14 +258,10 @@ function BuyerHome() {
           >
             <Bell size={18} color={colors.text} strokeWidth={1.75} />
           </CircleAction>
-          {showBoutiqueShortcut && (
-            <CircleAction
-              onPress={() => router.push('/(tabs)/boutique')}
-              accessibilityLabel="Aller à ma boutique"
-            >
-              <Store size={18} color={colors.text} strokeWidth={1.75} />
-            </CircleAction>
-          )}
+          {/* Phase X.10 (revised) — Messagerie is back as a dedicated tab and
+              Boutique was fused into the Profil hero card. The X.10-first
+              Messages icon + Home Boutique shortcut were both removed so the
+              header carries only universal commerce actions. */}
           <CircleAction
             onPress={() => router.push('/cart')}
             accessibilityLabel={`Panier (${cartCount} articles)`}

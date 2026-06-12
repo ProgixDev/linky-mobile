@@ -63,11 +63,12 @@ function buildQuickActions(roles: UserRole[]): QuickAction[] {
   if (isSeller) {
     out.push({ Icon: Store, label: 'Ventes', href: '/seller/orders' });
     out.push({ Icon: Banknote, label: 'Retraits', href: '/wallet/retirer' });
-    out.push({ Icon: HomeIcon, label: 'Boutique', href: '/(tabs)/boutique' });
+    // Phase X.10 (revised) — Boutique / Mes biens dropped from this scroll ;
+    // they're surfaced as a dedicated hero card above the quick actions so
+    // pros land on their workspace in one tap instead of scrolling for it.
   }
   if (isAgent) {
     out.push({ Icon: CalendarCheck, label: 'Visites', href: '/pro/visites' });
-    out.push({ Icon: Building2, label: 'Mes biens', href: '/(tabs)/boutique' });
   }
   out.push({ Icon: Wallet, label: 'Wallet', href: '/wallet' });
   out.push({ Icon: ShieldCheck, label: 'KYC', href: '/kyc/intro' });
@@ -218,6 +219,32 @@ export default function ProfilRoute() {
             </View>
           </View>
         </View>
+
+        {/* ===== Boutique hero (Phase X.10 revised) ===== */}
+        {/* Pros land on their workspace in one tap. Sellers see "Ma boutique" ;
+            agents see "Mes biens" ; users who are BOTH see both stacked. Pure
+            buyers see neither (no card rendered). Replaces the X.10-original
+            Home-header Boutique shortcut. */}
+        {(roles.includes('seller') || roles.includes('agent')) && (
+          <View style={{ paddingHorizontal: 24, paddingTop: 18, gap: 10 }}>
+            {roles.includes('seller') && (
+              <BoutiqueHero
+                Icon={Store}
+                title="Ma boutique"
+                sub="Annonces, ventes, statistiques."
+                ctaLabel="Ouvrir la boutique"
+              />
+            )}
+            {roles.includes('agent') && (
+              <BoutiqueHero
+                Icon={Building2}
+                title="Mes biens"
+                sub="Annonces immobilières, visites, demandes."
+                ctaLabel="Ouvrir l'espace agent"
+              />
+            )}
+          </View>
+        )}
 
         {/* ===== Quick actions ===== */}
         <ScrollView
@@ -574,6 +601,93 @@ function Row({
       {!right && onPress && (
         <ChevronRight size={16} color={colors.textFaint} strokeWidth={2} />
       )}
+    </Pressable>
+  );
+}
+
+// Phase X.10 (revised) — prominent entry into a pro's workspace, replaces
+// the old hidden boutique tab + Home-header Store shortcut. Sellers see one,
+// agents see another, dual-role users see both stacked.
+function BoutiqueHero({
+  Icon,
+  title,
+  sub,
+  ctaLabel,
+}: {
+  Icon: LucideIcon;
+  title: string;
+  sub: string;
+  ctaLabel: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={() => {
+        haptic.light();
+        router.push('/(tabs)/boutique');
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={ctaLabel}
+      style={{
+        padding: 18,
+        borderRadius: 20,
+        backgroundColor: colors.primarySoft,
+        borderWidth: 1,
+        borderColor: 'rgba(15,114,86,0.18)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+      }}
+    >
+      <View
+        style={{
+          width: 52,
+          height: 52,
+          borderRadius: 16,
+          backgroundColor: colors.primary,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Icon size={24} color="#FFFFFF" strokeWidth={1.75} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            fontSize: 16,
+            fontWeight: '700',
+            color: colors.primaryDeep,
+            letterSpacing: -0.1,
+            lineHeight: 20,
+            includeFontPadding: false,
+          }}
+        >
+          {title}
+        </Text>
+        <Text
+          style={{
+            fontSize: 12.5,
+            color: colors.primaryDeep,
+            opacity: 0.75,
+            marginTop: 3,
+            letterSpacing: 0,
+            lineHeight: 16,
+          }}
+        >
+          {sub}
+        </Text>
+        <Text
+          style={{
+            fontSize: 12,
+            fontWeight: '700',
+            color: colors.primary,
+            marginTop: 8,
+            letterSpacing: 0.2,
+          }}
+        >
+          {ctaLabel} →
+        </Text>
+      </View>
     </Pressable>
   );
 }

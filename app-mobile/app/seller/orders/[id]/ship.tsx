@@ -166,10 +166,17 @@ export default function ShipRoute() {
             haptic.medium();
             try {
               const trimmed = tracking.trim();
+              // Phase X.12 — send the human-readable carrier LABEL
+              // ("Jefa Delivery") rather than the internal id ("jefa") so
+              // the buyer's order-detail timeline reads cleanly. CARRIERS
+              // is a fixed V1 list, so .find() is exhaustive ; the `?? carrier`
+              // fallback is paranoia for a future enum addition.
+              const carrierLabel =
+                CARRIERS.find((c) => c.id === carrier)?.label ?? carrier;
               await shipMutation.mutateAsync({
                 orderId: id,
                 trackingNumber: trimmed.length > 0 ? trimmed : undefined,
-                carrier,
+                carrier: carrierLabel,
               });
               toast.show("Commande marquée expédiée. Acheteur notifié.", 'success');
               router.replace(`/seller/orders/${id}`);

@@ -26,15 +26,32 @@ const TAB_LABELS: Record<string, string> = {
   boutique: 'Boutique',
   profil: 'Profil',
 };
+// Phase X.10 (revised) — visual L→R order enforced explicitly (do not rely
+// on state.routes ordering, which expo-router may derive from file-system
+// alphabetical order rather than the <Tabs.Screen> declaration order).
+// Profil stays rightmost ; Découvrir is the centered FAB ; Messagerie is a
+// dedicated tab (the header-icon variant of X.10 was rolled back in favor of
+// fusing Boutique into Profil — see PHASE_K_V1_1_BACKLOG).
+const TAB_ORDER = ['index', 'marche', 'decouvrir', 'messagerie', 'profil'] as const;
 
 export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  // Respect tabs hidden via `options.href: null` (e.g. role-gated Boutique tab).
-  const visibleRoutes = state.routes.filter((r) => {
-    const opts = descriptors[r.key]?.options as { href?: string | null } | undefined;
-    return opts?.href !== null;
-  });
+  // Respect tabs hidden via `options.href: null` (e.g. role-gated Boutique tab),
+  // then enforce TAB_ORDER so Profil is always rightmost regardless of how
+  // expo-router resolved state.routes. Routes not in TAB_ORDER are dropped
+  // (defense against an orphan file under (tabs)/ silently leaking into the bar).
+  const visibleRoutes = state.routes
+    .filter((r) => {
+      const opts = descriptors[r.key]?.options as { href?: string | null } | undefined;
+      return opts?.href !== null;
+    })
+    .filter((r) => (TAB_ORDER as readonly string[]).includes(r.name))
+    .sort(
+      (a, b) =>
+        (TAB_ORDER as readonly string[]).indexOf(a.name) -
+        (TAB_ORDER as readonly string[]).indexOf(b.name),
+    );
   const activeRoute = state.routes[state.index];
   const onDiscoverRoute = activeRoute?.name === 'decouvrir';
   const barBg = onDiscoverRoute ? 'rgba(14, 19, 17, 0.92)' : colors.bgElev;

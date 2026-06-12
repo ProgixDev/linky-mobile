@@ -3,7 +3,9 @@
 -- These SELECT policies gate ONLY what authenticated users receive via the
 -- realtime change stream. Edge functions use service_role and bypass RLS as
 -- before. auth.uid() reads from the JWT 'sub' claim — the JWT must be signed
--- with SUPABASE_JWT_SECRET (minted via mint-realtime-jwt M.2).
+-- with the project's legacy HS256 secret, exposed to the edge fn as
+-- LINKY_SB_JWT_SECRET (minted via mint-realtime-jwt M.2 ; renamed X.11
+-- because Supabase reserves the SUPABASE_ prefix for user-defined secrets).
 --
 -- The `(select auth.uid())` wrapper is the recommended pattern : it lets
 -- Postgres cache the function result across rows in a single query.
