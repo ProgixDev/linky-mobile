@@ -96,11 +96,17 @@ interface ResolveDisputeResponse {
 
 // 30s poll catches new disputes without realtime. V1.1 will swap this for a
 // Supabase realtime channel on the orders table so we can drop the polling.
+//
+// Phase V.8 -- pass include_resolved: { since_days: 7 } so the Kanban's
+// "Remboursés" and "Libérés" columns aren't empty on first page load. The
+// server-side cap (1..90) is enforced in list-disputes' validator.
 export function useDisputes() {
   return useQuery({
-    queryKey: ['disputes', 'all'],
+    queryKey: ['disputes', 'all', 7],
     queryFn: async () => {
-      const r = await apiFetch<ListDisputesResponse>('list-disputes', {});
+      const r = await apiFetch<ListDisputesResponse>('list-disputes', {
+        include_resolved: { since_days: 7 },
+      });
       if (!r.ok || !r.data) {
         throw r.error ?? { code: 'UNKNOWN', message_fr: 'Erreur de chargement' };
       }

@@ -26,7 +26,13 @@ import { assertAdmin } from '@shared/admin.ts';
 import { mapOrder, type OrderRow } from '@shared/catalog.ts';
 
 interface Cursor { updated_at: string; id: string }
-interface Body { limit?: number; cursor?: Cursor }
+// Phase V.8 — include_resolved widens the result set to
+// status IN ('disputed','refunded','released') with the cutoff applied to
+// updated_at (the resolution stamps it via the RPC's update at the end of
+// resolve_dispute). Admin Kanban defaults to 7 days so the
+// "Remboursés" / "Libérés" columns aren't empty on first load.
+interface IncludeResolved { since_days: number }
+interface Body { limit?: number; cursor?: Cursor; include_resolved?: IncludeResolved }
 
 // Phase V.2 -- anchored. See discover-feed for the rationale.
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
@@ -39,11 +45,21 @@ function validCursor(c: unknown): c is Cursor {
   return true;
 }
 
+function validIncludeResolved(v: unknown): v is IncludeResolved {
+  if (typeof v !== 'object' || v === null) return false;
+  const x = v as Record<string, unknown>;
+  if (typeof x.since_days !== 'number' || !Number.isFinite(x.since_days)) return false;
+  // Cap : protects the index scan from a degenerate since_days request.
+  if (x.since_days < 1 || x.since_days > 90) return false;
+  return true;
+}
+
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
   const x = b as Record<string, unknown>;
   if (x.limit !== undefined && (typeof x.limit !== 'number' || x.limit < 1 || x.limit > 100)) return false;
   if (x.cursor !== undefined && !validCursor(x.cursor)) return false;
+  if (x.include_resolved !== undefined && !validIncludeResolved(x.include_resolved)) return false;
   return true;
 }
 
@@ -65,8 +81,22 @@ Deno.serve(makePost<Body>('/v1/admin/disputes/list', valid, async ({ sb, body, r
 
   let q = sb
     .from('orders')
-    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at, updated_at')
-    .eq('status', 'disputed');
+    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at, updated_at');
+
+  // Phase V.8 -- widen the status filter when include_resolved is requested.
+  // Logic : disputed orders ALWAYS show (no cutoff). Resolved orders
+  // (refunded / released) only show if updated_at >= cutoff. The
+  // resolve_dispute RPC stamps updated_at at the end of both branches, so
+  // the cutoff is a faithful "resolved within the last N days" filter.
+  // PostgREST .or() compound : status.eq.disputed OR (status IN
+  // (refunded,released) AND updated_at >= cutoff).
+  if (body.include_resolved) {
+    const cutoff = new Date(Date.now() - body.include_resolved.since_days * 24 * 3600 * 1000).toISOString();
+    q = q.or(`status.eq.disputed,and(status.in.(refunded,released),updated_at.gte.${cutoff})`);
+  } else {
+    q = q.eq('status', 'disputed');
+  }
+
   if (body.cursor) {
     const { updated_at, id } = body.cursor;
     q = q.or(`updated_at.gt.${updated_at},and(updated_at.eq.${updated_at},id.gt.${id})`);
