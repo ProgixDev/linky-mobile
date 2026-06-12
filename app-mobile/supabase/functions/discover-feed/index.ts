@@ -19,7 +19,10 @@ import {
 interface Cursor { created_at: string; id: string }
 interface Body { limit?: number; cursor?: Cursor }
 
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+// Phase V.2 -- anchored. Pre-V2 the trailing $ was missing ; cursor
+// created_at flows into PostgREST .or() filter strings (contained today
+// by the ANDed user-id filter, harden anyway).
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
 
 function validCursor(c: unknown): c is Cursor {
   if (typeof c !== 'object' || c === null) return false;

@@ -17,7 +17,10 @@ interface Body {
   note?: string;
 }
 
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+// Phase V.2 -- anchored. requested_at flows into the INSERT path ; the
+// PG timestamp parser would already reject malformed input, but the
+// validator-side anchor is hygiene + consistency with the list fns.
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
 
 function isUuid(s: unknown): s is string {
   return typeof s === 'string' && /^[0-9a-f-]{36}$/i.test(s);

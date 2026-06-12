@@ -28,7 +28,8 @@ import { mapOrder, type OrderRow } from '@shared/catalog.ts';
 interface Cursor { updated_at: string; id: string }
 interface Body { limit?: number; cursor?: Cursor }
 
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+// Phase V.2 -- anchored. See discover-feed for the rationale.
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
 
 function validCursor(c: unknown): c is Cursor {
   if (typeof c !== 'object' || c === null) return false;

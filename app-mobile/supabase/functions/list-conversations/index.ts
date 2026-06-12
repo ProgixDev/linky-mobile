@@ -20,7 +20,8 @@ interface Body { limit?: number; cursor?: Cursor }
 
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 100;
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+// Phase V.2 -- anchored. See discover-feed for the rationale.
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 function validCursor(c: unknown): c is Cursor {
