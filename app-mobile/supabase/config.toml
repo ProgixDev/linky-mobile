@@ -493,6 +493,9 @@ verify_jwt = false
 [functions.list-kyc-sessions]
 verify_jwt = false
 
+[functions.list-my-visit-requests]
+verify_jwt = false
+
 [functions.list-listings-admin]
 verify_jwt = false
 

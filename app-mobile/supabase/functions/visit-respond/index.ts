@@ -129,9 +129,11 @@ Deno.serve(makePost<Body>('/v1/visits/respond', valid, async ({ sb, body, req })
         ? `Ta visite de ${propertyTitle} le ${slot} est confirmée.`
         : `Ta demande de visite de ${propertyTitle} le ${slot} n'a pas été retenue.`,
     iconHint: 'check',
-    // Buyer-side visit list lands in V1.1 (buyer/requests is an empty-state
-    // stub) — route to the property the visit concerns instead.
-    deeplink: `/property/${updatedRow.property_id}`,
+    // Phase X.1 — buyer-side list is live now (list-my-visit-requests +
+    // app/buyer/requests.tsx). Deeplink lands the buyer on the list with
+    // context (status grouping + property cards) instead of dropping them
+    // on the listing page where the visit status isn't visible.
+    deeplink: `/buyer/requests`,
     refType: 'visit_request',
     refId: updatedRow.id,
   });

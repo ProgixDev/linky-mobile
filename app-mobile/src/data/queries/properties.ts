@@ -320,6 +320,33 @@ export function useAgentVisits(status?: VisitStatus | string) {
   });
 }
 
+// Phase X.1 — buyer-side visit list. Mirrors useAgentVisits but joins the
+// property snapshot (cover photo, title, district, city, price) for the
+// list card. Sorted server-side requested_at desc.
+export interface BuyerVisitRequest extends VisitRequest {
+  property?: {
+    id: string;
+    title: string;
+    district: string | null;
+    city: string;
+    priceMinor: number;
+    perMonth: boolean;
+    coverUrl?: string;
+  };
+}
+export function useMyVisitRequests(status?: VisitStatus | string) {
+  return useQuery({
+    queryKey: ['my-visit-requests', status ?? null],
+    queryFn: async (): Promise<BuyerVisitRequest[]> => {
+      const r = await apiPost<{ visits: BuyerVisitRequest[] }>({
+        path: '/list-my-visit-requests',
+        body: status ? { status } : {},
+      });
+      return r.visits;
+    },
+  });
+}
+
 export function useRespondVisitRequest() {
   const qc = useQueryClient();
   return useMutation({
