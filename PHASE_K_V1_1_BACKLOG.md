@@ -98,6 +98,153 @@ This document is the client-shareable mirror of the internal memory `project_pha
 
 # New V1.1 items (Phase X, 2026-06-12)
 
+## X.6+W.4 — Android `assembleRelease` blocked on armeabi-v7a (mmkv loop + Windows MAX_PATH)
+
+**V1 today** — the dev APK is now produced via `./gradlew assembleDebug
+-PreactNativeArchitectures=arm64-v8a` (W.4a, 2026-06-12). Restricting to the
+single 64-bit ARM ABI sidesteps two armeabi-v7a-only failures :
+
+1. `:react-native-mmkv:buildCMakeDebug[armeabi-v7a]` loops on
+   `ninja: error: manifest 'build.ninja' still dirty after 100 tries`.
+   Cache wipe (`android/.gradle` + `android/app/.cxx` +
+   `node_modules/react-native-mmkv/android/.cxx`) + `gradlew --stop`
+   does NOT clear the loop ; reproduces on `4.4m → 15m` runs depending
+   on parallelism. arm64-v8a + x86 + x86_64 all configure + build
+   cleanly in the same run.
+2. `:app:buildCMakeDebug[armeabi-v7a]` fails autolinked codegen with
+   `ninja: error: Stat(safeareacontext_autolinked_build/CMakeFiles/
+   react_codegen_safeareacontext.dir/C_/Users/.../node_modules/react-
+   native-safe-area-context/.../RNCSafeAreaViewShadowNode.cpp.o):
+   Filename longer than 260 characters`. Windows MAX_PATH hit by the
+   nested autolinked .o path under the project root
+   `C:\Users\Omen\Documents\projects\linky\linky-mobile\app-mobile`.
+
+**Limit** — `./gradlew assembleRelease` defaults to all four ABIs to
+produce a Play-Store-ready bundle. Both failures above re-surface on the
+release build, so the client APK CANNOT ship until one of the unblock
+paths below lands.
+
+**V1.1 unblock options** (any one of these is enough — option 5 is
+RECOMMENDED for the V1 client APK ; the others stay relevant for local
+builds and CI hygiene) :
+
+- **5. EAS cloud build** (`eas build -p android --profile preview`,
+  RECOMMENDED). The project already has working EAS preview +
+  development profiles on the Expo dashboard (last successful run
+  9 days ago, ~21–27 min). Cloud build runs on Linux so neither the
+  mmkv ninja loop (Windows-specific) nor the Windows MAX_PATH
+  truncation reproduces ; produces a Play-Store-ready bundle with all
+  four ABIs ; returns an installable link + QR code. This is the
+  posture the W.4 release APK should ship under. EAS prebuilds
+  `android/` fresh on every run — see PUSH_SETUP.md "EAS variant"
+  for the FCM credential differences.
+- Enable Win32 long paths in the registry on the build host :
+  `HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled=1`
+  + a reboot. Fixes failure #2 directly. Failure #1 needs a separate
+  mmkv fix (see next bullet).
+- Move the repo to a shorter root (e.g. `C:\src\linky\`) — same effect
+  on #2, no registry edit needed.
+- Pin the NDK to `26.1.10909125` (last LTS that mmkv builds cleanly on
+  Windows per the open mmkv issue tracker) via `android.ndkVersion =
+  '26.1.10909125'` in `android/build.gradle`. Fixes #1.
+- Or : drop `armeabi-v7a` from the release build via `splits.abi
+  { reset(); include 'arm64-v8a', 'x86_64' }` (no real device left
+  in 2026 is armeabi-v7a-only — the 32-bit segment is a vanishing
+  long-tail). Cuts the APK size in half too. Easiest LOCAL move.
+
+**Effort** — S (any of the five options above). Option 5 (EAS) is the
+recommended V1 default ; the others stay relevant for offline /
+laptop-only builds.
+
+## X.11 — Supabase HS256 → asymmetric key migration (security, V1.1)
+
+**Background** — Phase X.11 (2026-06-12) wired Realtime by setting the
+project's legacy HS256 JWT secret as `LINKY_SB_JWT_SECRET` on
+mint-realtime-jwt. That secret transited dev chat transcripts during
+the wire-up. It is **also** the same secret that backs the project's
+**anon key and service_role key** (those keys are HS256 JWTs minted
+from this exact secret).
+
+**Why this can't be rotated as a one-line fix** — revoking the legacy
+HS256 secret invalidates the anon key embedded in every shipped client
+(mobile app, landing site, admin console) AND the service_role key
+used by every edge function. A naive rotation would brick the entire
+backend until every consumer is rebuilt + redeployed with new keys.
+The W.1 rotation playbook deliberately deferred this row for the same
+reason — see ROTATION_LOG.md `(g)`.
+
+**V1.1 migration path** :
+
+1. Adopt Supabase's modern **publishable / secret API keys** on the
+   project (Dashboard → Settings → API → migrate). These are bearer
+   tokens, not HS256 JWTs.
+2. Rewrite `signSupabaseRealtimeToken` (`supabase/functions/_shared/jwt.ts`)
+   to sign with the project's current **ES256 signing key**. Realtime
+   accepts both during the migration window per Supabase's published
+   compatibility table.
+3. Update mobile (`src/lib/api.ts` / `supabase` client init) + landing
+   + admin to send the new publishable key in `apikey` header instead
+   of the HS256 anon JWT.
+4. Update all edge fns to read the new secret API key from a renamed
+   secret (e.g. `LINKY_SB_SECRET_KEY`).
+5. Ship a release that carries the new keys.
+6. **Then** revoke the legacy HS256 secret. Verify : anon/service_role
+   JWTs minted before revocation are rejected ; realtime mint still
+   succeeds against the ES256 key.
+
+**Effort** — L (the migration touches every client + every edge fn).
+Tracked here because it's a real security debt — until step 6, the
+HS256 secret remains as it was when it leaked into dev transcripts.
+
+**Until then : never revoke the legacy key.** It backs realtime
+minting + the anon key + the service_role key ; revocation is
+load-bearing on the migration above. ROTATION_LOG.md row (g) records
+the deferral explicitly.
+
+## X.10 — Tab-bar simplification + Boutique fusion (LANDED 2026-06-12)
+
+**Final V1 posture** — the 5-tab ceiling is respected with Messagerie as
+a dedicated tab and Boutique fused into the Profil screen :
+
+| Tab | Always-visible |
+|---|---|
+| Accueil | ✅ |
+| Marché | ✅ |
+| Découvrir (FAB) | ✅ |
+| Messagerie | ✅ |
+| Profil | ✅ (always rightmost — enforced via TAB_ORDER in BottomTabBar) |
+
+The original X.10 design (Messagerie demoted to a header icon, Boutique
+shortcut on the Home header) was rolled back in the same session after
+a phone-side review. Reason : the header icon + home shortcut combo
+scattered pro entry points across two screens ; the hero card on Profil
+gives sellers / agents a single, one-tap landing for their workspace.
+
+**What changed under the hood** :
+
+- `app/(tabs)/_layout.tsx` declares all 5 visible tabs + Boutique stays
+  `href:null` (Stack route only, reachable from the Profil hero).
+- `src/components/nav/BottomTabBar.tsx` enforces order via the
+  `TAB_ORDER` constant — Profil locked rightmost, no expo-router
+  file-system-alpha drift.
+- `app/(tabs)/profil.tsx` renders `<BoutiqueHero>` for sellers
+  (`"Ma boutique"`) and agents (`"Mes biens"`) ; dual-role users see
+  both stacked ; pure buyers see neither.
+- Boutique + Mes biens chips dropped from the Profil quick-action
+  scroll to avoid duplicate entry points.
+- Home header lost its Boutique Store shortcut ; `showBoutiqueShortcut`
+  variable removed.
+
+**V1.1 direction (still worth tracking)** — if the client wants deeper
+simplification, the next fusion is collapsing Accueil + Marché into a
+single Commerce tab. Accueil today is "personalized landing + wallet
+hero + shop shortcuts" and Marché is "browse the catalog with filters."
+Both are commerce surfaces ; the line between them is a UX artifact,
+not a mental-model one. The fused tab would lead with the personalized
+landing for signed-in users and degrade gracefully to the marche
+filters when the user starts searching — a single scroll instead of a
+tab switch. Effort M ; not a V1 blocker.
+
 ## X.6 — Branded monochrome notification icon (Android)
 
 **V1 today** — `app.json` plugin config + `AndroidManifest` meta-data only set the notification TINT (`#0A5240`). The notification ICON itself is intentionally NOT set (Android falls back to the launcher silhouette, which looks acceptable but unbranded). A placeholder would look worse than the default.

@@ -104,6 +104,102 @@ Install it on a real device (not an emulator — push tokens don't generate on s
 
 ---
 
+## EAS variant — cloud builds (RECOMMENDED for the client APK)
+
+The project has working EAS profiles (preview + development) on the
+Expo dashboard. `eas build -p android --profile preview` runs on a
+Linux host so it sidesteps both Windows-only failures of the local
+gradle path (mmkv `build.ninja still dirty` loop + safe-area-context
+MAX_PATH truncation, tracked in `PHASE_K_V1_1_BACKLOG.md`). It also
+builds all four ABIs and produces a Play-Store-ready bundle — the
+right posture for the client APK.
+
+**Key difference**: EAS runs `npx expo prebuild` fresh on every build,
+which regenerates the `android/` tree from `app.json`. The native-layer
+X.6a edits documented above (gradle classpath, conditional apply,
+AndroidManifest meta-data, colors.xml) **do NOT apply to EAS builds** —
+they live in the gitignored `android/` tree that EAS throws away.
+
+What does work on EAS, by mechanism :
+
+| Native bit | How EAS gets it |
+|---|---|
+| Google Services plugin classpath + apply | `expo-build-properties` config plugin OR the EAS-Expo prebuild template auto-wires this when `android.googleServicesFile` is set in `app.json` |
+| `google-services.json` (per-build secret) | `android.googleServicesFile` field in `app.json` pointing at a path EAS can read. Two options below. |
+| Notification tint color | Already in the `["expo-notifications", { "color": "#0A5240" }]` tuple in `app.json.plugins`. Prebuild emits the manifest meta-data + colors.xml from that. |
+| `com.linky.app` package + Expo projectId | Already in `app.json` + `app.json.extra.eas.projectId`. |
+
+### Wiring `google-services.json` for EAS
+
+Pick ONE :
+
+**A. Commit the file** (simplest if the Firebase project is dedicated
+to Linky and the key has no broader scope) :
+
+1. Place `google-services.json` at `app-mobile/google-services.json`
+   (the repo root for the mobile app, NOT `android/app/`).
+2. In `app-mobile/.gitignore`, add an exception so this exact file
+   tracks despite the existing `android/` blanket :
+   ```gitignore
+   # Exception : explicitly track the Firebase config so EAS picks it up.
+   !google-services.json
+   ```
+3. In `app.json` under `expo.android`, add :
+   ```json
+   "googleServicesFile": "./google-services.json"
+   ```
+4. Commit the file + the `app.json` change.
+
+**B. EAS file secret** (recommended if the FCM project is shared with
+non-Linky surfaces or you want strict secret hygiene) :
+
+1. Don't commit the file. Instead :
+   ```powershell
+   cd app-mobile
+   npx eas secret:create --scope project --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json
+   ```
+2. In `app.json` under `expo.android`, set :
+   ```json
+   "googleServicesFile": "./google-services.json"
+   ```
+3. In `eas.json`'s `build.preview.android` (and `build.production`),
+   add :
+   ```json
+   "env": { "GOOGLE_SERVICES_JSON": "google-services.json" }
+   ```
+   EAS materializes the file secret at that path before prebuild reads
+   `app.json`.
+
+Both paths leave the local-gradle workflow intact (the file at
+`android/app/google-services.json` is what `gradlew assembleRelease`
+reads on this Windows machine — the EAS-side `app.json` field is what
+the cloud build reads after prebuild).
+
+### Build + install
+
+```powershell
+cd app-mobile
+npx eas build -p android --profile preview
+```
+
+EAS returns an installable link + QR code. The link is shareable with
+the client — no LAN exposure needed.
+
+### When to use which
+
+| Need | Path |
+|---|---|
+| Today's dev iteration on this Windows machine (Metro hot-reload) | Local `gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a` + `http.server` (W.4a, what's running now) |
+| Client APK delivery (W.4 release) | EAS `--profile preview` (cloud, all ABIs, shareable link) |
+| First-run device test of unmerged native modules | EAS `--profile development` (cloud dev-client) |
+
+The local-gradle instructions above stay valid for development builds
+that exercise Metro hot-reload and don't need shareability. **The
+release/client APK should ship via EAS until the V1.1 mmkv + MAX_PATH
+items in `PHASE_K_V1_1_BACKLOG.md` land.**
+
+---
+
 ## Verification
 
 ### A — Token registration
