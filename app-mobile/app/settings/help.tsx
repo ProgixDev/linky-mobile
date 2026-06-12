@@ -105,16 +105,12 @@ export default function HelpRoute() {
           </View>
         </View>
 
+        {/* Phase X.7 — "Chat avec l'équipe" with its fake "En ligne" badge
+            removed (no live-chat backend exists in V1 — the badge actively
+            lied). Email + Appeler stay because both already openURL into
+            the OS app. */}
         <SectionLabel label="Nous contacter" />
         <Card>
-          <ContactRow
-            Icon={MessageCircle}
-            label="Chat avec l'équipe"
-            sub="Réponse en moyenne sous 1 h, 7j/7"
-            onPress={() => haptic.light()}
-            badge="En ligne"
-            badgeAccent="success"
-          />
           <ContactRow
             Icon={Mail}
             label="Envoyer un email"
@@ -144,17 +140,28 @@ export default function HelpRoute() {
 
         <SectionLabel label="Aide approfondie" />
         <Card>
+          {/* Phase X.7 — wired to dedicated support mailboxes. */}
           <ContactRow
             Icon={ShieldCheck}
             label="Signaler un problème de sécurité"
             sub="Compte piraté, fraude, contenu inapproprié."
-            onPress={() => haptic.light()}
+            onPress={() =>
+              Linking.openURL(
+                'mailto:security@linky.gn?subject=' +
+                  encodeURIComponent('Signalement sécurité Linky'),
+              ).catch(() => {})
+            }
           />
           <ContactRow
             Icon={CircleAlert}
             label="Signaler un bug"
             sub="Décris-nous ce qui ne marche pas."
-            onPress={() => haptic.light()}
+            onPress={() =>
+              Linking.openURL(
+                'mailto:support@linky.gn?subject=' +
+                  encodeURIComponent('Bug Linky'),
+              ).catch(() => {})
+            }
           />
           <ContactRow
             Icon={Activity}
@@ -321,9 +328,10 @@ function ContactRow({
 
 function FaqRow({ question, answer, last }: { question: string; answer: string; last?: boolean }) {
   const { colors } = useTheme();
+  // Phase X.7 — both question and answer are always rendered, so the
+  // Pressable wrapper with haptic-only onPress added nothing. View.
   return (
-    <Pressable
-      onPress={() => haptic.light()}
+    <View
       style={{
         flexDirection: 'row',
         gap: 12,
@@ -372,6 +380,6 @@ function FaqRow({ question, answer, last }: { question: string; answer: string; 
           {answer}
         </Text>
       </View>
-    </Pressable>
+    </View>
   );
 }

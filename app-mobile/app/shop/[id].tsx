@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, Share, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeft,
   Share2,
-  MoreVertical,
   MapPin,
   Clock,
   ShieldCheck,
@@ -80,14 +79,20 @@ export default function ShopRoute() {
             <CircleButton onPress={() => router.back()} accessibilityLabel="Retour">
               <ArrowLeft size={18} color={colors.text} strokeWidth={2} />
             </CircleButton>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <CircleButton onPress={() => {}} accessibilityLabel="Partager">
-                <Share2 size={16} color={colors.text} strokeWidth={2} />
-              </CircleButton>
-              <CircleButton onPress={() => {}} accessibilityLabel="Plus">
-                <MoreVertical size={16} color={colors.text} strokeWidth={2} />
-              </CircleButton>
-            </View>
+            {/* Phase X.7 — Share wired to native Share API (message-only ;
+                a linky:// URL would dead-end for recipients without the
+                app) ; "Plus" kebab removed (no V1 per-shop menu). */}
+            <CircleButton
+              onPress={() => {
+                void Share.share({
+                  title: shop.name,
+                  message: `${shop.name} sur Linky`,
+                }).catch(() => {});
+              }}
+              accessibilityLabel="Partager"
+            >
+              <Share2 size={16} color={colors.text} strokeWidth={2} />
+            </CircleButton>
           </View>
         </View>
 

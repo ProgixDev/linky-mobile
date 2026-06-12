@@ -1,14 +1,14 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Phone, ShieldCheck } from 'lucide-react-native';
+import { Phone, ShieldCheck } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
-import { haptic } from '../../src/lib/haptics';
 
-// Phones backend lands in a later step. Until then the screen renders an empty
-// state with the existing "Ajouter un numéro" CTA so users can already discover
-// the feature without seeing stranger numbers pre-populated.
+// Phase X.7 — the phones backend is unbuilt in V1, so the "Ajouter un
+// numéro" button (haptic-only onPress) was a dead promise. Collapsed to
+// an honest informational screen ; users see the feature is coming and
+// stop tapping a button that does nothing.
 
 export default function PhonesRoute() {
   const { colors } = useTheme();
@@ -49,8 +49,28 @@ export default function PhonesRoute() {
             >
               <Phone size={20} color={colors.textMuted} strokeWidth={1.75} />
             </View>
+            <View
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 999,
+                backgroundColor: colors.accentSoft,
+                marginBottom: 2,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: '700',
+                  color: colors.accentText,
+                  letterSpacing: 0.5,
+                }}
+              >
+                BIENTÔT
+              </Text>
+            </View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-              Aucun numéro ajouté
+              Gestion des numéros
             </Text>
             <Text
               style={{
@@ -61,38 +81,9 @@ export default function PhonesRoute() {
                 lineHeight: 17,
               }}
             >
-              Ajoute un numéro pour recevoir les codes SMS et notifications de commande.
+              Tu pourras bientôt ajouter ou changer ton numéro de téléphone ici. En attendant, ton numéro de connexion reste actif.
             </Text>
           </View>
-        </View>
-
-        <View style={{ paddingHorizontal: 24, paddingTop: 18 }}>
-          <Pressable
-            onPress={() => haptic.light()}
-            style={{
-              height: 54,
-              borderRadius: 16,
-              backgroundColor: colors.text,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            <Plus size={16} color={colors.bg} strokeWidth={2.25} />
-            <Text
-              style={{
-                fontSize: 14.5,
-                fontWeight: '700',
-                color: colors.bg,
-                letterSpacing: 0,
-                lineHeight: 17,
-                includeFontPadding: false,
-              }}
-            >
-              Ajouter un numéro
-            </Text>
-          </Pressable>
         </View>
 
         <View style={{ paddingHorizontal: 24, paddingTop: 18 }}>

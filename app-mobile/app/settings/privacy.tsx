@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Eye,
@@ -72,12 +72,22 @@ export default function PrivacyRoute() {
           />
         </Card>
 
+        {/* Phase X.7 — both rows now open the OS mail client with a
+            pre-filled subject so the support team can process the
+            GDPR request. No V1 self-serve flow exists ; the
+            email-based workflow is the honest path. */}
         <SectionLabel label="Mes données" />
         <Card>
           <ActionRow
             Icon={Download}
             label="Télécharger mes données"
             sub="On t'envoie une copie de tes données par email."
+            onPress={() =>
+              Linking.openURL(
+                'mailto:support@linky.gn?subject=' +
+                  encodeURIComponent('Demande de téléchargement de mes données Linky'),
+              ).catch(() => {})
+            }
           />
           <ActionRow
             Icon={Trash2}
@@ -85,6 +95,12 @@ export default function PrivacyRoute() {
             sub="Action définitive après 30 jours d'attente."
             danger
             last
+            onPress={() =>
+              Linking.openURL(
+                'mailto:support@linky.gn?subject=' +
+                  encodeURIComponent('Demande de suppression de mon compte Linky'),
+              ).catch(() => {})
+            }
           />
         </Card>
       </ScrollView>
@@ -207,18 +223,22 @@ function ActionRow({
   sub,
   danger,
   last,
+  onPress,
 }: {
   Icon: LucideIcon;
   label: string;
   sub: string;
   danger?: boolean;
   last?: boolean;
+  onPress?: () => void;
 }) {
   const { colors } = useTheme();
   const fg = danger ? colors.danger : colors.text;
   return (
     <Pressable
-      onPress={() => haptic.light()}
+      // Phase X.7 — onPress was haptic-only ; now driven by the caller so
+      // the two GDPR rows can wire to support-email workflows.
+      onPress={() => { haptic.light(); onPress?.(); }}
       style={{
         flexDirection: 'row',
         gap: 14,

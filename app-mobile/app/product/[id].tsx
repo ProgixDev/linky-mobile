@@ -1,4 +1,4 @@
-import { Dimensions, Pressable, ScrollView, View } from 'react-native';
+import { Dimensions, Pressable, ScrollView, Share, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
@@ -135,7 +135,21 @@ export default function ProductDetailRoute() {
                 <ArrowLeft size={18} color="#0E1311" strokeWidth={2} />
               </CircleButton>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <CircleButton onPress={() => haptic.light()} ariaLabel="Partager">
+                {/* Phase X.7 — native Share. Pre-X7 onPress was haptic-only.
+                    Message-only : a `linky://` URL would dead-end for any
+                    recipient without the app installed, and Android ignores
+                    the url field anyway. Once a web/universal link exists
+                    (V1.1), add a URL pointing at the public listing page. */}
+                <CircleButton
+                  onPress={() => {
+                    haptic.light();
+                    void Share.share({
+                      title: product.title,
+                      message: `${product.title} — ${formatGNF(product.priceGnf)} sur Linky`,
+                    }).catch(() => {});
+                  }}
+                  ariaLabel="Partager"
+                >
                   <Share2 size={16} color="#0E1311" strokeWidth={2} />
                 </CircleButton>
                 <CircleButton

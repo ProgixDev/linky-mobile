@@ -4,7 +4,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import {
   Truck,
-  Receipt,
   ShieldCheck,
   PackageX,
 } from 'lucide-react-native';
@@ -283,35 +282,10 @@ export default function SellerOrderDetailRoute() {
               Marquer comme expédiée
             </Text>
           </Pressable>
-        ) : (
-          <Pressable
-            onPress={() => haptic.light()}
-            style={{
-              height: 56,
-              borderRadius: 16,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.borderStrong,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            <Receipt size={16} color={colors.text} strokeWidth={2} />
-            <Text
-              style={{
-                fontSize: 14.5,
-                fontWeight: '700',
-                color: colors.text,
-                lineHeight: 17,
-                includeFontPadding: false,
-              }}
-            >
-              Voir le reçu
-            </Text>
-          </Pressable>
-        )}
+        ) : null}
+        {/* Phase X.7 — "Voir le reçu" Pressable removed (haptic-only ;
+            no V1 receipt screen). Once an order is past needs-ship,
+            the sticky CTA bar simply disappears. */}
       </SafeAreaView>
     </SafeAreaView>
   );

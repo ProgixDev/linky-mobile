@@ -1,8 +1,7 @@
-import { Linking, Pressable, ScrollView, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import {
-  Star,
   Share2,
   AtSign,
   Globe,
@@ -91,19 +90,23 @@ export default function AboutRoute() {
           </Text>
         </View>
 
+        {/* Phase X.7 — "Noter sur l'App Store" removed (no V1 store
+            presence: Android APK side-loaded, iOS not built). Partager
+            Linky now uses the native Share API instead of a haptic-only
+            no-op. */}
         <SectionLabel label="Aide la communauté" />
         <Card>
-          <ActionRow
-            Icon={Star}
-            label="Noter sur l'App Store"
-            sub="Ton avis fait avancer Linky."
-            onPress={() => haptic.light()}
-          />
           <ActionRow
             Icon={Share2}
             label="Partager Linky"
             sub="Invite tes amis et proches."
-            onPress={() => haptic.light()}
+            onPress={() => {
+              haptic.light();
+              void Share.share({
+                title: 'Linky',
+                message: "Linky — le marché et l'immobilier en Guinée. À découvrir.",
+              }).catch(() => {});
+            }}
             last
           />
         </Card>
