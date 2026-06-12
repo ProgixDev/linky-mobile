@@ -58,29 +58,10 @@ export function useWallet() {
   });
 }
 
-interface RechargeArgs {
-  amountGnf: number;
-  source: 'orange-money' | 'mtn-money' | 'card';
-}
-
-const METHOD: Record<RechargeArgs['source'], string> = {
-  'orange-money': 'orange_money',
-  'mtn-money': 'mtn_money',
-  card: 'card',
-};
-
-// Records a PENDING top-up intent. No balance change yet — a payment rail confirms + credits later.
-export function useRechargeWallet() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ amountGnf, source }: RechargeArgs) =>
-      apiPost<{ topup: unknown }>({
-        path: '/wallet-topup-intent',
-        body: { currency: 'GNF', amount_minor: amountGnf, method: METHOD[source] },
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wallet'] }),
-  });
-}
+// Phase X.7 — useRechargeWallet removed. The recharger screen now reads
+// "Bientôt disponible" (no consumer left) ; the /wallet-topup-intent edge
+// function and its V1.1 demo seeding pattern (SQL insert + confirm_topup)
+// stay live, so V1.1 can re-introduce the hook when Mobile Money goes wet.
 
 export interface WithdrawalRequestItem {
   id: string;
