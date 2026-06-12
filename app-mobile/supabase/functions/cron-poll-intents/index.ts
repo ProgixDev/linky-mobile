@@ -14,10 +14,30 @@
 //   3. On thrown error (network, 5xx, timeout): bump with
 //      last_error_code='RAIL_TRANSIENT' so expire_stale_intents (S5) defers.
 //   4. expire_stale_intents() — sweep > 15 min old (only if last poll was clean).
+//
+// Phase V.6 — stale Stripe PI sweep (Q-1 backlog) :
+//   5. pick_stale_stripe_intents(50) — pending stripe intents older than 15
+//      minutes whose rail_intent_id is a real Stripe PI (not the
+//      pending-init- placeholder). For each :
+//        a) Cancel the PI on Stripe FIRST via paymentIntents.cancel().
+//           Order of operations IS the safety property — if we expired the
+//           local intent before cancelling on Stripe, the buyer's stale
+//           payment sheet could still charge the card and we'd have a
+//           money-taken / order-cancelled mismatch.
+//        b) If the cancel succeeds OR the PI was already 'canceled' (idempotent
+//           on Stripe) → process_intent_outcome(cancelled) flips the local
+//           intent + order atomically through the same RPC user-cancel uses.
+//        c) If the PI is already 'succeeded' on Stripe → the webhook IS about
+//           to flip the local intent to completed (or already did). Skip ;
+//           the cron will not see this row again on the next tick.
+//        d) On API error or unexpected status → leave the intent for the next
+//           tick. We don't bump RAIL_TRANSIENT because stripe intents aren't
+//           polled in step 1 anyway ; the next sweep will retry.
 
 import { serviceClient } from '@shared/db.ts';
 import { getPaymentStatus } from '@shared/lengopay.ts';
 import { notifyOrderPaid } from '@shared/order-paid-push.ts';
+import { stripeClient } from '@shared/stripe.ts';
 
 interface PendingIntent {
   id: string;
@@ -117,7 +137,74 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const { data: expiredCount } = await sb.rpc('expire_stale_intents');
 
+  // Phase V.6 — stale Stripe PI sweep. Cancel-first / local-flip-second.
+  // The picker (FOR UPDATE SKIP LOCKED) guarantees two overlapping cron ticks
+  // never act on the same row.
+  let stripeSwept = 0, stripeCancelled = 0, stripeAlreadyTerminal = 0, stripeSkipped = 0;
+  const { data: staleStripe, error: stripePickErr } = await sb.rpc('pick_stale_stripe_intents', { p_limit: 50 });
+  if (stripePickErr) {
+    console.error('[cron-poll-intents] stripe pick error:', stripePickErr);
+  } else {
+    for (const row of (staleStripe ?? []) as { id: string; rail_intent_id: string }[]) {
+      stripeSwept++;
+      try {
+        // (a) Cancel the PI on Stripe FIRST. paymentIntents.cancel is
+        // idempotent for already-canceled PIs (returns the canceled object).
+        let piStatus: string | null = null;
+        try {
+          const cancelled = await stripeClient().paymentIntents.cancel(row.rail_intent_id);
+          piStatus = cancelled.status;
+        } catch (cancelErr) {
+          // Look up actual status. If already canceled -> safe to flip local.
+          // If succeeded -> webhook owns it ; skip. Anything else -> log + skip.
+          try {
+            piStatus = (await stripeClient().paymentIntents.retrieve(row.rail_intent_id)).status;
+          } catch (retrieveErr) {
+            console.error('[cron-poll-intents] stripe retrieve after cancel error:', { id: row.id, pi: row.rail_intent_id, cancelErr, retrieveErr });
+            stripeSkipped++;
+            continue;
+          }
+        }
+
+        if (piStatus === 'succeeded') {
+          // (c) Webhook is about to flip / already flipped to completed. Don't
+          // touch the local intent — the cron picker won't see this row next
+          // tick because the webhook will have set status='completed'.
+          stripeAlreadyTerminal++;
+          continue;
+        }
+
+        if (piStatus !== 'canceled') {
+          console.error('[cron-poll-intents] stripe PI in unexpected post-cancel state', { id: row.id, pi: row.rail_intent_id, pi_status: piStatus });
+          stripeSkipped++;
+          continue;
+        }
+
+        // (b) PI is cancelled on Stripe -> safe to flip local atomically.
+        const { error: outcomeErr } = await sb.rpc('process_intent_outcome', {
+          p_intent_id: row.id,
+          p_terminal_status: 'cancelled',
+          p_rail_status: 'stripe_expired',
+          p_error_code: 'STRIPE_EXPIRED',
+          p_error_message: 'Server-side TTL sweep cancelled the Stripe PI before flipping the order.',
+        });
+        if (outcomeErr) {
+          // No catch needed : the PI is already canceled on Stripe, so the
+          // worst-case is the cron retries on the next tick. log + carry on.
+          console.error('[cron-poll-intents] process_intent_outcome (stripe sweep) error:', { id: row.id, outcomeErr });
+          stripeSkipped++;
+          continue;
+        }
+        stripeCancelled++;
+      } catch (e) {
+        console.error('[cron-poll-intents] stripe sweep iteration error:', { id: row.id, e });
+        stripeSkipped++;
+      }
+    }
+  }
+
   return new Response(JSON.stringify({
     polled, completed, failed, cancelled, stillPending, errors, expired: expiredCount ?? 0,
+    stripeSwept, stripeCancelled, stripeAlreadyTerminal, stripeSkipped,
   }), { status: 200, headers: { 'content-type': 'application/json' } });
 });
