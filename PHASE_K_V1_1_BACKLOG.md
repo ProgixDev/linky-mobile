@@ -96,6 +96,32 @@ This document is the client-shareable mirror of the internal memory `project_pha
 
 ---
 
+# New V1.1 items (Phase X, 2026-06-12)
+
+Items deliberately deferred during the Phase X audit-then-fix sweep. Each carries the honest UI in V1 (no dead promise on the user) and an explicit sizing so the work isn't lost.
+
+## X.4 — Stripe card-topup
+
+**V1 today** — `/app/wallet/recharger.tsx` is collapsed to an honest "Bientôt" surface for Mobile Money (Lengopay contract-blocked) and points the user to "pay by card at checkout" as the working today path. Wallet seeding for demos goes through `confirm_topup` via SQL (documented in `SMOKE_MATRIX_2026-06-12.md`).
+
+**Limit** — buyers can't fund a Linky balance from the app. Wallet-funded purchases require an admin/SQL seed.
+
+**V1.1 target** — full Stripe card-topup wired end-to-end. Five honest-effort pieces :
+
+| Piece | Effort | Notes |
+|---|---|---|
+| Migration: add `rail`, `rail_intent_id`, `rail_status`, `client_secret_hint`, `last_polled_at`, `last_error_code`, `last_error_message` to `topup_intents` | M | Mirrors the `payment_intents` table shape. |
+| New edge fn `wallet-topup-stripe-intent` (makePost, requireUser): create Stripe PI → INSERT topup row with the PI id → return `{ topup_id, payment: { client_secret, publishable_key } }` | M | Mirrors place-order's Stripe branch. |
+| Extend `stripe-webhook` to detect topup-rail PIs (lookup `payment_intents` first, fall back to `topup_intents`) and call `confirm_topup(topup_id)` on success ; mirror cancelled / failed branches | M | Two cache writes possible per webhook now (order or topup). |
+| Mobile flow: when source='card' in recharger.tsx, open Stripe sheet → route to `wallet/recharger/confirm/[topupId]` polling screen → redirect to `/wallet` on success ; mirror checkout/confirm/[orderId] pattern | M | Mirrors checkout/confirm/[orderId]. |
+| Stale-Stripe-topup-PI sweep (reuse the V.6 cancel-first-then-flip pattern) | S–M | New sibling RPC `pick_stale_stripe_topup_intents` ; same cron-poll-intents fn extends to handle topup intents too. |
+
+**Effort** — total L (one-week-ish if no surprises). The Lengopay rail comes online with a single config swap when the contract signs ; Stripe topup is more code-shaped work because the rail-intent linkage doesn't exist in `topup_intents` yet.
+
+**Honest-UI check** — V1 recharger reads as honest "Bientôt" + "pay by card at checkout" CTA ; no dead buttons, no false success toasts.
+
+---
+
 # Shipped post-U (Phase V, 2026-06-12) — server hardening
 
 V.1 closed the big idempotency race ; V.2-V.8 cleared the rest of the

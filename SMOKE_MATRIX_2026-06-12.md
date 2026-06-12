@@ -48,6 +48,41 @@ Continue with the Scenario 1 account.
 
 ---
 
+### Demo wallet seeding (when a wallet-funded purchase is needed)
+
+V1 has no working topup rail (Lengopay contract-blocked, no Stripe card-topup path yet — tracked V1.1). To demo a **wallet-funded** purchase, seed the buyer's wallet via the Management API SQL editor. The `confirm_topup` RPC is the canonical entry point — it inserts a `topup_intents` row at status='completed' and atomically posts a one-sided ledger credit so the wallet running balance is correct.
+
+```sql
+-- 1) Insert a pending topup row for the buyer (any positive amount_minor).
+insert into public.topup_intents (user_id, currency, amount_minor, status, method)
+values (
+  '<buyer_user_id>'::uuid,   -- the buyer's public.users.id
+  'GNF',
+  5000000,                   -- 5 000 000 GNF (covers most demo purchases)
+  'pending',
+  'demo-seed'
+)
+returning id;                 -- copy this id
+
+-- 2) Confirm it. confirm_topup atomically credits the wallet (auto-create
+-- if absent) and flips the topup row to status='completed'. Returns the
+-- wallet id + new running balance.
+select * from public.confirm_topup('<topup_id_from_step_1>'::uuid);
+
+-- 3) (Optional) Verify the credit landed.
+select balance_after, ref_type, ref_id, created_at
+  from public.ledger_entries
+  where wallet_id = (
+    select id from public.wallets
+     where user_id = '<buyer_user_id>'::uuid and currency = 'GNF'
+  )
+  order by created_at desc limit 3;
+```
+
+This is the only acceptable demo seed path. The Recharger screen in V1 is honestly informational (Phase X.4 collapse) — it does NOT credit the wallet ; the in-app "Recharger" buttons land on the same screen and point users to "pay by card at checkout" as the working today path.
+
+---
+
 ## Scenario 3 — Money path (card 4242 → escrow → QR confirm → withdrawal)
 
 Need a SECOND account (buyer) to purchase from the seller of Scenario 2. Use a fresh email; no role upgrade needed.
