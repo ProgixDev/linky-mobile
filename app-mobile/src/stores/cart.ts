@@ -24,7 +24,12 @@ export const useCart = create<CartState>((set) => ({
           ),
         };
       }
-      return { lines: [...s.lines, { productId, quantity }] };
+      // V1 escrow is one order per checkout: place-order takes a single
+      // productId and the payment intent is created for that one product.
+      // A multi-line cart let checkout display a summed total while only the
+      // first line was ever ordered/charged — so the cart holds a single line
+      // and adding a different product replaces it instead of silently piling up.
+      return { lines: [{ productId, quantity }] };
     }),
   remove: (productId) =>
     set((s) => ({ lines: s.lines.filter((l) => l.productId !== productId) })),

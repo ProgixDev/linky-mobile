@@ -13,7 +13,7 @@ import { Card } from '../../src/components/primitives/Card';
 import { SettingsRow } from '../../src/components/lists/SettingsRow';
 import { formatGNF } from '../../src/lib/format';
 import { useToast } from '../../src/components/feedback/Toast';
-import { useWithdrawWallet } from '../../src/data/queries';
+import { useWithdrawWallet, useWallet } from '../../src/data/queries';
 import { toToastMessage } from '../../src/lib/api';
 
 type Operator = 'Orange Money' | 'MTN Mobile Money';
@@ -44,6 +44,10 @@ export default function RetirerRoute() {
   const [operator, setOperator] = useState<Operator>('Orange Money');
   const { show } = useToast();
   const withdraw = useWithdrawWallet();
+  const walletQuery = useWallet();
+  const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!walletQuery.data;
+  const balance = walletQuery.data?.balanceGnf ?? 0;
+  const exceedsBalance = walletReady && amount > balance;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -88,10 +92,22 @@ export default function RetirerRoute() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 6, marginTop: 12 }}>
-          {[100_000, 200_000, 500_000, 850_000].map((v) => (
+          {[100_000, 200_000, 500_000].map((v) => (
             <Chip key={v} label={new Intl.NumberFormat('fr-FR').format(v)} active={v === amount} onPress={() => setAmount(v)} block />
           ))}
         </View>
+
+        <Text
+          variant="caption"
+          tone="muted"
+          style={{ marginTop: 14, letterSpacing: 0, color: exceedsBalance ? colors.danger : undefined }}
+        >
+          {walletReady
+            ? exceedsBalance
+              ? `Solde insuffisant — disponible : ${formatGNF(balance)}`
+              : `Solde disponible : ${formatGNF(balance)}`
+            : 'Chargement du solde…'}
+        </Text>
       </View>
 
       <StickyBottom>
@@ -99,6 +115,7 @@ export default function RetirerRoute() {
           size="lg"
           block
           loading={withdraw.isPending}
+          disabled={withdraw.isPending || !walletReady || amount <= 0 || exceedsBalance}
           label={`Retirer ${formatGNF(amount)}`}
           onPress={() =>
             withdraw.mutate(

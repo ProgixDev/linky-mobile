@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Dimensions, Pressable, View } from 'react-native';
+import { Dimensions, Pressable, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import {
   Heart,
-  MessageCircle,
-  Bookmark,
   Share2,
   Info,
   Sparkles as SparklesIcon,
@@ -21,7 +18,6 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
-import { CommentsSheet } from './CommentsSheet';
 import { formatGNF, formatEUR, formatDistance } from '../../lib/format';
 import { gnfToEur } from '../../lib/currency';
 import { haptic } from '../../lib/haptics';
@@ -71,7 +67,6 @@ export function DiscoverCard({
 
   // image carousel auto-rotate when active
   const [photoIdx, setPhotoIdx] = useState(0);
-  const commentsRef = useRef<BottomSheetModal>(null);
   useEffect(() => {
     if (!isActive || photos.length <= 1 || videoUrl) return;
     const t = setInterval(() => {
@@ -256,14 +251,12 @@ export function DiscoverCard({
             haptic.light();
             toggleFav(id);
           }}
-          onMessage={() => {
+          onShare={() => {
             haptic.light();
-            commentsRef.current?.present();
+            void Share.share({ message: 'Découvre cette annonce sur Linky' }).catch(() => {});
           }}
-          onSave={() => haptic.light()}
-          onShare={() => haptic.light()}
           onDetails={() => router.push(isProduct ? `/product/${id}` : `/property/${id}`)}
-          likeCount={isProduct ? data.item.favCount.toString() : '3.4k'}
+          likeCount={isProduct ? data.item.favCount.toString() : ''}
           bottomAnchor={bottomCardOffset + 60} // sits just above the bottom card
         />
 
@@ -422,8 +415,6 @@ export function DiscoverCard({
           </Pressable>
         </View>
       </Pressable>
-
-      <CommentsSheet ref={commentsRef} itemId={id} />
     </View>
   );
 }
@@ -463,8 +454,6 @@ function FeedPill({ label, active }: { label: string; active?: boolean }) {
 function DiscoverRail({
   isFav,
   onLike,
-  onMessage,
-  onSave,
   onShare,
   onDetails,
   likeCount,
@@ -472,8 +461,6 @@ function DiscoverRail({
 }: {
   isFav: boolean;
   onLike: () => void;
-  onMessage: () => void;
-  onSave: () => void;
   onShare: () => void;
   onDetails: () => void;
   likeCount: string;
@@ -494,20 +481,6 @@ function DiscoverRail({
       label: likeCount,
       onPress: onLike,
       bg: isFav ? colors.danger : 'rgba(0,0,0,0.4)',
-    },
-    {
-      key: 'msg',
-      icon: <MessageCircle size={20} color="#FFFFFF" strokeWidth={2} />,
-      label: 'Message',
-      onPress: onMessage,
-      bg: 'rgba(0,0,0,0.4)',
-    },
-    {
-      key: 'save',
-      icon: <Bookmark size={20} color="#FFFFFF" strokeWidth={2} />,
-      label: '248',
-      onPress: onSave,
-      bg: 'rgba(0,0,0,0.4)',
     },
     {
       key: 'share',

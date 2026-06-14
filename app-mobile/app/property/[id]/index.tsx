@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Share, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,8 @@ import { MicroLabel } from '../../../src/components/lists/SectionHeader';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
+import { useFavorites } from '../../../src/stores/favorites';
+import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
 import { PropertyLocationMap } from '../../../src/components/property/PropertyLocationMap';
 import { formatDistance } from '../../../src/lib/format';
 import { toToastMessage } from '../../../src/lib/api';
@@ -23,10 +25,12 @@ import { haptic } from '../../../src/lib/haptics';
 export default function PropertyDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
-  const { data: prop, isLoading } = useProperty(id);
+  const { data: prop, isLoading, isError, refetch } = useProperty(id);
   const trackView = useTrackView();
   const findOrCreate = useFindOrCreateConversation();
   const { show } = useToast();
+  const isFav = useFavorites((s) => (id ? s.propertyIds.has(id) : false));
+  const toggleFav = useFavorites((s) => s.toggleProperty);
 
   // Fire-and-forget view bump on mount / when id changes. Failures don't block render.
   useEffect(() => {
@@ -52,8 +56,8 @@ export default function PropertyDetailRoute() {
     }
   }
 
-  if (isLoading || !prop) {
-    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (isLoading || isError || !prop) {
+    return <DetailStateScreen loading={isLoading} title="Bien" onRetry={() => void refetch()} />;
   }
 
   const isTerrain = prop.type === 'terrain';
@@ -92,11 +96,30 @@ export default function PropertyDetailRoute() {
                 <I.arrowLeft size={18} color="#0E1311" />
               </IconButton>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <IconButton variant="secondary" size={36} style={{ backgroundColor: 'rgba(255,255,255,0.95)', borderColor: 'transparent' }}>
+                <IconButton
+                  variant="secondary"
+                  size={36}
+                  onPress={() => {
+                    haptic.light();
+                    void Share.share({
+                      title: prop.title,
+                      message: `${prop.title} — sur Linky`,
+                    }).catch(() => {});
+                  }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.95)', borderColor: 'transparent' }}
+                >
                   <I.share size={16} color="#0E1311" />
                 </IconButton>
-                <IconButton variant="secondary" size={36} style={{ backgroundColor: 'rgba(255,255,255,0.95)', borderColor: 'transparent' }}>
-                  <I.heart size={16} color="#0E1311" />
+                <IconButton
+                  variant="secondary"
+                  size={36}
+                  onPress={() => {
+                    haptic.light();
+                    toggleFav(prop.id);
+                  }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.95)', borderColor: 'transparent' }}
+                >
+                  <I.heart size={16} color={isFav ? colors.danger : '#0E1311'} fill={isFav ? colors.danger : 'transparent'} />
                 </IconButton>
               </View>
             </View>

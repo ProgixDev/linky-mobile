@@ -20,6 +20,7 @@ import { useShop, useProducts, useFindOrCreateConversation } from '../../src/dat
 import { haptic } from '../../src/lib/haptics';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
+import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 
 type Tab = 'articles' | 'reviews' | 'about';
 
@@ -28,7 +29,7 @@ const HERO_HEIGHT = 220;
 export default function ShopRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
-  const { data: shop } = useShop(id);
+  const { data: shop, isLoading, isError, refetch } = useShop(id);
   const { data: products } = useProducts({ shopId: id });
   const [tab, setTab] = useState<Tab>('articles');
   const [following, setFollowing] = useState(false);
@@ -48,7 +49,9 @@ export default function ShopRoute() {
     }
   };
 
-  if (!shop) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (isLoading || isError || !shop) {
+    return <DetailStateScreen loading={isLoading} title="Boutique" onRetry={() => void refetch()} />;
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -197,7 +200,11 @@ export default function ShopRoute() {
               }}
             >
               <StatColumn
-                value={`${(shop.followerCount / 1000).toFixed(1)}k`}
+                value={
+                  shop.followerCount >= 1000
+                    ? `${(shop.followerCount / 1000).toFixed(1)}k`
+                    : String(shop.followerCount)
+                }
                 label="Abonnés"
               />
               <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 4 }} />

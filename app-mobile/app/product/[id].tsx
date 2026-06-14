@@ -32,13 +32,14 @@ import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { formatGNF, formatEUR } from '../../src/lib/format';
 import { gnfToEur } from '../../src/lib/currency';
+import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 
 const { width: SW } = Dimensions.get('window');
 
 export default function ProductDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
-  const { data: product } = useProduct(id);
+  const { data: product, isLoading, isError, refetch } = useProduct(id);
   const { data: related } = useProducts({ category: product?.category });
   const isFav = useFavorites((s) => (id ? s.productIds.has(id) : false));
   const toggleFav = useFavorites((s) => s.toggleProduct);
@@ -74,8 +75,8 @@ export default function ProductDetailRoute() {
     }
   }
 
-  if (!product) {
-    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (isLoading || isError || !product) {
+    return <DetailStateScreen loading={isLoading} title="Article" onRetry={() => void refetch()} />;
   }
 
   return (

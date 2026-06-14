@@ -108,9 +108,6 @@ export default function CartRoute() {
                 <Text style={{ fontSize: 13, fontWeight: '500', lineHeight: 17 }} numberOfLines={2}>
                   {product.title}
                 </Text>
-                <Text variant="micro" tone="muted" style={{ marginTop: 3, letterSpacing: 0, textTransform: 'none' }}>
-                  {product.shopId.replace('s_', '').replace(/_/g, ' ')}
-                </Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                   <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
                     {formatGNF(product.priceGnf)}

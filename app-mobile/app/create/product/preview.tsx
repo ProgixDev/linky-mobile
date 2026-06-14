@@ -9,9 +9,7 @@ import { Button } from '../../../src/components/primitives/Button';
 import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
 import { TopBar } from '../../../src/components/nav/TopBar';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
-import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { I } from '../../../src/icons/Icon';
-import { photos } from '../../../src/data/photos';
 import { useCreateListing } from '../../../src/stores/createListing';
 import { formatGNF } from '../../../src/lib/format';
 import { useToast } from '../../../src/components/feedback/Toast';
@@ -38,11 +36,14 @@ export default function CreatePreviewRoute() {
         </Text>
 
         <View style={{ aspectRatio: 9 / 14, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.discoverBg }}>
-          <Image
-            source={state.photos[0] ? { uri: state.photos[0] } : photos.iphone}
-            style={{ flex: 1 }}
-            contentFit="cover"
-          />
+          {state.photos[0] ? (
+            <Image source={{ uri: state.photos[0] }} style={{ flex: 1 }} contentFit="cover" />
+          ) : (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <I.image size={30} color="rgba(255,255,255,0.7)" />
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Aucune photo ajoutée</Text>
+            </View>
+          )}
           <LinearGradient
             colors={['rgba(0,0,0,0.4)', 'transparent', 'transparent', 'rgba(0,0,0,0.85)']}
             locations={[0, 0.3, 0.5, 1]}
@@ -58,13 +59,6 @@ export default function CreatePreviewRoute() {
           </View>
         </View>
 
-        <View style={{ marginTop: 14 }}>
-          <TrustStrip tone="accent">
-            <Text style={{ color: colors.accentText, fontSize: 11.5 }}>
-              <Text style={{ fontWeight: '700' }}>Booste ton annonce</Text> pour apparaître en haut du feed. 5 000 GNF / jour.
-            </Text>
-          </TrustStrip>
-        </View>
       </View>
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
         <Button variant="secondary" label="Modifier" onPress={() => router.back()} disabled={createProduct.isPending} />
@@ -84,7 +78,6 @@ export default function CreatePreviewRoute() {
                 city: state.city,
                 // Geography simplified per 2026-05-29 client meeting: cities only, no districts.
               };
-              console.log('[preview] product-create body:', JSON.stringify(body));
               await createProduct.mutateAsync(body);
               show('Annonce publiée 🎉', 'success');
               reset();

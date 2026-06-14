@@ -14,6 +14,7 @@ import { formatGNF } from '../../src/lib/format';
 import { useOrder } from '../../src/data/queries';
 import { useAuth } from '../../src/stores/auth';
 import { OrderResolutionBanner } from '../../src/components/orders/OrderResolutionBanner';
+import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 
 // Each stage carries both its visible label (`t`) and the identity of the
 // `orders.events` row that marks it as reached (`eventKind` or `eventLabel`).
@@ -38,10 +39,12 @@ const STAGES: Array<{
 export default function OrderRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
-  const { data: order } = useOrder(id);
+  const { data: order, isLoading, isError, refetch } = useOrder(id);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
 
-  if (!order) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (isLoading || isError || !order) {
+    return <DetailStateScreen loading={isLoading} title="Commande" onRetry={() => void refetch()} />;
+  }
 
   const currentStageIdx = STAGES.findIndex((s) => s.key === order.status);
   const idx = currentStageIdx === -1 ? 2 : currentStageIdx;

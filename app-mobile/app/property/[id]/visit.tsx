@@ -17,6 +17,7 @@ import { useProperty, useRequestVisit } from '../../../src/data/queries/properti
 import { formatGNF } from '../../../src/lib/format';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
+import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
 
 const DAYS = [
   { id: 'today',    label: 'Aujourd\'hui',  offset: 0 },
@@ -40,7 +41,7 @@ function formatDayLabel(d: Date): string {
 export default function VisitRequestRoute() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: property } = useProperty(id);
+  const { data: property, isLoading, isError, refetch } = useProperty(id);
   const requestVisit = useRequestVisit();
   const toast = useToast();
 
@@ -50,8 +51,8 @@ export default function VisitRequestRoute() {
 
   const valid = !!slot && !!property;
 
-  if (!property) {
-    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (isLoading || isError || !property) {
+    return <DetailStateScreen loading={isLoading} title="Visite" onRetry={() => void refetch()} />;
   }
 
   return (
