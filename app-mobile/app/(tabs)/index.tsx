@@ -14,8 +14,6 @@ import {
   Store,
   Wallet,
   ChevronRight,
-  Search,
-  Camera,
   Shirt,
   Smartphone,
   Sofa,
@@ -270,48 +268,6 @@ function BuyerHome() {
           >
             <ShoppingBag size={18} color={colors.text} strokeWidth={1.75} />
           </CircleAction>
-        </View>
-
-        {/* Search */}
-        <View style={{ paddingHorizontal: 20 }}>
-          <Pressable
-            onPress={() => router.push('/(tabs)/marche')}
-            style={{
-              height: 52,
-              borderRadius: 999,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 16,
-              gap: 12,
-            }}
-          >
-            <Search size={18} color={colors.textMuted} strokeWidth={2} />
-            <Text
-              style={{
-                flex: 1,
-                fontSize: 14,
-                color: colors.textFaint,
-                letterSpacing: 0,
-              }}
-            >
-              Cherche un produit, un logement…
-            </Text>
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 999,
-                backgroundColor: colors.primarySoft,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Camera size={16} color={colors.primary} strokeWidth={1.75} />
-            </View>
-          </Pressable>
         </View>
 
         {/* Pro summary — only when user has buyer + a pro role */}
