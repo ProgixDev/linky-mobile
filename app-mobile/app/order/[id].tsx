@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
 import QRCode from 'react-native-qrcode-svg';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Card } from '../../src/components/primitives/Card';
@@ -16,34 +18,37 @@ import { useAuth } from '../../src/stores/auth';
 import { OrderResolutionBanner } from '../../src/components/orders/OrderResolutionBanner';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 
-// Each stage carries both its visible label (`t`) and the identity of the
-// `orders.events` row that marks it as reached (`eventKind` or `eventLabel`).
-// Pre-X9 we tried to match events by visible label, but the X.6b shipped event
-// uses label 'Commande expédiée' (matching the buyer push) while this UI's
-// 'preparing' row reads 'En cours de remise' — the labels never lined up so
-// the shipped timestamp + tracking number never rendered under the stage. Now
-// the stage matches events by identity (kind or label) instead.
-const STAGES: Array<{
+// Phase I.9 — stage display label resolved via i18n at render. The
+// eventLabel matchers (used to find the row in order.events) stay FR-only
+// because they're stable backend strings the server writes ; matching by
+// translated UI label would break the moment a non-FR client opens a
+// previously-paid order.
+const STAGE_DEFS: Array<{
   key: string;
-  t: string;
+  labelKey: string;
   // either of these matches an event row :
   eventKind?: string;
   eventLabel?: string;
 }> = [
-  { key: 'placed', t: 'Commande passée', eventLabel: 'Commande passée' },
-  { key: 'paid', t: 'Paiement reçu en séquestre', eventLabel: 'Paiement reçu en séquestre' },
-  { key: 'preparing', t: 'En cours de remise', eventKind: 'shipped' },
-  { key: 'released', t: 'Réception confirmée', eventLabel: 'Réception confirmée' },
+  { key: 'placed',    labelKey: 'order.stagePlaced',    eventLabel: 'Commande passée' },
+  { key: 'paid',      labelKey: 'order.stagePaid',      eventLabel: 'Paiement reçu en séquestre' },
+  { key: 'preparing', labelKey: 'order.stagePreparing', eventKind: 'shipped' },
+  { key: 'released',  labelKey: 'order.stageReleased',  eventLabel: 'Réception confirmée' },
 ];
 
 export default function OrderRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { data: order, isLoading, isError, refetch } = useOrder(id);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
+  const STAGES = useMemo(
+    () => STAGE_DEFS.map((s) => ({ ...s, label: t(s.labelKey) })),
+    [t],
+  );
 
   if (isLoading || isError || !order) {
-    return <DetailStateScreen loading={isLoading} title="Commande" onRetry={() => void refetch()} />;
+    return <DetailStateScreen loading={isLoading} title={t('order.fallbackTitle')} onRetry={() => void refetch()} />;
   }
 
   const currentStageIdx = STAGES.findIndex((s) => s.key === order.status);
@@ -70,7 +75,7 @@ export default function OrderRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Suivi de commande" back subtitle={`#${order.reference}`} />
+      <TopBar title={t('order.trackingTitle')} back subtitle={`#${order.reference}`} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
         {(isBuyer || isSeller) && (
           <OrderResolutionBanner
@@ -90,7 +95,7 @@ export default function OrderRoute() {
                 {order.productSnapshot.title}
               </Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                Qté {order.quantity}
+                {t('order.qty', { count: order.quantity })}
               </Text>
             </View>
             <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
@@ -100,7 +105,7 @@ export default function OrderRoute() {
         </Card>
 
         <View style={{ marginTop: 18 }}>
-          <MicroLabel label="Statut du séquestre" />
+          <MicroLabel label={t('order.stageStatus')} />
           <Card padding={16}>
             {STAGES.map((s, i, arr) => {
               const done = i < idx;
@@ -138,13 +143,13 @@ export default function OrderRoute() {
                   </View>
                   <View style={{ flex: 1, paddingBottom: i < arr.length - 1 ? 22 : 0 }}>
                     <Text style={{ fontSize: 13, fontWeight: '600', color: done || current || action ? colors.text : colors.textMuted }}>
-                      {s.t}
+                      {s.label}
                     </Text>
                     <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
                       {stageEvent
                         ? new Date(stageEvent.at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
                         : action
-                          ? 'Action requise dès remise'
+                          ? t('order.stageActionRequired')
                           : ''}
                     </Text>
                     {stageEvent?.tracking && (
@@ -153,8 +158,7 @@ export default function OrderRoute() {
                         tone="muted"
                         style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}
                       >
-                        Suivi · {stageEvent.tracking}
-                        {stageEvent.carrier ? ` · ${stageEvent.carrier}` : ''}
+                        {t('order.stageTracking', { tracking: stageEvent.tracking, carrier: stageEvent.carrier ? t('order.stageCarrierSuffix', { carrier: stageEvent.carrier }) : '' })}
                       </Text>
                     )}
                   </View>
@@ -167,16 +171,16 @@ export default function OrderRoute() {
         {isBuyer && inHandoffWindow && (
           <>
             <View style={{ marginTop: 18 }}>
-              <MicroLabel label="Confirmation" />
+              <MicroLabel label={t('order.qrLabel')} />
               <Card padding={20}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <I.qr size={16} color={colors.text} />
                   <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-                    Scanne le QR du colis
+                    {t('order.qrInstructionTitle')}
                   </Text>
                 </View>
                 <Text style={{ fontSize: 12.5, color: colors.textMuted, lineHeight: 18 }}>
-                  Pour libérer le paiement vers le vendeur, scanne le QR code collé sur ton colis avec l&apos;app. Cela garantit que tu as bien reçu ta commande — le code prouve la remise physique.
+                  {t('order.qrInstruction')}
                 </Text>
               </Card>
             </View>
@@ -185,7 +189,7 @@ export default function OrderRoute() {
               <Button
                 variant="primary"
                 block
-                label="Scanner le QR"
+                label={t('order.scanQrCta')}
                 leading={<I.qr size={16} color="#FFFFFF" />}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /scan typedRoute regenerates next start
                 onPress={() => router.push('/scan' as any)}
@@ -195,7 +199,7 @@ export default function OrderRoute() {
                 size="sm"
                 block
                 style={{ marginTop: 8 }}
-                label="Signaler un problème"
+                label={t('order.reportProblem')}
                 leading={<I.warn size={14} color={colors.danger} />}
                 onPress={() => router.push(`/dispute/${order.id}`)}
               />
@@ -205,12 +209,12 @@ export default function OrderRoute() {
 
         {isSeller && inHandoffWindow && qrPayload && (
           <View style={{ marginTop: 18 }}>
-            <MicroLabel label="Code de livraison" />
+            <MicroLabel label={t('order.deliveryCodeLabel')} />
             <Card padding={20}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <I.qr size={16} color={colors.text} />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-                  Code de réception
+                  {t('order.receiveCodeTitle')}
                 </Text>
               </View>
               <View
@@ -241,8 +245,7 @@ export default function OrderRoute() {
                   textAlign: 'center',
                 }}
               >
-                Imprime ce code et colle-le sur le colis. L&apos;acheteur le scanne à la réception
-                pour confirmer et libérer ton paiement.
+                {t('order.receiveCodeBody')}
               </Text>
             </Card>
           </View>

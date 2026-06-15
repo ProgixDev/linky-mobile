@@ -97,6 +97,7 @@ const EN_FR_IDENTICAL_ALLOWLIST = new Set([
   // Pure interpolation template, no translatable words.
   'cart.subtitle',
   'pro.demandeWhenOther',
+  'order.stageCarrierSuffix',
   'checkout.confirmTerminalErrorPrefix',
   // Brand / section header ("Mobile Money" stays as-is across FR/EN).
   'checkout.sectionMobileMoney',

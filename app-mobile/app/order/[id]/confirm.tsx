@@ -2,6 +2,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Card } from '../../../src/components/primitives/Card';
@@ -33,6 +34,7 @@ export default function OrderConfirmRoute() {
   const rawToken = params.token;
   const token = typeof rawToken === 'string' && SCAN_TOKEN_RE.test(rawToken) ? rawToken : undefined;
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { data: order, isLoading } = useOrder(id);
   const confirm = useConfirmReception();
   const { show } = useToast();
@@ -47,19 +49,19 @@ export default function OrderConfirmRoute() {
   if (!isBuyer) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Confirmation" back />
+        <TopBar title={t('order.confirmHeader')} back />
         <View style={{ flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center', gap: 16 }}>
           <I.warn size={36} color={colors.danger} />
           <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
-            Action non autorisée
+            {t('order.confirmNotAuthorized')}
           </Text>
           <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 }}>
-            Seul l&apos;acheteur de cette commande peut confirmer la réception.
+            {t('order.confirmOnlyBuyer')}
           </Text>
           <Button
             variant="primary"
             block
-            label="Retour à l'accueil"
+            label={t('order.confirmBackHome')}
             onPress={() => router.replace('/(tabs)')}
             style={{ marginTop: 8 }}
           />
@@ -76,19 +78,19 @@ export default function OrderConfirmRoute() {
   if (!token) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Confirmer la réception" back subtitle={`#${order.reference}`} />
+        <TopBar title={t('order.confirmTitle')} back subtitle={`#${order.reference}`} />
         <View style={{ flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center', gap: 18 }}>
           <I.qr size={44} color={colors.primary} />
           <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
-            Scanne le QR du colis
+            {t('order.confirmScanTitle')}
           </Text>
           <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 }}>
-            Pour confirmer cette commande, scanne le QR code collé sur le colis avec l&apos;app. Cela garantit que tu as bien reçu ta commande.
+            {t('order.confirmScanBody')}
           </Text>
           <Button
             variant="primary"
             block
-            label="Scanner le QR"
+            label={t('order.scanQrCta')}
             leading={<I.qr size={16} color="#FFFFFF" />}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /scan typedRoute regenerates next start
             onPress={() => router.replace('/scan' as any)}
@@ -98,7 +100,7 @@ export default function OrderConfirmRoute() {
             variant="ghost"
             size="sm"
             block
-            label="Signaler un problème"
+            label={t('order.reportProblem')}
             leading={<I.warn size={14} color={colors.danger} />}
             onPress={() => router.push(`/dispute/${order.id}`)}
           />
@@ -111,7 +113,7 @@ export default function OrderConfirmRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Confirmer la réception" back subtitle={`#${order.reference}`} />
+      <TopBar title={t('order.confirmTitle')} back subtitle={`#${order.reference}`} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
         <Card padding={12}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
@@ -125,7 +127,7 @@ export default function OrderConfirmRoute() {
                 {order.productSnapshot.title}
               </Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                Qté {order.quantity}
+                {t('order.qty', { count: order.quantity })}
               </Text>
             </View>
             <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
@@ -139,8 +141,7 @@ export default function OrderConfirmRoute() {
             <View style={{ marginTop: 16 }}>
               <TrustStrip tone="accent">
                 <Text style={{ color: colors.accentText, fontSize: 11.5 }}>
-                  Maintiens 5 secondes pour confirmer. Le paiement sera libéré vers le vendeur.{' '}
-                  <Text style={{ fontWeight: '700' }}>Cette action est irréversible.</Text>
+                  {t('order.confirmHoldHint')}
                 </Text>
               </TrustStrip>
             </View>
@@ -152,13 +153,13 @@ export default function OrderConfirmRoute() {
                     { orderId: order.id, scanToken: token },
                     {
                       onSuccess: () => {
-                        show('Paiement libéré au vendeur', 'success');
+                        show(t('order.confirmSuccess'), 'success');
                         router.replace(`/order/${order.id}`);
                       },
                       onError: (e) => {
                         const msg = (e as { message_fr?: string; message?: string }).message_fr
                           ?? (e as { message?: string }).message
-                          ?? 'Erreur de confirmation';
+                          ?? t('order.confirmError');
                         show(msg, 'danger');
                       },
                     },
@@ -170,7 +171,7 @@ export default function OrderConfirmRoute() {
                 size="sm"
                 block
                 style={{ marginTop: 8 }}
-                label="Signaler un problème"
+                label={t('order.reportProblem')}
                 leading={<I.warn size={14} color={colors.danger} />}
                 onPress={() => router.push(`/dispute/${order.id}`)}
               />
@@ -180,16 +181,15 @@ export default function OrderConfirmRoute() {
           <View style={{ marginTop: 18 }}>
             <Card padding={20}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 6 }}>
-                Confirmation indisponible
+                {t('order.confirmUnavailableTitle')}
               </Text>
               <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 19 }}>
-                Cette commande n&apos;est pas en attente de confirmation. Ouvre le suivi pour voir
-                son statut actuel.
+                {t('order.confirmUnavailableBody')}
               </Text>
               <Button
                 variant="secondary"
                 block
-                label="Voir le suivi"
+                label={t('order.confirmViewTracking')}
                 onPress={() => router.replace(`/order/${order.id}`)}
                 style={{ marginTop: 14 }}
               />
