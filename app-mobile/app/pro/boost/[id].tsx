@@ -1,11 +1,13 @@
+import { useTranslation } from 'react-i18next';
 import { ComingSoonScreen } from '../../../src/components/feedback/ComingSoon';
 
 export default function BoostDetailRoute() {
+  const { t } = useTranslation();
   return (
     <ComingSoonScreen
       icon="bolt"
-      title="Booster ses annonces"
-      blurb="Très bientôt — paiement à la performance pour mettre tes annonces en avant."
+      title={t('pro.boostScreenTitle')}
+      blurb={t('pro.boostScreenBlurbDetail')}
     />
   );
 }

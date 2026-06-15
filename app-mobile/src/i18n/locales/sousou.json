@@ -729,7 +729,15 @@
     "statsEmptyTitle": "Pas encore d'annonce",
     "statsEmptyBody": "Publie un produit depuis ta boutique pour voir tes vues s'afficher ici.",
     "statsKindProduct": "Produit",
-    "statsKindProperty": "Bien"
+    "statsKindProperty": "Bien",
+    "boostScreenTitle": "Booster ses annonces",
+    "boostScreenBlurb": "Très bientôt tu pourras mettre tes annonces en avant — paiement à la performance, plus de vues, plus de ventes. On te préviendra dès que c'est prêt.",
+    "boostScreenBlurbNew": "Très bientôt tu pourras mettre tes annonces en avant — paiement à la performance, plus de vues, plus de ventes.",
+    "boostScreenBlurbDetail": "Très bientôt — paiement à la performance pour mettre tes annonces en avant.",
+    "promoScreenTitle": "Codes promo",
+    "promoScreenBlurb": "Bientôt tu pourras créer des codes de réduction pour fidéliser tes acheteurs — pourcentage ou montant fixe, durée limitée.",
+    "promoScreenBlurbNew": "Bientôt tu pourras créer des codes de réduction pour fidéliser tes acheteurs.",
+    "promoScreenBlurbDetail": "Bientôt — codes de réduction pour fidéliser tes acheteurs."
   },
   "buyer": {
     "requestsTitle": "Mes demandes de visite",

@@ -729,7 +729,15 @@
     "statsEmptyTitle": "No listings yet",
     "statsEmptyBody": "Publish a product from your shop to start seeing views here.",
     "statsKindProduct": "Product",
-    "statsKindProperty": "Property"
+    "statsKindProperty": "Property",
+    "boostScreenTitle": "Boost your listings",
+    "boostScreenBlurb": "Very soon you'll be able to put your listings front and center — pay-for-performance, more views, more sales. We'll let you know the moment it's ready.",
+    "boostScreenBlurbNew": "Very soon you'll be able to put your listings front and center — pay-for-performance, more views, more sales.",
+    "boostScreenBlurbDetail": "Coming soon — pay-for-performance to put your listings front and center.",
+    "promoScreenTitle": "Promo codes",
+    "promoScreenBlurb": "Soon you'll be able to create discount codes to keep your buyers coming back — percentage or flat amount, time-limited.",
+    "promoScreenBlurbNew": "Soon you'll be able to create discount codes to keep your buyers coming back.",
+    "promoScreenBlurbDetail": "Coming soon — discount codes to keep your buyers coming back."
   },
   "buyer": {
     "requestsTitle": "My requests",
