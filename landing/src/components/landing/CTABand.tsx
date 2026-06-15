@@ -1,4 +1,5 @@
 import { AppStoreBadges } from './AppStoreBadges';
+import { AndroidDownloadButton } from './AndroidDownloadButton';
 
 export function CTABand() {
   return (
@@ -15,18 +16,24 @@ export function CTABand() {
               <span className="text-accent">C&apos;est gratuit.</span>
             </h2>
             <p className="mx-auto mt-6 max-w-xl text-lg text-white/80">
-              iOS et Android. Inscription en 1 minute, vérification en 3.
-              Disponible en Guinée et pour la diaspora.
+              Android disponible maintenant, iOS bientôt. Inscription en 1
+              minute, vérification en 3. En Guinée et pour la diaspora.
             </p>
 
-            <div className="mt-10 flex flex-wrap justify-center gap-3">
-              <AppStoreBadges />
+            <div className="mt-10 flex flex-col items-center gap-6">
+              <AndroidDownloadButton variant="onDark" />
+              <div className="flex flex-col items-center gap-2.5">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-white/50">
+                  Bientôt sur les stores
+                </span>
+                <AppStoreBadges />
+              </div>
             </div>
 
             <div className="mx-auto mt-10 flex max-w-md flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-white/60">
-              <span>⭐ 4.8/5 sur l&apos;App Store</span>
+              <span>🔒 Paiement escrow sécurisé</span>
               <span>·</span>
-              <span>15k+ téléchargements</span>
+              <span>Vendeurs vérifiés KYC</span>
               <span>·</span>
               <span>100 % français</span>
             </div>
