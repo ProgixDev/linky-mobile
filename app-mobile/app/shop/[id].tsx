@@ -53,6 +53,11 @@ export default function ShopRoute() {
     return <DetailStateScreen loading={isLoading} title="Boutique" onRetry={() => void refetch()} />;
   }
 
+  // Phase Y.1 — never render a bare/placeholder response time. The DB used to
+  // ship a mojibake em-dash placeholder ; we now blank that and only show the
+  // segment when a real value is present.
+  const hasResponseTime = shop.responseTime.trim().length > 0;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
@@ -174,17 +179,21 @@ export default function ShopRoute() {
                   >
                     {shop.city}
                   </Text>
-                  <Text style={{ fontSize: 12, color: colors.textFaint }}>·</Text>
-                  <Clock size={11} color={colors.textMuted} strokeWidth={2} />
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: colors.textMuted,
-                      letterSpacing: 0,
-                    }}
-                  >
-                    {shop.responseTime}
-                  </Text>
+                  {hasResponseTime && (
+                    <>
+                      <Text style={{ fontSize: 12, color: colors.textFaint }}>·</Text>
+                      <Clock size={11} color={colors.textMuted} strokeWidth={2} />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: colors.textMuted,
+                          letterSpacing: 0,
+                        }}
+                      >
+                        {shop.responseTime}
+                      </Text>
+                    </>
+                  )}
                 </View>
               </View>
             </View>
@@ -424,7 +433,9 @@ export default function ShopRoute() {
 
             <View style={{ marginTop: 14, gap: 10 }}>
               <InfoRow Icon={MapPin} label="Ville" value={shop.city} />
-              <InfoRow Icon={Clock} label="Temps de réponse" value={shop.responseTime} />
+              {hasResponseTime && (
+                <InfoRow Icon={Clock} label="Temps de réponse" value={shop.responseTime} />
+              )}
               {shop.verified && (
                 <InfoRow
                   Icon={ShieldCheck}
