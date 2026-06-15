@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Smartphone } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -28,6 +29,7 @@ const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').
 
 export default function RechargerRoute() {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const { show } = useToast();
   const qc = useQueryClient();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
@@ -54,22 +56,22 @@ export default function RechargerRoute() {
         returnURL: 'linky://stripe-redirect',
       });
       if (initErr) {
-        show('Impossible de préparer le paiement', 'danger');
+        show(t('wallet.recharger.prepareError'), 'danger');
         return;
       }
       const { error: payErr } = await presentPaymentSheet();
       if (payErr) {
-        if (payErr.code !== PaymentSheetError.Canceled) show(payErr.message || 'Paiement échoué', 'danger');
+        if (payErr.code !== PaymentSheetError.Canceled) show(payErr.message || t('wallet.recharger.payError'), 'danger');
         return;
       }
       // Charge succeeded. The webhook credits the wallet in ~1-3s ; invalidate
       // now and let the wallet screen's refetch-on-focus pick up the new balance.
-      show('Recharge réussie — ton solde se met à jour dans un instant', 'success');
+      show(t('wallet.recharger.successToast'), 'success');
       qc.invalidateQueries({ queryKey: ['wallet'] });
       if (router.canGoBack()) router.back();
       else router.replace('/wallet');
     } catch (e) {
-      show(toToastMessage(e, 'Recharge impossible'), 'danger');
+      show(toToastMessage(e, t('wallet.recharger.errorToast')), 'danger');
     } finally {
       setBusy(false);
     }
@@ -77,7 +79,7 @@ export default function RechargerRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Recharger" back />
+      <TopBar title={t('wallet.recharger.topbar')} back />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -101,7 +103,7 @@ export default function RechargerRoute() {
           </View>
           <View>
             <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-              Solde actuel
+              {t('wallet.recharger.balanceLabel')}
             </Text>
             <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
               {formatGNF(balance)}
@@ -110,7 +112,7 @@ export default function RechargerRoute() {
         </View>
 
         {/* Amount */}
-        <MicroLabel label="Montant à recharger" />
+        <MicroLabel label={t('wallet.recharger.amountLabel')} />
         <View
           style={{
             backgroundColor: colors.bgElev,
@@ -126,15 +128,15 @@ export default function RechargerRoute() {
         >
           <TextInput
             value={amount > 0 ? new Intl.NumberFormat('fr-FR').format(amount) : ''}
-            onChangeText={(t) => {
-              const n = Number(t.replace(/\D/g, ''));
+            onChangeText={(txt) => {
+              const n = Number(txt.replace(/\D/g, ''));
               setAmount(Number.isFinite(n) ? n : 0);
             }}
             keyboardType="number-pad"
             placeholder="0"
             placeholderTextColor={colors.textFaint}
             maxLength={11}
-            accessibilityLabel="Montant à recharger en francs guinéens"
+            accessibilityLabel={t('wallet.recharger.accessAmount')}
             style={{
               fontSize: 36,
               fontWeight: '700',
@@ -157,7 +159,7 @@ export default function RechargerRoute() {
         </View>
 
         <Text variant="caption" tone="muted" style={{ marginTop: 12, letterSpacing: 0, color: tooLow ? colors.danger : undefined }}>
-          {tooLow ? `Minimum ${formatGNF(MIN_TOPUP)}` : 'Paiement sécurisé par carte bancaire.'}
+          {tooLow ? t('wallet.recharger.minimum', { amount: formatGNF(MIN_TOPUP) }) : t('wallet.recharger.securityNote')}
         </Text>
 
         {/* Mobile Money — honest "coming" note */}
@@ -178,9 +180,9 @@ export default function RechargerRoute() {
             <Smartphone size={18} color={colors.textMuted} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600' }}>Orange Money & MTN MoMo</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('wallet.recharger.mmTitle')}</Text>
             <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}>
-              Recharge par Mobile Money à l'activation du contrat Linky × Lengopay.
+              {t('wallet.recharger.mmSub')}
             </Text>
           </View>
         </View>
@@ -193,7 +195,7 @@ export default function RechargerRoute() {
           loading={busy || topup.isPending}
           disabled={!canPay}
           leading={<CreditCard size={16} color={colors.bg} strokeWidth={2.25} />}
-          label={`Payer ${formatGNF(amount)} par carte`}
+          label={t('wallet.recharger.payCta', { amount: formatGNF(amount) })}
           onPress={pay}
         />
       </StickyBottom>

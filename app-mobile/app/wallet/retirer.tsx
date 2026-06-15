@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -53,6 +54,7 @@ function OperatorRow({
   divider: boolean;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <Pressable
       onPress={() => {
@@ -88,7 +90,7 @@ function OperatorRow({
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{op.id}</Text>
         <Text variant="caption" tone="muted" style={{ letterSpacing: 0 }}>
-          Vers ton compte {op.short}
+          {t('wallet.retirer.destSub', { short: op.short })}
         </Text>
       </View>
       <View
@@ -111,6 +113,7 @@ function OperatorRow({
 
 export default function RetirerRoute() {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const { show } = useToast();
   const withdraw = useWithdrawWallet();
   const walletQuery = useWallet();
@@ -128,7 +131,7 @@ export default function RetirerRoute() {
   if (walletQuery.isLoading) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Retirer" back />
+        <TopBar title={t('wallet.retirer.topbar')} back />
         <View style={{ padding: 16, gap: 14 }}>
           <Skeleton height={96} radius={16} />
           <Skeleton height={120} radius={16} />
@@ -142,7 +145,7 @@ export default function RetirerRoute() {
   if (walletQuery.isError) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Retirer" back />
+        <TopBar title={t('wallet.retirer.topbar')} back />
         <ErrorStateView onRetry={() => void walletQuery.refetch()} />
       </SafeAreaView>
     );
@@ -152,12 +155,12 @@ export default function RetirerRoute() {
   if (balance <= 0) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Retirer" back />
+        <TopBar title={t('wallet.retirer.topbar')} back />
         <EmptyState
           icon="wallet"
-          title="Aucun solde à retirer"
-          description="Tes ventes encaissées arrivent dans ton portefeuille. Tu pourras les retirer ici dès que ton solde est positif."
-          ctaLabel="Retour au portefeuille"
+          title={t('wallet.retirer.emptyTitle')}
+          description={t('wallet.retirer.emptyDesc')}
+          ctaLabel={t('wallet.retirer.emptyCta')}
           onCta={() => (router.canGoBack() ? router.back() : router.replace('/wallet'))}
         />
       </SafeAreaView>
@@ -173,17 +176,17 @@ export default function RetirerRoute() {
       { amountGnf: amount, destination },
       {
         onSuccess: () => {
-          show('Retrait demandé — traitement sous 24h', 'success');
+          show(t('wallet.retirer.successToast'), 'success');
           router.back();
         },
-        onError: (e) => show(toToastMessage(e, 'Retrait impossible'), 'danger'),
+        onError: (e) => show(toToastMessage(e, t('wallet.retirer.errorToast')), 'danger'),
       },
     );
   }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Retirer" back />
+      <TopBar title={t('wallet.retirer.topbar')} back />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -216,7 +219,7 @@ export default function RetirerRoute() {
           </View>
           <View>
             <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-              Solde disponible
+              {t('wallet.retirer.balanceLabel')}
             </Text>
             <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
               {formatGNF(balance)}
@@ -225,7 +228,7 @@ export default function RetirerRoute() {
         </View>
 
         {/* Amount — editable, not just 3 fixed chips */}
-        <MicroLabel label="Montant à retirer" />
+        <MicroLabel label={t('wallet.retirer.amountLabel')} />
         <View
           style={{
             backgroundColor: colors.bgElev,
@@ -241,15 +244,15 @@ export default function RetirerRoute() {
         >
           <TextInput
             value={amount > 0 ? new Intl.NumberFormat('fr-FR').format(amount) : ''}
-            onChangeText={(t) => {
-              const n = Number(t.replace(/\D/g, ''));
+            onChangeText={(txt) => {
+              const n = Number(txt.replace(/\D/g, ''));
               setAmount(Number.isFinite(n) ? n : 0);
             }}
             keyboardType="number-pad"
             placeholder="0"
             placeholderTextColor={colors.textFaint}
             maxLength={11}
-            accessibilityLabel="Montant à retirer en francs guinéens"
+            accessibilityLabel={t('wallet.retirer.accessAmount')}
             style={{
               fontSize: 36,
               fontWeight: '700',
@@ -274,7 +277,7 @@ export default function RetirerRoute() {
               onPress={() => setAmount(v)}
             />
           ))}
-          <Chip label="Tout" variant="soft" active={amount === balance} onPress={() => setAmount(balance)} />
+          <Chip label={t('wallet.retirer.allChip')} variant="soft" active={amount === balance} onPress={() => setAmount(balance)} />
         </View>
 
         <Text
@@ -283,13 +286,13 @@ export default function RetirerRoute() {
           style={{ marginTop: 12, letterSpacing: 0, color: exceedsBalance ? colors.danger : undefined }}
         >
           {exceedsBalance
-            ? `Solde insuffisant — disponible : ${formatGNF(balance)}`
-            : `Il te restera ${formatGNF(balance - amount)} après ce retrait`}
+            ? t('wallet.retirer.insufficient', { balance: formatGNF(balance) })
+            : t('wallet.retirer.remainingAfter', { remaining: formatGNF(balance - amount) })}
         </Text>
 
         {/* Destination — operator + the number money is actually sent to */}
         <View style={{ marginTop: 22 }}>
-          <MicroLabel label="Vers" />
+          <MicroLabel label={t('wallet.retirer.destLabel')} />
           <View style={{ borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
             {OPERATORS.map((op, i) => (
               <OperatorRow
@@ -304,16 +307,16 @@ export default function RetirerRoute() {
 
           <View style={{ marginTop: 12 }}>
             <Input
-              label={`Numéro ${operator === 'Orange Money' ? 'Orange Money' : 'MTN'}`}
+              label={t('wallet.retirer.phoneInputLabel', { operator: operator === 'Orange Money' ? 'Orange Money' : 'MTN' })}
               leadingIcon="phone"
               keyboardType="phone-pad"
-              placeholder="6XX XX XX XX"
+              placeholder={t('wallet.retirer.phonePlaceholder')}
               value={formatGnPhone(phone)}
-              onChangeText={(t) => setPhone(normalizeGnPhone(t))}
+              onChangeText={(txt) => setPhone(normalizeGnPhone(txt))}
               errorText={
-                phone.length > 0 && !phoneValid ? 'Numéro guinéen invalide (9 chiffres, commence par 6).' : undefined
+                phone.length > 0 && !phoneValid ? t('wallet.retirer.phoneInvalid') : undefined
               }
-              helperText={phone.length === 0 ? "Le numéro qui recevra l'argent." : undefined}
+              helperText={phone.length === 0 ? t('wallet.retirer.phoneHint') : undefined}
             />
           </View>
         </View>
@@ -331,8 +334,7 @@ export default function RetirerRoute() {
         >
           <I.shield size={16} color={colors.textMuted} />
           <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 18 }}>
-            Vérifie bien le numéro : l'argent y est envoyé manuellement sous 24h ouvrées. Suis l'état dans Portefeuille ›
-            Retraits.
+            {t('wallet.retirer.infoNote')}
           </Text>
         </View>
       </ScrollView>
@@ -340,7 +342,7 @@ export default function RetirerRoute() {
       <StickyBottom>
         {canSubmit && (
           <Text variant="caption" tone="muted" style={{ textAlign: 'center', marginBottom: 8, letterSpacing: 0 }}>
-            Vers {operator} · {formatGnPhone(phone)}
+            {t('wallet.retirer.summary', { operator, phone: formatGnPhone(phone) })}
           </Text>
         )}
         <Button
@@ -348,7 +350,7 @@ export default function RetirerRoute() {
           block
           loading={withdraw.isPending}
           disabled={!canSubmit}
-          label={amount > 0 ? `Retirer ${formatGNF(amount)}` : 'Retirer'}
+          label={amount > 0 ? t('wallet.retirer.ctaWithAmount', { amount: formatGNF(amount) }) : t('wallet.retirer.cta')}
           onPress={submit}
         />
       </StickyBottom>

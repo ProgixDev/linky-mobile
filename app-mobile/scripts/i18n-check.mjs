@@ -129,6 +129,12 @@ const EN_FR_IDENTICAL_ALLOWLIST = new Set([
   'aboutScreen.websiteSub',
   'aboutScreen.writeSub',
   'helpScreen.emailSub',
+  // Phone format placeholder is a digit stencil, not a translatable string.
+  'wallet.retirer.phonePlaceholder',
+  // Pure interpolation template, only the {{var}} differs FR/EN.
+  'wallet.recharger.minimum',
+  // Mobile money brand names ("Orange Money & MTN MoMo") stay as-is.
+  'wallet.recharger.mmTitle',
 ]);
 
 function looksLikeProperNoun(value) {
