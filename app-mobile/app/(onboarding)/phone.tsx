@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, ChevronDown, Lock, MessageSquare } from 'lucide-react-native';
+import { ArrowLeft, Lock, MessageSquare } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -121,7 +121,6 @@ export default function PhoneRoute() {
               >
                 <GuineaFlag />
                 <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>+224</Text>
-                <ChevronDown size={14} color={colors.textMuted} />
               </Pressable>
               <View
                 style={{
@@ -139,6 +138,9 @@ export default function PhoneRoute() {
                   value={phone}
                   onChangeText={setPhone}
                   keyboardType="phone-pad"
+                  // Guinea mobile numbers are 9 digits; allow a little slack for
+                  // any spaces a user types (the request strips non-digits).
+                  maxLength={12}
                   placeholder="6XX XX XX XX"
                   placeholderTextColor={colors.textFaint}
                   onFocus={() => setFocused(true)}

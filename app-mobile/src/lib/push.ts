@@ -59,6 +59,27 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   return data;
 }
 
+// Register this device's Expo push token with the backend and cache it in
+// MMKV. Best-effort : a failure must never disturb the caller. Shared by the
+// app-start hook and the in-app Notifications toggle.
+export async function registerPushToken(): Promise<void> {
+  try {
+    const token = await registerForPushNotificationsAsync();
+    if (!token) return;
+    await apiPost({
+      path: '/register-push-token',
+      body: {
+        token,
+        platform: Platform.OS === 'ios' ? 'ios' : 'android',
+        device_label: Device.modelName ?? undefined,
+      },
+    });
+    storage.set(STORAGE_KEYS.pushToken, token);
+  } catch (e) {
+    console.warn('[push] registration failed:', e);
+  }
+}
+
 // Logout path. Best-effort with a hard 2.5s cap — logout must never hang on
 // push state (the server treats an already-gone token as success anyway).
 export async function unregisterPushToken(): Promise<void> {

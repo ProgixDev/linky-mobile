@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, ArrowRight, CreditCard, Phone } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -27,6 +27,10 @@ const OPTIONS: Option[] = [
 export default function AuthChoiceRoute() {
   const { colors, radii } = useTheme();
   const setChannel = useAuth((s) => s.setChannel);
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  // Returning users arrive with ?mode=login — the flow is the same passwordless
+  // entry, but the copy reflects sign-in rather than sign-up.
+  const isLogin = mode === 'login';
   const [choice, setChoice] = useState<Channel>('phone');
 
   return (
@@ -46,10 +50,12 @@ export default function AuthChoiceRoute() {
 
         <View style={{ marginTop: 40 }}>
           <Text style={{ fontSize: 32, lineHeight: 38, fontWeight: '800', letterSpacing: -0.6, color: colors.text }}>
-            Tu es où ?
+            {isLogin ? 'Te reconnecter' : 'Tu es où ?'}
           </Text>
           <Text style={{ marginTop: 10, fontSize: 15, lineHeight: 22, color: colors.textMuted }}>
-            On adapte le paiement selon ta région.
+            {isLogin
+              ? 'Choisis comment tu t’es inscrit·e pour recevoir ton code.'
+              : 'On adapte le paiement selon ta région.'}
           </Text>
         </View>
 
@@ -107,7 +113,7 @@ export default function AuthChoiceRoute() {
             variant="dark"
             size="lg"
             block
-            label="Continuer"
+            label={isLogin ? 'Se connecter' : 'Continuer'}
             trailing={<ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />}
             onPress={() => {
               haptic.medium();

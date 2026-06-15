@@ -13,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Search,
   SlidersHorizontal,
-  Camera,
   ArrowUpDown,
   ShoppingBag,
   Home as HomeIcon,
@@ -332,18 +331,8 @@ export default function MarcheRoute() {
               autoCorrect={false}
               accessibilityLabel="Recherche"
             />
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 999,
-                backgroundColor: colors.primarySoft,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Camera size={16} color={colors.primary} strokeWidth={1.75} />
-            </View>
+            {/* Camera "visual search" badge removed — it was a static View with
+                no onPress, implying an image-search feature that doesn't exist. */}
           </View>
           <Pressable
             onPress={() => {
@@ -699,7 +688,11 @@ export default function MarcheRoute() {
           />
           <Button
             variant="primary"
-            label={`Voir ${properties?.length ?? 0} biens`}
+            label={
+              isArticles
+                ? `Voir ${products?.length ?? 0} articles`
+                : `Voir ${properties?.length ?? 0} biens`
+            }
             style={{ flex: 2 }}
             onPress={() => setSheetOpen(false)}
           />

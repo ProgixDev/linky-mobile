@@ -62,7 +62,7 @@ export default function RefundDetailRoute() {
             maxWidth: 320,
           }}
         >
-          Les litiges sont traités par l&apos;équipe Linky. Retrouvez le détail de la résolution sur la commande concernée.
+          Les litiges sont traités par l&apos;équipe Linky. Retrouve le détail de la résolution sur la commande concernée.
         </Text>
         <Pressable
           onPress={() => {

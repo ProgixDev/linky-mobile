@@ -180,7 +180,7 @@ export default function WelcomeRoute() {
             size="lg"
             block
             label="J'ai déjà un compte"
-            onPress={() => router.push('/(onboarding)/auth-choice')}
+            onPress={() => router.push('/(onboarding)/auth-choice?mode=login')}
           />
         </View>
       </View>

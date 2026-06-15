@@ -13,6 +13,7 @@ import { useAuth } from '../../../../src/stores/auth';
 import { useToast } from '../../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../../src/lib/api';
 import { ActivityIndicator } from 'react-native';
+import { DetailStateScreen } from '../../../../src/components/feedback/DetailState';
 
 interface Carrier {
   id: 'jefa' | 'sopex' | 'self' | 'pickup';
@@ -33,7 +34,7 @@ export default function ShipRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [carrier, setCarrier] = useState<Carrier['id']>('jefa');
   const [tracking, setTracking] = useState('');
-  const { data: order, isLoading } = useOrder(id);
+  const { data: order, isLoading, isError, refetch } = useOrder(id);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
   const toast = useToast();
   // Phase X.6b — real submit. Pre-X6b the button was haptic + router.replace
@@ -56,7 +57,14 @@ export default function ShipRoute() {
   const valid = !trackingRequired || tracking.length >= 4;
 
   if (isLoading || wrongOwner) {
-    return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }} />;
+    // Spinner (not a blank screen) while loading or during the brief
+    // wrong-owner redirect — on 3G the blank view read as a frozen screen.
+    return <DetailStateScreen loading title="Expédier la commande" />;
+  }
+  if (isError && !order) {
+    return (
+      <DetailStateScreen loading={false} title="Expédier la commande" onRetry={() => void refetch()} />
+    );
   }
 
   return (

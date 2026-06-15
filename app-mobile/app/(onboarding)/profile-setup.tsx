@@ -9,7 +9,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { Camera as CameraIcon, User as UserIcon, Sparkles } from 'lucide-react-native';
+import { User as UserIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -48,7 +48,6 @@ export default function ProfileSetupRoute() {
   const toast = useToast();
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
-  const [nickname, setNickname] = useState('');
   const [city, setCity] = useState('');
   const [roles, setRoles] = useState<Set<string>>(new Set());
 
@@ -146,14 +145,7 @@ export default function ProfileSetupRoute() {
         </Text>
 
         <View style={{ flex: 1, marginTop: 22 }}>
-          {step === 0 && (
-            <IdentityStep
-              name={name}
-              setName={setName}
-              nickname={nickname}
-              setNickname={setNickname}
-            />
-          )}
+          {step === 0 && <IdentityStep name={name} setName={setName} />}
 
           {step === 1 && <CityMapPicker value={city} onChange={setCity} />}
 
@@ -210,52 +202,30 @@ export default function ProfileSetupRoute() {
 function IdentityStep({
   name,
   setName,
-  nickname,
-  setNickname,
 }: {
   name: string;
   setName: (v: string) => void;
-  nickname: string;
-  setNickname: (v: string) => void;
 }) {
   const { colors } = useTheme();
   return (
     <View>
-      {/* Avatar */}
+      {/* Avatar — photo upload not wired in onboarding (no upload flow here);
+          camera badge removed so it doesn't promise an action. */}
       <View style={{ alignItems: 'center', marginBottom: 26 }}>
-        <Pressable style={{ position: 'relative' }}>
-          <View
-            style={{
-              width: 104,
-              height: 104,
-              borderRadius: 999,
-              backgroundColor: colors.bgSunken,
-              borderWidth: 3,
-              borderColor: colors.bg,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <UserIcon size={40} color={colors.textFaint} strokeWidth={1.5} />
-          </View>
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              right: 0,
-              width: 34,
-              height: 34,
-              borderRadius: 999,
-              backgroundColor: colors.primary,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 3,
-              borderColor: colors.bg,
-            }}
-          >
-            <CameraIcon size={15} color="#FFFFFF" strokeWidth={2.25} />
-          </View>
-        </Pressable>
+        <View
+          style={{
+            width: 104,
+            height: 104,
+            borderRadius: 999,
+            backgroundColor: colors.bgSunken,
+            borderWidth: 3,
+            borderColor: colors.bg,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <UserIcon size={40} color={colors.textFaint} strokeWidth={1.5} />
+        </View>
       </View>
 
       {/* Inputs */}
@@ -266,14 +236,6 @@ function IdentityStep({
           onChangeText={setName}
           placeholder="Ton prénom et nom"
           Icon={UserIcon}
-        />
-        <IdField
-          label="SURNOM"
-          value={nickname}
-          onChangeText={setNickname}
-          placeholder="Comment on t'appelle (optionnel)"
-          Icon={Sparkles}
-          optional
         />
       </View>
     </View>

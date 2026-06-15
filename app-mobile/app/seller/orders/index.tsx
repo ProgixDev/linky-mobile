@@ -33,18 +33,22 @@ const FILTERS: { id: Filter; label: string; statuses?: OrderStatus[] }[] = [
   { id: 'done', label: 'Terminées', statuses: ['delivered', 'released'] },
 ];
 
-const STATUS_META: Record<OrderStatus, { label: string; Icon: LucideIcon; bg: string; fg: string }> = {
-  placed: { label: 'À PRÉPARER', Icon: Clock, bg: '#FCE7D3', fg: '#A04D08' },
-  paid: { label: 'À PRÉPARER', Icon: Clock, bg: '#FCE7D3', fg: '#A04D08' },
-  preparing: { label: 'EN ROUTE', Icon: Truck, bg: '#FCF1DC', fg: '#8B5A0A' },
-  delivered: { label: 'LIVRÉE', Icon: Package, bg: '#E0F0E8', fg: '#155F45' },
-  released: { label: 'PAYÉE', Icon: CheckCircle2, bg: '#E8F2EE', fg: '#0A5240' },
-  disputed: { label: 'LITIGE', Icon: CircleAlert, bg: '#FBE7E5', fg: '#B53D2F' },
-  cancelled: { label: 'ANNULÉE', Icon: Ban, bg: '#EEEEEE', fg: '#606060' },
-  refunded: { label: 'REMBOURSÉE', Icon: RotateCcw, bg: '#E8EFF6', fg: '#1F4E7A' },
+// Status tones map to theme tokens (resolved per-render) so the pills stay
+// legible on dark `colors.card` — mirrors the pattern in pro/visites/index.tsx.
+type PillTone = 'accent' | 'primary' | 'danger' | 'muted';
+
+const STATUS_META: Record<OrderStatus, { label: string; Icon: LucideIcon; tone: PillTone }> = {
+  placed: { label: 'À PRÉPARER', Icon: Clock, tone: 'accent' },
+  paid: { label: 'À PRÉPARER', Icon: Clock, tone: 'accent' },
+  preparing: { label: 'EN ROUTE', Icon: Truck, tone: 'accent' },
+  delivered: { label: 'LIVRÉE', Icon: Package, tone: 'primary' },
+  released: { label: 'PAYÉE', Icon: CheckCircle2, tone: 'primary' },
+  disputed: { label: 'LITIGE', Icon: CircleAlert, tone: 'danger' },
+  cancelled: { label: 'ANNULÉE', Icon: Ban, tone: 'muted' },
+  refunded: { label: 'REMBOURSÉE', Icon: RotateCcw, tone: 'muted' },
 };
 
-const STATUS_FALLBACK = { label: '—', Icon: CircleAlert, bg: '#EEEEEE', fg: '#606060' } as const;
+const STATUS_FALLBACK = { label: '—', Icon: CircleAlert, tone: 'muted' as PillTone } as const;
 
 export default function SellerOrdersIndex() {
   const { colors } = useTheme();
@@ -174,6 +178,22 @@ export default function SellerOrdersIndex() {
 function SellerOrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
   const { colors } = useTheme();
   const meta = STATUS_META[order.status] ?? { ...STATUS_FALLBACK, label: order.status.toUpperCase() };
+  const pillBg =
+    meta.tone === 'accent'
+      ? colors.accentSoft
+      : meta.tone === 'primary'
+        ? colors.primarySoft
+        : meta.tone === 'danger'
+          ? 'rgba(209,79,60,0.12)'
+          : colors.bgSunken;
+  const pillFg =
+    meta.tone === 'accent'
+      ? colors.accentText
+      : meta.tone === 'primary'
+        ? colors.primaryDeep
+        : meta.tone === 'danger'
+          ? colors.danger
+          : colors.textMuted;
   const needsAction = order.status === 'paid' || order.status === 'placed';
 
   return (
@@ -200,19 +220,19 @@ function SellerOrderRow({ order, onPress }: { order: Order; onPress: () => void 
                 paddingHorizontal: 8,
                 height: 20,
                 borderRadius: 999,
-                backgroundColor: meta.bg,
+                backgroundColor: pillBg,
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexDirection: 'row',
                 gap: 4,
               }}
             >
-              <meta.Icon size={10} color={meta.fg} strokeWidth={2.25} />
+              <meta.Icon size={10} color={pillFg} strokeWidth={2.25} />
               <Text
                 style={{
                   fontSize: 9.5,
                   fontWeight: '700',
-                  color: meta.fg,
+                  color: pillFg,
                   lineHeight: 11,
                   includeFontPadding: false,
                   letterSpacing: 0.3,

@@ -15,13 +15,14 @@ import { haptic } from '../../../../src/lib/haptics';
 import { useOrder } from '../../../../src/data/queries';
 import { formatGNF } from '../../../../src/lib/format';
 import { OrderResolutionBanner } from '../../../../src/components/orders/OrderResolutionBanner';
+import { DetailStateScreen } from '../../../../src/components/feedback/DetailState';
 import { useAuth } from '../../../../src/stores/auth';
 import { useToast } from '../../../../src/components/feedback/Toast';
 
 export default function SellerOrderDetailRoute() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: order, isLoading } = useOrder(id);
+  const { data: order, isLoading, isError, refetch } = useOrder(id);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
   const toast = useToast();
 
@@ -41,7 +42,12 @@ export default function SellerOrderDetailRoute() {
   }, [wrongOwner, toast]);
 
   if (isLoading || wrongOwner) {
-    return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }} />;
+    // Spinner (not a blank screen) while loading or during the brief
+    // wrong-owner redirect — on 3G the blank view read as a frozen screen.
+    return <DetailStateScreen loading title="Commande" />;
+  }
+  if (isError && !order) {
+    return <DetailStateScreen loading={false} title="Commande" onRetry={() => void refetch()} />;
   }
   if (!order) {
     return (

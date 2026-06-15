@@ -24,15 +24,19 @@ const FILTERS: { id: Filter; label: string; statuses?: VisitStatus[] }[] = [
   { id: 'rejected', label: 'Refusées', statuses: ['rejected', 'cancelled'] },
 ];
 
+// Status tones map to theme tokens (resolved per-render) so the pills stay
+// legible on dark `colors.card` — mirrors the pattern in pro/visites/index.tsx.
+type PillTone = 'accent' | 'primary' | 'danger' | 'muted';
+
 const STATUS_META: Record<
   string,
-  { label: string; Icon: LucideIcon; bg: string; fg: string }
+  { label: string; Icon: LucideIcon; tone: PillTone }
 > = {
-  pending: { label: 'EN ATTENTE', Icon: Clock, bg: '#FCF1DC', fg: '#8B5A0A' },
-  accepted: { label: 'ACCEPTÉE', Icon: CheckCircle2, bg: '#E0F0E8', fg: '#155F45' },
-  rejected: { label: 'REFUSÉE', Icon: X, bg: '#FBE7E5', fg: '#B53D2F' },
-  cancelled: { label: 'ANNULÉE', Icon: X, bg: '#EEEEEE', fg: '#606060' },
-  completed: { label: 'TERMINÉE', Icon: CheckCircle2, bg: '#E8F2EE', fg: '#0A5240' },
+  pending: { label: 'EN ATTENTE', Icon: Clock, tone: 'accent' },
+  accepted: { label: 'ACCEPTÉE', Icon: CheckCircle2, tone: 'primary' },
+  rejected: { label: 'REFUSÉE', Icon: X, tone: 'danger' },
+  cancelled: { label: 'ANNULÉE', Icon: X, tone: 'muted' },
+  completed: { label: 'TERMINÉE', Icon: CheckCircle2, tone: 'primary' },
 };
 
 export default function DemandesIndex() {
@@ -174,6 +178,22 @@ export default function DemandesIndex() {
 function DemandRow({ visit, onPress }: { visit: VisitRequest; onPress: () => void }) {
   const { colors } = useTheme();
   const meta = STATUS_META[String(visit.status)] ?? STATUS_META.pending;
+  const pillBg =
+    meta.tone === 'accent'
+      ? colors.accentSoft
+      : meta.tone === 'primary'
+        ? colors.primarySoft
+        : meta.tone === 'danger'
+          ? 'rgba(209,79,60,0.12)'
+          : colors.bgSunken;
+  const pillFg =
+    meta.tone === 'accent'
+      ? colors.accentText
+      : meta.tone === 'primary'
+        ? colors.primaryDeep
+        : meta.tone === 'danger'
+          ? colors.danger
+          : colors.textMuted;
   const isPending = visit.status === 'pending';
   const buyerName = visit.buyer?.displayName ?? 'Visiteur';
   const initial = buyerName.charAt(0).toUpperCase();
@@ -249,19 +269,19 @@ function DemandRow({ visit, onPress }: { visit: VisitRequest; onPress: () => voi
               paddingHorizontal: 7,
               height: 18,
               borderRadius: 999,
-              backgroundColor: meta.bg,
+              backgroundColor: pillBg,
               alignItems: 'center',
               justifyContent: 'center',
               flexDirection: 'row',
               gap: 4,
             }}
           >
-            <meta.Icon size={9} color={meta.fg} strokeWidth={2.5} />
+            <meta.Icon size={9} color={pillFg} strokeWidth={2.5} />
             <Text
               style={{
                 fontSize: 9.5,
                 fontWeight: '700',
-                color: meta.fg,
+                color: pillFg,
                 lineHeight: 11,
                 includeFontPadding: false,
                 letterSpacing: 0.3,

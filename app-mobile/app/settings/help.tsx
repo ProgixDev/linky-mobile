@@ -2,13 +2,11 @@ import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Mail,
-  Phone,
   ChevronRight,
   HelpCircle,
   ShieldCheck,
   Activity,
   CircleAlert,
-  CheckCircle2,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -48,65 +46,12 @@ export default function HelpRoute() {
           subtitle="On t'aide à utiliser Linky en toute sérénité."
         />
 
-        {/* Status banner */}
-        <View style={{ paddingHorizontal: 24 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              padding: 14,
-              borderRadius: 14,
-              backgroundColor: colors.primarySoft,
-              borderWidth: 1,
-              borderColor: 'rgba(15,114,86,0.18)',
-            }}
-          >
-            <View
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 999,
-                backgroundColor: colors.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CheckCircle2 size={14} color="#FFFFFF" strokeWidth={2.25} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: '700',
-                  color: colors.primaryDeep,
-                  letterSpacing: 0,
-                  lineHeight: 16,
-                  includeFontPadding: false,
-                }}
-              >
-                Tous les services sont opérationnels
-              </Text>
-              <Text
-                style={{
-                  fontSize: 11.5,
-                  color: colors.primaryDeep,
-                  marginTop: 2,
-                  letterSpacing: 0,
-                  lineHeight: 14,
-                  opacity: 0.75,
-                }}
-              >
-                Mis à jour il y a 2 min · linky.gn/status
-              </Text>
-            </View>
-          </View>
-        </View>
-
         {/* Phase X.7 — "Chat avec l'équipe" with its fake "En ligne" badge
             removed (no live-chat backend exists in V1 — the badge actively
             lied). Email + Appeler stay because both already openURL into
             the OS app. */}
+        {/* "Appeler" row removed — it dialed a placeholder number
+            (+224 622 00 00 00) that reaches nothing. Email is the real channel. */}
         <SectionLabel label="Nous contacter" />
         <Card>
           <ContactRow
@@ -114,12 +59,6 @@ export default function HelpRoute() {
             label="Envoyer un email"
             sub="support@linky.gn"
             onPress={() => Linking.openURL('mailto:support@linky.gn').catch(() => {})}
-          />
-          <ContactRow
-            Icon={Phone}
-            label="Appeler"
-            sub="+224 622 00 00 00"
-            onPress={() => Linking.openURL('tel:+224622000000').catch(() => {})}
             last
           />
         </Card>

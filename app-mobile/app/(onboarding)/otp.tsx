@@ -124,7 +124,7 @@ export default function OtpRoute() {
     }
   }, [pendingDevCode, setPendingDevCode]);
 
-  useEffect(() => {
+  const verify = () => {
     if (code.length !== CODE_LENGTH || verifyOtp.isPending || firedRef.current) return;
     if (!pendingOtpId) {
       toast.show('Session OTP introuvable — recommence', 'danger');
@@ -151,7 +151,13 @@ export default function OtpRoute() {
         haptic.warning();
       }
     })();
-  }, [code, pendingOtpId, verifyOtp, setTokens, setPendingOtpId, signIn, toast]);
+  };
+
+  useEffect(() => {
+    if (code.length !== CODE_LENGTH) return;
+    verify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, pendingOtpId]);
 
   const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
   const ss = String(seconds % 60).padStart(2, '0');
@@ -280,10 +286,7 @@ export default function OtpRoute() {
             block
             label={verifyOtp.isPending ? 'Vérification…' : 'Vérifier'}
             disabled={code.length !== CODE_LENGTH || verifyOtp.isPending}
-            onPress={() => {
-              // The effect above auto-fires when code reaches 6 digits; this button is a manual fallback.
-              if (code.length === CODE_LENGTH) setCode(code);
-            }}
+            onPress={verify}
           />
         </View>
       </View>

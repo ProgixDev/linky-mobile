@@ -59,9 +59,13 @@ export default function NotificationsRoute() {
     today: [],
     week: [],
   };
+  // "Aujourd'hui" = since local midnight, not a rolling 24h window — a 9am
+  // notification should still read as "Aujourd'hui" at 11pm the same day.
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  const midnightMs = midnight.getTime();
   for (const n of filtered) {
-    const ms = Date.now() - new Date(n.at).getTime();
-    if (ms < 24 * 3600_000) grouped.today.push(n);
+    if (new Date(n.at).getTime() >= midnightMs) grouped.today.push(n);
     else grouped.week.push(n);
   }
 
@@ -169,6 +173,10 @@ export default function NotificationsRoute() {
 function NotificationRow({ item }: { item: AppNotification }) {
   const { colors } = useTheme();
   const Icon = I[ICON_FOR[item.iconHint] ?? 'info'];
+  // NOTE: the theme has no info-soft / success-soft tokens (only primarySoft
+  // and accentSoft), so message/visit tints keep a low-alpha rgba() of the
+  // theme's info/success hues. Add `infoSoft`/`successSoft` to tokens.ts to
+  // make these fully theme-driven.
   const tint =
     item.category === 'order'
       ? { bg: colors.primarySoft, fg: colors.primary }

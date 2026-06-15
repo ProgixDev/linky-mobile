@@ -1,5 +1,13 @@
-import { useEffect, useState } from 'react';
-import { View, ScrollView, TextInput, Pressable } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -9,17 +17,44 @@ import { Avatar } from '../../src/components/primitives/Avatar';
 import { IconButton } from '../../src/components/primitives/Button';
 import { I } from '../../src/icons/Icon';
 import { useConversation, useSendMessage, useMarkConversationRead } from '../../src/data/queries';
+import { useToast } from '../../src/components/feedback/Toast';
 import { useAuth } from '../../src/stores/auth';
 import { formatGNF } from '../../src/lib/format';
+
+const MESSAGE_MAX_LENGTH = 2000;
 
 export default function ChatRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
-  const { data } = useConversation(id);
+  const { data, isLoading, isError, refetch } = useConversation(id);
   const send = useSendMessage(id);
   const me = useAuth((s) => s.authUserId);
   const markRead = useMarkConversationRead(id);
+  const toast = useToast();
   const [text, setText] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
+  const messageCount = data?.messages.length ?? 0;
+
+  // Auto-scroll to the newest message when the thread grows (send or incoming).
+  useEffect(() => {
+    if (messageCount > 0) {
+      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+    }
+  }, [messageCount]);
+
+  const onSend = () => {
+    const body = text.trim();
+    if (!body || send.isPending) return;
+    // Keep the draft until the server confirms; on a flaky 3G send the user
+    // must not silently lose what they typed.
+    send.mutate(body, {
+      onSuccess: () => setText(''),
+      onError: () => {
+        setText(body);
+        toast.show('Message non envoyé — réessaie.', 'danger');
+      },
+    });
+  };
 
   // Auto-mark-read when arriving on the screen, and whenever the message
   // list changes (new incoming during polling = should clear unread).
@@ -72,6 +107,11 @@ export default function ChatRoute() {
         </View>
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+      >
       {pinned && (
         <Pressable
           onPress={() => router.push(`/${pinned.kind === 'property' ? 'property' : 'product'}/${pinned.id}`)}
@@ -107,9 +147,42 @@ export default function ChatRoute() {
           didn't reflect the actual messages' dates — a minor visual lie
           when a conversation spanned days. V1 chat volumes don't justify
           a real per-day group header. */}
+      {isLoading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : isError && messageCount === 0 ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 12 }}>
+          <Text tone="muted" style={{ textAlign: 'center' }}>
+            Impossible de charger la conversation.
+          </Text>
+          <Pressable
+            onPress={() => void refetch()}
+            style={{
+              paddingHorizontal: 18,
+              height: 40,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>Réessayer</Text>
+          </Pressable>
+        </View>
+      ) : messageCount === 0 ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+          <Text tone="muted" style={{ textAlign: 'center' }}>
+            Aucun message pour l&apos;instant. Écris le premier.
+          </Text>
+        </View>
+      ) : (
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 14, gap: 8 }}
         showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
       >
         {data?.messages.map((m) => {
           const isMine = m.senderId === me;
@@ -147,6 +220,7 @@ export default function ChatRoute() {
           );
         })}
       </ScrollView>
+      )}
 
       <View
         style={{
@@ -156,7 +230,7 @@ export default function ChatRoute() {
           borderTopColor: colors.border,
           flexDirection: 'row',
           gap: 8,
-          alignItems: 'center',
+          alignItems: 'flex-end',
           backgroundColor: colors.card,
         }}
       >
@@ -167,10 +241,18 @@ export default function ChatRoute() {
           onChangeText={setText}
           placeholder="Écris un message"
           placeholderTextColor={colors.textFaint}
+          multiline
+          maxLength={MESSAGE_MAX_LENGTH}
+          returnKeyType="send"
+          blurOnSubmit={false}
+          onSubmitEditing={onSend}
           style={{
             flex: 1,
-            height: 40,
+            minHeight: 40,
+            maxHeight: 120,
             paddingHorizontal: 14,
+            paddingTop: 10,
+            paddingBottom: 10,
             backgroundColor: colors.bgElev,
             borderWidth: 1,
             borderColor: colors.border,
@@ -180,11 +262,8 @@ export default function ChatRoute() {
           }}
         />
         <Pressable
-          onPress={() => {
-            if (!text.trim()) return;
-            send.mutate(text.trim());
-            setText('');
-          }}
+          onPress={onSend}
+          disabled={!text.trim() || send.isPending}
           style={{
             width: 38,
             height: 38,
@@ -192,12 +271,18 @@ export default function ChatRoute() {
             backgroundColor: colors.primary,
             alignItems: 'center',
             justifyContent: 'center',
+            opacity: !text.trim() || send.isPending ? 0.5 : 1,
           }}
           accessibilityLabel="Envoyer"
         >
-          <I.send size={16} color="#FFFFFF" />
+          {send.isPending ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <I.send size={16} color="#FFFFFF" />
+          )}
         </Pressable>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

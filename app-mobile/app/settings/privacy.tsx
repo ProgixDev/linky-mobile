@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -15,13 +14,19 @@ import { Text } from '../../src/components/primitives/Text';
 import { Switch } from '../../src/components/primitives/Switch';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { haptic } from '../../src/lib/haptics';
+import { usePrefs } from '../../src/stores/prefs';
 
 export default function PrivacyRoute() {
   const { colors } = useTheme();
-  const [personalize, setPersonalize] = useState(true);
-  const [analytics, setAnalytics] = useState(true);
-  const [adTracking, setAdTracking] = useState(false);
-  const [profilePublic, setProfilePublic] = useState(true);
+  // Backed by the persisted prefs store (MMKV) so they survive an app reopen.
+  const personalize = usePrefs((s) => s.privacyPersonalize);
+  const setPersonalize = usePrefs((s) => s.setPrivacyPersonalize);
+  const analytics = usePrefs((s) => s.privacyAnalytics);
+  const setAnalytics = usePrefs((s) => s.setPrivacyAnalytics);
+  const adTracking = usePrefs((s) => s.privacyAdTracking);
+  const setAdTracking = usePrefs((s) => s.setPrivacyAdTracking);
+  const profilePublic = usePrefs((s) => s.privacyProfilePublic);
+  const setProfilePublic = usePrefs((s) => s.setPrivacyProfilePublic);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>

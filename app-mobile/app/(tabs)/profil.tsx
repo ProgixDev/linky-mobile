@@ -34,7 +34,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Switch } from '../../src/components/primitives/Switch';
 import { haptic } from '../../src/lib/haptics';
-import { unregisterPushToken } from '../../src/lib/push';
+import { registerPushToken, unregisterPushToken } from '../../src/lib/push';
 import { useAuth, type UserRole } from '../../src/stores/auth';
 import { usePrefs } from '../../src/stores/prefs';
 import { useKycStatus } from '../../src/data/queries';
@@ -75,12 +75,34 @@ function buildQuickActions(roles: UserRole[]): QuickAction[] {
   return out;
 }
 
+const LANGUAGE_LABELS: Record<string, string> = {
+  fr: 'Français',
+  en: 'English',
+  pular: 'Pular',
+  sousou: 'Sousou',
+};
+
+const THEME_LABELS: Record<string, string> = {
+  system: 'Système',
+  light: 'Clair',
+  dark: 'Sombre',
+};
+
 export default function ProfilRoute() {
-  const { colors } = useTheme();
+  const { colors, preference } = useTheme();
   const user = useAuth((s) => s.user);
   const roles = useAuth((s) => s.roles);
   const signOut = useAuth((s) => s.signOut);
-  const { dataSaver, setDataSaver, notifications, setNotifications } = usePrefs();
+  const { dataSaver, setDataSaver, notifications, setNotifications, language } = usePrefs();
+
+  // Notifications toggle must also (un)register the device's push token,
+  // not just flip the MMKV flag — otherwise the OS-level subscription drifts
+  // out of sync with the user's stated preference.
+  const onToggleNotifications = (v: boolean) => {
+    setNotifications(v);
+    if (v) void registerPushToken();
+    else void unregisterPushToken();
+  };
   // Live status beats the MMKV-cached user snapshot (which only refreshes at
   // sign-in) — a KYC approval should light the chip on the next profile visit.
   const { data: kyc } = useKycStatus();
@@ -372,18 +394,18 @@ export default function ProfilRoute() {
             <Row
               Icon={Bell}
               label="Notifications"
-              right={<Switch value={notifications} onChange={setNotifications} />}
+              right={<Switch value={notifications} onChange={onToggleNotifications} />}
             />
             <Row
               Icon={Globe2}
               label="Langue"
-              value="Français"
+              value={LANGUAGE_LABELS[language] ?? 'Français'}
               onPress={() => router.push('/settings')}
             />
             <Row
               Icon={SparklesIcon}
               label="Thème"
-              value="Système"
+              value={THEME_LABELS[preference] ?? 'Système'}
               onPress={() => router.push('/settings/theme')}
             />
             <Row
