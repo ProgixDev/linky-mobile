@@ -14,6 +14,7 @@ import type { ReactNode } from 'react';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useAuth, type UserRole } from '../stores/auth';
 import { useTheme } from '../theme/ThemeProvider';
 import { Text } from '../components/primitives/Text';
@@ -42,9 +43,12 @@ export function useRoleGuard(required: UserRole | UserRole[]): RoleGuardResult {
 // produced "agent immobiliers". Also: when the gate accepts EITHER seller
 // or agent, offer both Devenir CTAs so a pure buyer doesn't have to guess
 // which role they actually need.
-const ROLE_LABELS: Record<'seller' | 'agent', { sg: string; pl: string }> = {
-  seller: { sg: 'vendeur', pl: 'vendeurs' },
-  agent:  { sg: 'agent immobilier', pl: 'agents immobiliers' },
+// Phase I.9 — labelKey only ; ROLE_LABELS resolved per-render via t() so
+// the gate pitch flips with the active language. The {sg, pl} shape is
+// retained for the existing render logic.
+const ROLE_LABEL_KEYS: Record<'seller' | 'agent', { sg: string; pl: string }> = {
+  seller: { sg: 'roleGate.roleSellerSg', pl: 'roleGate.roleSellerPl' },
+  agent:  { sg: 'roleGate.roleAgentSg',  pl: 'roleGate.roleAgentPl'  },
 };
 
 export function RoleGateView({
@@ -57,23 +61,28 @@ export function RoleGateView({
   surfaceLabel: string;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const wantsSeller = required.includes('seller');
   const wantsAgent = required.includes('agent');
   // Both-allowed gate (e.g. /pro/*) uses the shop icon as a calm default and
   // offers BOTH Devenir CTAs in the action stack below.
   const icon: IconKey = wantsSeller && !wantsAgent ? 'store' : wantsAgent && !wantsSeller ? 'building' : 'store';
-  const titleLabel =
+  const sellerSg = t(ROLE_LABEL_KEYS.seller.sg);
+  const sellerPl = t(ROLE_LABEL_KEYS.seller.pl);
+  const agentSg  = t(ROLE_LABEL_KEYS.agent.sg);
+  const agentPl  = t(ROLE_LABEL_KEYS.agent.pl);
+  const titleText =
     wantsSeller && wantsAgent
-      ? `${ROLE_LABELS.seller.pl} ou ${ROLE_LABELS.agent.pl}`
+      ? t('roleGate.titleForBoth', { seller: sellerPl, agent: agentPl })
       : wantsSeller
-        ? ROLE_LABELS.seller.pl
-        : ROLE_LABELS.agent.pl;
-  const bodyRoles =
+        ? t('roleGate.titleForSeller', { label: sellerPl })
+        : t('roleGate.titleForAgent', { label: agentPl });
+  const bodyText =
     wantsSeller && wantsAgent
-      ? `le rôle ${ROLE_LABELS.seller.sg} ou ${ROLE_LABELS.agent.sg}`
+      ? t('roleGate.bodyBoth', { surface: surfaceLabel, seller: sellerSg, agent: agentSg })
       : wantsSeller
-        ? `le rôle ${ROLE_LABELS.seller.sg}`
-        : `le rôle ${ROLE_LABELS.agent.sg}`;
+        ? t('roleGate.bodySeller', { surface: surfaceLabel, role: sellerSg })
+        : t('roleGate.bodyAgent', { surface: surfaceLabel, role: agentSg });
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ paddingHorizontal: 20, paddingTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -114,7 +123,7 @@ export function RoleGateView({
           })()}
         </View>
         <Text variant="dispL" center style={{ fontSize: 22, lineHeight: 28 }}>
-          Réservé aux {titleLabel}
+          {titleText}
         </Text>
         <Text
           variant="bodyM"
@@ -122,8 +131,7 @@ export function RoleGateView({
           center
           style={{ marginTop: 10, maxWidth: 300, lineHeight: 21 }}
         >
-          Pour accéder à {surfaceLabel}, active {bodyRoles} dans ton profil.
-          {' '}C'est gratuit et tu peux désactiver à tout moment.
+          {bodyText}
         </Text>
         <View style={{ marginTop: 28, width: '100%', gap: 10, maxWidth: 320 }}>
           {wantsSeller && (
@@ -131,7 +139,7 @@ export function RoleGateView({
               variant="dark"
               size="lg"
               block
-              label={`Devenir ${ROLE_LABELS.seller.sg}`}
+              label={t('roleGate.becomeSeller', { role: sellerSg })}
               onPress={() => router.push(`/profil/devenir?role=seller` as never)}
             />
           )}
@@ -140,7 +148,7 @@ export function RoleGateView({
               variant={wantsSeller ? 'outline' : 'dark'}
               size="lg"
               block
-              label={`Devenir ${ROLE_LABELS.agent.sg}`}
+              label={t('roleGate.becomeAgent', { role: agentSg })}
               onPress={() => router.push(`/profil/devenir?role=agent` as never)}
             />
           )}
@@ -148,7 +156,7 @@ export function RoleGateView({
             variant="ghost"
             size="md"
             block
-            label="Retour à l'accueil"
+            label={t('roleGate.backHome')}
             onPress={() => router.replace('/(tabs)')}
           />
         </View>

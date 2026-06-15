@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,6 +9,7 @@ import {
   Check,
   MapPin,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
@@ -19,11 +20,12 @@ import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
 
-const DAYS = [
-  { id: 'today',    label: 'Aujourd\'hui',  offset: 0 },
-  { id: 'tomorrow', label: 'Demain',        offset: 1 },
-  { id: 'd3',       label: 'Après-demain',  offset: 2 },
-  { id: 'd4',       label: '+3 jours',      offset: 3 },
+// Phase I.9 — labelKey only ; component useMemo(t) resolves labels at render.
+const DAY_DEFS = [
+  { id: 'today',    labelKey: 'property.visitDayToday',         offset: 0 },
+  { id: 'tomorrow', labelKey: 'property.visitDayTomorrow',      offset: 1 },
+  { id: 'd3',       labelKey: 'property.visitDayAfterTomorrow', offset: 2 },
+  { id: 'd4',       labelKey: 'property.visitDayPlus3',         offset: 3 },
 ];
 
 const SLOTS = ['09:00', '10:30', '14:00', '15:30', '17:00', '18:30'];
@@ -40,6 +42,7 @@ function formatDayLabel(d: Date): string {
 
 export default function VisitRequestRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: property, isLoading, isError, refetch } = useProperty(id);
   const requestVisit = useRequestVisit();
@@ -48,11 +51,15 @@ export default function VisitRequestRoute() {
   const [dayId, setDayId] = useState('tomorrow');
   const [slot, setSlot] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const DAYS = useMemo(
+    () => DAY_DEFS.map((d) => ({ ...d, label: t(d.labelKey) })),
+    [t],
+  );
 
   const valid = !!slot && !!property;
 
   if (isLoading || isError || !property) {
-    return <DetailStateScreen loading={isLoading} title="Visite" onRetry={() => void refetch()} />;
+    return <DetailStateScreen loading={isLoading} title={t('property.visitFallbackTitle')} onRetry={() => void refetch()} />;
   }
 
   return (
@@ -62,8 +69,8 @@ export default function VisitRequestRoute() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         <ScreenHeader
-          title="Demander une visite"
-          subtitle="Propose un créneau, l'agent te confirme rapidement."
+          title={t('property.visitTitle')}
+          subtitle={t('property.visitSubtitle')}
         />
 
         {/* Property preview */}
@@ -115,7 +122,7 @@ export default function VisitRequestRoute() {
                 }}
               >
                 {formatGNF(property.priceGnf)}
-                {property.perMonth && <Text style={{ fontWeight: '500', color: colors.textMuted }}> /mois</Text>}
+                {property.perMonth && <Text style={{ fontWeight: '500', color: colors.textMuted }}>{t('property.visitPerMonth')}</Text>}
               </Text>
             </View>
           </View>
@@ -132,7 +139,7 @@ export default function VisitRequestRoute() {
               marginBottom: 10,
             }}
           >
-            JOUR
+            {t('property.visitDay')}
           </Text>
           <ScrollView
             horizontal
@@ -198,7 +205,7 @@ export default function VisitRequestRoute() {
               marginBottom: 10,
             }}
           >
-            CRÉNEAU
+            {t('property.visitSlot')}
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {SLOTS.map((s) => {
@@ -252,7 +259,7 @@ export default function VisitRequestRoute() {
               marginBottom: 10,
             }}
           >
-            MESSAGE · OPTIONNEL
+            {t('property.visitMessageOptional')}
           </Text>
           <View
             style={{
@@ -267,7 +274,7 @@ export default function VisitRequestRoute() {
             <TextInput
               value={note}
               onChangeText={setNote}
-              placeholder="Précise ton besoin (durée du bail, nombre de personnes…)"
+              placeholder={t('property.visitNotePlaceholder')}
               placeholderTextColor={colors.textFaint}
               multiline
               textAlignVertical="top"
@@ -314,11 +321,11 @@ export default function VisitRequestRoute() {
                 requested_at: target.toISOString(),
                 note: note.trim() || undefined,
               });
-              toast.show('Demande envoyée 🎉', 'success');
+              toast.show(t('property.visitSuccess'), 'success');
               router.replace('/buyer/requests');
             } catch (e: unknown) {
               console.error('[request-visit] error:', e);
-              toast.show(toToastMessage(e, 'Envoi impossible'), 'danger');
+              toast.show(toToastMessage(e, t('property.visitError')), 'danger');
             }
           }}
           style={{
@@ -346,7 +353,7 @@ export default function VisitRequestRoute() {
               includeFontPadding: false,
             }}
           >
-            {requestVisit.isPending ? 'Envoi…' : 'Envoyer la demande'}
+            {requestVisit.isPending ? t('property.visitSending') : t('property.visitSubmit')}
           </Text>
         </Pressable>
       </SafeAreaView>

@@ -519,7 +519,23 @@
     "trustVisitBody": "You pay nothing until you've visited the property and confirmed.",
     "bookVisit": "Book a visit",
     "contactAgent": "Contact the agent",
-    "agentSection": "Agent"
+    "agentSection": "Agent",
+    "visitFallbackTitle": "Visit",
+    "visitTitle": "Request a visit",
+    "visitSubtitle": "Suggest a slot — the agent confirms quickly.",
+    "visitDay": "DAY",
+    "visitSlot": "SLOT",
+    "visitMessageOptional": "MESSAGE · OPTIONAL",
+    "visitNotePlaceholder": "Add details (lease length, number of people…)",
+    "visitSubmit": "Send the request",
+    "visitSending": "Sending…",
+    "visitSuccess": "Request sent 🎉",
+    "visitError": "Couldn't send",
+    "visitDayToday": "Today",
+    "visitDayTomorrow": "Tomorrow",
+    "visitDayAfterTomorrow": "Day after",
+    "visitDayPlus3": "+3 days",
+    "visitPerMonth": " /mo"
   },
   "cart": {
     "title": "My cart",
@@ -898,5 +914,20 @@
     "en": "English",
     "pular": "Pular",
     "sousou": "Sousou"
+  },
+  "roleGate": {
+    "roleSellerSg": "seller",
+    "roleSellerPl": "sellers",
+    "roleAgentSg": "real-estate agent",
+    "roleAgentPl": "real-estate agents",
+    "titleForSeller": "For {{label}} only",
+    "titleForAgent": "For {{label}} only",
+    "titleForBoth": "For {{seller}} or {{agent}} only",
+    "bodySeller": "To access {{surface}}, activate the {{role}} role in your profile. It's free and you can disable it anytime.",
+    "bodyAgent": "To access {{surface}}, activate the {{role}} role in your profile. It's free and you can disable it anytime.",
+    "bodyBoth": "To access {{surface}}, activate the {{seller}} or {{agent}} role in your profile. It's free and you can disable it anytime.",
+    "becomeSeller": "Become a {{role}}",
+    "becomeAgent": "Become a {{role}}",
+    "backHome": "Back to home"
   }
 }

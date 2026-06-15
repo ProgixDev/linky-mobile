@@ -519,7 +519,23 @@
     "trustVisitBody": "Tu ne paies aucun acompte tant que tu n'as pas visité le bien et confirmé.",
     "bookVisit": "Réserver une visite",
     "contactAgent": "Contacter l'agent",
-    "agentSection": "Agent"
+    "agentSection": "Agent",
+    "visitFallbackTitle": "Visite",
+    "visitTitle": "Demander une visite",
+    "visitSubtitle": "Propose un créneau, l'agent te confirme rapidement.",
+    "visitDay": "JOUR",
+    "visitSlot": "CRÉNEAU",
+    "visitMessageOptional": "MESSAGE · OPTIONNEL",
+    "visitNotePlaceholder": "Précise ton besoin (durée du bail, nombre de personnes…)",
+    "visitSubmit": "Envoyer la demande",
+    "visitSending": "Envoi…",
+    "visitSuccess": "Demande envoyée 🎉",
+    "visitError": "Envoi impossible",
+    "visitDayToday": "Aujourd'hui",
+    "visitDayTomorrow": "Demain",
+    "visitDayAfterTomorrow": "Après-demain",
+    "visitDayPlus3": "+3 jours",
+    "visitPerMonth": " /mois"
   },
   "cart": {
     "title": "Mon panier",
@@ -898,5 +914,20 @@
     "en": "English",
     "pular": "Pular",
     "sousou": "Sousou"
+  },
+  "roleGate": {
+    "roleSellerSg": "vendeur",
+    "roleSellerPl": "vendeurs",
+    "roleAgentSg": "agent immobilier",
+    "roleAgentPl": "agents immobiliers",
+    "titleForSeller": "Réservé aux {{label}}",
+    "titleForAgent": "Réservé aux {{label}}",
+    "titleForBoth": "Réservé aux {{seller}} ou {{agent}}",
+    "bodySeller": "Pour accéder à {{surface}}, active le rôle {{role}} dans ton profil. C'est gratuit et tu peux désactiver à tout moment.",
+    "bodyAgent": "Pour accéder à {{surface}}, active le rôle {{role}} dans ton profil. C'est gratuit et tu peux désactiver à tout moment.",
+    "bodyBoth": "Pour accéder à {{surface}}, active le rôle {{seller}} ou {{agent}} dans ton profil. C'est gratuit et tu peux désactiver à tout moment.",
+    "becomeSeller": "Devenir {{role}}",
+    "becomeAgent": "Devenir {{role}}",
+    "backHome": "Retour à l'accueil"
   }
 }
