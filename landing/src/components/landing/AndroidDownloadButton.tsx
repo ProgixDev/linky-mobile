@@ -53,7 +53,7 @@ export function AndroidDownloadButton({
       <span
         className={[
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105',
-          onDark ? 'bg-[#0E1311]/6' : 'bg-white/8',
+          onDark ? 'bg-[#3DDC84]/15' : 'bg-[#3DDC84]/20',
         ].join(' ')}
       >
         <AndroidRobot size={24} className="text-[#3DDC84]" />
@@ -61,13 +61,13 @@ export function AndroidDownloadButton({
       <span className="flex flex-col items-start leading-none">
         <span
           className={[
-            'text-[10px] font-semibold uppercase tracking-widest',
-            onDark ? 'text-[#0E1311]/55' : 'text-white/55',
+            'text-[10.5px] font-semibold uppercase tracking-widest',
+            onDark ? 'text-[#0E1311]/70' : 'text-white/85',
           ].join(' ')}
         >
           Télécharger · Gratuit
         </span>
-        <span className="mt-1.5 flex items-center gap-2 text-[16px] font-bold">
+        <span className="mt-1.5 flex items-center gap-2 text-[17px] font-bold">
           Pour Android
           <span
             className={[
