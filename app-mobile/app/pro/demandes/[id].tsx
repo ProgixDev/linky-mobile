@@ -11,6 +11,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Check, X, CalendarDays, MapPin, User as UserIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Button } from '../../../src/components/primitives/Button';
@@ -24,15 +25,17 @@ import {
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'EN ATTENTE',
-  accepted: 'ACCEPTÉE',
-  rejected: 'REFUSÉE',
-  cancelled: 'ANNULÉE',
-  completed: 'TERMINÉE',
+// Phase I.8 — status labels resolved via i18n at render. The pro screens
+// share pro.status.* keys.
+const STATUS_LABEL_KEY: Record<string, string> = {
+  pending: 'pro.status.pending',
+  accepted: 'pro.status.accepted',
+  rejected: 'pro.status.declined',
+  cancelled: 'pro.status.cancelled',
+  completed: 'pro.status.completed',
 };
 
-function formatWhen(iso: string): string {
+function formatWhen(iso: string, t: (k: string, opts?: Record<string, unknown>) => string): string {
   const d = new Date(iso);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -40,14 +43,15 @@ function formatWhen(iso: string): string {
   target.setHours(0, 0, 0, 0);
   const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
   const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  if (diff === 0) return `Aujourd'hui · ${time}`;
-  if (diff === 1) return `Demain · ${time}`;
+  if (diff === 0) return t('pro.demandeWhenToday', { time });
+  if (diff === 1) return t('pro.demandeWhenTomorrow', { time });
   const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
-  return `${dayLabel} · ${time}`;
+  return t('pro.demandeWhenOther', { day: dayLabel, time });
 }
 
 export default function DemandDetailRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const visitsQuery = useAgentVisits();
   const respond = useRespondVisitRequest();
@@ -62,7 +66,7 @@ export default function DemandDetailRoute() {
   if (visitsQuery.isError && !visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Demande" />
+        <ScreenHeader title={t('pro.demandeDetailTitle')} />
         <ErrorStateView onRetry={() => void visitsQuery.refetch()} />
       </SafeAreaView>
     );
@@ -71,7 +75,7 @@ export default function DemandDetailRoute() {
   if (visitsQuery.isLoading && !visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Demande" />
+        <ScreenHeader title={t('pro.demandeDetailTitle')} />
         <View style={{ paddingHorizontal: 24, gap: 14, paddingTop: 8 }}>
           <Skeleton height={72} radius={18} />
           <Skeleton height={90} radius={18} />
@@ -84,20 +88,20 @@ export default function DemandDetailRoute() {
   if (!visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Demande" />
+        <ScreenHeader title={t('pro.demandeDetailTitle')} />
         <EmptyState
           icon="package"
-          title="Demande introuvable"
-          description="Cette demande n'existe plus ou a été retirée."
-          ctaLabel="Retour"
+          title={t('pro.demandeDetailNotFoundTitle')}
+          description={t('pro.demandeDetailNotFoundBody')}
+          ctaLabel={t('common.back')}
           onCta={() => (router.canGoBack() ? router.back() : router.replace('/pro/demandes'))}
         />
       </SafeAreaView>
     );
   }
 
-  const buyerName = visit.buyer?.displayName ?? 'Demandeur';
-  const whenLabel = formatWhen(visit.requestedAt);
+  const buyerName = visit.buyer?.displayName ?? t('pro.demandeDetailFallbackBuyer');
+  const whenLabel = formatWhen(visit.requestedAt, t);
   const propertyTitle = visit.property?.title;
   const locationLabel = [visit.property?.district, visit.property?.city].filter(Boolean).join(', ');
   const canDecide = visit.status === 'pending';
@@ -107,11 +111,11 @@ export default function DemandDetailRoute() {
     setSubmitting(decision);
     try {
       await respond.mutateAsync({ visit_request_id: visit.id, decision });
-      toast.show(decision === 'accept' ? 'Visite acceptée.' : 'Visite refusée.', 'success');
+      toast.show(decision === 'accept' ? t('pro.demandeAcceptToast') : t('pro.demandeRejectToast'), 'success');
       if (router.canGoBack()) router.back();
       else router.replace('/pro/demandes');
     } catch (e) {
-      toast.show(toToastMessage(e, "Impossible d'enregistrer la réponse."), 'danger');
+      toast.show(toToastMessage(e, t('pro.demandeRespondError')), 'danger');
     } finally {
       setSubmitting(null);
     }
@@ -123,7 +127,7 @@ export default function DemandDetailRoute() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <ScreenHeader title="Demande" subtitle={STATUS_LABEL[visit.status] ?? visit.status.toUpperCase()} />
+        <ScreenHeader title={t('pro.demandeDetailTitle')} subtitle={STATUS_LABEL_KEY[visit.status] ? t(STATUS_LABEL_KEY[visit.status]) : visit.status.toUpperCase()} />
 
         {/* Demandeur */}
         <View style={{ paddingHorizontal: 24 }}>
@@ -165,14 +169,14 @@ export default function DemandDetailRoute() {
                 {buyerName}
               </Text>
               <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
-                Contact via la messagerie Linky
+                {t('pro.demandeDetailContactHint')}
               </Text>
             </View>
           </View>
         </View>
 
         {/* Date demandée */}
-        <Section title="Date souhaitée">
+        <Section title={t('pro.demandeDetailSectionDate')}>
           <View
             style={{
               padding: 14,
@@ -192,7 +196,7 @@ export default function DemandDetailRoute() {
 
         {/* Note */}
         {visit.note ? (
-          <Section title="Message">
+          <Section title={t('pro.demandeDetailSectionMessage')}>
             <View
               style={{
                 padding: 14,
@@ -210,7 +214,7 @@ export default function DemandDetailRoute() {
         ) : null}
 
         {/* Bien */}
-        <Section title="Bien concerné">
+        <Section title={t('pro.demandeDetailSectionProperty')}>
           <Pressable
             onPress={() => router.push(`/property/${visit.propertyId}`)}
             style={{
@@ -233,7 +237,7 @@ export default function DemandDetailRoute() {
               }}
               numberOfLines={2}
             >
-              {propertyTitle ?? "Voir l'annonce"}
+              {propertyTitle ?? t('pro.demandeDetailViewListingFallback')}
             </Text>
             {locationLabel.length > 0 && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -244,7 +248,7 @@ export default function DemandDetailRoute() {
               </View>
             )}
             <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.primary, marginTop: 4 }}>
-              Voir l'annonce →
+              {t('pro.demandeDetailViewProperty')}
             </Text>
           </Pressable>
         </Section>
@@ -266,7 +270,7 @@ export default function DemandDetailRoute() {
             variant="outline"
             size="lg"
             style={{ flex: 1 }}
-            label="Refuser"
+            label={t('pro.decline')}
             leading={<X size={16} color={colors.danger} strokeWidth={2} />}
             onPress={() => onRespond('reject')}
             loading={submitting === 'reject'}
@@ -276,7 +280,7 @@ export default function DemandDetailRoute() {
             variant="dark"
             size="lg"
             style={{ flex: 1.4 }}
-            label="Accepter"
+            label={t('pro.accept')}
             leading={<Check size={16} color={colors.bg} strokeWidth={2.25} />}
             onPress={() => onRespond('accept')}
             loading={submitting === 'accept'}

@@ -14,14 +14,16 @@ import { haptic } from '../../../src/lib/haptics';
 import { useAgentVisits } from '../../../src/data/queries';
 import type { VisitRequest, VisitStatus } from '../../../src/data/queries/properties';
 import { formatRelativeFR } from '../../../src/lib/format';
+import { useTranslation } from 'react-i18next';
 
 type Filter = 'all' | 'pending' | 'accepted' | 'rejected';
 
-const FILTERS: { id: Filter; label: string; statuses?: VisitStatus[] }[] = [
-  { id: 'all', label: 'Tout' },
-  { id: 'pending', label: 'À répondre', statuses: ['pending'] },
-  { id: 'accepted', label: 'Acceptées', statuses: ['accepted'] },
-  { id: 'rejected', label: 'Refusées', statuses: ['rejected', 'cancelled'] },
+// Phase I.8 — labelKey only. Component useMemo(t) at render.
+const FILTER_DEFS: { id: Filter; labelKey: string; statuses?: VisitStatus[] }[] = [
+  { id: 'all', labelKey: 'pro.filterAllShort' },
+  { id: 'pending', labelKey: 'pro.filterToAnswer', statuses: ['pending'] },
+  { id: 'accepted', labelKey: 'pro.filterAccepted', statuses: ['accepted'] },
+  { id: 'rejected', labelKey: 'pro.filterDeclined', statuses: ['rejected', 'cancelled'] },
 ];
 
 // Status tones map to theme tokens (resolved per-render) so the pills stay
@@ -30,39 +32,44 @@ type PillTone = 'accent' | 'primary' | 'danger' | 'muted';
 
 const STATUS_META: Record<
   string,
-  { label: string; Icon: LucideIcon; tone: PillTone }
+  { labelKey: string; Icon: LucideIcon; tone: PillTone }
 > = {
-  pending: { label: 'EN ATTENTE', Icon: Clock, tone: 'accent' },
-  accepted: { label: 'ACCEPTÉE', Icon: CheckCircle2, tone: 'primary' },
-  rejected: { label: 'REFUSÉE', Icon: X, tone: 'danger' },
-  cancelled: { label: 'ANNULÉE', Icon: X, tone: 'muted' },
-  completed: { label: 'TERMINÉE', Icon: CheckCircle2, tone: 'primary' },
+  pending: { labelKey: 'pro.status.pending', Icon: Clock, tone: 'accent' },
+  accepted: { labelKey: 'pro.status.accepted', Icon: CheckCircle2, tone: 'primary' },
+  rejected: { labelKey: 'pro.status.declined', Icon: X, tone: 'danger' },
+  cancelled: { labelKey: 'pro.status.cancelled', Icon: X, tone: 'muted' },
+  completed: { labelKey: 'pro.status.completed', Icon: CheckCircle2, tone: 'primary' },
 };
 
 export default function DemandesIndex() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<Filter>('all');
   const visitsQuery = useAgentVisits();
   const visits = visitsQuery.data;
   const isLoading = visitsQuery.isLoading;
+  const FILTERS = useMemo(
+    () => FILTER_DEFS.map((f) => ({ ...f, label: t(f.labelKey) })),
+    [t],
+  );
 
   const filtered = useMemo(() => {
     const list = visits ?? [];
     const f = FILTERS.find((x) => x.id === filter);
     if (!f?.statuses) return list;
     return list.filter((v) => f.statuses!.includes(v.status as VisitStatus));
-  }, [visits, filter]);
+  }, [visits, filter, FILTERS]);
 
   const unreadCount = (visits ?? []).filter((v) => v.status === 'pending').length;
   // U.0d — subtitle error arm gated on "no cached data" so a failed
   // pull-to-refresh keeps the unread count visible.
   const subtitle = visitsQuery.isError && (!visits || visits.length === 0)
-    ? "Impossible de charger tes demandes."
+    ? t('pro.demandesSubError')
     : isLoading
-      ? 'Chargement…'
+      ? t('pro.demandesSubLoading')
       : unreadCount > 0
-        ? `${unreadCount} demande${unreadCount > 1 ? 's' : ''} en attente de réponse.`
-        : 'Aucune demande en attente.';
+        ? t('pro.demandesSubPending', { count: unreadCount })
+        : t('pro.demandesSubNoPending');
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -77,7 +84,7 @@ export default function DemandesIndex() {
           />
         }
       >
-        <ScreenHeader title="Demandes" subtitle={subtitle} />
+        <ScreenHeader title={t('pro.demandesTitle')} subtitle={subtitle} />
 
         {/* Phase U.0 should-fix — exclusive error : chips + empty state
             stopped rendering during the error so the user sees one clear
@@ -156,10 +163,10 @@ export default function DemandesIndex() {
                     <View style={{ paddingVertical: 40, alignItems: 'center', gap: 6 }}>
                       <CalendarDays size={22} color={colors.textFaint} strokeWidth={1.75} />
                       <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                        Aucune demande
+                        {t('pro.demandesEmptyTitle')}
                       </Text>
                       <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                        Les demandes de visite apparaîtront ici.
+                        {t('pro.demandesEmptyBody')}
                       </Text>
                     </View>
                   )}
@@ -177,7 +184,9 @@ export default function DemandesIndex() {
 
 function DemandRow({ visit, onPress }: { visit: VisitRequest; onPress: () => void }) {
   const { colors } = useTheme();
-  const meta = STATUS_META[String(visit.status)] ?? STATUS_META.pending;
+  const { t } = useTranslation();
+  const metaBase = STATUS_META[String(visit.status)] ?? STATUS_META.pending;
+  const meta = { ...metaBase, label: t(metaBase.labelKey) };
   const pillBg =
     meta.tone === 'accent'
       ? colors.accentSoft
@@ -195,9 +204,9 @@ function DemandRow({ visit, onPress }: { visit: VisitRequest; onPress: () => voi
           ? colors.danger
           : colors.textMuted;
   const isPending = visit.status === 'pending';
-  const buyerName = visit.buyer?.displayName ?? 'Visiteur';
+  const buyerName = visit.buyer?.displayName ?? t('pro.demandesFallbackVisitor');
   const initial = buyerName.charAt(0).toUpperCase();
-  const propertyTitle = visit.property?.title ?? 'Bien';
+  const propertyTitle = visit.property?.title ?? t('pro.demandesFallbackProperty');
 
   return (
     <Pressable

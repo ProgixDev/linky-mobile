@@ -36,17 +36,17 @@ import {
   useMyWithdrawals,
   type WithdrawalRequestItem,
 } from '../../../src/data/queries/wallet';
+import { useTranslation } from 'react-i18next';
 
-// Phase U.0 nit — align "approved" label with wallet ("En attente"). The
-// V1 manual payout flow doesn't surface the intermediate "approved" state
-// anyway ; aligning prevents the same withdrawal from reading two
-// different statuses across screens.
-const STATUS_LABEL: Record<WithdrawalRequestItem['status'], string> = {
-  pending: 'En attente',
-  approved: 'En attente',
-  paid: 'Payé',
-  rejected: 'Refusé',
-  cancelled: 'Annulé',
+// Phase I.8 / U.0 nit — labelKey only ; row resolves with t() at render.
+// 'approved' aligns with 'pending' since V1 manual payout flow doesn't
+// surface that intermediate state.
+const STATUS_LABEL_KEY: Record<WithdrawalRequestItem['status'], string> = {
+  pending: 'seller.payoutsStatus.pending',
+  approved: 'seller.payoutsStatus.approved',
+  paid: 'seller.payoutsStatus.paid',
+  rejected: 'seller.payoutsStatus.rejected',
+  cancelled: 'seller.payoutsStatus.cancelled',
 };
 
 function statusVisual(s: WithdrawalRequestItem['status']) {
@@ -57,6 +57,7 @@ function statusVisual(s: WithdrawalRequestItem['status']) {
 
 export default function PayoutsRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const wallet = useWallet();
   const withdrawals = useMyWithdrawals();
 
@@ -86,7 +87,7 @@ export default function PayoutsRoute() {
           />
         }
       >
-        <ScreenHeader title="Retraits" subtitle="L'argent libéré atterrit sur ton Mobile Money." />
+        <ScreenHeader title={t('seller.payoutsTitle')} subtitle={t('seller.payoutsSubtitle')} />
 
         {/* Hero — solde disponible */}
         <View style={{ paddingHorizontal: 24 }}>
@@ -120,7 +121,7 @@ export default function PayoutsRoute() {
                   letterSpacing: 0.5,
                 }}
               >
-                SOLDE DISPONIBLE
+                {t('seller.payoutsBalanceLabel')}
               </Text>
               {wallet.isLoading ? (
                 <View style={{ marginTop: 10 }}>
@@ -142,7 +143,7 @@ export default function PayoutsRoute() {
                   </Text>
                   <Pressable onPress={() => void wallet.refetch()} hitSlop={8} style={{ marginTop: 6 }}>
                     <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>
-                      Réessayer
+                      {t('seller.payoutsRetryHero')}
                     </Text>
                   </Pressable>
                 </>
@@ -186,7 +187,7 @@ export default function PayoutsRoute() {
                 >
                   <ArrowDownToLine size={14} color="#0A5240" strokeWidth={2.5} />
                   <Text style={{ color: '#0A5240', fontWeight: '700', fontSize: 13.5 }}>
-                    Retirer
+                    {t('seller.payoutsWithdraw')}
                   </Text>
                 </Pressable>
               )}
@@ -206,7 +207,7 @@ export default function PayoutsRoute() {
               marginBottom: 4,
             }}
           >
-            HISTORIQUE
+            {t('seller.payoutsHistory')}
           </Text>
 
           {withdrawals.isError && (
@@ -217,7 +218,7 @@ export default function PayoutsRoute() {
 
           {!withdrawals.isError && withdrawals.isLoading && (
             <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 4 }}>
-              Chargement…
+              {t('seller.payoutsLoading')}
             </Text>
           )}
 
@@ -225,9 +226,9 @@ export default function PayoutsRoute() {
             <View style={{ paddingVertical: 28 }}>
               <EmptyState
                 icon="package"
-                title="Aucun retrait pour le moment"
-                description="Quand tes ventes seront libérées, tu pourras les transférer vers ton Mobile Money."
-                ctaLabel={balanceReady && balanceGnf > 0 ? 'Faire mon premier retrait' : undefined}
+                title={t('seller.payoutsEmptyTitle')}
+                description={t('seller.payoutsEmptyBody')}
+                ctaLabel={balanceReady && balanceGnf > 0 ? t('seller.payoutsFirstWithdraw') : undefined}
                 onCta={balanceReady && balanceGnf > 0 ? () => router.push('/wallet/retirer') : undefined}
               />
             </View>
@@ -244,6 +245,7 @@ export default function PayoutsRoute() {
 
 function WithdrawalRow({ item }: { item: WithdrawalRequestItem }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { Icon, tint } = statusVisual(item.status);
   const palette =
     tint === 'success'
@@ -303,7 +305,7 @@ function WithdrawalRow({ item }: { item: WithdrawalRequestItem }) {
           }}
           numberOfLines={1}
         >
-          {STATUS_LABEL[item.status]}
+          {t(STATUS_LABEL_KEY[item.status])}
           {item.destination ? ` · ${item.destination}` : ''}
         </Text>
       </View>

@@ -7,6 +7,7 @@ import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArchiveX } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
@@ -14,10 +15,11 @@ import { haptic } from '../../../src/lib/haptics';
 
 export default function RefundDetailRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScreenHeader title="Litige" />
+      <ScreenHeader title={t('seller.refundDetailTitle')} />
 
       <View
         style={{
@@ -50,7 +52,7 @@ export default function RefundDetailRoute() {
             includeFontPadding: false,
           }}
         >
-          Cette section n&apos;est plus disponible
+          {t('seller.refundDetailGoneTitle')}
         </Text>
         <Text
           style={{
@@ -62,7 +64,7 @@ export default function RefundDetailRoute() {
             maxWidth: 320,
           }}
         >
-          Les litiges sont traités par l&apos;équipe Linky. Retrouve le détail de la résolution sur la commande concernée.
+          {t('seller.refundsDetailNote')}
         </Text>
         <Pressable
           onPress={() => {
@@ -88,7 +90,7 @@ export default function RefundDetailRoute() {
               includeFontPadding: false,
             }}
           >
-            Retour à Boutique
+            {t('seller.refundsBack')}
           </Text>
         </Pressable>
       </View>

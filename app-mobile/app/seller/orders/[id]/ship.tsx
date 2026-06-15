@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Truck, Package, MapPin, Building2 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../../src/theme/ThemeProvider';
 import { Text } from '../../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../../src/components/nav/ScreenHeader';
@@ -22,18 +23,42 @@ interface Carrier {
   Icon: LucideIcon;
 }
 
-const CARRIERS: Carrier[] = [
-  { id: 'jefa', label: 'Jefa Delivery', desc: 'Livraison Conakry · 24 h', Icon: Truck },
-  { id: 'sopex', label: 'SOPEX Express', desc: 'National · 48 à 72 h', Icon: Package },
-  { id: 'self', label: 'Je livre moi-même', desc: 'Tu organises la remise', Icon: MapPin },
-  { id: 'pickup', label: 'Retrait sur place', desc: 'L\'acheteur passe te chercher', Icon: Building2 },
+// Phase I.8 — CARRIERS carries i18n keys ; component memos resolved list.
+// IMPORTANT : the label sent to the backend in the carrier field MUST stay
+// language-stable (buyer-side timeline reads "Jefa Delivery" not the
+// translated word) ; the rendered label is per-language for UX.
+const CARRIER_DEFS = [
+  { id: 'jefa' as const, labelKey: 'seller.shipCarrierJefaLabel', descKey: 'seller.shipCarrierJefaDesc', Icon: Truck },
+  { id: 'sopex' as const, labelKey: 'seller.shipCarrierSopexLabel', descKey: 'seller.shipCarrierSopexDesc', Icon: Package },
+  { id: 'self' as const, labelKey: 'seller.shipCarrierSelfLabel', descKey: 'seller.shipCarrierSelfDesc', Icon: MapPin },
+  { id: 'pickup' as const, labelKey: 'seller.shipCarrierPickupLabel', descKey: 'seller.shipCarrierPickupDesc', Icon: Building2 },
 ];
+// Stable backend labels (FR, source of truth on server). Used in
+// shipMutation regardless of UI language so the buyer timeline stays
+// consistent across languages.
+const CARRIER_BACKEND_LABELS: Record<Carrier['id'], string> = {
+  jefa: 'Jefa Delivery',
+  sopex: 'SOPEX Express',
+  self: 'Je livre moi-même',
+  pickup: 'Retrait sur place',
+};
 
 export default function ShipRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [carrier, setCarrier] = useState<Carrier['id']>('jefa');
   const [tracking, setTracking] = useState('');
+  const CARRIERS: Carrier[] = useMemo(
+    () =>
+      CARRIER_DEFS.map((c) => ({
+        id: c.id,
+        Icon: c.Icon,
+        label: t(c.labelKey),
+        desc: t(c.descKey),
+      })),
+    [t],
+  );
   const { data: order, isLoading, isError, refetch } = useOrder(id);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
   const toast = useToast();
@@ -48,7 +73,7 @@ export default function ShipRoute() {
   const wrongOwner = !isLoading && !!order && (!meId || order.sellerId !== meId);
   useEffect(() => {
     if (wrongOwner) {
-      toast.show("Cette commande ne fait pas partie de tes ventes.", 'info');
+      toast.show(t('seller.shipWrongOwner'), 'info');
       router.replace('/(tabs)');
     }
   }, [wrongOwner, toast]);
@@ -59,11 +84,11 @@ export default function ShipRoute() {
   if (isLoading || wrongOwner) {
     // Spinner (not a blank screen) while loading or during the brief
     // wrong-owner redirect — on 3G the blank view read as a frozen screen.
-    return <DetailStateScreen loading title="Expédier la commande" />;
+    return <DetailStateScreen loading title={t('seller.shipTitle')} />;
   }
   if (isError && !order) {
     return (
-      <DetailStateScreen loading={false} title="Expédier la commande" onRetry={() => void refetch()} />
+      <DetailStateScreen loading={false} title={t('seller.shipTitle')} onRetry={() => void refetch()} />
     );
   }
 
@@ -74,8 +99,8 @@ export default function ShipRoute() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         <ScreenHeader
-          title="Expédier la commande"
-          subtitle="Indique le mode de livraison et le numéro de suivi."
+          title={t('seller.shipTitle')}
+          subtitle={t('seller.shipSubtitle')}
         />
 
         <View style={{ paddingHorizontal: 24, gap: 10 }}>
@@ -101,7 +126,7 @@ export default function ShipRoute() {
                 marginBottom: 10,
               }}
             >
-              NUMÉRO DE SUIVI
+              {t('seller.shipTrackingLabel')}
             </Text>
             <View
               style={{
@@ -120,7 +145,7 @@ export default function ShipRoute() {
               <TextInput
                 value={tracking}
                 onChangeText={setTracking}
-                placeholder="JF-2026-00123"
+                placeholder={t('seller.shipTrackingPlaceholder')}
                 placeholderTextColor={colors.textFaint}
                 autoCapitalize="characters"
                 autoCorrect={false}
@@ -146,7 +171,7 @@ export default function ShipRoute() {
                 lineHeight: 16,
               }}
             >
-              L'acheteur recevra une notification avec ce numéro pour suivre sa commande.
+              {t('seller.shipTrackingHint')}
             </Text>
           </View>
         )}
@@ -179,17 +204,18 @@ export default function ShipRoute() {
               // the buyer's order-detail timeline reads cleanly. CARRIERS
               // is a fixed V1 list, so .find() is exhaustive ; the `?? carrier`
               // fallback is paranoia for a future enum addition.
-              const carrierLabel =
-                CARRIERS.find((c) => c.id === carrier)?.label ?? carrier;
+              // Phase I.8 — backend gets the STABLE FR label so the buyer
+              // timeline reads "Jefa Delivery" regardless of UI language.
+              const carrierLabel = CARRIER_BACKEND_LABELS[carrier] ?? carrier;
               await shipMutation.mutateAsync({
                 orderId: id,
                 trackingNumber: trimmed.length > 0 ? trimmed : undefined,
                 carrier: carrierLabel,
               });
-              toast.show("Commande marquée expédiée. Acheteur notifié.", 'success');
+              toast.show(t('seller.shipSuccess'), 'success');
               router.replace(`/seller/orders/${id}`);
             } catch (e) {
-              toast.show(toToastMessage(e, "Impossible d'enregistrer l'expédition."), 'danger');
+              toast.show(toToastMessage(e, t('seller.shipError')), 'danger');
             }
           }}
           style={{
@@ -215,7 +241,7 @@ export default function ShipRoute() {
               includeFontPadding: false,
             }}
           >
-            {shipMutation.isPending ? 'Envoi…' : "Confirmer l'expédition"}
+            {shipMutation.isPending ? t('seller.shipSending') : t('seller.shipSubmit')}
           </Text>
         </Pressable>
       </SafeAreaView>

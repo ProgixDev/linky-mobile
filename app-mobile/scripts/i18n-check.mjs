@@ -96,12 +96,18 @@ const EN_FR_IDENTICAL_ALLOWLIST = new Set([
   'onboarding.email.badge',
   // Pure interpolation template, no translatable words.
   'cart.subtitle',
-  // Brand names (mobile money rails + card schemes + payment buttons).
+  'pro.demandeWhenOther',
+  // Brand names (mobile money rails + card schemes + payment buttons +
+  // local Guinea delivery partners).
   'checkout.rails.orangeMoney',
   'checkout.rails.mtnMoney',
   'checkoutSub.cardHint',
   'checkoutSub.applePay',
   'checkoutSub.googlePay',
+  'seller.shipCarrierJefaLabel',
+  'seller.shipCarrierSopexLabel',
+  // Carrier-supplied tracking format placeholder.
+  'seller.shipTrackingPlaceholder',
   // Technical brand (Wi-Fi is the registered alliance trademark).
   'create.amenityWifi',
 ]);
