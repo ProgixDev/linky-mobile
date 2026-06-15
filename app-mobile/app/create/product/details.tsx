@@ -9,6 +9,7 @@ import { Button } from '../../../src/components/primitives/Button';
 import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
 import { TopBar } from '../../../src/components/nav/TopBar';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
+import { CitySelectField } from '../../../src/components/forms/CitySelectField';
 import { useCreateListing } from '../../../src/stores/createListing';
 import { gnfToEur } from '../../../src/lib/currency';
 
@@ -84,6 +85,10 @@ export default function CreateProductDetailsRoute() {
               ))}
             </View>
           </View>
+
+          {/* City — required. Was never collected, so every product shipped
+              with city='' and was invisible to the Marché city filter. */}
+          <CitySelectField value={state.city} onChange={(c) => state.set('city', c)} />
         </View>
       </ScrollView>
 
@@ -92,7 +97,7 @@ export default function CreateProductDetailsRoute() {
         <Button
           label="Continuer"
           style={{ flex: 1 }}
-          disabled={!state.title.trim() || state.priceGnf <= 0}
+          disabled={!state.title.trim() || state.priceGnf <= 0 || !state.city.trim()}
           onPress={() => router.push('/create/product/photos')}
         />
       </StickyBottom>
