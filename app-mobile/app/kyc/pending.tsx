@@ -1,7 +1,7 @@
 // Phase P.4 — live KYC decision screen. Polls kyc-status every 2.5s while the
 // Didit session is open ; flips to the verified / declined state in place the
 // moment the webhook (or the poll safety-net) lands the decision.
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -15,18 +15,19 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Check, Clock, Bell, X, ShieldCheck } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { haptic } from '../../src/lib/haptics';
 import { useKycStatus } from '../../src/data/queries';
 
-const SUBMITTED = ["Pièce d'identité", 'Selfie de contrôle'];
-
 export default function KycPendingRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { data } = useKycStatus({ poll: true });
   const status = data?.kycStatus ?? 'pending';
+  const SUBMITTED = useMemo(() => [t('kyc.pendingPiece'), t('kyc.pendingSelfie')], [t]);
 
   const isApproved = status === 'approved';
   const isDeclined = status === 'declined';
@@ -70,19 +71,19 @@ export default function KycPendingRoute() {
   const BadgeIcon = isApproved ? ShieldCheck : isDeclined || isExpired ? X : Check;
 
   const title = isApproved
-    ? 'Identité vérifiée !'
+    ? t('kyc.pendingApprovedTitle')
     : isDeclined
-      ? 'Vérification non aboutie'
+      ? t('kyc.pendingDeclinedTitle')
       : isExpired
-        ? 'Session expirée'
-        : "C'est envoyé !";
+        ? t('kyc.pendingExpiredTitle')
+        : t('kyc.pendingSentTitle');
   const subtitle = isApproved
-    ? 'Ton compte est vérifié — ta boutique porte maintenant le badge « Vendeur vérifié ».'
+    ? t('kyc.pendingApprovedSub')
     : isDeclined
-      ? "La vérification n'a pas abouti. Assure-toi que ta pièce est lisible, bien éclairée, et réessaie."
+      ? t('kyc.pendingDeclinedSub')
       : isExpired
-        ? "La vérification n'a pas été terminée. Tu peux recommencer quand tu veux."
-        : 'On vérifie tes documents et on te tient au courant. En attendant, tu peux continuer à utiliser Linky normalement.';
+        ? t('kyc.pendingExpiredSub')
+        : t('kyc.pendingSentSub');
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -152,7 +153,7 @@ export default function KycPendingRoute() {
             >
               <Clock size={13} color={colors.primaryDeep} strokeWidth={2.25} />
               <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.primaryDeep, letterSpacing: 0.1 }}>
-                {status === 'in_review' ? 'Examen manuel en cours' : 'Réponse sous 48 h'}
+                {status === 'in_review' ? t('kyc.pendingInReview') : t('kyc.pendingSlaReply')}
               </Text>
             </View>
           )}
@@ -170,10 +171,10 @@ export default function KycPendingRoute() {
               }}
             >
               <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textFaint, letterSpacing: 0.6 }}>
-                ENVOYÉ
+                {t('kyc.pendingSubmitted')}
               </Text>
-              {SUBMITTED.map((t) => (
-                <View key={t} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              {SUBMITTED.map((label) => (
+                <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View
                     style={{
                       width: 18,
@@ -186,7 +187,7 @@ export default function KycPendingRoute() {
                   >
                     <Check size={11} color="#FFFFFF" strokeWidth={3.5} />
                   </View>
-                  <Text style={{ fontSize: 13.5, color: colors.text }}>{t}</Text>
+                  <Text style={{ fontSize: 13.5, color: colors.text }}>{label}</Text>
                 </View>
               ))}
             </View>
@@ -198,19 +199,19 @@ export default function KycPendingRoute() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 10 }}>
               <Bell size={12} color={colors.textMuted} strokeWidth={2} />
               <Text style={{ fontSize: 12, color: colors.textMuted, letterSpacing: 0 }}>
-                On t'envoie une notification dès que c'est validé.
+                {t('kyc.pendingNotifyHint')}
               </Text>
             </View>
           )}
           {isDeclined || isExpired ? (
             <>
-              <Button variant="dark" size="lg" block label="Réessayer" onPress={() => router.replace('/kyc/intro')} />
-              <Button variant="ghost" size="sm" block label="Retour au profil" onPress={() => router.replace('/(tabs)/profil')} />
+              <Button variant="dark" size="lg" block label={t('kyc.ctaRetry')} onPress={() => router.replace('/kyc/intro')} />
+              <Button variant="ghost" size="sm" block label={t('kyc.ctaBackProfile')} onPress={() => router.replace('/(tabs)/profil')} />
             </>
           ) : (
             <>
-              <Button variant="dark" size="lg" block label="Continuer sur Linky" onPress={() => router.replace('/(tabs)')} />
-              <Button variant="ghost" size="sm" block label="Retour au profil" onPress={() => router.replace('/(tabs)/profil')} />
+              <Button variant="dark" size="lg" block label={t('kyc.ctaContinue')} onPress={() => router.replace('/(tabs)')} />
+              <Button variant="ghost" size="sm" block label={t('kyc.ctaBackProfile')} onPress={() => router.replace('/(tabs)/profil')} />
             </>
           )}
         </View>

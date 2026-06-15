@@ -26,17 +26,20 @@ import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { useMyVisitRequests, type BuyerVisitRequest } from '../../src/data/queries/properties';
 import { formatGNF } from '../../src/lib/format';
+import { useTranslation } from 'react-i18next';
 
 type GroupKey = 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed';
 
 const GROUP_ORDER: GroupKey[] = ['pending', 'accepted', 'rejected', 'cancelled', 'completed'];
 
-const GROUP_LABEL: Record<GroupKey, string> = {
-  pending:   'En attente',
-  accepted:  'Confirmées',
-  rejected:  'Refusées',
-  cancelled: 'Annulées',
-  completed: 'Terminées',
+// Phase I.8 — labelKey only. Component resolves with t() at render so the
+// group headers flip on language switch.
+const GROUP_LABEL_KEY: Record<GroupKey, string> = {
+  pending:   'buyer.group.pending',
+  accepted:  'buyer.group.accepted',
+  rejected:  'buyer.group.rejected',
+  cancelled: 'buyer.group.cancelled',
+  completed: 'buyer.group.completed',
 };
 
 function formatSlot(iso: string): string {
@@ -48,6 +51,7 @@ function formatSlot(iso: string): string {
 
 export default function BuyerRequestsRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const q = useMyVisitRequests();
   const data = q.data;
 
@@ -76,7 +80,7 @@ export default function BuyerRequestsRoute() {
   if (q.isError && (!data || data.length === 0)) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Mes demandes" subtitle="Tes visites en cours." />
+        <ScreenHeader title={t('buyer.requestsTitle')} subtitle={t('buyer.requestsSubtitle')} />
         <View style={{ flex: 1 }}>
           <ErrorStateView onRetry={() => void q.refetch()} />
         </View>
@@ -97,7 +101,7 @@ export default function BuyerRequestsRoute() {
           />
         }
       >
-        <ScreenHeader title="Mes demandes" subtitle="Tes visites en cours." />
+        <ScreenHeader title={t('buyer.requestsTitle')} subtitle={t('buyer.requestsSubtitle')} />
 
         {q.isLoading ? (
           <View style={{ paddingHorizontal: 20, paddingTop: 8, gap: 14 }}>
@@ -128,7 +132,7 @@ export default function BuyerRequestsRoute() {
               <CalendarDays size={24} color={colors.textMuted} strokeWidth={1.75} />
             </View>
             <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>
-              Aucune demande pour le moment
+              {t('buyer.requestsEmptyTitle')}
             </Text>
             <Text
               style={{
@@ -139,8 +143,7 @@ export default function BuyerRequestsRoute() {
                 lineHeight: 18,
               }}
             >
-              Quand tu enverras une demande de visite sur un bien, elle s'affichera
-              ici avec son statut.
+              {t('buyer.requestsEmpty')}
             </Text>
           </View>
         ) : (
@@ -155,7 +158,7 @@ export default function BuyerRequestsRoute() {
                     tone="muted"
                     style={{ marginTop: 4, marginBottom: 8 }}
                   >
-                    {GROUP_LABEL[key].toUpperCase()} · {rows.length}
+                    {t(GROUP_LABEL_KEY[key]).toUpperCase()} · {rows.length}
                   </Text>
                   <View style={{ gap: 10 }}>
                     {rows.map((v) => (
@@ -174,7 +177,9 @@ export default function BuyerRequestsRoute() {
 
 function VisitRow({ visit }: { visit: BuyerVisitRequest }) {
   const { colors } = useTheme();
-  const meta = STATUS_META[visit.status] ?? STATUS_META.pending;
+  const { t } = useTranslation();
+  const metaBase = STATUS_META[visit.status] ?? STATUS_META.pending;
+  const meta = { ...metaBase, label: t(metaBase.labelKey) };
   return (
     <Pressable
       onPress={() => router.push(`/property/${visit.propertyId}`)}
@@ -225,7 +230,7 @@ function VisitRow({ visit }: { visit: BuyerVisitRequest }) {
           }}
           numberOfLines={1}
         >
-          {visit.property?.title ?? 'Bien retiré'}
+          {visit.property?.title ?? t('buyer.propertyRemoved')}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <Clock size={11} color={colors.textMuted} strokeWidth={2} />
@@ -286,43 +291,42 @@ function VisitRow({ visit }: { visit: BuyerVisitRequest }) {
   );
 }
 
-// Theme-aware status pill. Mirrors the agent-side STATUS_META in pro/visites
-// (kept inline so the buyer screen doesn't depend on agent-side typing).
+// Phase I.8 — labelKey only ; VisitRow resolves via t() at render.
 const STATUS_META: Record<
   string,
   {
-    label: string;
+    labelKey: string;
     Icon: typeof Check | null;
     bg: (c: ReturnType<typeof useTheme>['colors']) => string;
     fg: (c: ReturnType<typeof useTheme>['colors']) => string;
   }
 > = {
   pending: {
-    label: 'EN ATTENTE',
+    labelKey: 'buyer.status.pending',
     Icon: Clock,
     bg: (c) => c.accentSoft,
     fg: (c) => c.accentText,
   },
   accepted: {
-    label: 'CONFIRMÉE',
+    labelKey: 'buyer.status.accepted',
     Icon: Check,
     bg: (c) => c.primarySoft,
     fg: (c) => c.primaryDeep,
   },
   rejected: {
-    label: 'REFUSÉE',
+    labelKey: 'buyer.status.rejected',
     Icon: XIcon,
     bg: () => 'rgba(209,79,60,0.12)',
     fg: (c) => c.danger,
   },
   cancelled: {
-    label: 'ANNULÉE',
+    labelKey: 'buyer.status.cancelled',
     Icon: XIcon,
     bg: (c) => c.bgSunken,
     fg: (c) => c.textMuted,
   },
   completed: {
-    label: 'TERMINÉE',
+    labelKey: 'buyer.status.completed',
     Icon: Check,
     bg: (c) => c.primarySoft,
     fg: (c) => c.primaryDeep,

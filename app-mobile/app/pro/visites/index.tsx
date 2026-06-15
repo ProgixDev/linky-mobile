@@ -12,13 +12,15 @@ import { haptic } from '../../../src/lib/haptics';
 import { toToastMessage } from '../../../src/lib/api';
 import { useAgentVisits, useRespondVisitRequest } from '../../../src/data/queries/properties';
 import type { VisitRequest } from '../../../src/data/queries/properties';
+import { useTranslation } from 'react-i18next';
 
-const STATUS_META: Record<string, { label: string; bg: 'accent' | 'primary' | 'danger' | 'muted' }> = {
-  pending: { label: 'EN ATTENTE', bg: 'accent' },
-  accepted: { label: 'CONFIRMÉ', bg: 'primary' },
-  rejected: { label: 'REFUSÉ', bg: 'danger' },
-  cancelled: { label: 'ANNULÉ', bg: 'muted' },
-  completed: { label: 'TERMINÉ', bg: 'muted' },
+// Phase I.8 — labelKey only, resolved at render via t().
+const STATUS_META: Record<string, { labelKey: string; bg: 'accent' | 'primary' | 'danger' | 'muted' }> = {
+  pending:   { labelKey: 'pro.status.pending',   bg: 'accent' },
+  accepted:  { labelKey: 'pro.status.accepted',  bg: 'primary' },
+  rejected:  { labelKey: 'pro.status.declined',  bg: 'danger' },
+  cancelled: { labelKey: 'pro.status.cancelled', bg: 'muted' },
+  completed: { labelKey: 'pro.status.completed', bg: 'muted' },
 };
 
 function dayBucketFr(iso: string): { key: string; label: string; sub: string } {
@@ -44,6 +46,7 @@ function timeFr(iso: string): string {
 
 export default function VisitesIndex() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const visitsQuery = useAgentVisits();
   const visits = visitsQuery.data ?? [];
   const isLoading = visitsQuery.isLoading;
@@ -75,7 +78,7 @@ export default function VisitesIndex() {
           />
         }
       >
-        <ScreenHeader title="Visites" subtitle="Tes demandes de visite et confirmations." />
+        <ScreenHeader title={t('pro.visitsTitle')} subtitle={t('pro.visitsSubtitle')} />
 
         {/* Phase U.0 should-fix — exclusive error : hide the zeroed summary
             row + list during error so the user doesn't read a confident
@@ -89,9 +92,9 @@ export default function VisitesIndex() {
         ) : (
           <>
             <View style={{ paddingHorizontal: 24, flexDirection: 'row', gap: 10, marginBottom: 22 }}>
-              <SummaryStat label="Aujourd'hui" value={String(todayCount)} tone="accent" />
-              <SummaryStat label="Confirmées" value={String(acceptedCount)} />
-              <SummaryStat label="En attente" value={String(pendingCount)} />
+              <SummaryStat label={t('pro.visitsToday')} value={String(todayCount)} tone="accent" />
+              <SummaryStat label={t('pro.visitsConfirmed')} value={String(acceptedCount)} />
+              <SummaryStat label={t('pro.visitsPending')} value={String(pendingCount)} />
             </View>
 
             {isLoading && (
@@ -105,7 +108,7 @@ export default function VisitesIndex() {
             {!isLoading && visits.length === 0 && (
               <View style={{ paddingHorizontal: 24, paddingVertical: 32 }}>
                 <Text tone="muted" style={{ textAlign: 'center' }}>
-                  Aucune demande de visite pour l&apos;instant.
+                  {t('pro.visitsEmpty')}
                 </Text>
               </View>
             )}
@@ -175,9 +178,11 @@ function SummaryStat({ label, value, tone }: { label: string; value: string; ton
 
 function VisitCard({ visit }: { visit: VisitRequest }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const respond = useRespondVisitRequest();
   const toast = useToast();
-  const meta = STATUS_META[visit.status] ?? STATUS_META.pending;
+  const metaBase = STATUS_META[visit.status] ?? STATUS_META.pending;
+  const meta = { ...metaBase, label: t(metaBase.labelKey) };
   const pending = visit.status === 'pending';
 
   const pillBg =
@@ -328,7 +333,7 @@ function VisitCard({ visit }: { visit: VisitRequest }) {
           >
             <X size={14} color={colors.danger} strokeWidth={2.25} />
             <Text style={{ fontSize: 13, fontWeight: '700', color: colors.danger, lineHeight: 15 }}>
-              Refuser
+              {t('pro.decline')}
             </Text>
           </Pressable>
           <Pressable
@@ -348,7 +353,7 @@ function VisitCard({ visit }: { visit: VisitRequest }) {
           >
             <Check size={14} color="#FFFFFF" strokeWidth={2.5} />
             <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF', lineHeight: 15 }}>
-              Accepter
+              {t('pro.accept')}
             </Text>
           </Pressable>
         </View>

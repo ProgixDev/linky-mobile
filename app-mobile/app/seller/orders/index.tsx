@@ -23,38 +23,48 @@ import { haptic } from '../../../src/lib/haptics';
 import { useSellerOrders } from '../../../src/data/queries';
 import { formatGNF, formatRelativeFR } from '../../../src/lib/format';
 import type { Order, OrderStatus } from '../../../src/data/types';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type Filter = 'all' | 'todo' | 'shipping' | 'done';
 
-const FILTERS: { id: Filter; label: string; statuses?: OrderStatus[] }[] = [
-  { id: 'all', label: 'Toutes' },
-  { id: 'todo', label: 'À expédier', statuses: ['paid', 'placed'] },
-  { id: 'shipping', label: 'En cours', statuses: ['preparing'] },
-  { id: 'done', label: 'Terminées', statuses: ['delivered', 'released'] },
+// Phase I.8 — FILTERS + STATUS_META rebuilt as labelKey-only definitions so
+// language switching re-translates pills + chips. Component resolves at
+// render via t().
+const FILTER_DEFS: { id: Filter; labelKey: string; statuses?: OrderStatus[] }[] = [
+  { id: 'all', labelKey: 'seller.filterAll' },
+  { id: 'todo', labelKey: 'seller.filterToShip', statuses: ['paid', 'placed'] },
+  { id: 'shipping', labelKey: 'seller.filterShipped', statuses: ['preparing'] },
+  { id: 'done', labelKey: 'seller.filterDone', statuses: ['delivered', 'released'] },
 ];
 
 // Status tones map to theme tokens (resolved per-render) so the pills stay
 // legible on dark `colors.card` — mirrors the pattern in pro/visites/index.tsx.
 type PillTone = 'accent' | 'primary' | 'danger' | 'muted';
 
-const STATUS_META: Record<OrderStatus, { label: string; Icon: LucideIcon; tone: PillTone }> = {
-  placed: { label: 'À PRÉPARER', Icon: Clock, tone: 'accent' },
-  paid: { label: 'À PRÉPARER', Icon: Clock, tone: 'accent' },
-  preparing: { label: 'EN ROUTE', Icon: Truck, tone: 'accent' },
-  delivered: { label: 'LIVRÉE', Icon: Package, tone: 'primary' },
-  released: { label: 'PAYÉE', Icon: CheckCircle2, tone: 'primary' },
-  disputed: { label: 'LITIGE', Icon: CircleAlert, tone: 'danger' },
-  cancelled: { label: 'ANNULÉE', Icon: Ban, tone: 'muted' },
-  refunded: { label: 'REMBOURSÉE', Icon: RotateCcw, tone: 'muted' },
+const STATUS_META: Record<OrderStatus, { labelKey: string; Icon: LucideIcon; tone: PillTone }> = {
+  placed: { labelKey: 'seller.status.placed', Icon: Clock, tone: 'accent' },
+  paid: { labelKey: 'seller.status.paid', Icon: Clock, tone: 'accent' },
+  preparing: { labelKey: 'seller.status.preparing', Icon: Truck, tone: 'accent' },
+  delivered: { labelKey: 'seller.status.delivered', Icon: Package, tone: 'primary' },
+  released: { labelKey: 'seller.status.released', Icon: CheckCircle2, tone: 'primary' },
+  disputed: { labelKey: 'seller.status.disputed', Icon: CircleAlert, tone: 'danger' },
+  cancelled: { labelKey: 'seller.status.cancelled', Icon: Ban, tone: 'muted' },
+  refunded: { labelKey: 'seller.status.refunded', Icon: RotateCcw, tone: 'muted' },
 };
 
-const STATUS_FALLBACK = { label: '—', Icon: CircleAlert, tone: 'muted' as PillTone } as const;
+const STATUS_FALLBACK = { labelKey: 'states.empty', Icon: CircleAlert, tone: 'muted' as PillTone } as const;
 
 export default function SellerOrdersIndex() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<Filter>('todo');
   const ordersQuery = useSellerOrders();
   const orders = ordersQuery.data;
+  const FILTERS = useMemo(
+    () => FILTER_DEFS.map((f) => ({ ...f, label: t(f.labelKey) })),
+    [t],
+  );
 
   const filtered = (orders ?? []).filter((o) => {
     const f = FILTERS.find((x) => x.id === filter);
@@ -76,8 +86,8 @@ export default function SellerOrdersIndex() {
         }
       >
         <ScreenHeader
-          title="Commandes reçues"
-          subtitle="Prépare, expédie et reçois ton paiement."
+          title={t('seller.ordersTitle')}
+          subtitle={t('seller.ordersSubtitle')}
         />
 
         {/* Phase U.0 should-fix — exclusive error : was co-rendering with
@@ -152,16 +162,14 @@ export default function SellerOrdersIndex() {
                     <View style={{ paddingVertical: 40, alignItems: 'center', gap: 6 }}>
                       <Package size={22} color={colors.textFaint} strokeWidth={1.75} />
                       <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                        {/* U.0 should-fix — copy was wrong when a filter
-                            other than "Toutes" was active. */}
                         {(orders?.length ?? 0) > 0
-                          ? 'Aucune commande dans ce filtre'
-                          : 'Aucune commande reçue'}
+                          ? t('seller.noOrdersInFilter')
+                          : t('seller.noOrders')}
                       </Text>
                       <Text style={{ color: colors.textMuted, fontSize: 12 }}>
                         {(orders?.length ?? 0) > 0
-                          ? 'Bascule sur Toutes pour voir tes autres ventes.'
-                          : "Les commandes apparaîtront ici dès qu'un client passera commande."}
+                          ? t('seller.noOrdersInFilterSub')
+                          : t('seller.noOrdersSub')}
                       </Text>
                     </View>
                   )}
@@ -177,7 +185,12 @@ export default function SellerOrdersIndex() {
 
 function SellerOrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
   const { colors } = useTheme();
-  const meta = STATUS_META[order.status] ?? { ...STATUS_FALLBACK, label: order.status.toUpperCase() };
+  const { t } = useTranslation();
+  // Phase I.8 — resolve labelKey at render so the status pill flips live.
+  const metaBase = STATUS_META[order.status];
+  const meta = metaBase
+    ? { ...metaBase, label: t(metaBase.labelKey) }
+    : { ...STATUS_FALLBACK, label: order.status.toUpperCase() };
   const pillBg =
     meta.tone === 'accent'
       ? colors.accentSoft

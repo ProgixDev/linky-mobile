@@ -1,32 +1,43 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { ArrowLeft, IdCard, Camera, ScanFace, ShieldCheck, Lock, Clock } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { useStartKyc } from '../../src/data/queries';
 import { ApiError } from '../../src/lib/api';
 
-const STEPS = [
-  { n: '01', label: 'Choisis ta pièce', Icon: IdCard },
-  { n: '02', label: 'Scanne recto / verso', Icon: Camera },
-  { n: '03', label: 'Selfie de contrôle', Icon: ScanFace },
+// Phase I.8 — STEPS / ASSURANCES carry labelKey only, resolved at render.
+const STEP_DEFS = [
+  { n: '01', labelKey: 'kyc.step01Label', Icon: IdCard },
+  { n: '02', labelKey: 'kyc.step02Label', Icon: Camera },
+  { n: '03', labelKey: 'kyc.step03Label', Icon: ScanFace },
 ];
 
-const ASSURANCES = [
-  { Icon: Lock, label: 'Données chiffrées de bout en bout' },
-  { Icon: Clock, label: 'Réponse sous 48 h' },
-  { Icon: ShieldCheck, label: 'Conforme à la réglementation guinéenne' },
+const ASSURANCE_DEFS = [
+  { Icon: Lock, labelKey: 'kyc.assurance1' },
+  { Icon: Clock, labelKey: 'kyc.assurance2' },
+  { Icon: ShieldCheck, labelKey: 'kyc.assurance3' },
 ];
 
 export default function KycIntroRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const startKyc = useStartKyc();
   const [error, setError] = useState<string | null>(null);
+  const STEPS = useMemo(
+    () => STEP_DEFS.map((s) => ({ ...s, label: t(s.labelKey) })),
+    [t],
+  );
+  const ASSURANCES = useMemo(
+    () => ASSURANCE_DEFS.map((a) => ({ ...a, label: t(a.labelKey) })),
+    [t],
+  );
 
   // Phase P — the capture happens in Didit's hosted flow (ID scan + selfie +
   // liveness in the in-app browser). The browser closes itself when Didit
@@ -57,11 +68,11 @@ export default function KycIntroRoute() {
       router.replace('/kyc/pending');
     } catch (e) {
       if (e instanceof ApiError && e.code === 'KYC_NOT_CONFIGURED') {
-        setError('La vérification arrive très bientôt. Réessaie dans quelques jours.');
+        setError(t('kyc.errorComingSoon'));
       } else if (e instanceof ApiError && e.code === 'KYC_PROVIDER_ERROR') {
         setError(e.message_fr); // « service indisponible » — pas la faute de sa connexion
       } else {
-        setError('Impossible de démarrer la vérification. Vérifie ta connexion et réessaie.');
+        setError(t('kyc.errorCannotStart'));
       }
     }
   };
@@ -101,19 +112,19 @@ export default function KycIntroRoute() {
             }}
           >
             <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primaryDeep, letterSpacing: 0.4 }}>
-              VÉRIFICATION
+              {t('kyc.badge')}
             </Text>
           </View>
 
           <Text variant="dispL" style={{ fontSize: 32, lineHeight: 38 }}>
-            Confirme que c'est{'\n'}bien toi.
+            {t('kyc.title')}
           </Text>
           <Text
             variant="bodyM"
             tone="muted"
             style={{ marginTop: 10, fontSize: 15, lineHeight: 22, letterSpacing: 0 }}
           >
-            En 3 étapes, on s'assure de ton identité pour protéger tes paiements et débloquer les fonctionnalités vendeur.
+            {t('kyc.subtitle')}
           </Text>
 
           {/* Steps */}
@@ -191,7 +202,7 @@ export default function KycIntroRoute() {
             variant="dark"
             size="lg"
             block
-            label={startKyc.isPending ? 'Ouverture…' : 'Commencer'}
+            label={startKyc.isPending ? t('kyc.ctaStarting') : t('kyc.ctaStart')}
             loading={startKyc.isPending}
             onPress={onStart}
           />
@@ -199,7 +210,7 @@ export default function KycIntroRoute() {
             variant="ghost"
             size="sm"
             block
-            label="Plus tard"
+            label={t('kyc.ctaLater')}
             onPress={() => {
               if (router.canGoBack()) router.back();
               else router.replace('/(tabs)');

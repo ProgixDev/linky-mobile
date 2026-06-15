@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Card } from '../../src/components/primitives/Card';
@@ -11,29 +13,39 @@ import { useAuth } from '../../src/stores/auth';
 
 interface TypeOption {
   kind: 'product' | 'property';
-  title: string;
-  desc: string;
+  titleKey: string;
+  descKey: string;
   icon: IconKey;
   requires: 'seller' | 'agent';
 }
 
-const OPTIONS: TypeOption[] = [
-  { kind: 'product', title: 'Un article', desc: 'Mode, électronique, beauté…', icon: 'store', requires: 'seller' },
-  { kind: 'property', title: 'Un bien immobilier', desc: 'Appartement, maison, terrain', icon: 'building', requires: 'agent' },
+// Phase I.8 — OPTIONS carry i18n keys ; component resolves at render via t().
+const OPTION_DEFS: TypeOption[] = [
+  { kind: 'product', titleKey: 'create.kindProductTitle', descKey: 'create.kindProductDesc', icon: 'store', requires: 'seller' },
+  { kind: 'property', titleKey: 'create.kindPropertyTitle', descKey: 'create.kindPropertyDesc', icon: 'building', requires: 'agent' },
 ];
 
 export default function CreateTypeRoute() {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const roles = useAuth((s) => s.roles);
   const setKind = useCreateListing((s) => s.setKind);
   const reset = useCreateListing((s) => s.reset);
-  const visibleOptions = OPTIONS.filter((o) => roles.includes(o.requires));
+  const visibleOptions = useMemo(
+    () =>
+      OPTION_DEFS.filter((o) => roles.includes(o.requires)).map((o) => ({
+        ...o,
+        title: t(o.titleKey),
+        desc: t(o.descKey),
+      })),
+    [roles, t],
+  );
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Nouvelle annonce" back />
+      <TopBar title={t('boutique.newListingProduct')} back />
       <View style={{ paddingHorizontal: 16 }}>
         <Text variant="dispL" style={{ fontSize: 22, marginBottom: 18 }}>
-          Que veux-tu publier ?
+          {t('create.selectKindTitle')}
         </Text>
         {visibleOptions.length === 0 && (
           <Pressable
@@ -42,15 +54,14 @@ export default function CreateTypeRoute() {
           >
             <Card padding={16}>
               <Text variant="titleM" style={{ fontSize: 14 }}>
-                Active un rôle pour publier
+                {t('create.activateRoleTitle')}
               </Text>
               <Text
                 variant="micro"
                 tone="muted"
                 style={{ letterSpacing: 0, textTransform: 'none', marginTop: 4 }}
               >
-                Touche ici pour devenir vendeur ou agent immobilier — on
-                t'explique comment ça marche.
+                {t('create.activateRoleBody')}
               </Text>
             </Card>
           </Pressable>
