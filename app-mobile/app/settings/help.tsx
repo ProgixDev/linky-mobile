@@ -9,31 +9,28 @@ import {
   CircleAlert,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 
-const FAQ: { q: string; a: string }[] = [
-  {
-    q: 'Comment fonctionne le paiement sécurisé ?',
-    a: 'On garde l\'argent en escrow jusqu\'à confirmation de la réception.',
-  },
-  {
-    q: 'Que faire en cas de litige avec un vendeur ?',
-    a: 'Ouvre un litige depuis la commande. Un médiateur Linky intervient sous 48 h.',
-  },
-  {
-    q: 'Comment devenir vendeur vérifié ?',
-    a: 'Va dans Profil → Vérification d\'identité et suis les 3 étapes.',
-  },
-  {
-    q: 'Les paiements en euros sont-ils disponibles ?',
-    a: 'Oui, avec une carte bancaire pour la diaspora. GNF reste la devise principale.',
-  },
+// Phase I.9 — stable defs ; the visible label is resolved at render time
+// via t() so the FAQ flips language with Langue.
+const FAQ_DEFS: { qKey: string; aKey: string }[] = [
+  { qKey: 'helpScreen.faq1Q', aKey: 'helpScreen.faq1A' },
+  { qKey: 'helpScreen.faq2Q', aKey: 'helpScreen.faq2A' },
+  { qKey: 'helpScreen.faq3Q', aKey: 'helpScreen.faq3A' },
+  { qKey: 'helpScreen.faq4Q', aKey: 'helpScreen.faq4A' },
 ];
 
 export default function HelpRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const FAQ = useMemo(
+    () => FAQ_DEFS.map((d) => ({ q: t(d.qKey), a: t(d.aKey) })),
+    [t],
+  );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -42,8 +39,8 @@ export default function HelpRoute() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <ScreenHeader
-          title="Aide & support"
-          subtitle="On t'aide à utiliser Linky en toute sérénité."
+          title={t('helpScreen.topbar')}
+          subtitle={t('helpScreen.subtitle')}
         />
 
         {/* Phase X.7 — "Chat avec l'équipe" with its fake "En ligne" badge
@@ -52,18 +49,18 @@ export default function HelpRoute() {
             the OS app. */}
         {/* "Appeler" row removed — it dialed a placeholder number
             (+224 622 00 00 00) that reaches nothing. Email is the real channel. */}
-        <SectionLabel label="Nous contacter" />
+        <SectionLabel label={t('helpScreen.sectionContact')} />
         <Card>
           <ContactRow
             Icon={Mail}
-            label="Envoyer un email"
-            sub="support@linky.gn"
+            label={t('helpScreen.emailLabel')}
+            sub={t('helpScreen.emailSub')}
             onPress={() => Linking.openURL('mailto:support@linky.gn').catch(() => {})}
             last
           />
         </Card>
 
-        <SectionLabel label="Questions fréquentes" />
+        <SectionLabel label={t('helpScreen.sectionFaq')} />
         <Card>
           {FAQ.map((item, idx) => (
             <FaqRow
@@ -75,35 +72,35 @@ export default function HelpRoute() {
           ))}
         </Card>
 
-        <SectionLabel label="Aide approfondie" />
+        <SectionLabel label={t('helpScreen.sectionDeep')} />
         <Card>
           {/* Phase X.7 — wired to dedicated support mailboxes. */}
           <ContactRow
             Icon={ShieldCheck}
-            label="Signaler un problème de sécurité"
-            sub="Compte piraté, fraude, contenu inapproprié."
+            label={t('helpScreen.securityLabel')}
+            sub={t('helpScreen.securitySub')}
             onPress={() =>
               Linking.openURL(
                 'mailto:security@linky.gn?subject=' +
-                  encodeURIComponent('Signalement sécurité Linky'),
+                  encodeURIComponent(t('helpScreen.securitySubject')),
               ).catch(() => {})
             }
           />
           <ContactRow
             Icon={CircleAlert}
-            label="Signaler un bug"
-            sub="Décris-nous ce qui ne marche pas."
+            label={t('helpScreen.bugLabel')}
+            sub={t('helpScreen.bugSub')}
             onPress={() =>
               Linking.openURL(
                 'mailto:support@linky.gn?subject=' +
-                  encodeURIComponent('Bug Linky'),
+                  encodeURIComponent(t('helpScreen.bugSubject')),
               ).catch(() => {})
             }
           />
           <ContactRow
             Icon={Activity}
-            label="Page de statut"
-            sub="Voir l'état des services en temps réel."
+            label={t('helpScreen.statusLabel')}
+            sub={t('helpScreen.statusSub')}
             onPress={() => Linking.openURL('https://linky.gn/status').catch(() => {})}
             last
           />

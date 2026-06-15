@@ -10,6 +10,7 @@ import {
   Heart,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
@@ -20,6 +21,7 @@ const APP_BUILD = '1';
 
 export default function AboutRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -27,7 +29,7 @@ export default function AboutRoute() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        <ScreenHeader title="À propos de Linky" />
+        <ScreenHeader title={t('aboutScreen.topbar')} />
 
         {/* Logo + version */}
         <View style={{ alignItems: 'center', paddingHorizontal: 24, paddingBottom: 24 }}>
@@ -73,7 +75,7 @@ export default function AboutRoute() {
               letterSpacing: 0,
             }}
           >
-            Version {APP_VERSION} · Build {APP_BUILD}
+            {t('aboutScreen.version', { version: APP_VERSION, build: APP_BUILD })}
           </Text>
           <Text
             style={{
@@ -86,7 +88,7 @@ export default function AboutRoute() {
               letterSpacing: 0,
             }}
           >
-            Le marché et l'immobilier en Guinée, dans une seule app. Fait avec soin à Conakry.
+            {t('aboutScreen.tagline')}
           </Text>
         </View>
 
@@ -94,43 +96,43 @@ export default function AboutRoute() {
             presence: Android APK side-loaded, iOS not built). Partager
             Linky now uses the native Share API instead of a haptic-only
             no-op. */}
-        <SectionLabel label="Aide la communauté" />
+        <SectionLabel label={t('aboutScreen.sectionHelp')} />
         <Card>
           <ActionRow
             Icon={Share2}
-            label="Partager Linky"
-            sub="Invite tes amis et proches."
+            label={t('aboutScreen.shareLabel')}
+            sub={t('aboutScreen.shareSub')}
             onPress={() => {
               haptic.light();
               void Share.share({
                 title: 'Linky',
-                message: "Linky — le marché et l'immobilier en Guinée. À découvrir.",
+                message: t('aboutScreen.shareMessage'),
               }).catch(() => {});
             }}
             last
           />
         </Card>
 
-        <SectionLabel label="Restons en contact" />
+        <SectionLabel label={t('aboutScreen.sectionContact')} />
         <Card>
           <ActionRow
             Icon={AtSign}
-            label="Instagram"
-            sub="@linkyapp"
+            label={t('aboutScreen.instagramLabel')}
+            sub={t('aboutScreen.instagramSub')}
             onPress={() => Linking.openURL('https://instagram.com/linkyapp').catch(() => {})}
             trailing={<ExternalLink size={14} color={colors.textFaint} strokeWidth={2} />}
           />
           <ActionRow
             Icon={Globe}
-            label="Site web"
-            sub="linky.gn"
+            label={t('aboutScreen.websiteLabel')}
+            sub={t('aboutScreen.websiteSub')}
             onPress={() => Linking.openURL('https://linky.gn').catch(() => {})}
             trailing={<ExternalLink size={14} color={colors.textFaint} strokeWidth={2} />}
           />
           <ActionRow
             Icon={Mail}
-            label="Nous écrire"
-            sub="hello@linky.gn"
+            label={t('aboutScreen.writeLabel')}
+            sub={t('aboutScreen.writeSub')}
             onPress={() => Linking.openURL('mailto:hello@linky.gn').catch(() => {})}
             trailing={<ExternalLink size={14} color={colors.textFaint} strokeWidth={2} />}
             last
@@ -149,11 +151,11 @@ export default function AboutRoute() {
           }}
         >
           <Text style={{ fontSize: 12, color: colors.textFaint, letterSpacing: 0 }}>
-            Fait avec
+            {t('aboutScreen.madeWith')}
           </Text>
           <Heart size={11} color={colors.danger} fill={colors.danger} strokeWidth={0} />
           <Text style={{ fontSize: 12, color: colors.textFaint, letterSpacing: 0 }}>
-            à Conakry.
+            {t('aboutScreen.atConakry')}
           </Text>
         </View>
       </ScrollView>

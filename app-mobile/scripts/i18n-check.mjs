@@ -122,6 +122,13 @@ const EN_FR_IDENTICAL_ALLOWLIST = new Set([
   'seller.shipTrackingPlaceholder',
   // Technical brand (Wi-Fi is the registered alliance trademark).
   'create.amenityWifi',
+  // Pure interpolation template, identical structure FR/EN.
+  'aboutScreen.version',
+  // Brand handles / domains / email addresses are language-agnostic.
+  'aboutScreen.instagramSub',
+  'aboutScreen.websiteSub',
+  'aboutScreen.writeSub',
+  'helpScreen.emailSub',
 ]);
 
 function looksLikeProperNoun(value) {
