@@ -253,10 +253,14 @@ export default function PropertyDetailRoute() {
             </View>
           )}
 
-          <View style={{ marginTop: 18 }}>
-            <MicroLabel label="Description" />
-            <Text variant="bodyM">{prop.description}</Text>
-          </View>
+          {/* Phase Y.4 — hide the section heading when no description, rather
+              than showing the label above an empty paragraph. */}
+          {prop.description.trim().length > 0 && (
+            <View style={{ marginTop: 18 }}>
+              <MicroLabel label="Description" />
+              <Text variant="bodyM">{prop.description}</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 

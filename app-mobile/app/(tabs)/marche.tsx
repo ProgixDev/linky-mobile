@@ -688,10 +688,11 @@ export default function MarcheRoute() {
           />
           <Button
             variant="primary"
+            // Phase Y.4 — pluralize the count noun (1 article, 2 articles).
             label={
               isArticles
-                ? `Voir ${products?.length ?? 0} articles`
-                : `Voir ${properties?.length ?? 0} biens`
+                ? `Voir ${products?.length ?? 0} article${(products?.length ?? 0) === 1 ? '' : 's'}`
+                : `Voir ${properties?.length ?? 0} bien${(properties?.length ?? 0) === 1 ? '' : 's'}`
             }
             style={{ flex: 2 }}
             onPress={() => setSheetOpen(false)}

@@ -265,7 +265,7 @@ function BuyerHome() {
               header carries only universal commerce actions. */}
           <CircleAction
             onPress={() => router.push('/cart')}
-            accessibilityLabel={`Panier (${cartCount} articles)`}
+            accessibilityLabel={`Panier (${cartCount} article${cartCount === 1 ? '' : 's'})`}
             badge={cartCount > 0 ? String(cartCount) : undefined}
           >
             <ShoppingBag size={18} color={colors.text} strokeWidth={1.75} />

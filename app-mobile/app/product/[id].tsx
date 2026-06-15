@@ -463,6 +463,10 @@ export default function ProductDetailRoute() {
                 >
                   {shop.name}
                 </Text>
+                {/* Phase Y.4 — sweep: never render a 0-star rating or a bare
+                    response-time placeholder. For new shops, show "Nouveau"
+                    in lieu of the rating ; only append "repond en X" when a
+                    real response_time value is present. */}
                 <View
                   style={{
                     flexDirection: 'row',
@@ -471,27 +475,47 @@ export default function ProductDetailRoute() {
                     marginTop: 4,
                   }}
                 >
-                  <Star size={11} color={colors.accent} fill={colors.accent} />
-                  <Text
-                    style={{
-                      fontSize: 11.5,
-                      fontWeight: '700',
-                      color: colors.text,
-                      fontVariant: ['tabular-nums'],
-                      letterSpacing: 0,
-                    }}
-                  >
-                    {shop.rating}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 11.5,
-                      color: colors.textMuted,
-                      letterSpacing: 0,
-                    }}
-                  >
-                    ({shop.reviewCount} avis) · répond en {shop.responseTime}
-                  </Text>
+                  {shop.reviewCount > 0 ? (
+                    <>
+                      <Star size={11} color={colors.accent} fill={colors.accent} />
+                      <Text
+                        style={{
+                          fontSize: 11.5,
+                          fontWeight: '700',
+                          color: colors.text,
+                          fontVariant: ['tabular-nums'],
+                          letterSpacing: 0,
+                        }}
+                      >
+                        {shop.rating.toFixed(1)}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 11.5,
+                          color: colors.textMuted,
+                          letterSpacing: 0,
+                        }}
+                      >
+                        ({shop.reviewCount} avis)
+                        {shop.responseTime.trim().length > 0
+                          ? ` · répond en ${shop.responseTime}`
+                          : ''}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text
+                      style={{
+                        fontSize: 11.5,
+                        color: colors.textMuted,
+                        letterSpacing: 0,
+                      }}
+                    >
+                      Nouveau
+                      {shop.responseTime.trim().length > 0
+                        ? ` · répond en ${shop.responseTime}`
+                        : ''}
+                    </Text>
+                  )}
                 </View>
               </View>
               <ChevronRight size={16} color={colors.textFaint} strokeWidth={2} />
@@ -526,18 +550,22 @@ export default function ProductDetailRoute() {
         </Section>
 
         {/* ===== Description ===== */}
-        <Section title="Description">
-          <Text
-            style={{
-              fontSize: 14.5,
-              color: colors.text,
-              lineHeight: 22,
-              letterSpacing: 0,
-            }}
-          >
-            {product.description}
-          </Text>
-        </Section>
+        {/* Phase Y.4 — hide the heading entirely when no description, rather
+            than showing "Description" above an empty paragraph. */}
+        {product.description.trim().length > 0 && (
+          <Section title="Description">
+            <Text
+              style={{
+                fontSize: 14.5,
+                color: colors.text,
+                lineHeight: 22,
+                letterSpacing: 0,
+              }}
+            >
+              {product.description}
+            </Text>
+          </Section>
+        )}
 
         {/* ===== Related ===== */}
         {related && related.length > 1 && (
