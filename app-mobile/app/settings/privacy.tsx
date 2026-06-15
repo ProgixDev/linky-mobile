@@ -1,4 +1,4 @@
-import { Linking, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Eye,
@@ -15,9 +15,11 @@ import { Switch } from '../../src/components/primitives/Switch';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { haptic } from '../../src/lib/haptics';
 import { usePrefs } from '../../src/stores/prefs';
+import { useToast } from '../../src/components/feedback/Toast';
 
 export default function PrivacyRoute() {
   const { colors } = useTheme();
+  const toast = useToast();
   // Backed by the persisted prefs store (MMKV) so they survive an app reopen.
   const personalize = usePrefs((s) => s.privacyPersonalize);
   const setPersonalize = usePrefs((s) => s.setPrivacyPersonalize);
@@ -27,6 +29,33 @@ export default function PrivacyRoute() {
   const setAdTracking = usePrefs((s) => s.setPrivacyAdTracking);
   const profilePublic = usePrefs((s) => s.privacyProfilePublic);
   const setProfilePublic = usePrefs((s) => s.setPrivacyProfilePublic);
+
+  // Phase Y.3 — "Supprimer mon compte" is a GDPR-required path with no V1
+  // self-serve backend. We open a mailto request to support@linky.gn so the
+  // user has a way to actually file the request, but we confirm first
+  // (irreversible-feeling) and we tell them the truth: it's a manual support
+  // workflow, not an automated 30-day countdown.
+  const onDeleteAccount = () => {
+    Alert.alert(
+      'Supprimer mon compte',
+      "On va ouvrir ton application mail pour envoyer une demande à notre équipe support. Ils confirmeront la suppression par retour de mail.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Continuer',
+          style: 'destructive',
+          onPress: () => {
+            Linking.openURL(
+              'mailto:support@linky.gn?subject=' +
+                encodeURIComponent('Demande de suppression de mon compte Linky'),
+            ).catch(() => {
+              toast.show('Impossible d\'ouvrir ton application mail.', 'danger');
+            });
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -77,35 +106,26 @@ export default function PrivacyRoute() {
           />
         </Card>
 
-        {/* Phase X.7 — both rows now open the OS mail client with a
-            pre-filled subject so the support team can process the
-            GDPR request. No V1 self-serve flow exists ; the
-            email-based workflow is the honest path. */}
+        {/* Phase Y.3 — "Télécharger mes données" has no V1 self-serve backend ;
+            it's now an honest "Bientôt" row (no mailto, no fake "we sent you
+            an email"). "Supprimer mon compte" stays actionable via support
+            mail with an explicit confirm dialog — GDPR requires a path. */}
         <SectionLabel label="Mes données" />
         <Card>
           <ActionRow
             Icon={Download}
             label="Télécharger mes données"
-            sub="On t'envoie une copie de tes données par email."
-            onPress={() =>
-              Linking.openURL(
-                'mailto:support@linky.gn?subject=' +
-                  encodeURIComponent('Demande de téléchargement de mes données Linky'),
-              ).catch(() => {})
-            }
+            sub="Bientôt — pour l'instant, écris-nous à support@linky.gn."
+            comingSoon
+            onPress={() => toast.show('Bientôt disponible.', 'info')}
           />
           <ActionRow
             Icon={Trash2}
             label="Supprimer mon compte"
-            sub="Action définitive après 30 jours d'attente."
+            sub="Demande à notre équipe la suppression définitive de ton compte."
             danger
             last
-            onPress={() =>
-              Linking.openURL(
-                'mailto:support@linky.gn?subject=' +
-                  encodeURIComponent('Demande de suppression de mon compte Linky'),
-              ).catch(() => {})
-            }
+            onPress={onDeleteAccount}
           />
         </Card>
       </ScrollView>
@@ -227,6 +247,7 @@ function ActionRow({
   label,
   sub,
   danger,
+  comingSoon,
   last,
   onPress,
 }: {
@@ -234,15 +255,16 @@ function ActionRow({
   label: string;
   sub: string;
   danger?: boolean;
+  comingSoon?: boolean;
   last?: boolean;
   onPress?: () => void;
 }) {
   const { colors } = useTheme();
-  const fg = danger ? colors.danger : colors.text;
+  const fg = comingSoon ? colors.textMuted : danger ? colors.danger : colors.text;
   return (
     <Pressable
-      // Phase X.7 — onPress was haptic-only ; now driven by the caller so
-      // the two GDPR rows can wire to support-email workflows.
+      // Phase Y.3 — onPress wires to the caller's flow. Coming-soon rows tap
+      // to a "Bientôt" toast ; danger rows go through a confirm dialog.
       onPress={() => { haptic.light(); onPress?.(); }}
       style={{
         flexDirection: 'row',
@@ -267,18 +289,41 @@ function ActionRow({
         <Icon size={16} color={fg} strokeWidth={1.75} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            fontSize: 14.5,
-            fontWeight: '600',
-            color: fg,
-            letterSpacing: 0,
-            lineHeight: 18,
-            includeFontPadding: false,
-          }}
-        >
-          {label}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text
+            style={{
+              fontSize: 14.5,
+              fontWeight: '600',
+              color: fg,
+              letterSpacing: 0,
+              lineHeight: 18,
+              includeFontPadding: false,
+            }}
+          >
+            {label}
+          </Text>
+          {comingSoon && (
+            <View
+              style={{
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+                borderRadius: 999,
+                backgroundColor: colors.accentSoft,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 9.5,
+                  fontWeight: '700',
+                  color: colors.accentText,
+                  letterSpacing: 0.4,
+                }}
+              >
+                BIENTÔT
+              </Text>
+            </View>
+          )}
+        </View>
         <Text
           style={{
             fontSize: 12,

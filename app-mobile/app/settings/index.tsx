@@ -7,6 +7,7 @@ import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { haptic } from '../../src/lib/haptics';
 import { usePrefs } from '../../src/stores/prefs';
+import { useToast } from '../../src/components/feedback/Toast';
 
 type LangCode = 'fr' | 'en' | 'pular' | 'sousou';
 type FlagKind = 'fr' | 'gb' | 'gn';
@@ -100,6 +101,7 @@ function Flag({ kind }: { kind: FlagKind }) {
 export default function SettingsRoute() {
   const { colors } = useTheme();
   const { language, setLanguage } = usePrefs();
+  const toast = useToast();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -128,12 +130,18 @@ export default function SettingsRoute() {
             return (
               <Pressable
                 key={lang.code}
+                // Phase Y.3 — disabled rows still tap to a small "Bientôt" toast so
+                // the user gets visible feedback (otherwise the tap feels broken).
+                // setLanguage is never called for non-French; the radio stays put.
                 onPress={() => {
-                  if (disabled) return;
+                  if (disabled) {
+                    haptic.light();
+                    toast.show('Bientôt disponible.', 'info');
+                    return;
+                  }
                   haptic.selection();
                   setLanguage(lang.code);
                 }}
-                disabled={disabled}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
