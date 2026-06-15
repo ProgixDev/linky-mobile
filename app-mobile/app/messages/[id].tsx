@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Avatar } from '../../src/components/primitives/Avatar';
@@ -26,6 +27,7 @@ const MESSAGE_MAX_LENGTH = 2000;
 export default function ChatRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { data, isLoading, isError, refetch } = useConversation(id);
   const send = useSendMessage(id);
   const me = useAuth((s) => s.authUserId);
@@ -51,7 +53,7 @@ export default function ChatRoute() {
       onSuccess: () => setText(''),
       onError: () => {
         setText(body);
-        toast.show('Message non envoyé — réessaie.', 'danger');
+        toast.show(t('messages.sendError'), 'danger');
       },
     });
   };
@@ -64,7 +66,7 @@ export default function ChatRoute() {
   }, [id, data?.messages.length]);
 
   const conv = data?.conversation;
-  const otherName = conv?.otherUserDisplayName ?? 'Utilisateur';
+  const otherName = conv?.otherUserDisplayName ?? t('messages.fallbackUser');
   const otherAvatar = conv?.otherUserAvatarUrl;
   const pinned = conv?.pinnedListingId && conv.pinnedListingTitle
     ? {
@@ -131,7 +133,7 @@ export default function ChatRoute() {
           <Image source={pinned.photoUrl ?? undefined} style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: colors.bgSunken }} contentFit="cover" />
           <View style={{ flex: 1 }}>
             <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-              À propos de
+              {t('messages.chatPinnedAbout')}
             </Text>
             <Text style={{ fontSize: 13, fontWeight: '600' }} numberOfLines={1}>
               {pinned.title}
@@ -154,7 +156,7 @@ export default function ChatRoute() {
       ) : isError && messageCount === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 12 }}>
           <Text tone="muted" style={{ textAlign: 'center' }}>
-            Impossible de charger la conversation.
+            {t('messages.chatLoadError')}
           </Text>
           <Pressable
             onPress={() => void refetch()}
@@ -168,13 +170,13 @@ export default function ChatRoute() {
               justifyContent: 'center',
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>Réessayer</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{t('messages.chatRetry')}</Text>
           </Pressable>
         </View>
       ) : messageCount === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
           <Text tone="muted" style={{ textAlign: 'center' }}>
-            Aucun message pour l&apos;instant. Écris le premier.
+            {t('messages.chatEmpty')}
           </Text>
         </View>
       ) : (
@@ -214,7 +216,7 @@ export default function ChatRoute() {
                 }}
               >
                 {new Date(m.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                {isMine && m.seen ? ' · Vu' : ''}
+                {isMine && m.seen ? ` · ${t('messages.chatSeen')}` : ''}
               </Text>
             </View>
           );
@@ -239,7 +241,7 @@ export default function ChatRoute() {
         <TextInput
           value={text}
           onChangeText={setText}
-          placeholder="Écris un message"
+          placeholder={t('messages.chatInputPlaceholder')}
           placeholderTextColor={colors.textFaint}
           multiline
           maxLength={MESSAGE_MAX_LENGTH}
@@ -273,7 +275,7 @@ export default function ChatRoute() {
             justifyContent: 'center',
             opacity: !text.trim() || send.isPending ? 0.5 : 1,
           }}
-          accessibilityLabel="Envoyer"
+          accessibilityLabel={t('messages.chatSendA11y')}
         >
           {send.isPending ? (
             <ActivityIndicator size="small" color="#FFFFFF" />

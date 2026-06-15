@@ -324,7 +324,14 @@
     "newMessage": "New message",
     "sendPlaceholder": "Write a message…",
     "sendError": "Message not sent — try again.",
-    "openConvError": "Couldn't open the conversation."
+    "openConvError": "Couldn't open the conversation.",
+    "chatPinnedAbout": "About",
+    "chatLoadError": "Couldn't load the conversation.",
+    "chatRetry": "Try again",
+    "chatEmpty": "No messages yet. Write the first one.",
+    "chatSeen": "Seen",
+    "chatSendA11y": "Send",
+    "chatInputPlaceholder": "Write a message"
   },
   "dispute": {
     "topbar": "Report a problem",

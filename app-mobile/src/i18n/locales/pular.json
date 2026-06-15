@@ -324,7 +324,14 @@
     "newMessage": "Nouveau message",
     "sendPlaceholder": "Écris un message…",
     "sendError": "Message non envoyé — réessaie.",
-    "openConvError": "Impossible d'ouvrir la conversation."
+    "openConvError": "Impossible d'ouvrir la conversation.",
+    "chatPinnedAbout": "À propos de",
+    "chatLoadError": "Impossible de charger la conversation.",
+    "chatRetry": "Réessayer",
+    "chatEmpty": "Aucun message pour l'instant. Écris le premier.",
+    "chatSeen": "Vu",
+    "chatSendA11y": "Envoyer",
+    "chatInputPlaceholder": "Écris un message"
   },
   "dispute": {
     "topbar": "Signaler un problème",
