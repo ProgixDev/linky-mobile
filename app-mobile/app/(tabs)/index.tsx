@@ -863,11 +863,13 @@ const CATEGORY_DEFS: Array<{
   labelKey: string;
   tint: 'primary' | 'accent' | 'cream' | 'info' | 'mint' | 'rose' | 'lilac' | 'sand';
 }> = [
-  { Icon: Shirt,         code: 'Mode',        labelKey: 'home.catMode',        tint: 'primary' },
-  { Icon: Smartphone,    code: 'Électronique', labelKey: 'home.catElectronique', tint: 'accent' },
-  { Icon: Sofa,          code: 'Maison',      labelKey: 'home.catMaison',      tint: 'cream' },
-  { Icon: Car,           code: 'Auto',        labelKey: 'home.catAuto',        tint: 'info' },
-  { Icon: SparklesIcon,  code: 'Beauté',      labelKey: 'home.catBeaute',      tint: 'rose' },
+  // `code` MUST equal the value the create wizard stores on the product
+  // (create/product/category.tsx) — else the tile filters to an empty Marché.
+  { Icon: Shirt,         code: 'Mode & Beauté',  labelKey: 'home.catMode',        tint: 'primary' },
+  { Icon: Smartphone,    code: 'Électronique',   labelKey: 'home.catElectronique', tint: 'accent' },
+  { Icon: Sofa,          code: 'Maison',         labelKey: 'home.catMaison',      tint: 'cream' },
+  { Icon: Car,           code: 'Auto & Moto',    labelKey: 'home.catAuto',        tint: 'info' },
+  { Icon: SparklesIcon,  code: 'Beauté & Soin',  labelKey: 'home.catBeaute',      tint: 'rose' },
   { Icon: Building2,     code: 'Location',    labelKey: 'home.catLocation',    tint: 'mint' },
   { Icon: HomeIcon,      code: 'Vente',       labelKey: 'home.catVente',       tint: 'lilac' },
   { Icon: TreePine,      code: 'Terrains',    labelKey: 'home.catTerrains',    tint: 'sand' },

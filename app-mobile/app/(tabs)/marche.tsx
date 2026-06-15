@@ -44,13 +44,16 @@ import { useTranslation } from 'react-i18next';
 // stable filter value (matches the legacy hardcoded string for backward
 // compat with the filters store), the labelKey is resolved at render so
 // labels flip with the active language.
+// `code` MUST equal the value the create wizard stores on the product
+// (create/product/category.tsx) or the filter returns nothing.
 const PRODUCT_CATEGORY_DEFS = [
   { code: 'Tout', labelKey: 'marche.catTout' },
-  { code: 'Mode', labelKey: 'marche.catMode' },
+  { code: 'Mode & Beauté', labelKey: 'marche.catMode' },
   { code: 'Électronique', labelKey: 'marche.catElectronique' },
   { code: 'Maison', labelKey: 'marche.catMaison' },
-  { code: 'Beauté', labelKey: 'marche.catBeaute' },
-  { code: 'Auto', labelKey: 'marche.catAuto' },
+  { code: 'Beauté & Soin', labelKey: 'marche.catBeaute' },
+  { code: 'Auto & Moto', labelKey: 'marche.catAuto' },
+  { code: 'Services', labelKey: 'create.catServices' },
 ] as const;
 const PROPERTY_TYPE_DEFS: { value: 'location' | 'vente' | 'terrain'; labelKey: string }[] = [
   { value: 'location', labelKey: 'marche.propLocation' },
