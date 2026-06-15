@@ -8,6 +8,7 @@ import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { haptic } from '../../src/lib/haptics';
 import { usePrefs } from '../../src/stores/prefs';
+import { useToast } from '../../src/components/feedback/Toast';
 
 type LangCode = 'fr' | 'en' | 'pular' | 'sousou';
 type FlagKind = 'fr' | 'gb' | 'gn';
@@ -100,6 +101,15 @@ function Flag({ kind }: { kind: FlagKind }) {
   );
 }
 
+// Phase I.7 — V1 ships with French + English selectable only. Pular and
+// Sousou stay registered as i18next resources (their JSONs are French-
+// placeholder skeletons, harmless), but the Langue UI gates them off the
+// same way Phase Y.3 originally did : disabled row + opacity 0.55 +
+// "À venir" sub-label + "Bientôt disponible." toast on tap. The day the
+// client ships translations, drop them from this set and the rows
+// re-enable with zero other code changes.
+const LAUNCH_LANGUAGES = new Set(['fr', 'en']);
+
 export default function SettingsRoute() {
   const { colors } = useTheme();
   const { language, setLanguage } = usePrefs();
@@ -107,6 +117,7 @@ export default function SettingsRoute() {
   // subtitle copy below is translated, so switching the language flips this
   // screen too. Plain `useTranslation()` subscribes to that event.
   const { t } = useTranslation();
+  const toast = useToast();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -129,18 +140,24 @@ export default function SettingsRoute() {
             overflow: 'hidden',
           }}
         >
-          {/* Phase I.4 — all four rows are selectable. FR is the fallback
-              language ; selecting one of the others persists the pref and
-              calls i18n.changeLanguage(), which re-renders every component
-              using useTranslation() live. Pular/Sousou values are
-              French-placeholder until the client's translators ship the CSV
-              round-trip (see scripts/i18n-export-csv.mjs). */}
+          {/* Phase I.7 — only FR + EN are selectable for V1 launch. Pular and
+              Sousou render as honest "À venir" rows : opacity 0.55 + tap
+              fires a "Bientôt disponible." toast, never sets the language.
+              The Pular/Sousou JSONs are still registered as fallback-aware
+              resources, so the moment the client returns their CSV the rows
+              just need to be re-enabled — no other code change required. */}
           {LANGUAGES.map((lang, idx) => {
             const selected = language === lang.code;
+            const disabled = !LAUNCH_LANGUAGES.has(lang.code);
             return (
               <Pressable
                 key={lang.code}
                 onPress={() => {
+                  if (disabled) {
+                    haptic.light();
+                    toast.show(t('common.comingSoonAvailable'), 'info');
+                    return;
+                  }
                   if (selected) return;
                   haptic.selection();
                   setLanguage(lang.code);
@@ -153,6 +170,7 @@ export default function SettingsRoute() {
                   paddingVertical: 14,
                   borderBottomWidth: idx < LANGUAGES.length - 1 ? 1 : 0,
                   borderBottomColor: colors.border,
+                  opacity: disabled ? 0.55 : 1,
                 }}
               >
                 <View
@@ -180,7 +198,7 @@ export default function SettingsRoute() {
                   >
                     {lang.label}
                   </Text>
-                  {lang.code === 'fr' && (
+                  {(lang.code === 'fr' || disabled) && (
                     <Text
                       style={{
                         fontSize: 12,
@@ -190,7 +208,9 @@ export default function SettingsRoute() {
                         lineHeight: 15,
                       }}
                     >
-                      {t('settings.languageDefault')}
+                      {disabled
+                        ? t('settings.languageComingSoonHint')
+                        : t('settings.languageDefault')}
                     </Text>
                   )}
                 </View>
