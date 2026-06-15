@@ -8,6 +8,7 @@ import {
   PackageX,
 } from 'lucide-react-native';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../../src/theme/ThemeProvider';
 import { Text } from '../../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../../src/components/nav/ScreenHeader';
@@ -21,6 +22,7 @@ import { useToast } from '../../../../src/components/feedback/Toast';
 
 export default function SellerOrderDetailRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: order, isLoading, isError, refetch } = useOrder(id);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
@@ -36,7 +38,7 @@ export default function SellerOrderDetailRoute() {
   const wrongOwner = !isLoading && !!order && (!meId || order.sellerId !== meId);
   useEffect(() => {
     if (wrongOwner) {
-      toast.show("Cette commande ne fait pas partie de tes ventes.", 'info');
+      toast.show(t('seller.shipWrongOwner'), 'info');
       router.replace('/(tabs)');
     }
   }, [wrongOwner, toast]);
@@ -291,7 +293,7 @@ export default function SellerOrderDetailRoute() {
                 includeFontPadding: false,
               }}
             >
-              Marquer comme expédiée
+              {t('seller.orderDetailMarkShipped')}
             </Text>
           </Pressable>
         ) : (
@@ -299,7 +301,7 @@ export default function SellerOrderDetailRoute() {
           // the seller knows the order is recognized, just not shippable yet.
           <View style={{ height: 56, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 13.5, fontWeight: '600', color: colors.textMuted }}>
-              En attente du paiement de l'acheteur
+              {t('seller.orderDetailAwaitingPayment')}
             </Text>
           </View>
         )}

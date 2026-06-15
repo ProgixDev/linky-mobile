@@ -646,6 +646,8 @@
     "shipSuccess": "Order marked shipped. Buyer notified.",
     "shipError": "Couldn't save the shipping info.",
     "shipWrongOwner": "This order isn't one of yours.",
+    "orderDetailMarkShipped": "Mark as shipped",
+    "orderDetailAwaitingPayment": "Waiting for the buyer's payment",
     "status": {
       "placed": "TO PREPARE",
       "paid": "TO PREPARE",
@@ -716,7 +718,18 @@
     "demandeRespondError": "Couldn't save your reply.",
     "demandeWhenToday": "Today · {{time}}",
     "demandeWhenTomorrow": "Tomorrow · {{time}}",
-    "demandeWhenOther": "{{day}} · {{time}}"
+    "demandeWhenOther": "{{day}} · {{time}}",
+    "statsTitle": "Stats",
+    "statsSubtitle": "Your listings and their views — real data.",
+    "statsCardEyebrow": "TOTAL VIEWS · YOUR LISTINGS",
+    "statsActive_one": "{{count}} active listing",
+    "statsActive_other": "{{count}} active listings",
+    "statsListEyebrow": "VIEWS PER LISTING",
+    "statsLoading": "Loading…",
+    "statsEmptyTitle": "No listings yet",
+    "statsEmptyBody": "Publish a product from your shop to start seeing views here.",
+    "statsKindProduct": "Product",
+    "statsKindProperty": "Property"
   },
   "buyer": {
     "requestsTitle": "My requests",

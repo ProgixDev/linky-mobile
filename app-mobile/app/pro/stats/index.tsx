@@ -7,6 +7,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Eye } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
@@ -27,6 +28,7 @@ type StatRow = {
 
 export default function StatsRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const myShops = useMyShops();
   const firstShopId = myShops.data?.[0]?.id;
   const products = useProducts({ shopId: firstShopId });
@@ -59,8 +61,8 @@ export default function StatsRoute() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <ScreenHeader
-          title="Statistiques"
-          subtitle="Tes annonces et leurs vues — données réelles."
+          title={t('pro.statsTitle')}
+          subtitle={t('pro.statsSubtitle')}
         />
 
         {isError && (
@@ -95,7 +97,7 @@ export default function StatsRoute() {
                     letterSpacing: 0.5,
                   }}
                 >
-                  VUES TOTALES · TES ANNONCES
+                  {t('pro.statsCardEyebrow')}
                 </Text>
                 <View
                   style={{
@@ -127,8 +129,7 @@ export default function StatsRoute() {
                     marginTop: 4,
                   }}
                 >
-                  {activeCount} annonce{activeCount > 1 ? 's' : ''} active
-                  {activeCount > 1 ? 's' : ''}
+                  {t('pro.statsActive', { count: activeCount })}
                 </Text>
               </View>
             </View>
@@ -145,12 +146,12 @@ export default function StatsRoute() {
                   marginBottom: 12,
                 }}
               >
-                VUES PAR ANNONCE
+                {t('pro.statsListEyebrow')}
               </Text>
 
               {isLoading && (
                 <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 4 }}>
-                  Chargement…
+                  {t('pro.statsLoading')}
                 </Text>
               )}
 
@@ -158,8 +159,8 @@ export default function StatsRoute() {
                 <View style={{ paddingVertical: 28 }}>
                   <EmptyState
                     icon="package"
-                    title="Pas encore d'annonce"
-                    description="Publie un produit depuis ta boutique pour voir tes vues s'afficher ici."
+                    title={t('pro.statsEmptyTitle')}
+                    description={t('pro.statsEmptyBody')}
                   />
                 </View>
               )}
@@ -223,7 +224,7 @@ export default function StatsRoute() {
                           letterSpacing: 0,
                         }}
                       >
-                        {formatGNF(r.priceGnf)} · {r.kind === 'property' ? 'Bien' : 'Produit'}
+                        {formatGNF(r.priceGnf)} · {r.kind === 'property' ? t('pro.statsKindProperty') : t('pro.statsKindProduct')}
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

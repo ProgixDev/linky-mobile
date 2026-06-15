@@ -646,6 +646,8 @@
     "shipSuccess": "Commande marquée expédiée. Acheteur notifié.",
     "shipError": "Impossible d'enregistrer l'expédition.",
     "shipWrongOwner": "Cette commande ne fait pas partie de tes ventes.",
+    "orderDetailMarkShipped": "Marquer comme expédiée",
+    "orderDetailAwaitingPayment": "En attente du paiement de l'acheteur",
     "status": {
       "placed": "À PRÉPARER",
       "paid": "À PRÉPARER",
@@ -716,7 +718,18 @@
     "demandeRespondError": "Impossible d'enregistrer la réponse.",
     "demandeWhenToday": "Aujourd'hui · {{time}}",
     "demandeWhenTomorrow": "Demain · {{time}}",
-    "demandeWhenOther": "{{day}} · {{time}}"
+    "demandeWhenOther": "{{day}} · {{time}}",
+    "statsTitle": "Statistiques",
+    "statsSubtitle": "Tes annonces et leurs vues — données réelles.",
+    "statsCardEyebrow": "VUES TOTALES · TES ANNONCES",
+    "statsActive_one": "{{count}} annonce active",
+    "statsActive_other": "{{count}} annonces actives",
+    "statsListEyebrow": "VUES PAR ANNONCE",
+    "statsLoading": "Chargement…",
+    "statsEmptyTitle": "Pas encore d'annonce",
+    "statsEmptyBody": "Publie un produit depuis ta boutique pour voir tes vues s'afficher ici.",
+    "statsKindProduct": "Produit",
+    "statsKindProperty": "Bien"
   },
   "buyer": {
     "requestsTitle": "Mes demandes",

@@ -601,6 +601,8 @@ seller.shipSending,Envoi…,Sending…,,
 seller.shipSuccess,Commande marquée expédiée. Acheteur notifié.,Order marked shipped. Buyer notified.,,
 seller.shipError,Impossible d'enregistrer l'expédition.,Couldn't save the shipping info.,,
 seller.shipWrongOwner,Cette commande ne fait pas partie de tes ventes.,This order isn't one of yours.,,
+seller.orderDetailMarkShipped,Marquer comme expédiée,Mark as shipped,,
+seller.orderDetailAwaitingPayment,En attente du paiement de l'acheteur,Waiting for the buyer's payment,,
 seller.status.placed,À PRÉPARER,TO PREPARE,PASSÉE,PASSÉE
 seller.status.paid,À PRÉPARER,TO PREPARE,PAYÉE,PAYÉE
 seller.status.preparing,EN ROUTE,ON THE WAY,,
@@ -664,6 +666,17 @@ pro.demandeRespondError,Impossible d'enregistrer la réponse.,Couldn't save your
 pro.demandeWhenToday,Aujourd'hui · {{time}},Today · {{time}},,
 pro.demandeWhenTomorrow,Demain · {{time}},Tomorrow · {{time}},,
 pro.demandeWhenOther,{{day}} · {{time}},{{day}} · {{time}},,
+pro.statsTitle,Statistiques,Stats,,
+pro.statsSubtitle,Tes annonces et leurs vues — données réelles.,Your listings and their views — real data.,,
+pro.statsCardEyebrow,VUES TOTALES · TES ANNONCES,TOTAL VIEWS · YOUR LISTINGS,,
+pro.statsActive_one,{{count}} annonce active,{{count}} active listing,,
+pro.statsActive_other,{{count}} annonces actives,{{count}} active listings,,
+pro.statsListEyebrow,VUES PAR ANNONCE,VIEWS PER LISTING,,
+pro.statsLoading,Chargement…,Loading…,,
+pro.statsEmptyTitle,Pas encore d'annonce,No listings yet,,
+pro.statsEmptyBody,Publie un produit depuis ta boutique pour voir tes vues s'afficher ici.,Publish a product from your shop to start seeing views here.,,
+pro.statsKindProduct,Produit,Product,,
+pro.statsKindProperty,Bien,Property,,
 buyer.requestsTitle,Mes demandes,My requests,Mes demandes de visite,Mes demandes de visite
 buyer.requestsSubtitle,Tes visites en cours.,Your visits in progress.,Suis tes demandes et leurs réponses.,Suis tes demandes et leurs réponses.
 buyer.requestsEmptyTitle,Aucune demande pour le moment,No requests yet,,
