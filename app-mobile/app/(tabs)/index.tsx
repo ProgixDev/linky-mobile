@@ -48,6 +48,7 @@ import { photos } from '../../src/data/photos';
 import { useAuth } from '../../src/stores/auth';
 import { useCart } from '../../src/stores/cart';
 import { useCreateListing } from '../../src/stores/createListing';
+import { useFilters } from '../../src/stores/filters';
 import {
   useShops,
   usePopularProducts,
@@ -401,7 +402,21 @@ function BuyerHome() {
                 Icon={c.Icon}
                 label={c.label}
                 tint={c.tint}
-                onPress={() => router.push('/(tabs)/marche')}
+                onPress={() => {
+                  // Seed the marketplace filter so the tile lands on its
+                  // actual category, not an unfiltered marché. Product labels
+                  // match marche's PRODUCT_CATEGORIES exactly; the 3 property
+                  // tiles map to the immobilier tab + property type.
+                  const f = useFilters.getState();
+                  if (c.label === 'Location' || c.label === 'Vente' || c.label === 'Terrains') {
+                    f.setMarcheTab('immobilier');
+                    f.setPropertyType(c.label === 'Location' ? 'location' : c.label === 'Vente' ? 'vente' : 'terrain');
+                  } else {
+                    f.setMarcheTab('articles');
+                    f.setProductCategory(c.label);
+                  }
+                  router.push('/(tabs)/marche');
+                }}
               />
             ))}
           </View>
