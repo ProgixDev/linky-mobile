@@ -3,6 +3,7 @@ import { Dimensions, RefreshControl, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { DiscoverCard, DiscoverEnd } from '../../src/components/discover/DiscoverCard';
 import { useDiscoverInfinite } from '../../src/data/queries';
@@ -18,6 +19,7 @@ type FeedRow = { kind: 'item'; data: DiscoverItem; id: string } | { kind: 'end';
 
 export default function DecouvrirRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const roles = useAuth((s) => s.roles);
   // Role-aware feed: pure agents see only properties, pure sellers see only products.
   const isBuyer = roles.includes('buyer');
@@ -85,15 +87,15 @@ export default function DecouvrirRoute() {
           }}
         >
           <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-            Impossible de charger le feed
+            {t('decouvrir.errorTitle')}
           </Text>
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
-            Vérifie ta connexion et réessaie.
+            {t('decouvrir.errorSub')}
           </Text>
           <Button
             variant="primary"
             size="md"
-            label="Réessayer"
+            label={t('common.retry')}
             onPress={() => void refetch()}
           />
         </View>
@@ -108,15 +110,15 @@ export default function DecouvrirRoute() {
           }}
         >
           <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-            Rien à découvrir pour l'instant
+            {t('decouvrir.emptyTitle')}
           </Text>
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
-            Reviens dans quelques minutes — le feed est mis à jour en continu.
+            {t('decouvrir.emptySub')}
           </Text>
           <Button
             variant="primary"
             size="md"
-            label="Réessayer"
+            label={t('common.retry')}
             onPress={() => void refetch()}
           />
         </View>

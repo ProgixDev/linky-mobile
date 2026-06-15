@@ -3,6 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Plus, Home as HomeIcon, Building2 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import {
   EstateDashboard,
@@ -18,6 +19,7 @@ import { useCreateListing } from '../../src/stores/createListing';
 
 export default function BoutiqueRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const roles = useAuth((s) => s.roles);
   const isSeller = roles.includes('seller');
   const isAgent = roles.includes('agent');
@@ -30,7 +32,7 @@ export default function BoutiqueRoute() {
   const setKind = useCreateListing((s) => s.setKind);
   const [mode, setMode] = useState<ProMode>(isSeller ? 'shop' : 'estate');
   if (!guard.allowed) {
-    return <RoleGateView required={guard.required} surfaceLabel="ton tableau de bord" />;
+    return <RoleGateView required={guard.required} surfaceLabel={t('boutique.roleGateLabel')} />;
   }
   // Phase T.2 fix — `mode` is captured at first mount ; after a role change
   // while this tab stays mounted (devenir / roles flows), a pure seller
@@ -75,7 +77,7 @@ export default function BoutiqueRoute() {
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            accessibilityLabel={effectiveMode === 'shop' ? 'Nouvelle annonce' : 'Nouveau bien'}
+            accessibilityLabel={effectiveMode === 'shop' ? t('boutique.newListingProduct') : t('boutique.newListingProperty')}
           >
             <Plus size={20} color={colors.bg} strokeWidth={2.25} />
           </Pressable>
@@ -94,13 +96,13 @@ export default function BoutiqueRoute() {
             >
               <ModeTab
                 Icon={HomeIcon}
-                label="Boutique"
+                label={t('boutique.modeShop')}
                 active={effectiveMode === 'shop'}
                 onPress={() => setMode('shop')}
               />
               <ModeTab
                 Icon={Building2}
-                label="Immobilier"
+                label={t('boutique.modeEstate')}
                 active={effectiveMode === 'estate'}
                 onPress={() => setMode('estate')}
               />

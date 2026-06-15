@@ -30,6 +30,7 @@ import {
   Home as HomeIcon,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Switch } from '../../src/components/primitives/Switch';
@@ -50,31 +51,30 @@ interface QuickAction {
 // union, ordered: buyer-side first (most common), then seller, then agent.
 // Pure buyers no longer see zero pro shortcuts (KYC stays universal since
 // it gates publishing AND high-value buyer flows).
-function buildQuickActions(roles: UserRole[]): QuickAction[] {
+// Phase I.3c — takes t so labels translate.
+function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAction[] {
   const isBuyer = roles.includes('buyer');
   const isSeller = roles.includes('seller');
   const isAgent = roles.includes('agent');
   const out: QuickAction[] = [];
   if (isBuyer) {
-    out.push({ Icon: Package, label: 'Commandes', href: '/orders' });
-    out.push({ Icon: CalendarDays, label: 'Demandes', href: '/buyer/requests' });
-    out.push({ Icon: Heart, label: 'Favoris', href: '/favorites' });
+    out.push({ Icon: Package, label: t('profil.qa.commandes'), href: '/orders' });
+    out.push({ Icon: CalendarDays, label: t('profil.qa.demandes'), href: '/buyer/requests' });
+    out.push({ Icon: Heart, label: t('profil.qa.favoris'), href: '/favorites' });
   }
   if (isSeller) {
-    out.push({ Icon: Store, label: 'Ventes', href: '/seller/orders' });
-    out.push({ Icon: Banknote, label: 'Retraits', href: '/wallet/retirer' });
-    // Phase X.10 (revised) — Boutique / Mes biens dropped from this scroll ;
-    // they're surfaced as a dedicated hero card above the quick actions so
-    // pros land on their workspace in one tap instead of scrolling for it.
+    out.push({ Icon: Store, label: t('profil.qa.ventes'), href: '/seller/orders' });
+    out.push({ Icon: Banknote, label: t('profil.qa.retraits'), href: '/wallet/retirer' });
   }
   if (isAgent) {
-    out.push({ Icon: CalendarCheck, label: 'Visites', href: '/pro/visites' });
+    out.push({ Icon: CalendarCheck, label: t('profil.qa.visites'), href: '/pro/visites' });
   }
-  out.push({ Icon: Wallet, label: 'Wallet', href: '/wallet' });
-  out.push({ Icon: ShieldCheck, label: 'KYC', href: '/kyc/intro' });
+  out.push({ Icon: Wallet, label: t('profil.qa.wallet'), href: '/wallet' });
+  out.push({ Icon: ShieldCheck, label: t('profil.qa.kyc'), href: '/kyc/intro' });
   return out;
 }
 
+// Language NATIVE names are universal across UI languages.
 const LANGUAGE_LABELS: Record<string, string> = {
   fr: 'Français',
   en: 'English',
@@ -82,14 +82,9 @@ const LANGUAGE_LABELS: Record<string, string> = {
   sousou: 'Sousou',
 };
 
-const THEME_LABELS: Record<string, string> = {
-  system: 'Système',
-  light: 'Clair',
-  dark: 'Sombre',
-};
-
 export default function ProfilRoute() {
   const { colors, preference } = useTheme();
+  const { t } = useTranslation();
   const user = useAuth((s) => s.user);
   const roles = useAuth((s) => s.roles);
   const signOut = useAuth((s) => s.signOut);
@@ -107,7 +102,12 @@ export default function ProfilRoute() {
   // sign-in) — a KYC approval should light the chip on the next profile visit.
   const { data: kyc } = useKycStatus();
   const kycApproved = (kyc?.kycStatus ?? user?.kyc_status) === 'approved';
-  const quickActions = buildQuickActions(roles);
+  const quickActions = buildQuickActions(roles, t);
+  const THEME_LABELS: Record<string, string> = {
+    system: t('profil.theme.system'),
+    light: t('profil.theme.light'),
+    dark: t('profil.theme.dark'),
+  };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -126,7 +126,7 @@ export default function ProfilRoute() {
               lineHeight: 38,
             }}
           >
-            Profil
+            {t('profil.title')}
           </Text>
         </View>
 
@@ -188,7 +188,7 @@ export default function ProfilRoute() {
                 }}
                 numberOfLines={1}
               >
-                {user?.display_name ?? 'Toi'}
+                {user?.display_name ?? t('profil.fallbackName')}
               </Text>
               {user?.city ? (
                 <View
@@ -235,7 +235,7 @@ export default function ProfilRoute() {
                     letterSpacing: 0,
                   }}
                 >
-                  Modifier mon profil
+                  {t('profil.editMyProfile')}
                 </Text>
               </Pressable>
             </View>
@@ -252,17 +252,17 @@ export default function ProfilRoute() {
             {roles.includes('seller') && (
               <BoutiqueHero
                 Icon={Store}
-                title="Ma boutique"
-                sub="Annonces, ventes, statistiques."
-                ctaLabel="Ouvrir la boutique"
+                title={t('profil.boutiqueHero.shopTitle')}
+                sub={t('profil.boutiqueHero.shopSub')}
+                ctaLabel={t('profil.boutiqueHero.shopCta')}
               />
             )}
             {roles.includes('agent') && (
               <BoutiqueHero
                 Icon={Building2}
-                title="Mes biens"
-                sub="Annonces immobilières, visites, demandes."
-                ctaLabel="Ouvrir l'espace agent"
+                title={t('profil.boutiqueHero.agentTitle')}
+                sub={t('profil.boutiqueHero.agentSub')}
+                ctaLabel={t('profil.boutiqueHero.agentCta')}
               />
             )}
           </View>
@@ -341,27 +341,27 @@ export default function ProfilRoute() {
 
         {/* ===== Réglages section ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 28 }}>
-          <SectionLabel label="Réglages" />
+          <SectionLabel label={t('profil.section.reglages')} />
           <SettingsCard>
             <Row
               Icon={Phone}
-              label="Numéros de téléphone"
+              label={t('profil.row.phones')}
               onPress={() => router.push('/settings/phones')}
             />
             <Row
               Icon={MapPin}
-              label="Adresses"
+              label={t('profil.row.addresses')}
               onPress={() => router.push('/settings/addresses')}
             />
             <Row
               Icon={UserCog}
-              label="Mes rôles"
-              value={roles.length > 1 ? `${roles.length} rôles` : '1 rôle'}
+              label={t('profil.row.roles')}
+              value={t('profil.row.roleCount', { count: roles.length })}
               onPress={() => router.push('/profil/roles' as never)}
             />
             <Row
               Icon={ShieldCheck}
-              label="Vérification d'identité"
+              label={t('profil.row.kyc')}
               onPress={() => router.push('/kyc/intro')}
               right={
                 kycApproved ? (
@@ -385,7 +385,7 @@ export default function ProfilRoute() {
                         includeFontPadding: false,
                       }}
                     >
-                      VÉRIFIÉE
+                      {t('profil.row.kycVerified')}
                     </Text>
                   </View>
                 ) : undefined
@@ -393,30 +393,30 @@ export default function ProfilRoute() {
             />
             <Row
               Icon={Bell}
-              label="Notifications"
+              label={t('profil.row.notifications')}
               right={<Switch value={notifications} onChange={onToggleNotifications} />}
             />
             <Row
               Icon={Globe2}
-              label="Langue"
+              label={t('profil.row.langue')}
               value={LANGUAGE_LABELS[language] ?? 'Français'}
               onPress={() => router.push('/settings')}
             />
             <Row
               Icon={SparklesIcon}
-              label="Thème"
-              value={THEME_LABELS[preference] ?? 'Système'}
+              label={t('profil.row.theme')}
+              value={THEME_LABELS[preference] ?? THEME_LABELS.system}
               onPress={() => router.push('/settings/theme')}
             />
             <Row
               Icon={CloudOff}
-              label="Mode économie de données"
-              sub="Désactive l'autoplay, baisse la qualité"
+              label={t('profil.row.dataSaver')}
+              sub={t('profil.row.dataSaverSub')}
               right={<Switch value={dataSaver} onChange={setDataSaver} />}
             />
             <Row
               Icon={Eye}
-              label="Confidentialité"
+              label={t('profil.row.privacy')}
               onPress={() => router.push('/settings/privacy')}
               divider={false}
             />
@@ -425,27 +425,27 @@ export default function ProfilRoute() {
 
         {/* ===== À propos ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
-          <SectionLabel label="À propos" />
+          <SectionLabel label={t('profil.section.about')} />
           <SettingsCard>
             <Row
               Icon={Info}
-              label="À propos de Linky"
+              label={t('profil.row.aboutLinky')}
               value="v0.1.0"
               onPress={() => router.push('/settings/about')}
             />
             <Row
               Icon={MessageCircle}
-              label="Aide & support"
+              label={t('profil.row.help')}
               onPress={() => router.push('/settings/help')}
             />
             <Row
               Icon={FileText}
-              label="Conditions générales"
+              label={t('profil.row.terms')}
               onPress={() => router.push('/settings/terms')}
             />
             <Row
               Icon={Shield}
-              label="Politique de confidentialité"
+              label={t('profil.row.privacyPolicy')}
               onPress={() => router.push('/settings/privacy-policy')}
               divider={false}
             />
@@ -486,7 +486,7 @@ export default function ProfilRoute() {
                 includeFontPadding: false,
               }}
             >
-              Déconnexion
+              {t('profil.logout')}
             </Text>
           </Pressable>
         </View>

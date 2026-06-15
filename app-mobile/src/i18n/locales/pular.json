@@ -39,6 +39,71 @@
     "profil": "Profil",
     "messagerie": "Messagerie"
   },
+  "decouvrir": {
+    "errorTitle": "Impossible de charger le feed",
+    "errorSub": "Vérifie ta connexion et réessaie.",
+    "emptyTitle": "Rien à découvrir pour l'instant",
+    "emptySub": "Reviens dans quelques minutes — le feed est mis à jour en continu."
+  },
+  "boutique": {
+    "modeShop": "Boutique",
+    "modeEstate": "Immobilier",
+    "newListingProduct": "Nouvelle annonce",
+    "newListingProperty": "Nouveau bien",
+    "roleGateLabel": "ton tableau de bord"
+  },
+  "profil": {
+    "title": "Profil",
+    "fallbackName": "Toi",
+    "editMyProfile": "Modifier mon profil",
+    "qa": {
+      "commandes": "Commandes",
+      "demandes": "Demandes",
+      "favoris": "Favoris",
+      "ventes": "Ventes",
+      "retraits": "Retraits",
+      "visites": "Visites",
+      "wallet": "Wallet",
+      "kyc": "KYC"
+    },
+    "boutiqueHero": {
+      "shopTitle": "Ma boutique",
+      "shopSub": "Annonces, ventes, statistiques.",
+      "shopCta": "Ouvrir la boutique",
+      "agentTitle": "Mes biens",
+      "agentSub": "Annonces immobilières, visites, demandes.",
+      "agentCta": "Ouvrir l'espace agent"
+    },
+    "section": {
+      "reglages": "Réglages",
+      "about": "À propos"
+    },
+    "row": {
+      "phones": "Numéros de téléphone",
+      "addresses": "Adresses",
+      "roles": "Mes rôles",
+      "roleCount_one": "1 rôle",
+      "roleCount_other": "{{count}} rôles",
+      "kyc": "Vérification d'identité",
+      "kycVerified": "VÉRIFIÉE",
+      "notifications": "Notifications",
+      "langue": "Langue",
+      "theme": "Thème",
+      "dataSaver": "Mode économie de données",
+      "dataSaverSub": "Désactive l'autoplay, baisse la qualité",
+      "privacy": "Confidentialité",
+      "aboutLinky": "À propos de Linky",
+      "help": "Aide & support",
+      "terms": "Conditions générales",
+      "privacyPolicy": "Politique de confidentialité"
+    },
+    "logout": "Déconnexion",
+    "theme": {
+      "system": "Système",
+      "light": "Clair",
+      "dark": "Sombre"
+    }
+  },
   "onboarding": {
     "welcome": {
       "start": "Commencer",

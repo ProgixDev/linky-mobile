@@ -39,6 +39,71 @@
     "profil": "Profile",
     "messagerie": "Messages"
   },
+  "decouvrir": {
+    "errorTitle": "Couldn't load the feed",
+    "errorSub": "Check your connection and try again.",
+    "emptyTitle": "Nothing to discover yet",
+    "emptySub": "Come back in a few minutes — the feed updates continuously."
+  },
+  "boutique": {
+    "modeShop": "Shop",
+    "modeEstate": "Real estate",
+    "newListingProduct": "New listing",
+    "newListingProperty": "New property",
+    "roleGateLabel": "your dashboard"
+  },
+  "profil": {
+    "title": "Profile",
+    "fallbackName": "You",
+    "editMyProfile": "Edit my profile",
+    "qa": {
+      "commandes": "Orders",
+      "demandes": "Requests",
+      "favoris": "Favorites",
+      "ventes": "Sales",
+      "retraits": "Withdrawals",
+      "visites": "Visits",
+      "wallet": "Wallet",
+      "kyc": "KYC"
+    },
+    "boutiqueHero": {
+      "shopTitle": "My shop",
+      "shopSub": "Listings, sales, stats.",
+      "shopCta": "Open the shop",
+      "agentTitle": "My properties",
+      "agentSub": "Listings, visits, requests.",
+      "agentCta": "Open the agent workspace"
+    },
+    "section": {
+      "reglages": "Settings",
+      "about": "About"
+    },
+    "row": {
+      "phones": "Phone numbers",
+      "addresses": "Addresses",
+      "roles": "My roles",
+      "roleCount_one": "1 role",
+      "roleCount_other": "{{count}} roles",
+      "kyc": "ID verification",
+      "kycVerified": "VERIFIED",
+      "notifications": "Notifications",
+      "langue": "Language",
+      "theme": "Theme",
+      "dataSaver": "Data saver",
+      "dataSaverSub": "Disable autoplay, lower quality",
+      "privacy": "Privacy",
+      "aboutLinky": "About Linky",
+      "help": "Help & support",
+      "terms": "Terms",
+      "privacyPolicy": "Privacy policy"
+    },
+    "logout": "Sign out",
+    "theme": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    }
+  },
   "onboarding": {
     "welcome": {
       "start": "Get started",

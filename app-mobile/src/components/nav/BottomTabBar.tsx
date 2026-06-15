@@ -1,6 +1,7 @@
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Compass } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { I, type IconKey } from '../../icons/Icon';
@@ -18,13 +19,15 @@ const TAB_ICONS: Record<string, IconKey> = {
   boutique: 'store',
   profil: 'user',
 };
-const TAB_LABELS: Record<string, string> = {
-  index: 'Accueil',
-  marche: 'Marché',
-  decouvrir: 'Découvrir',
-  messagerie: 'Messages',
-  boutique: 'Boutique',
-  profil: 'Profil',
+// Phase I.3c — i18n keys per route name. Resolved with t() inside the
+// component so labels flip when the user changes language.
+const TAB_LABEL_KEYS: Record<string, string> = {
+  index: 'tabs.home',
+  marche: 'tabs.marche',
+  decouvrir: 'tabs.decouvrir',
+  messagerie: 'tabs.messagerie',
+  boutique: 'tabs.boutique',
+  profil: 'tabs.profil',
 };
 // Phase X.10 (revised) — visual L→R order enforced explicitly (do not rely
 // on state.routes ordering, which expo-router may derive from file-system
@@ -36,6 +39,7 @@ const TAB_ORDER = ['index', 'marche', 'decouvrir', 'messagerie', 'profil'] as co
 
 export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   // Respect tabs hidden via `options.href: null` (e.g. role-gated Boutique tab),
   // then enforce TAB_ORDER so Profil is always rightmost regardless of how
@@ -102,7 +106,7 @@ export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarPro
                 justifyContent: 'flex-start',
               }}
               accessibilityRole="tab"
-              accessibilityLabel={TAB_LABELS[route.name]}
+              accessibilityLabel={t(TAB_LABEL_KEYS[route.name] ?? 'tabs.home')}
               accessibilityState={{ selected: focused }}
             >
               <View
@@ -131,7 +135,7 @@ export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarPro
                   color: focused ? activeColor : inactiveColor,
                 }}
               >
-                {TAB_LABELS[route.name]}
+                {t(TAB_LABEL_KEYS[route.name] ?? 'tabs.home')}
               </Text>
             </Pressable>
           );
@@ -148,12 +152,12 @@ export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarPro
               gap: 3,
             }}
             accessibilityRole="tab"
-            accessibilityLabel={TAB_LABELS[route.name]}
+            accessibilityLabel={t(TAB_LABEL_KEYS[route.name] ?? 'tabs.home')}
             accessibilityState={{ selected: focused }}
           >
             <Icon size={22} color={focused ? activeColor : inactiveColor} stroke={focused ? 2 : 1.5} />
             <Text style={{ fontSize: 10, fontWeight: '500', color: focused ? activeColor : inactiveColor }}>
-              {TAB_LABELS[route.name]}
+              {t(TAB_LABEL_KEYS[route.name] ?? 'tabs.home')}
             </Text>
           </Pressable>
         );
