@@ -16,6 +16,7 @@ import { I, type IconKey } from '../../../src/icons/Icon';
 import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
 import { useFavorites } from '../../../src/stores/favorites';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
+import { useTranslation } from 'react-i18next';
 import { PropertyLocationMap } from '../../../src/components/property/PropertyLocationMap';
 import { formatDistance } from '../../../src/lib/format';
 import { toToastMessage } from '../../../src/lib/api';
@@ -25,6 +26,7 @@ import { haptic } from '../../../src/lib/haptics';
 export default function PropertyDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const { data: prop, isLoading, isError, refetch } = useProperty(id);
   const trackView = useTrackView();
   const findOrCreate = useFindOrCreateConversation();
@@ -57,7 +59,7 @@ export default function PropertyDetailRoute() {
   }
 
   if (isLoading || isError || !prop) {
-    return <DetailStateScreen loading={isLoading} title="Bien" onRetry={() => void refetch()} />;
+    return <DetailStateScreen loading={isLoading} title={t('property.fallbackTitle')} onRetry={() => void refetch()} />;
   }
 
   const isTerrain = prop.type === 'terrain';
@@ -257,7 +259,7 @@ export default function PropertyDetailRoute() {
               than showing the label above an empty paragraph. */}
           {prop.description.trim().length > 0 && (
             <View style={{ marginTop: 18 }}>
-              <MicroLabel label="Description" />
+              <MicroLabel label={t('property.descriptionHeading')} />
               <Text variant="bodyM">{prop.description}</Text>
             </View>
           )}

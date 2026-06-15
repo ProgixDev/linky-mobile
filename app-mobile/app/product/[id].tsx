@@ -33,12 +33,14 @@ import { toToastMessage } from '../../src/lib/api';
 import { formatGNF, formatEUR } from '../../src/lib/format';
 import { gnfToEur } from '../../src/lib/currency';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
+import { useTranslation } from 'react-i18next';
 
 const { width: SW } = Dimensions.get('window');
 
 export default function ProductDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { data: product, isLoading, isError, refetch } = useProduct(id);
   const { data: related } = useProducts({ category: product?.category });
   const isFav = useFavorites((s) => (id ? s.productIds.has(id) : false));
@@ -76,7 +78,7 @@ export default function ProductDetailRoute() {
   }
 
   if (isLoading || isError || !product) {
-    return <DetailStateScreen loading={isLoading} title="Article" onRetry={() => void refetch()} />;
+    return <DetailStateScreen loading={isLoading} title={t('product.fallbackTitle')} onRetry={() => void refetch()} />;
   }
 
   return (
@@ -524,7 +526,7 @@ export default function ProductDetailRoute() {
         )}
 
         {/* ===== Specs ===== */}
-        <Section title="Caractéristiques">
+        <Section title={t('product.specHeading')}>
           <View
             style={{
               borderRadius: 18,
@@ -534,18 +536,18 @@ export default function ProductDetailRoute() {
               overflow: 'hidden',
             }}
           >
-            <SpecRow Icon={Tag} label="Catégorie" value={capitalize(product.category)} />
+            <SpecRow Icon={Tag} label={t('product.specCategorie')} value={capitalize(product.category)} />
             <SpecRow
               Icon={ShieldCheck}
-              label="État"
+              label={t('product.specCondition')}
               value={conditionLabel(product.condition)}
             />
             <SpecRow
               Icon={MapPin}
-              label="Lieu"
+              label={t('product.specPlace')}
               value={`${product.city}${product.district ? `, ${product.district}` : ''}`}
             />
-            <SpecRow Icon={Truck} label="Remise" value="Sur place ou livraison" last />
+            <SpecRow Icon={Truck} label={t('product.specShipping')} value={t('product.specShippingValue')} last />
           </View>
         </Section>
 
@@ -553,7 +555,7 @@ export default function ProductDetailRoute() {
         {/* Phase Y.4 — hide the heading entirely when no description, rather
             than showing "Description" above an empty paragraph. */}
         {product.description.trim().length > 0 && (
-          <Section title="Description">
+          <Section title={t('product.descriptionHeading')}>
             <Text
               style={{
                 fontSize: 14.5,

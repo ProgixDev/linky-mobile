@@ -12,6 +12,7 @@ import {
   Star,
   MessageCircle,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -29,6 +30,7 @@ const HERO_HEIGHT = 220;
 export default function ShopRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { data: shop, isLoading, isError, refetch } = useShop(id);
   const { data: products } = useProducts({ shopId: id });
   const [tab, setTab] = useState<Tab>('articles');
@@ -50,15 +52,15 @@ export default function ShopRoute() {
   };
 
   if (isLoading || isError || !shop) {
-    return <DetailStateScreen loading={isLoading} title="Boutique" onRetry={() => void refetch()} />;
+    return <DetailStateScreen loading={isLoading} title={t('shop.fallbackTitle')} onRetry={() => void refetch()} />;
   }
 
   // Phase Y.1 — never render a bare/placeholder response time. The DB used to
   // ship a mojibake em-dash placeholder ; we now blank that and only show the
   // segment when a real value is present.
   const hasResponseTime = shop.responseTime.trim().length > 0;
-  // Phase Y.2 — count/rating honesty.
-  const articlesLabel = shop.productCount === 1 ? 'Article' : 'Articles';
+  // Phase Y.2 / I.3d — count/rating honesty + pluralization via i18next.
+  const articlesLabel = t('shop.article', { count: shop.productCount });
   const isNewShop = shop.reviewCount === 0;
   const hasAbout = shop.about.trim().length > 0;
   const hasAvatar = typeof shop.avatar === 'string' && shop.avatar.length > 0;
@@ -252,17 +254,17 @@ export default function ShopRoute() {
                     ? `${(shop.followerCount / 1000).toFixed(1)}k`
                     : String(shop.followerCount)
                 }
-                label={shop.followerCount === 1 ? 'Abonné' : 'Abonnés'}
+                label={t('shop.follower', { count: shop.followerCount })}
               />
               <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 4 }} />
               <StatColumn value={String(shop.productCount)} label={articlesLabel} />
               <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 4 }} />
               {isNewShop ? (
-                <StatColumn value="Nouveau" label="Pas encore d'avis" />
+                <StatColumn value={t('shop.newBadge')} label={t('shop.noReviewsYet')} />
               ) : (
                 <StatColumn
                   value={shop.rating.toFixed(1)}
-                  label={`${shop.reviewCount} avis`}
+                  label={t('shop.reviewsCount', { count: shop.reviewCount })}
                   trailing={<Star size={11} color={colors.accent} fill={colors.accent} />}
                 />
               )}
@@ -273,7 +275,7 @@ export default function ShopRoute() {
               <Button
                 variant={following ? 'outline' : 'dark'}
                 size="md"
-                label={following ? 'Abonné' : 'Suivre'}
+                label={following ? t('shop.following') : t('shop.follow')}
                 style={{ flex: 2 }}
                 onPress={() => {
                   haptic.light();
@@ -296,11 +298,11 @@ export default function ShopRoute() {
                   gap: 6,
                   opacity: findOrCreate.isPending || !shop?.ownerId ? 0.5 : 1,
                 }}
-                accessibilityLabel="Contacter le vendeur"
+                accessibilityLabel={t('shop.contactSeller')}
               >
                 <MessageCircle size={15} color={colors.text} strokeWidth={2} />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-                  Message
+                  {t('shop.message')}
                 </Text>
               </Pressable>
             </View>
@@ -318,15 +320,20 @@ export default function ShopRoute() {
               backgroundColor: colors.bgSunken,
             }}
           >
-            {(['articles', 'reviews', 'about'] as const).map((t) => {
-              const active = tab === t;
-              const label = t === 'articles' ? 'Articles' : t === 'reviews' ? 'Avis' : 'À propos';
+            {(['articles', 'reviews', 'about'] as const).map((tabId) => {
+              const active = tab === tabId;
+              const label =
+                tabId === 'articles'
+                  ? t('shop.tabArticles')
+                  : tabId === 'reviews'
+                  ? t('shop.tabReviews')
+                  : t('shop.tabAbout');
               return (
                 <Pressable
-                  key={t}
+                  key={tabId}
                   onPress={() => {
                     haptic.selection();
-                    setTab(t);
+                    setTab(tabId);
                   }}
                   style={{
                     flex: 1,
@@ -398,7 +405,7 @@ export default function ShopRoute() {
                     letterSpacing: isNewShop ? 0 : -1,
                   }}
                 >
-                  {isNewShop ? 'Nouveau' : shop.rating.toFixed(1)}
+                  {isNewShop ? t('shop.newBadge') : shop.rating.toFixed(1)}
                 </Text>
                 {!isNewShop && (
                   <View style={{ flexDirection: 'row', gap: 1, marginTop: 4 }}>
@@ -423,8 +430,8 @@ export default function ShopRoute() {
                   }}
                 >
                   {isNewShop
-                    ? `Pas encore d'avis pour ${shop.name}. Sois le premier à laisser un retour après ton achat.`
-                    : `Note basée sur les ${shop.reviewCount} avis vérifiés de clients ayant acheté chez ${shop.name}.`}
+                    ? t('shop.reviewsNone', { name: shop.name })
+                    : t('shop.reviewsBasedOn', { count: shop.reviewCount, name: shop.name })}
                 </Text>
               </View>
             </View>
@@ -438,7 +445,7 @@ export default function ShopRoute() {
                   letterSpacing: 0,
                 }}
               >
-                Les avis détaillés arrivent bientôt.
+                {t('shop.reviewsDetailsSoon')}
               </Text>
             )}
           </View>
@@ -464,7 +471,7 @@ export default function ShopRoute() {
                   marginBottom: 8,
                 }}
               >
-                À PROPOS
+                {t('shop.aboutHeading')}
               </Text>
               <Text
                 style={{
@@ -477,20 +484,20 @@ export default function ShopRoute() {
               >
                 {hasAbout
                   ? shop.about
-                  : "Cette boutique n'a pas encore ajouté de description."}
+                  : t('shop.aboutEmpty')}
               </Text>
             </View>
 
             <View style={{ marginTop: 14, gap: 10 }}>
-              <InfoRow Icon={MapPin} label="Ville" value={shop.city} />
+              <InfoRow Icon={MapPin} label={t('shop.infoVille')} value={shop.city} />
               {hasResponseTime && (
-                <InfoRow Icon={Clock} label="Temps de réponse" value={shop.responseTime} />
+                <InfoRow Icon={Clock} label={t('shop.infoResponseTime')} value={shop.responseTime} />
               )}
               {shop.verified && (
                 <InfoRow
                   Icon={ShieldCheck}
-                  label="Vérifié"
-                  value="Vendeur identifié par Linky"
+                  label={t('shop.infoVerified')}
+                  value={t('shop.infoVerifiedValue')}
                   accent
                 />
               )}
