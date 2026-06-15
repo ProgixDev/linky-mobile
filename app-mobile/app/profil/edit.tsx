@@ -180,11 +180,18 @@ export default function ProfilEditRoute() {
               )}
             </View>
           </Pressable>
-          <Pressable onPress={onPickAvatar} disabled={uploadAvatar.isPending} hitSlop={8}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary, marginTop: 10 }}>
-              {uploadAvatar.isPending ? 'Téléversement…' : 'Changer la photo'}
-            </Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 18, marginTop: 10, alignItems: 'center' }}>
+            <Pressable onPress={onPickAvatar} disabled={uploadAvatar.isPending} hitSlop={8}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
+                {uploadAvatar.isPending ? 'Téléversement…' : 'Changer la photo'}
+              </Text>
+            </Pressable>
+            {!!avatarUrl && !uploadAvatar.isPending && (
+              <Pressable onPress={() => setAvatarUrl('')} hitSlop={8} accessibilityLabel="Retirer la photo de profil">
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.danger }}>Retirer</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* Nom */}

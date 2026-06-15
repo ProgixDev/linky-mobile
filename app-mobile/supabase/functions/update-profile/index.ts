@@ -62,6 +62,29 @@ function valid(b: unknown): b is Body {
   return true;
 }
 
+// Accepts only a clean https URL on our own host pointing into the public
+// avatars bucket. Parsing (not a bare startsWith) defeats query/fragment and
+// host-confusion tricks, and rejects external / data: URLs outright.
+function isOwnAvatarUrl(v: string): boolean {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  if (!supabaseUrl) return false;
+  let url: URL;
+  let base: URL;
+  try {
+    url = new URL(v);
+    base = new URL(supabaseUrl);
+  } catch {
+    return false;
+  }
+  return (
+    url.protocol === 'https:' &&
+    url.host === base.host &&
+    url.search === '' &&
+    url.hash === '' &&
+    url.pathname.startsWith('/storage/v1/object/public/avatars/')
+  );
+}
+
 Deno.serve(makePost<Body>('/v1/profile/update', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
 
@@ -78,12 +101,10 @@ Deno.serve(makePost<Body>('/v1/profile/update', valid, async ({ sb, body, req })
     if (v.length === 0) {
       patch.avatar_url = null; // clear
     } else {
-      // Must be a public URL inside OUR avatars bucket — blocks setting an
-      // arbitrary external/attacker URL as a profile image.
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      if (!supabaseUrl) throwApi('INTERNAL_ERROR', 500, 'Configuration manquante');
-      const prefix = `${supabaseUrl}/storage/v1/object/public/avatars/`;
-      if (!v.startsWith(prefix)) throwApi('INVALID_BODY', 400, 'Avatar invalide');
+      // Must be a clean public URL inside OUR avatars bucket — blocks setting an
+      // arbitrary external/attacker URL as a profile image. Parse the URL rather
+      // than a bare startsWith so query/fragment tricks and host confusion fail.
+      if (!isOwnAvatarUrl(v)) throwApi('INVALID_BODY', 400, 'Avatar invalide');
       patch.avatar_url = v;
     }
   }

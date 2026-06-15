@@ -19,6 +19,29 @@ function isUuid(s: unknown): s is string {
   return typeof s === 'string' && /^[0-9a-f-]{36}$/i.test(s);
 }
 
+// Shop cover/avatar must be a clean https URL inside OUR Supabase storage
+// (any public bucket) — blocks a crafted request from injecting an arbitrary
+// external or data: image that would then render on the shop page for everyone.
+function isOwnStorageUrl(v: string): boolean {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  if (!supabaseUrl) return false;
+  let url: URL;
+  let base: URL;
+  try {
+    url = new URL(v);
+    base = new URL(supabaseUrl);
+  } catch {
+    return false;
+  }
+  return (
+    url.protocol === 'https:' &&
+    url.host === base.host &&
+    url.search === '' &&
+    url.hash === '' &&
+    url.pathname.startsWith('/storage/v1/object/public/')
+  );
+}
+
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
   const x = b as Record<string, unknown>;
@@ -33,6 +56,13 @@ function valid(b: unknown): b is Body {
 
 Deno.serve(makePost<Body>('/v1/shops/upsert', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
+  // Reject externally-hosted cover/avatar images (only our storage is allowed).
+  if (body.cover_url != null && body.cover_url !== '' && !isOwnStorageUrl(body.cover_url)) {
+    throwApi('INVALID_BODY', 400, 'Image de couverture invalide');
+  }
+  if (body.avatar_url != null && body.avatar_url !== '' && !isOwnStorageUrl(body.avatar_url)) {
+    throwApi('INVALID_BODY', 400, 'Logo invalide');
+  }
   const payload = {
     owner_id: userId,
     name: body.name.trim(),
