@@ -20,6 +20,7 @@ import {
   Check,
   Pause,
   CircleDot,
+  Pencil,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -370,10 +371,36 @@ export function ShopDashboard() {
       <Sheet
         open={!!statusTarget}
         onClose={() => setStatusTarget(null)}
-        title="Changer le statut"
-        snapPoints={['45%']}
+        title="Gérer l'annonce"
+        snapPoints={['52%']}
       >
         <View style={{ padding: 16, gap: 8 }}>
+          {/* Edit the listing content (not just its status). */}
+          <Pressable
+            onPress={() => {
+              const t = statusTarget;
+              setStatusTarget(null);
+              if (!t) return;
+              if (t.kind === 'product') router.push(`/product/edit/${t.id}`);
+              else router.push(`/property/edit/${t.id}`);
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              padding: 14,
+              borderRadius: 14,
+              backgroundColor: colors.primarySoft,
+              borderWidth: 1,
+              borderColor: colors.primary,
+            }}
+          >
+            <Pencil size={16} color={colors.primary} strokeWidth={2.25} />
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primaryDeep }}>Modifier l'annonce</Text>
+          </Pressable>
+          <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginTop: 4, marginBottom: 2 }}>
+            STATUT
+          </Text>
           {(statusTarget?.kind === 'property'
             ? [
                 { value: 'active' as const, label: 'Actif', Icon: CircleDot },
