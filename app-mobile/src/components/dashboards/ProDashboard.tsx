@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
   Star,
@@ -55,6 +56,7 @@ export type ProMode = 'shop' | 'estate';
 
 export function IdentityPill({ mode }: { mode: ProMode }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { data: shops } = useMyShops();
   const user = useAuth((s) => s.user);
   const myShop = shops?.[0];
@@ -65,8 +67,8 @@ export function IdentityPill({ mode }: { mode: ProMode }) {
   const isShop = mode === 'shop';
   const noShop = isShop && shops !== undefined && !myShop;
 
-  const name = isShop ? (myShop?.name ?? 'Crée ta boutique') : (user?.display_name ?? 'Mon agence');
-  const subtitle = isShop ? (noShop ? 'TAPE POUR CRÉER' : 'BOUTIQUE') : 'AGENCE IMMO';
+  const name = isShop ? (myShop?.name ?? t('proDashboard.identityCreateShop')) : (user?.display_name ?? t('proDashboard.identityMyAgency'));
+  const subtitle = isShop ? (noShop ? t('proDashboard.identitySubTapToCreate') : t('proDashboard.identitySubShop')) : t('proDashboard.identitySubAgency');
   const avatar = isShop ? myShop?.avatar : user?.avatar_url;
 
   return (
@@ -201,6 +203,7 @@ type ManagementTarget = { kind: 'product' | 'property'; id: string; current?: st
 
 export function ShopDashboard() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { data: shops } = useMyShops();
   const myShop = shops?.[0];
   const { data: products } = useProducts({ shopId: myShop?.id });
@@ -240,22 +243,22 @@ export function ShopDashboard() {
               The screens themselves serve a Bientot disponible state. */}
           <QuickAction
             Icon={Package}
-            label="Commandes"
+            label={t('proDashboard.qaOrders')}
             onPress={() => router.push('/seller/orders')}
           />
           <QuickAction
             Icon={MessageSquare}
-            label="Demandes"
+            label={t('proDashboard.qaRequests')}
             onPress={() => router.push('/pro/demandes')}
           />
           <QuickAction
             Icon={ArrowUpRight}
-            label="Retraits"
+            label={t('proDashboard.qaPayouts')}
             onPress={() => router.push('/seller/payouts')}
           />
           <QuickAction
             Icon={BarChart3}
-            label="Stats"
+            label={t('proDashboard.qaStats')}
             onPress={() => router.push('/pro/stats')}
           />
         </View>
@@ -264,27 +267,27 @@ export function ShopDashboard() {
       <View style={{ paddingHorizontal: 20, paddingTop: 22, flexDirection: 'row', gap: 10 }}>
         <StatTile
           Icon={Package}
-          label="Annonces"
+          label={t('proDashboard.statListings')}
           value={String(listingCount)}
           sub={
             activeListingsCount > 0
-              ? `${activeListingsCount} active${activeListingsCount > 1 ? 's' : ''}`
-              : 'Aucune active'
+              ? t('proDashboard.statActive', { count: activeListingsCount })
+              : t('proDashboard.statNoActive')
           }
         />
         <StatTile
           Icon={Clock}
-          label="En attente"
+          label={t('proDashboard.statPending')}
           value={String(pendingCount)}
-          sub={pendingCount > 0 ? 'Action requise' : 'Rien à valider'}
+          sub={pendingCount > 0 ? t('proDashboard.statPendingAction') : t('proDashboard.statPendingNone')}
           subTone={pendingCount > 0 ? 'accent' : undefined}
         />
-        <StatTile Icon={Star} label="Note" value="—" sub="Aucun avis" />
+        <StatTile Icon={Star} label={t('proDashboard.statRating')} value="—" sub={t('proDashboard.statNoReviews')} />
       </View>
 
       {shops === undefined ? null : !myShop ? (
         <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
-          <SectionTitle title="Mes annonces" />
+          <SectionTitle title={t('proDashboard.sectionMyListings')} />
           <Pressable
             onPress={() => {
               haptic.light();
@@ -303,16 +306,16 @@ export function ShopDashboard() {
           >
             <Package size={20} color={colors.textMuted} strokeWidth={1.75} />
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, letterSpacing: 0 }}>
-              Crée ta première annonce
+              {t('proDashboard.emptyCreateFirstListing')}
             </Text>
             <Text style={{ fontSize: 11.5, color: colors.textMuted, letterSpacing: 0 }}>
-              Ta boutique se crée à la première publication.
+              {t('proDashboard.emptyShopWillBeCreated')}
             </Text>
           </Pressable>
         </View>
       ) : (
         <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
-          <SectionTitle title="Mes annonces" />
+          <SectionTitle title={t('proDashboard.sectionMyListings')} />
           {(!products?.length && !properties?.length) ? (
             <View
               style={{
@@ -328,10 +331,10 @@ export function ShopDashboard() {
             >
               <Package size={20} color={colors.textMuted} strokeWidth={1.75} />
               <Text style={{ fontSize: 13.5, color: colors.text, fontWeight: '600' }}>
-                Tu n'as pas encore d'annonce.
+                {t('proDashboard.emptyNoListings')}
               </Text>
               <Text style={{ fontSize: 11.5, color: colors.textMuted }}>
-                Tape sur + pour publier.
+                {t('proDashboard.emptyTapPlus')}
               </Text>
             </View>
           ) : (
@@ -354,7 +357,7 @@ export function ShopDashboard() {
                   key={`pr-${p.id}`}
                   kind="property"
                   title={p.title}
-                  price={`${formatGNF(p.priceGnf)}${p.perMonth ? ' /mois' : ''}`}
+                  price={`${formatGNF(p.priceGnf)}${p.perMonth ? t('proDashboard.perMonth') : ''}`}
                   cover={p.photos[0]}
                   status={p.status}
                   onPress={() => router.push(`/property/${p.id}`)}
@@ -371,7 +374,7 @@ export function ShopDashboard() {
       <Sheet
         open={!!statusTarget}
         onClose={() => setStatusTarget(null)}
-        title="Gérer l'annonce"
+        title={t('proDashboard.manageTitle')}
         snapPoints={['52%']}
       >
         <View style={{ padding: 16, gap: 8 }}>
@@ -396,22 +399,22 @@ export function ShopDashboard() {
             }}
           >
             <Pencil size={16} color={colors.primary} strokeWidth={2.25} />
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primaryDeep }}>Modifier l'annonce</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primaryDeep }}>{t('proDashboard.manageEditCta')}</Text>
           </Pressable>
           <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginTop: 4, marginBottom: 2 }}>
-            STATUT
+            {t('proDashboard.manageStatusLabel')}
           </Text>
           {(statusTarget?.kind === 'property'
             ? [
-                { value: 'active' as const, label: 'Actif', Icon: CircleDot },
-                { value: 'paused' as const, label: 'En pause', Icon: Pause },
-                { value: 'reserved' as const, label: 'Réservé', Icon: Check },
-                { value: 'sold' as const, label: 'Vendu', Icon: Check },
+                { value: 'active' as const, label: t('proDashboard.statusActive'), Icon: CircleDot },
+                { value: 'paused' as const, label: t('proDashboard.statusPaused'), Icon: Pause },
+                { value: 'reserved' as const, label: t('proDashboard.statusReserved'), Icon: Check },
+                { value: 'sold' as const, label: t('proDashboard.statusSold'), Icon: Check },
               ]
             : [
-                { value: 'active' as const, label: 'Actif', Icon: CircleDot },
-                { value: 'paused' as const, label: 'En pause', Icon: Pause },
-                { value: 'sold' as const, label: 'Vendu', Icon: Check },
+                { value: 'active' as const, label: t('proDashboard.statusActive'), Icon: CircleDot },
+                { value: 'paused' as const, label: t('proDashboard.statusPaused'), Icon: Pause },
+                { value: 'sold' as const, label: t('proDashboard.statusSold'), Icon: Check },
               ]
           ).map((opt) => (
             <Pressable
@@ -425,11 +428,11 @@ export function ShopDashboard() {
                   } else {
                     await setPropertyStatus.mutateAsync({ id: statusTarget.id, status: opt.value });
                   }
-                  toast.show(`Statut: ${opt.label}`, 'success');
+                  toast.show(t('proDashboard.statusToast', { label: opt.label }), 'success');
                   setStatusTarget(null);
                 } catch (e: unknown) {
                   console.error('[mes-annonces] status error:', e);
-                  toast.show(toToastMessage(e, 'Mise à jour échouée'), 'danger');
+                  toast.show(toToastMessage(e, t('proDashboard.statusError')), 'danger');
                 }
               }}
               style={{
@@ -448,7 +451,7 @@ export function ShopDashboard() {
                 {opt.label}
               </Text>
               {statusTarget?.current === opt.value && (
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary }}>ACTUEL</Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary }}>{t('proDashboard.statusCurrent')}</Text>
               )}
             </Pressable>
           ))}
@@ -459,12 +462,12 @@ export function ShopDashboard() {
       <Sheet
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Supprimer l'annonce"
+        title={t('proDashboard.deleteTitle')}
         snapPoints={['35%']}
       >
         <View style={{ padding: 16, gap: 14 }}>
           <Text style={{ fontSize: 14, color: colors.text }}>
-            « {deleteTarget?.title} » sera définitivement supprimé. Action irréversible.
+            {t('proDashboard.deleteBody', { title: deleteTarget?.title ?? '' })}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable
@@ -480,7 +483,7 @@ export function ShopDashboard() {
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ fontWeight: '700', color: colors.text }}>Annuler</Text>
+              <Text style={{ fontWeight: '700', color: colors.text }}>{t('proDashboard.deleteCancel')}</Text>
             </Pressable>
             <Pressable
               disabled={deleteProduct.isPending || deleteProperty.isPending}
@@ -492,7 +495,7 @@ export function ShopDashboard() {
                   } else {
                     await deleteProperty.mutateAsync(deleteTarget.id);
                   }
-                  toast.show('Annonce supprimée', 'success');
+                  toast.show(t('proDashboard.deleteSuccess'), 'success');
                   setDeleteTarget(null);
                 } catch (e: unknown) {
                   console.error('[mes-annonces] delete error:', e);
@@ -503,11 +506,11 @@ export function ShopDashboard() {
                     qc.invalidateQueries({ queryKey: ['products'] });
                     qc.invalidateQueries({ queryKey: ['my-properties'] });
                     qc.invalidateQueries({ queryKey: ['my-shops'] });
-                    toast.show('Annonce déjà supprimée', 'info');
+                    toast.show(t('proDashboard.deleteAlready'), 'info');
                     setDeleteTarget(null);
                     return;
                   }
-                  toast.show(toToastMessage(e, 'Suppression échouée'), 'danger');
+                  toast.show(toToastMessage(e, t('proDashboard.deleteError')), 'danger');
                 }
               }}
               style={{
@@ -521,7 +524,7 @@ export function ShopDashboard() {
               }}
             >
               <Text style={{ fontWeight: '700', color: '#FFFFFF' }}>
-                {(deleteProduct.isPending || deleteProperty.isPending) ? 'Suppression…' : 'Supprimer'}
+                {(deleteProduct.isPending || deleteProperty.isPending) ? t('proDashboard.deleteCtaBusy') : t('proDashboard.deleteCta')}
               </Text>
             </Pressable>
           </View>
@@ -551,12 +554,13 @@ function ManagementRow({
   onDelete: () => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const statusLabel =
-    status === 'paused' ? 'En pause'
-    : status === 'sold' ? 'Vendu'
-    : status === 'reserved' ? 'Réservé'
-    : status === 'pending' ? 'En attente'
-    : 'Actif';
+    status === 'paused' ? t('proDashboard.statusPaused')
+    : status === 'sold' ? t('proDashboard.statusSold')
+    : status === 'reserved' ? t('proDashboard.statusReserved')
+    : status === 'pending' ? t('proDashboard.statusPending')
+    : t('proDashboard.statusActive');
   const statusTone =
     status === 'active' ? colors.primarySoft
     : status === 'paused' ? colors.bgSunken
@@ -586,7 +590,7 @@ function ManagementRow({
       />
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 9.5, fontWeight: '700', color: colors.textFaint, letterSpacing: 0.4 }}>
-          {kind === 'product' ? 'PRODUIT' : 'BIEN'}
+          {kind === 'product' ? t('proDashboard.kindProduct') : t('proDashboard.kindProperty')}
         </Text>
         <Text
           numberOfLines={1}
@@ -633,7 +637,7 @@ function ManagementRow({
         }}
         hitSlop={6}
         style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
-        accessibilityLabel="Supprimer"
+        accessibilityLabel={t('proDashboard.a11yDelete')}
       >
         <Trash2 size={16} color={colors.danger} strokeWidth={2} />
       </Pressable>
@@ -647,6 +651,7 @@ function ManagementRow({
 
 export function EstateDashboard() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { data: properties } = useMyProperties();
   const myProperties = useMemo(() => (properties ?? []).slice(0, 4), [properties]);
 
@@ -671,17 +676,17 @@ export function EstateDashboard() {
               just below. */}
           <QuickAction
             Icon={CalendarDays}
-            label="Visites"
+            label={t('proDashboard.qaVisits')}
             onPress={() => router.push('/pro/visites')}
           />
           <QuickAction
             Icon={MessageSquare}
-            label="Demandes"
+            label={t('proDashboard.qaRequests')}
             onPress={() => router.push('/pro/demandes')}
           />
           <QuickAction
             Icon={ArrowUpRight}
-            label="Retraits"
+            label={t('proDashboard.qaPayouts')}
             /* Phase U.0 should-fix — pure agents land on the seller-gated
                /seller/payouts otherwise (Réservé aux vendeurs from their
                OWN dashboard) ; route to the wallet retrait flow directly. */
@@ -689,7 +694,7 @@ export function EstateDashboard() {
           />
           <QuickAction
             Icon={BarChart3}
-            label="Stats"
+            label={t('proDashboard.qaStats')}
             onPress={() => router.push('/pro/stats')}
           />
         </View>
@@ -698,22 +703,22 @@ export function EstateDashboard() {
       <View style={{ paddingHorizontal: 20, paddingTop: 22, flexDirection: 'row', gap: 10 }}>
         <StatTile
           Icon={Building2}
-          label="Biens"
+          label={t('proDashboard.statBiens')}
           value={String(totalCount)}
-          sub={pendingCount > 0 ? `${pendingCount} en attente` : 'Aucun en attente'}
+          sub={pendingCount > 0 ? t('proDashboard.statPendingCount', { count: pendingCount }) : t('proDashboard.statPendingNoneEstate')}
         />
         <StatTile
           Icon={KeyRound}
-          label="Loués"
+          label={t('proDashboard.statLeased')}
           value={String(leasedCount)}
-          sub={leasedCount > 0 ? 'En location' : 'Aucun loué'}
+          sub={leasedCount > 0 ? t('proDashboard.statLeasedSub') : t('proDashboard.statNoneLeased')}
           subTone={leasedCount > 0 ? 'accent' : undefined}
         />
-        <StatTile Icon={Star} label="Note" value="—" sub="Aucun avis" />
+        <StatTile Icon={Star} label={t('proDashboard.statRating')} value="—" sub={t('proDashboard.statNoReviews')} />
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
-        <SectionTitle title="Mes biens" />
+        <SectionTitle title={t('proDashboard.sectionMyEstates')} />
         {myProperties.length === 0 ? (
           <View
             style={{
@@ -729,10 +734,10 @@ export function EstateDashboard() {
           >
             <Building2 size={20} color={colors.textMuted} strokeWidth={1.75} />
             <Text style={{ fontSize: 13.5, color: colors.text, fontWeight: '600' }}>
-              Tu n'as pas encore de bien.
+              {t('proDashboard.emptyNoProperty')}
             </Text>
             <Text style={{ fontSize: 11.5, color: colors.textMuted }}>
-              Tape sur + pour publier ton premier bien.
+              {t('proDashboard.emptyTapPlusProperty')}
             </Text>
           </View>
         ) : (
@@ -773,15 +778,16 @@ function WalletHero({
 }: {
   onTap?: () => void;
 }) {
+  const { t } = useTranslation();
   const wallet = useWallet();
   const isLoading = wallet.isLoading;
   const isError = wallet.isError;
   const value = isLoading || isError ? '—' : formatGNF(wallet.data?.balanceGnf ?? 0).replace(' GNF', '');
   const subline = isError
-    ? 'Erreur — touche Réessayer'
+    ? t('proDashboard.walletSubError')
     : isLoading
-      ? 'Chargement…'
-      : 'Disponible pour retrait';
+      ? t('proDashboard.walletSubLoading')
+      : t('proDashboard.walletSubAvailable');
   return (
     <Pressable onPress={onTap} disabled={!onTap}>
       <View
@@ -834,7 +840,7 @@ function WalletHero({
               letterSpacing: 0.6,
             }}
           >
-            SOLDE DISPONIBLE
+            {t('proDashboard.walletBalanceLabel')}
           </Text>
 
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 14 }}>
@@ -862,7 +868,7 @@ function WalletHero({
             {isError && (
               <Pressable onPress={() => void wallet.refetch()} hitSlop={8}>
                 <Text style={{ fontSize: 12.5, color: '#FFFFFF', fontWeight: '700' }}>
-                  Réessayer
+                  {t('proDashboard.walletRetry')}
                 </Text>
               </Pressable>
             )}

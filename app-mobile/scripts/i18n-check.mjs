@@ -98,6 +98,8 @@ const EN_FR_IDENTICAL_ALLOWLIST = new Set([
   'cart.subtitle',
   'pro.demandeWhenOther',
   'order.stageCarrierSuffix',
+  // "{{count}} active" happens to be valid English and French both.
+  'proDashboard.statActive_one',
   'checkout.confirmTerminalErrorPrefix',
   // Brand / section header ("Mobile Money" stays as-is across FR/EN).
   'checkout.sectionMobileMoney',
