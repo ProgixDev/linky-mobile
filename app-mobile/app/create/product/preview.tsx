@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Button } from '../../../src/components/primitives/Button';
@@ -18,6 +19,7 @@ import { toToastMessage } from '../../../src/lib/api';
 
 export default function CreatePreviewRoute() {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const state = useCreateListing();
   const reset = useCreateListing((s) => s.reset);
   const { show } = useToast();
@@ -25,14 +27,14 @@ export default function CreatePreviewRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Aperçu" back />
+      <TopBar title={t('create.previewTopbar')} back />
       <View style={{ paddingHorizontal: 16, paddingBottom: 100 }}>
         <ProgressDots total={6} current={5} />
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 14, marginBottom: 6 }}>
-          Comme dans le feed
+          {t('create.previewTitle')}
         </Text>
         <Text variant="caption" tone="muted" style={{ marginBottom: 18, letterSpacing: 0 }}>
-          Voilà comment ton annonce apparaîtra aux acheteurs.
+          {t('create.previewSub')}
         </Text>
 
         <View style={{ aspectRatio: 9 / 14, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.discoverBg }}>
@@ -41,7 +43,7 @@ export default function CreatePreviewRoute() {
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <I.image size={30} color="rgba(255,255,255,0.7)" />
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Aucune photo ajoutée</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{t('create.previewNoPhoto')}</Text>
             </View>
           )}
           <LinearGradient
@@ -67,9 +69,9 @@ export default function CreatePreviewRoute() {
 
       </View>
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
-        <Button variant="secondary" label="Modifier" onPress={() => router.back()} disabled={createProduct.isPending} />
+        <Button variant="secondary" label={t('create.previewEdit')} onPress={() => router.back()} disabled={createProduct.isPending} />
         <Button
-          label={createProduct.isPending ? 'Publication…' : 'Publier mon annonce'}
+          label={createProduct.isPending ? t('create.previewPublishing') : t('create.previewPublish')}
           style={{ flex: 1 }}
           disabled={createProduct.isPending || !state.title.trim() || state.priceGnf <= 0 || state.photos.length === 0 || !state.city.trim()}
           onPress={async () => {
@@ -85,12 +87,12 @@ export default function CreatePreviewRoute() {
                 // Geography simplified per 2026-05-29 client meeting: cities only, no districts.
               };
               await createProduct.mutateAsync(body);
-              show('Annonce publiée 🎉', 'success');
+              show(t('create.publishSuccess'), 'success');
               reset();
               router.replace('/(tabs)/boutique');
             } catch (e: unknown) {
               console.error('[product-create] error:', e);
-              show(toToastMessage(e, 'Publication échouée'), 'danger');
+              show(toToastMessage(e, t('create.publishError')), 'danger');
             }
           }}
         />

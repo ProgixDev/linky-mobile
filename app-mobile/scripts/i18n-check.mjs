@@ -98,6 +98,11 @@ const EN_FR_IDENTICAL_ALLOWLIST = new Set([
   'cart.subtitle',
   'pro.demandeWhenOther',
   'order.stageCarrierSuffix',
+  // Pure interpolation templates — only the {{var}} differs FR/EN.
+  'create.fieldDescCount',
+  'create.fieldEur',
+  // "Auto & Moto" is identical brand-style French/English.
+  'create.catAutoMoto',
   // "{{count}} active" happens to be valid English and French both.
   'proDashboard.statActive_one',
   'checkout.confirmTerminalErrorPrefix',

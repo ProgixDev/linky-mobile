@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Button } from '../../../src/components/primitives/Button';
@@ -12,34 +14,43 @@ import { useCreateListing } from '../../../src/stores/createListing';
 
 type Tint = 'primary' | 'accent' | 'cream' | 'info';
 
-const CATEGORIES: { t: string; icon: IconKey; tint: Tint }[] = [
-  { t: 'Mode & Beauté', icon: 'shirt', tint: 'primary' },
-  { t: 'Électronique', icon: 'phone', tint: 'accent' },
-  { t: 'Maison', icon: 'sofa', tint: 'cream' },
-  { t: 'Auto & Moto', icon: 'car', tint: 'info' },
-  { t: 'Beauté & Soin', icon: 'drop', tint: 'primary' },
-  { t: 'Services', icon: 'zap', tint: 'accent' },
+// Phase I.9 — `code` stays stable (it's stored on the product server-side) ;
+// `labelKey` resolves to the displayed name at render so the tile labels
+// flip with the active language. Matching by code keeps filters consistent
+// across language changes.
+const CATEGORY_DEFS: { code: string; labelKey: string; icon: IconKey; tint: Tint }[] = [
+  { code: 'Mode & Beauté', labelKey: 'create.catModeBeauty', icon: 'shirt', tint: 'primary' },
+  { code: 'Électronique', labelKey: 'create.catElectronique', icon: 'phone', tint: 'accent' },
+  { code: 'Maison', labelKey: 'create.catMaison', icon: 'sofa', tint: 'cream' },
+  { code: 'Auto & Moto', labelKey: 'create.catAutoMoto', icon: 'car', tint: 'info' },
+  { code: 'Beauté & Soin', labelKey: 'create.catBeauteSoin', icon: 'drop', tint: 'primary' },
+  { code: 'Services', labelKey: 'create.catServices', icon: 'zap', tint: 'accent' },
 ];
 
 export default function CreateCategoryRoute() {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const category = useCreateListing((s) => s.category);
   const setVal = useCreateListing((s) => s.set);
+  const CATEGORIES = useMemo(
+    () => CATEGORY_DEFS.map((c) => ({ ...c, label: t(c.labelKey) })),
+    [t],
+  );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Créer une annonce" back />
+      <TopBar title={t('create.topbarTitle')} back />
       <View style={{ paddingHorizontal: 16, paddingBottom: 100 }}>
         <ProgressDots total={6} current={1} />
         <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
-          Étape 2 / 6 · Catégorie
+          {t('create.stepDotsWith', { current: 2, total: 6, label: t('create.stepCategoryLabel') })}
         </Text>
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 18 }}>
-          Quelle catégorie ?
+          {t('create.stepCategoryTitle')}
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {CATEGORIES.map((cat) => {
-            const sel = cat.t === category;
+            const sel = cat.code === category;
             const Icon = I[cat.icon];
             const palette = {
               primary: { bg: colors.primarySoft, fg: colors.primary },
@@ -49,8 +60,8 @@ export default function CreateCategoryRoute() {
             }[cat.tint];
             return (
               <Pressable
-                key={cat.t}
-                onPress={() => setVal('category', cat.t)}
+                key={cat.code}
+                onPress={() => setVal('category', cat.code)}
                 style={{
                   flexBasis: '47%',
                   flexGrow: 1,
@@ -74,14 +85,14 @@ export default function CreateCategoryRoute() {
                 >
                   <Icon size={18} color={palette.fg} />
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: '600' }}>{cat.t}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '600' }}>{cat.label}</Text>
               </Pressable>
             );
           })}
         </View>
       </View>
       <StickyBottom>
-        <Button size="lg" block label="Continuer" disabled={!category} onPress={() => router.push('/create/product/details')} />
+        <Button size="lg" block label={t('create.continue')} disabled={!category} onPress={() => router.push('/create/product/details')} />
       </StickyBottom>
     </SafeAreaView>
   );

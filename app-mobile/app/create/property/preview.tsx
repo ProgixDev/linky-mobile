@@ -14,6 +14,7 @@ import {
   Edit3,
   Check,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
@@ -25,17 +26,26 @@ import { useCreateProperty } from '../../../src/data/queries/properties';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 
-// id → label, mirroring app/create/property/amenities.tsx (amenities are stored
-// as ids in state.amenities). Used to render the user's ACTUAL selection in the
-// preview instead of a hardcoded Wi-Fi/Parking/Clim. strip.
-const AMENITY_LABELS: Record<string, string> = {
-  wifi: 'Wi-Fi', park: 'Parking', ac: 'Climatisation', bath: 'Salle de bain privée',
-  kitchen: 'Cuisine équipée', furn: 'Meublé', tv: 'TV', sec: 'Gardien / sécurité',
-  garden: 'Jardin / cour', pool: 'Piscine', lift: 'Ascenseur', terrace: 'Balcon / terrasse',
+// Phase I.9 — id → i18n key. The state stores STABLE ids ; the preview
+// resolves the label via t() so the chip flips with the active language.
+const AMENITY_LABEL_KEY: Record<string, string> = {
+  wifi:    'create.amenityWifi',
+  park:    'create.amenityParking',
+  ac:      'create.amenityClim',
+  bath:    'create.amenityBath',
+  kitchen: 'create.amenityKitchen',
+  furn:    'create.amenityFurn',
+  tv:      'create.amenityTv',
+  sec:     'create.amenitySec',
+  garden:  'create.amenityGardenAlt',
+  pool:    'create.amenityPool',
+  lift:    'create.amenityLift',
+  terrace: 'create.amenityTerrace',
 };
 
 export default function PreviewRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   // Phase U.0 nit — photo-less draft used to fall back to mockProperties[0]
   // Unsplash, suggesting the listing carried a real photo. Now: neutral
   // placeholder (bgSunken + Building2 icon).
@@ -51,10 +61,10 @@ export default function PreviewRoute() {
         contentContainerStyle={{ paddingBottom: 140 }}
       >
         <ScreenHeader
-          title="Aperçu de l'annonce"
+          title={t('create.previewListingTitle')}
           subtitle={state.propertyType === 'location'
-            ? "C'est ce que verront tes futurs locataires."
-            : "C'est ce que verront tes futurs acheteurs."}
+            ? t('create.previewSubRental')
+            : t('create.previewSubSale')}
         />
 
         {/* Phone-style preview card */}
@@ -116,7 +126,7 @@ export default function PreviewRoute() {
                     includeFontPadding: false,
                   }}
                 >
-                  {state.propertyType === 'location' ? 'LOCATION' : state.propertyType === 'vente' ? 'VENTE' : 'TERRAIN'}
+                  {state.propertyType === 'location' ? t('create.typeBadgeLocation') : state.propertyType === 'vente' ? t('create.typeBadgeVente') : t('create.typeBadgeTerrain')}
                 </Text>
               </View>
             </View>
@@ -154,7 +164,7 @@ export default function PreviewRoute() {
                   {formatGNF(state.priceGnf).replace(' GNF', '')}
                 </Text>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted }}>
-                  GNF{state.propertyType === 'location' ? ' /mois' : ''}
+                  GNF{state.propertyType === 'location' ? t('create.perMonthAbbr') : ''}
                 </Text>
               </View>
               <View
@@ -182,15 +192,15 @@ export default function PreviewRoute() {
                   borderTopColor: colors.border,
                 }}
               >
-                {state.propertyType !== 'terrain' && <SpecMini Icon={BedDouble} label={`${state.rooms} ch.`} />}
-                <SpecMini Icon={Maximize2} label={`${state.areaSqm} m²`} />
+                {state.propertyType !== 'terrain' && <SpecMini Icon={BedDouble} label={t('create.specRoomsAbbr', { count: state.rooms })} />}
+                <SpecMini Icon={Maximize2} label={t('create.specAreaAbbr', { count: state.areaSqm })} />
               </View>
 
               {/* Amenity chips — the user's actual selection, not hardcoded */}
               {state.amenities.length > 0 && (
                 <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
                   {state.amenities.map((aid) => (
-                    <AmenityChip key={aid} Icon={Check} label={AMENITY_LABELS[aid] ?? aid} />
+                    <AmenityChip key={aid} Icon={Check} label={AMENITY_LABEL_KEY[aid] ? t(AMENITY_LABEL_KEY[aid]) : aid} />
                   ))}
                 </View>
               )}
@@ -209,11 +219,11 @@ export default function PreviewRoute() {
               marginLeft: 4,
             }}
           >
-            MODIFIER
+            {t('create.previewEditHeader')}
           </Text>
-          <EditRow Icon={Edit3} label="Détails du bien" route="/create/property/details" />
-          <EditRow Icon={MapPin} label="Localisation" route="/create/property/location" />
-          <EditRow Icon={Eye} label="Photos" route="/create/property/photos" />
+          <EditRow Icon={Edit3} label={t('create.previewEditDetails')} route="/create/property/details" />
+          <EditRow Icon={MapPin} label={t('create.previewEditLocation')} route="/create/property/location" />
+          <EditRow Icon={Eye} label={t('create.previewEditPhotos')} route="/create/property/photos" />
         </View>
       </ScrollView>
 
@@ -253,12 +263,12 @@ export default function PreviewRoute() {
                 lng: state.lng,
                 photos: state.propertyPhotos,
               });
-              show('Annonce publiée 🎉', 'success');
+              show(t('create.publishedSuccess'), 'success');
               reset();
               router.replace(`/property/${property.id}`);
             } catch (e: unknown) {
               console.error('[property-create] error:', e);
-              show(toToastMessage(e, 'Publication échouée'), 'danger');
+              show(toToastMessage(e, t('create.publishFailed')), 'danger');
             }
           }}
           style={{
@@ -279,7 +289,7 @@ export default function PreviewRoute() {
               includeFontPadding: false,
             }}
           >
-            {createProperty.isPending ? 'Publication…' : "Publier l'annonce"}
+            {createProperty.isPending ? t('create.publishListingBusy') : t('create.publishListingCta')}
           </Text>
         </Pressable>
       </SafeAreaView>
@@ -329,6 +339,7 @@ function AmenityChip({ Icon, label }: { Icon: typeof Wifi; label: string }) {
 
 function EditRow({ Icon, label, route }: { Icon: typeof Edit3; label: string; route: string }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <Pressable
       onPress={() => router.push(route as never)}
@@ -369,7 +380,7 @@ function EditRow({ Icon, label, route }: { Icon: typeof Edit3; label: string; ro
       >
         {label}
       </Text>
-      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>Modifier</Text>
+      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{t('create.previewEditCtaLabel')}</Text>
     </Pressable>
   );
 }

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Button } from '../../../src/components/primitives/Button';
@@ -49,6 +50,7 @@ function extForMime(m: AllowedMime): string {
 
 export default function CreatePhotosRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const photos = useCreateListing((s) => s.photos);
   const setVal = useCreateListing((s) => s.set);
   const requestUploadUrl = useRequestPhotoUploadUrl();
@@ -63,7 +65,7 @@ export default function CreatePhotosRoute() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        show('Autorise l’accès aux photos pour continuer', 'danger');
+        show(t('create.photosPermDenied'), 'danger');
         return;
       }
 
@@ -100,14 +102,14 @@ export default function CreatePhotosRoute() {
       if (!putRes.ok) {
         const raw = await putRes.text().catch(() => '');
         console.error('[photos] storage PUT failed', putRes.status, raw);
-        show('Téléversement échoué', 'danger');
+        show(t('create.photosUploadFailed'), 'danger');
         return;
       }
 
       setVal('photos', [...photos, public_url]);
     } catch (e: unknown) {
       console.error('[photos] add error:', e);
-      show(toToastMessage(e, 'Téléversement échoué'), 'danger');
+      show(toToastMessage(e, t('create.photosUploadFailed')), 'danger');
     } finally {
       setUploading(false);
     }
@@ -120,17 +122,17 @@ export default function CreatePhotosRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Créer une annonce" back />
+      <TopBar title={t('create.topbarTitle')} back />
       <View style={{ paddingHorizontal: 16, paddingBottom: 100 }}>
         <ProgressDots total={6} current={4} />
         <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
-          Étape 5 / 6 · Photos
+          {t('create.stepDotsWith', { current: 5, total: 6, label: t('create.stepPhotosLabel') })}
         </Text>
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 6 }}>
-          Ajoute des photos
+          {t('create.stepPhotosTitle')}
         </Text>
         <Text variant="caption" tone="muted" style={{ marginTop: 6, letterSpacing: 0 }}>
-          Plus tu en mets, plus tu vends vite. Maximum {MAX_PHOTOS}.
+          {t('create.photosMaxHint', { max: MAX_PHOTOS })}
         </Text>
 
         <View
@@ -169,7 +171,7 @@ export default function CreatePhotosRoute() {
                   }}
                 >
                   <Text style={{ fontSize: 9, fontWeight: '700', color: '#2A1A05', letterSpacing: 0.4 }}>
-                    PRINCIPALE
+                    {t('create.photosMain')}
                   </Text>
                 </View>
               )}
@@ -200,7 +202,7 @@ export default function CreatePhotosRoute() {
                 <>
                   <I.camera size={20} color={colors.textMuted} />
                   <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                    Ajouter
+                    {t('create.photosAdd')}
                   </Text>
                 </>
               )}
@@ -212,16 +214,16 @@ export default function CreatePhotosRoute() {
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
               {photos.length === 0
-                ? 'La première photo sera la principale.'
-                : 'Maintiens une photo pour la supprimer.'}
+                ? t('create.photosFirstHint')
+                : t('create.photosLongPressHint')}
             </Text>
           </TrustStrip>
         </View>
       </View>
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
-        <Button variant="secondary" label="Retour" onPress={() => router.back()} disabled={uploading} />
+        <Button variant="secondary" label={t('create.back')} onPress={() => router.back()} disabled={uploading} />
         <Button
-          label="Continuer"
+          label={t('create.continue')}
           style={{ flex: 1 }}
           disabled={uploading}
           onPress={() => router.push('/create/product/preview')}

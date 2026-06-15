@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Plus, Trash2, Star } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
@@ -42,6 +43,7 @@ function extForMime(m: AllowedMime): string {
 
 export default function PropertyPhotosRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const propertyPhotos = useCreateListing((s) => s.propertyPhotos);
   const setVal = useCreateListing((s) => s.set);
   const propertyType = useCreateListing((s) => s.propertyType);
@@ -99,7 +101,7 @@ export default function PropertyPhotosRoute() {
       if (!putRes.ok) {
         const raw = await putRes.text().catch(() => '');
         console.error('[property-photos] storage PUT failed', putRes.status, raw);
-        toast.show('Téléversement échoué', 'danger');
+        toast.show(t('create.photosUploadProperty'), 'danger');
         return;
       }
 
@@ -109,7 +111,7 @@ export default function PropertyPhotosRoute() {
       ]);
     } catch (e: unknown) {
       console.error('[property-photos] add error:', e);
-      toast.show(toToastMessage(e, 'Téléversement échoué'), 'danger');
+      toast.show(toToastMessage(e, t('create.photosUploadProperty')), 'danger');
     } finally {
       setUploading(false);
     }
@@ -122,8 +124,8 @@ export default function PropertyPhotosRoute() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         <ScreenHeader
-          title="Ajoute des photos"
-          subtitle="Au moins 3 photos, la première sert de couverture."
+          title={t('create.photosPropertyTitleAdd')}
+          subtitle={t('create.photosPropertySubAdd')}
         />
 
         {/* Cover slot */}
@@ -164,7 +166,7 @@ export default function PropertyPhotosRoute() {
                     letterSpacing: 0.3,
                   }}
                 >
-                  COUVERTURE
+                  {t('create.photosCoverBadge')}
                 </Text>
               </View>
               <Pressable
@@ -259,7 +261,7 @@ export default function PropertyPhotosRoute() {
                     letterSpacing: 0,
                   }}
                 >
-                  Ajouter
+                  {t('create.photosAddTile')}
                 </Text>
               </>
             )}
@@ -288,8 +290,7 @@ export default function PropertyPhotosRoute() {
                 letterSpacing: 0,
               }}
             >
-              Photos prises de jour, sans flash, qui montrent toutes les pièces. Pas de filtres
-              trompeurs.
+              {t('create.photosPropertyTipBody')}
             </Text>
           </View>
         </View>
@@ -335,7 +336,7 @@ export default function PropertyPhotosRoute() {
               includeFontPadding: false,
             }}
           >
-            Continuer · {propertyPhotos.length} photo{propertyPhotos.length > 1 ? 's' : ''}
+            {t('create.photosContinue', { count: propertyPhotos.length })}
           </Text>
         </Pressable>
       </SafeAreaView>

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -16,32 +17,39 @@ import {
   Sun,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
 import { useCreateListing } from '../../../src/stores/createListing';
 
-const AMENITIES: { id: string; label: string; Icon: LucideIcon }[] = [
-  { id: 'wifi', label: 'Wi-Fi', Icon: Wifi },
-  { id: 'park', label: 'Parking', Icon: Car },
-  { id: 'ac', label: 'Climatisation', Icon: Snowflake },
-  { id: 'bath', label: 'Salle de bain privée', Icon: Bath },
-  { id: 'kitchen', label: 'Cuisine équipée', Icon: ChefHat },
-  { id: 'furn', label: 'Meublé', Icon: Sofa },
-  { id: 'tv', label: 'TV', Icon: Tv },
-  { id: 'sec', label: 'Gardien / sécurité', Icon: Shield },
-  { id: 'garden', label: 'Jardin / cour', Icon: Trees },
-  { id: 'pool', label: 'Piscine', Icon: Waves },
-  { id: 'lift', label: 'Ascenseur', Icon: ArrowUpDown },
-  { id: 'terrace', label: 'Balcon / terrasse', Icon: Sun },
+// Phase I.9 — ids are stable backend keys ; labels resolve via i18n at render.
+const AMENITY_DEFS: { id: string; labelKey: string; Icon: LucideIcon }[] = [
+  { id: 'wifi',    labelKey: 'create.amenityWifi',       Icon: Wifi },
+  { id: 'park',    labelKey: 'create.amenityParking',    Icon: Car },
+  { id: 'ac',      labelKey: 'create.amenityClim',       Icon: Snowflake },
+  { id: 'bath',    labelKey: 'create.amenityBath',       Icon: Bath },
+  { id: 'kitchen', labelKey: 'create.amenityKitchen',    Icon: ChefHat },
+  { id: 'furn',    labelKey: 'create.amenityFurn',       Icon: Sofa },
+  { id: 'tv',      labelKey: 'create.amenityTv',         Icon: Tv },
+  { id: 'sec',     labelKey: 'create.amenitySec',        Icon: Shield },
+  { id: 'garden',  labelKey: 'create.amenityGardenAlt',  Icon: Trees },
+  { id: 'pool',    labelKey: 'create.amenityPool',       Icon: Waves },
+  { id: 'lift',    labelKey: 'create.amenityLift',       Icon: ArrowUpDown },
+  { id: 'terrace', labelKey: 'create.amenityTerrace',    Icon: Sun },
 ];
 
 export default function AmenitiesRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const amenities = useCreateListing((s) => s.amenities);
   const setVal = useCreateListing((s) => s.set);
   const picked = new Set(amenities);
+  const AMENITIES = useMemo(
+    () => AMENITY_DEFS.map((a) => ({ ...a, label: t(a.labelKey) })),
+    [t],
+  );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -50,8 +58,8 @@ export default function AmenitiesRoute() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         <ScreenHeader
-          title="Équipements"
-          subtitle="Coche tout ce que ton bien propose."
+          title={t('create.stepAmenitiesLabel')}
+          subtitle={t('create.stepAmenitiesSubtitle')}
         />
 
         <View
@@ -160,7 +168,7 @@ export default function AmenitiesRoute() {
               includeFontPadding: false,
             }}
           >
-            Continuer · {picked.size} sélectionné{picked.size > 1 ? 's' : ''}
+            {t('create.amenityContinue', { count: picked.size })}
           </Text>
         </Pressable>
       </SafeAreaView>

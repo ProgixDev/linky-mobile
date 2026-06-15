@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Mapbox, { MapView, Camera, PointAnnotation, type ScreenPointPayload } from '@rnmapbox/maps';
 import type { Feature, Point } from 'geojson';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Button } from '../../../src/components/primitives/Button';
@@ -28,6 +29,7 @@ function formatCoord(n: number, posLabel: string, negLabel: string): string {
 
 export default function CreatePropertyLocationRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { show } = useToast();
   const lat = useCreateListing((s) => s.lat);
   const lng = useCreateListing((s) => s.lng);
@@ -70,7 +72,7 @@ export default function CreatePropertyLocationRoute() {
       const Location = await import('expo-location');
       const perm = await Location.requestForegroundPermissionsAsync();
       if (!perm.granted) {
-        show('Autorise la localisation pour utiliser ta position', 'danger');
+        show(t('create.locationPermDenied'), 'danger');
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
@@ -83,8 +85,8 @@ export default function CreatePropertyLocationRoute() {
       // time, or a "is not a function" TypeError at call time. Both mean: rebuild needed.
       const msg = e instanceof Error
         && (/ExpoLocation/.test(e.message) || /is not a function/.test(e.message))
-        ? 'Module GPS indisponible — rebuilds le dev client. Utilise « Saisir manuellement » en attendant.'
-        : 'Impossible de récupérer ta position';
+        ? t('create.locationGpsUnavailable')
+        : t('create.locationGpsFailed');
       show(msg, 'danger');
     } finally {
       setBusy(false);
@@ -95,11 +97,11 @@ export default function CreatePropertyLocationRoute() {
     const la = parseFloat(latInput);
     const ln = parseFloat(lngInput);
     if (!Number.isFinite(la) || la < -90 || la > 90) {
-      show('Latitude invalide (-90 à 90)', 'danger');
+      show(t('create.locationLatErr'), 'danger');
       return;
     }
     if (!Number.isFinite(ln) || ln < -180 || ln > 180) {
-      show('Longitude invalide (-180 à 180)', 'danger');
+      show(t('create.locationLngErr'), 'danger');
       return;
     }
     setVal('lat', la);
@@ -110,25 +112,25 @@ export default function CreatePropertyLocationRoute() {
   const hasCoords = lat != null && lng != null;
   const coordsLabel = hasCoords
     ? `${formatCoord(lat, 'N', 'S')} · ${formatCoord(lng, 'E', 'W')}`
-    : 'Aucune position';
+    : t('create.locationNoPosition');
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Localisation GPS" back />
+      <TopBar title={t('create.locationTopbar')} back />
       <View style={{ paddingHorizontal: 16, paddingBottom: 100 }}>
         <ProgressDots total={6} current={4} />
         <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
-          Étape 5 / 6 · Localisation
+          {t('create.stepDotsWith', { current: 5, total: 6, label: t('create.stepLocationLabel') })}
         </Text>
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 16 }}>
-          Place l'épingle sur ta carte
+          {t('create.locationStepTitle')}
         </Text>
 
         <View style={{ aspectRatio: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.bgSunken, position: 'relative' }}>
           {Platform.OS === 'web' ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
               <Text variant="caption" tone="muted" center style={{ letterSpacing: 0 }}>
-                La carte n'est pas disponible sur le web — utilise « Saisir manuellement ».
+                {t('create.locationWebUnsupported')}
               </Text>
             </View>
           ) : (
@@ -188,7 +190,7 @@ export default function CreatePropertyLocationRoute() {
           <Button
             variant="secondary"
             style={{ flex: 1 }}
-            label={busy ? 'Localisation…' : 'Ma position'}
+            label={busy ? t('create.locationMyPositionBusy') : t('create.locationMyPosition')}
             disabled={busy}
             onPress={handleMyPosition}
             leading={<I.pin size={14} color={colors.text} />}
@@ -196,7 +198,7 @@ export default function CreatePropertyLocationRoute() {
           <Button
             variant="secondary"
             style={{ flex: 1 }}
-            label="Saisir manuellement"
+            label={t('create.locationManualCta')}
             onPress={() => {
               setLatInput(lat != null ? String(lat) : '');
               setLngInput(lng != null ? String(lng) : '');
@@ -208,23 +210,23 @@ export default function CreatePropertyLocationRoute() {
       </View>
 
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
-        <Button variant="secondary" label="Retour" onPress={() => router.back()} />
+        <Button variant="secondary" label={t('create.back')} onPress={() => router.back()} />
         <Button
-          label="Continuer"
+          label={t('create.continue')}
           style={{ flex: 1 }}
           disabled={lat == null || lng == null}
           onPress={() => router.push('/create/property/photos')}
         />
       </StickyBottom>
 
-      <Sheet open={manualOpen} onClose={() => setManualOpen(false)} title="Saisir les coordonnées" snapPoints={['50%']}>
+      <Sheet open={manualOpen} onClose={() => setManualOpen(false)} title={t('create.locationSheetTitle')} snapPoints={['50%']}>
         <View style={{ padding: 16, gap: 14 }}>
           <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
-            Entre les coordonnées GPS exactes du bien.
+            {t('create.locationSheetSub')}
           </Text>
           <View style={{ gap: 6 }}>
             <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
-              Latitude (-90 à 90)
+              {t('create.locationLat')}
             </Text>
             <TextInput
               value={latInput}
@@ -246,7 +248,7 @@ export default function CreatePropertyLocationRoute() {
           </View>
           <View style={{ gap: 6 }}>
             <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
-              Longitude (-180 à 180)
+              {t('create.locationLng')}
             </Text>
             <TextInput
               value={lngInput}
@@ -267,8 +269,8 @@ export default function CreatePropertyLocationRoute() {
             />
           </View>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-            <Button variant="secondary" label="Annuler" onPress={() => setManualOpen(false)} style={{ flex: 1 }} />
-            <Button label="Enregistrer" onPress={handleManualSave} style={{ flex: 1 }} />
+            <Button variant="secondary" label={t('create.locationCancel')} onPress={() => setManualOpen(false)} style={{ flex: 1 }} />
+            <Button label={t('create.locationSave')} onPress={handleManualSave} style={{ flex: 1 }} />
           </View>
         </View>
       </Sheet>
