@@ -8,10 +8,21 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type RowData,
   type SortingState,
 } from '@tanstack/react-table';
 import { useState } from 'react';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+
+// Per-column responsive class hook. Modules set `meta.cellClassName` (e.g.
+// 'hidden md:table-cell') to drop low-priority columns on narrow screens; the
+// same class is applied to the matching <th> so header + body stay aligned.
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    cellClassName?: string;
+  }
+}
 
 export function DataTable<TData, TValue>({
   data,
@@ -64,8 +75,8 @@ export function DataTable<TData, TValue>({
         {toolbar}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
+        <table className="w-full min-w-160 text-sm">
           <thead className="bg-sunken/60">
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id}>
@@ -73,7 +84,9 @@ export function DataTable<TData, TValue>({
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer select-none border-b border-line px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-faint"
+                    className={`cursor-pointer select-none border-b border-line px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-faint ${
+                      header.column.columnDef.meta?.cellClassName ?? ''
+                    }`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -102,7 +115,10 @@ export function DataTable<TData, TValue>({
                   className="border-b border-line last:border-0 hover:bg-sunken/40"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-5 py-4">
+                    <td
+                      key={cell.id}
+                      className={`px-5 py-4 ${cell.column.columnDef.meta?.cellClassName ?? ''}`}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

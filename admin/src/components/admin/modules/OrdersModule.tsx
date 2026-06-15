@@ -32,6 +32,7 @@ const columns: ColumnDef<AdminOrder>[] = [
   {
     id: 'product',
     header: 'Article',
+    meta: { cellClassName: 'hidden md:table-cell' },
     cell: ({ row }) => (
       <div className="max-w-[260px] truncate">
         {row.original.product_snapshot?.title ?? '—'}
@@ -41,11 +42,13 @@ const columns: ColumnDef<AdminOrder>[] = [
   {
     id: 'buyer',
     header: 'Acheteur',
+    meta: { cellClassName: 'hidden lg:table-cell' },
     cell: ({ row }) => row.original.buyer?.display_name ?? '—',
   },
   {
     id: 'seller',
     header: 'Vendeur',
+    meta: { cellClassName: 'hidden lg:table-cell' },
     cell: ({ row }) => row.original.seller?.display_name ?? '—',
   },
   {
@@ -74,6 +77,7 @@ const columns: ColumnDef<AdminOrder>[] = [
   {
     accessorKey: 'created_at',
     header: 'Date',
+    meta: { cellClassName: 'hidden md:table-cell' },
     cell: ({ row }) =>
       new Date(row.original.created_at).toLocaleDateString('fr-FR', {
         day: '2-digit',

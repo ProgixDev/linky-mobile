@@ -60,6 +60,7 @@ export function ListingsModule() {
     {
       id: 'owner',
       header: 'Vendeur',
+      meta: { cellClassName: 'hidden lg:table-cell' },
       cell: ({ row }) => {
         const l = row.original;
         return (
@@ -74,10 +75,11 @@ export function ListingsModule() {
         );
       },
     },
-    { accessorKey: 'city', header: 'Ville' },
+    { accessorKey: 'city', header: 'Ville', meta: { cellClassName: 'hidden lg:table-cell' } },
     {
       accessorKey: 'price_minor',
       header: 'Prix',
+      meta: { cellClassName: 'hidden md:table-cell' },
       cell: ({ row }) => (
         <span className="font-bold tabular-nums">
           {row.original.price_minor.toLocaleString('fr-FR')} GNF
@@ -87,6 +89,7 @@ export function ListingsModule() {
     {
       accessorKey: 'view_count',
       header: 'Vues',
+      meta: { cellClassName: 'hidden xl:table-cell' },
       cell: ({ row }) => (
         <span className="tabular-nums text-muted">
           {row.original.view_count.toLocaleString('fr-FR')}

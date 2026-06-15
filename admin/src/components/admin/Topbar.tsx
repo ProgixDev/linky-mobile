@@ -16,7 +16,7 @@ export function Topbar({
   subtitle?: string;
 }) {
   return (
-    <header className="flex h-20 shrink-0 items-center justify-between gap-6 border-b border-line bg-surface px-8">
+    <header className="hidden h-20 shrink-0 items-center justify-between gap-6 border-b border-line bg-surface px-8 lg:flex">
       <div>
         <div className="flex items-center gap-2">
           <h1 className="font-display text-2xl font-bold tracking-tight">

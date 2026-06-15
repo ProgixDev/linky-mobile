@@ -41,7 +41,16 @@ const NAV: { section: string; items: Item[] }[] = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  // When `drawer` is set the sidebar renders as a full-height in-drawer panel
+  // (always visible, no `hidden lg:flex` gate). `onNavigate` lets the parent
+  // close the mobile drawer when a nav link or sign-out is tapped.
+  drawer = false,
+  onNavigate,
+}: {
+  drawer?: boolean;
+  onNavigate?: () => void;
+} = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const session = useAuth((s) => s.session);
@@ -64,12 +73,19 @@ export function Sidebar() {
   const initials = initialsSource.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || 'A';
 
   const handleSignOut = () => {
+    onNavigate?.();
     clearSession();
     router.replace('/login');
   };
 
+  // Desktop: fixed rail, hidden below lg. Drawer: always-visible flex column
+  // (the slide-in container in Shell owns positioning + the lg:hidden gate).
+  const asideClass = drawer
+    ? 'flex h-full w-full shrink-0 flex-col bg-surface px-4 py-5'
+    : 'hidden h-screen w-72 shrink-0 flex-col border-r border-line bg-surface px-4 py-5 lg:flex';
+
   return (
-    <aside className="hidden h-screen w-72 shrink-0 flex-col border-r border-line bg-surface px-4 py-5 lg:flex">
+    <aside className={asideClass}>
       <div className="flex items-center gap-2.5 px-3 pb-5">
         <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-primary">
           <Image
@@ -103,6 +119,7 @@ export function Sidebar() {
                   <Link
                     key={it.href}
                     href={it.href}
+                    onClick={onNavigate}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                       active
                         ? 'bg-primary-soft text-primary-deep'

@@ -52,6 +52,7 @@ const columns: ColumnDef<AdminUser>[] = [
   {
     accessorKey: 'is_admin',
     header: 'Rôle',
+    meta: { cellClassName: 'hidden md:table-cell' },
     cell: ({ row }) =>
       row.original.is_admin ? (
         <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-deep">
@@ -64,6 +65,7 @@ const columns: ColumnDef<AdminUser>[] = [
   {
     accessorKey: 'created_at',
     header: 'Inscrit le',
+    meta: { cellClassName: 'hidden lg:table-cell' },
     cell: ({ row }) =>
       new Date(row.original.created_at).toLocaleDateString('fr-FR', {
         day: '2-digit',

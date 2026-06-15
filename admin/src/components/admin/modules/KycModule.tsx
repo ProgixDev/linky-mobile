@@ -35,23 +35,23 @@ export function KycModule() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[calc(100vh-220px)] items-center justify-center rounded-2xl border border-line bg-surface text-sm text-muted">
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-line bg-surface text-sm text-muted lg:h-[calc(100vh-220px)]">
         <Loader2 size={16} className="mr-2 animate-spin" /> Chargement de la file…
       </div>
     );
   }
   if (isError) {
     return (
-      <div className="flex h-[calc(100vh-220px)] items-center justify-center rounded-2xl border border-line bg-surface text-sm text-danger">
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-line bg-surface text-sm text-danger lg:h-[calc(100vh-220px)]">
         Impossible de charger la file KYC. Réessaie.
       </div>
     );
   }
 
   return (
-    <div className="grid h-[calc(100vh-220px)] gap-6 lg:grid-cols-[420px_1fr]">
+    <div className="grid gap-6 lg:h-[calc(100vh-220px)] lg:grid-cols-[420px_1fr]">
       {/* Queue */}
-      <div className="flex flex-col gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-4">
+      <div className="flex max-h-[60vh] flex-col gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-4 lg:max-h-none">
         <div className="flex items-center justify-between px-1">
           <div className="text-sm font-bold">File d&apos;attente</div>
           <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-accent-text">
