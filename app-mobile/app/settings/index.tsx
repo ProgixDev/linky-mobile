@@ -2,28 +2,30 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import Svg, { Rect, Line, Defs, ClipPath, Path } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { haptic } from '../../src/lib/haptics';
 import { usePrefs } from '../../src/stores/prefs';
-import { useToast } from '../../src/components/feedback/Toast';
 
 type LangCode = 'fr' | 'en' | 'pular' | 'sousou';
 type FlagKind = 'fr' | 'gb' | 'gn';
 
 interface LangOption {
   code: LangCode;
+  // The display label is each language's NATIVE name (Français, English,
+  // Pular, Sousou). Native names are universal — they don't change with the
+  // active UI language — so we can keep them as constants.
   label: string;
-  native: string;
   flag: FlagKind;
 }
 
 const LANGUAGES: LangOption[] = [
-  { code: 'fr', label: 'Français', native: 'Langue par défaut', flag: 'fr' },
-  { code: 'en', label: 'English', native: 'À venir', flag: 'gb' },
-  { code: 'pular', label: 'Pular', native: 'À venir', flag: 'gn' },
-  { code: 'sousou', label: 'Sousou', native: 'À venir', flag: 'gn' },
+  { code: 'fr', label: 'Français', flag: 'fr' },
+  { code: 'en', label: 'English', flag: 'gb' },
+  { code: 'pular', label: 'Pular', flag: 'gn' },
+  { code: 'sousou', label: 'Sousou', flag: 'gn' },
 ];
 
 function Flag({ kind }: { kind: FlagKind }) {
@@ -101,7 +103,10 @@ function Flag({ kind }: { kind: FlagKind }) {
 export default function SettingsRoute() {
   const { colors } = useTheme();
   const { language, setLanguage } = usePrefs();
-  const toast = useToast();
+  // Phase I.4 — re-render the screen whenever i18next changes language. The
+  // subtitle copy below is translated, so switching the language flips this
+  // screen too. Plain `useTranslation()` subscribes to that event.
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -110,8 +115,8 @@ export default function SettingsRoute() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <ScreenHeader
-          title="Langue"
-          subtitle="L'application est disponible en français pour la V1."
+          title={t('settings.languageTitle')}
+          subtitle={t('settings.languageSubtitle')}
         />
 
         <View
@@ -124,21 +129,19 @@ export default function SettingsRoute() {
             overflow: 'hidden',
           }}
         >
+          {/* Phase I.4 — all four rows are selectable. FR is the fallback
+              language ; selecting one of the others persists the pref and
+              calls i18n.changeLanguage(), which re-renders every component
+              using useTranslation() live. Pular/Sousou values are
+              French-placeholder until the client's translators ship the CSV
+              round-trip (see scripts/i18n-export-csv.mjs). */}
           {LANGUAGES.map((lang, idx) => {
             const selected = language === lang.code;
-            const disabled = lang.code !== 'fr';
             return (
               <Pressable
                 key={lang.code}
-                // Phase Y.3 — disabled rows still tap to a small "Bientôt" toast so
-                // the user gets visible feedback (otherwise the tap feels broken).
-                // setLanguage is never called for non-French; the radio stays put.
                 onPress={() => {
-                  if (disabled) {
-                    haptic.light();
-                    toast.show('Bientôt disponible.', 'info');
-                    return;
-                  }
+                  if (selected) return;
                   haptic.selection();
                   setLanguage(lang.code);
                 }}
@@ -150,7 +153,6 @@ export default function SettingsRoute() {
                   paddingVertical: 14,
                   borderBottomWidth: idx < LANGUAGES.length - 1 ? 1 : 0,
                   borderBottomColor: colors.border,
-                  opacity: disabled ? 0.55 : 1,
                 }}
               >
                 <View
@@ -178,17 +180,19 @@ export default function SettingsRoute() {
                   >
                     {lang.label}
                   </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: colors.textMuted,
-                      marginTop: 2,
-                      letterSpacing: 0,
-                      lineHeight: 15,
-                    }}
-                  >
-                    {lang.native}
-                  </Text>
+                  {lang.code === 'fr' && (
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: colors.textMuted,
+                        marginTop: 2,
+                        letterSpacing: 0,
+                        lineHeight: 15,
+                      }}
+                    >
+                      {t('settings.languageDefault')}
+                    </Text>
+                  )}
                 </View>
                 <View
                   style={{

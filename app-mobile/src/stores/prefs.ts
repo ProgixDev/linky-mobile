@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
+import i18n from '../i18n';
 
 export type Language = 'fr' | 'en' | 'pular' | 'sousou';
 
@@ -40,6 +41,9 @@ export const usePrefs = create<PrefsState>((set) => ({
   setLanguage: (v) => {
     storage.set(STORAGE_KEYS.language, v);
     set({ language: v });
+    // Phase I.1 — keep i18next's active language in lockstep with the
+    // persisted pref so every useTranslation() consumer re-renders live.
+    void i18n.changeLanguage(v);
   },
   setPrivacyPersonalize: (v) => {
     storage.set(STORAGE_KEYS.privacyPersonalize, v);

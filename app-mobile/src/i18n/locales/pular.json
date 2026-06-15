@@ -1,0 +1,69 @@
+{
+  "common": {
+    "continue": "Continuer",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "confirm": "Confirmer",
+    "retry": "Réessayer",
+    "search": "Rechercher",
+    "seeAll": "Tout voir",
+    "later": "Plus tard",
+    "comingSoon": "Bientôt",
+    "comingSoonAvailable": "Bientôt disponible.",
+    "share": "Partager",
+    "close": "Fermer",
+    "send": "Envoyer",
+    "done": "Terminé",
+    "loading": "Chargement…",
+    "yes": "Oui",
+    "no": "Non",
+    "ok": "OK"
+  },
+  "tabs": {
+    "home": "Accueil",
+    "marche": "Marché",
+    "decouvrir": "Découvrir",
+    "boutique": "Boutique",
+    "profil": "Profil",
+    "messagerie": "Messagerie"
+  },
+  "onboarding": {
+    "welcome": "Bienvenue",
+    "tagline": "Marketplace & Immobilier de Guinée",
+    "start": "Commencer",
+    "haveAccount": "J'ai déjà un compte"
+  },
+  "auth": {
+    "phoneTitle": "Ton numéro",
+    "phoneHelp": "Tu recevras un code à 6 chiffres par SMS.",
+    "otpTitle": "Vérification",
+    "verify": "Vérifier",
+    "resendIn": "Renvoyer dans"
+  },
+  "currency": {
+    "gnf": "GNF",
+    "eur": "€"
+  },
+  "states": {
+    "empty": "Rien à afficher",
+    "offline": "Hors ligne — tes données seront synchronisées",
+    "error": "Une erreur est survenue",
+    "errorGeneric": "Une erreur est survenue.",
+    "tryAgain": "Réessayer"
+  },
+  "settings": {
+    "languageTitle": "Langue",
+    "languageSubtitle": "Choisis la langue de l'application.",
+    "languageDefault": "Langue par défaut",
+    "languageComingSoonHint": "À venir"
+  },
+  "languages": {
+    "fr": "Français",
+    "en": "English",
+    "pular": "Pular",
+    "sousou": "Sousou"
+  }
+}

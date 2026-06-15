@@ -1,0 +1,69 @@
+{
+  "common": {
+    "continue": "Continue",
+    "back": "Back",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "retry": "Retry",
+    "search": "Search",
+    "seeAll": "See all",
+    "later": "Later",
+    "comingSoon": "Soon",
+    "comingSoonAvailable": "Coming soon.",
+    "share": "Share",
+    "close": "Close",
+    "send": "Send",
+    "done": "Done",
+    "loading": "Loading…",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK"
+  },
+  "tabs": {
+    "home": "Home",
+    "marche": "Market",
+    "decouvrir": "Discover",
+    "boutique": "Shop",
+    "profil": "Profile",
+    "messagerie": "Messages"
+  },
+  "onboarding": {
+    "welcome": "Welcome",
+    "tagline": "Guinea Marketplace & Real Estate",
+    "start": "Get started",
+    "haveAccount": "I already have an account"
+  },
+  "auth": {
+    "phoneTitle": "Your phone number",
+    "phoneHelp": "You'll receive a 6-digit code by SMS.",
+    "otpTitle": "Verification",
+    "verify": "Verify",
+    "resendIn": "Resend in"
+  },
+  "currency": {
+    "gnf": "GNF",
+    "eur": "€"
+  },
+  "states": {
+    "empty": "Nothing to show",
+    "offline": "Offline — your data will sync later",
+    "error": "Something went wrong",
+    "errorGeneric": "Something went wrong.",
+    "tryAgain": "Try again"
+  },
+  "settings": {
+    "languageTitle": "Language",
+    "languageSubtitle": "Pick the app language.",
+    "languageDefault": "Default language",
+    "languageComingSoonHint": "Coming soon"
+  },
+  "languages": {
+    "fr": "Français",
+    "en": "English",
+    "pular": "Pular",
+    "sousou": "Sousou"
+  }
+}
