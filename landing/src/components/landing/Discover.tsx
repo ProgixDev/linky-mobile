@@ -55,8 +55,8 @@ export function Discover() {
 
         {/* Phone mockup */}
         <div className="relative flex justify-center">
-          <div className="relative rounded-[42px] bg-black p-3 shadow-[0_60px_120px_-30px_rgba(0,0,0,0.6)]">
-            <div className="relative h-[600px] w-[300px] overflow-hidden rounded-[32px] bg-[#0E1311]">
+          <div className="relative w-full max-w-[300px] rounded-[42px] bg-black p-3 shadow-[0_60px_120px_-30px_rgba(0,0,0,0.6)]">
+            <div className="relative aspect-[300/600] w-full overflow-hidden rounded-[32px] bg-[#0E1311]">
               <div className="absolute left-1/2 top-2 z-30 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
 
               {/* Hero image area */}

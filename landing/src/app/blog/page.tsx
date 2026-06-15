@@ -129,7 +129,10 @@ export default function BlogPage() {
             placeholder="ton@email.com"
             className="h-12 flex-1 rounded-xl border border-white/15 bg-white/5 px-4 text-sm outline-none placeholder:text-white/40 focus:border-white/30"
           />
-          <button className="inline-flex h-12 items-center justify-center rounded-xl bg-white px-5 text-sm font-bold text-[#0E1311] hover:opacity-90">
+          <button
+            type="button"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-white px-5 text-sm font-bold text-[#0E1311] hover:opacity-90"
+          >
             S&apos;inscrire
           </button>
         </form>

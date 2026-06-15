@@ -47,7 +47,7 @@ export default function ContactPage() {
           <div className="text-xs font-bold uppercase tracking-wider text-[#0e6e55]">
             Téléphone · 9 h – 21 h
           </div>
-          <div className="font-display mt-2 text-3xl font-bold tracking-tight tabular-nums">
+          <div className="font-display mt-2 text-2xl font-bold tracking-tight tabular-nums sm:text-3xl">
             +224 622 00 00 00
           </div>
           <p className="mt-2 text-sm text-[#5e6864]">

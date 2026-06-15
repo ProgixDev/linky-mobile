@@ -151,12 +151,12 @@ export default function StatusPage() {
           return (
             <div
               key={h.t}
-              className="flex items-center gap-4 rounded-xl bg-white p-4 ring-1 ring-[#E5DED1]"
+              className="flex flex-col gap-2 rounded-xl bg-white p-4 ring-1 ring-[#E5DED1] sm:flex-row sm:items-center sm:gap-4"
             >
               <div className="text-xs text-[#8C9590]">{h.date}</div>
               <div className="flex-1 text-sm font-medium">{h.t}</div>
               <span
-                className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+                className="w-fit rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
                 style={{ background: m.bg, color: m.fg }}
               >
                 {h.resolved ? 'Résolu' : m.label}

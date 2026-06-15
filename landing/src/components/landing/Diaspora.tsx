@@ -42,7 +42,7 @@ export function Diaspora() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, margin: '-100px' }}
             transition={{ duration: 0.6 }}
-            className="relative aspect-square overflow-hidden rounded-[36px] bg-gradient-to-br from-primary via-primary-deep to-[#063929] p-10 text-white"
+            className="relative aspect-square overflow-hidden rounded-[36px] bg-gradient-to-br from-primary via-primary-deep to-[#063929] p-7 text-white sm:p-10"
           >
             <div className="grain absolute inset-0" />
             <div className="relative z-10 flex h-full flex-col justify-between">
@@ -53,7 +53,7 @@ export function Diaspora() {
                     Pour la diaspora
                   </span>
                 </div>
-                <h3 className="font-display mt-6 text-5xl font-bold leading-[0.95] tracking-tight md:text-6xl">
+                <h3 className="font-display mt-6 text-[40px] font-bold leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">
                   Reste connecté{' '}
                   <span className="text-accent">au pays.</span>
                 </h3>
