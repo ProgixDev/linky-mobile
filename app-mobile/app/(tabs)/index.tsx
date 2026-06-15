@@ -200,9 +200,9 @@ function BuyerHome() {
   const cartCount = useCart((s) => s.lines.length);
   const roles = useAuth((s) => s.roles);
   const hasPro = roles.includes('seller') || roles.includes('agent');
-  const { data: shops } = useShops(3);
+  const { data: shops, isLoading: shopsLoading } = useShops(3);
   const { data: products, isLoading: prodLoading } = usePopularProducts(4);
-  const { data: properties } = useNearbyProperties(3);
+  const { data: properties, isLoading: propLoading } = useNearbyProperties(3);
   const walletQuery = useWallet();
   const wallet = walletQuery.data;
   const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!wallet;
@@ -415,7 +415,11 @@ function BuyerHome() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 10, paddingHorizontal: 20 }}
           >
-            {shops?.map((s) => <ShopMiniCard key={s.id} shop={s} />) ?? null}
+            {shopsLoading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <View key={i} style={{ width: 150, height: 96, borderRadius: 16, backgroundColor: colors.bgSunken }} />
+                ))
+              : shops?.map((s) => <ShopMiniCard key={s.id} shop={s} />) ?? null}
           </ScrollView>
         </View>
 
@@ -502,34 +506,38 @@ function BuyerHome() {
                 position: 'relative',
               }}
             >
-              <Image
-                source={photos.perfume2}
-                style={{
-                  position: 'absolute',
-                  width: 64,
-                  height: 88,
-                  borderRadius: 14,
-                  left: 0,
-                  top: 8,
-                  transform: [{ rotate: '-8deg' }],
-                }}
-                contentFit="cover"
-              />
-              <Image
-                source={photos.apartment2}
-                style={{
-                  position: 'absolute',
-                  width: 64,
-                  height: 88,
-                  borderRadius: 14,
-                  right: 0,
-                  top: 0,
-                  transform: [{ rotate: '6deg' }],
-                  borderWidth: 2,
-                  borderColor: '#0E1311',
-                }}
-                contentFit="cover"
-              />
+              {products?.[0]?.photos?.[0] && (
+                <Image
+                  source={{ uri: products[0].photos[0] }}
+                  style={{
+                    position: 'absolute',
+                    width: 64,
+                    height: 88,
+                    borderRadius: 14,
+                    left: 0,
+                    top: 8,
+                    transform: [{ rotate: '-8deg' }],
+                  }}
+                  contentFit="cover"
+                />
+              )}
+              {properties?.[0]?.photos?.[0] && (
+                <Image
+                  source={{ uri: properties[0].photos[0] }}
+                  style={{
+                    position: 'absolute',
+                    width: 64,
+                    height: 88,
+                    borderRadius: 14,
+                    right: 0,
+                    top: 0,
+                    transform: [{ rotate: '6deg' }],
+                    borderWidth: 2,
+                    borderColor: '#0E1311',
+                  }}
+                  contentFit="cover"
+                />
+              )}
             </View>
             <View
               style={{
@@ -558,11 +566,15 @@ function BuyerHome() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
           >
-            {properties?.map((p) => (
-              <View key={p.id} style={{ width: 260 }}>
-                <PropertyCard property={p} />
-              </View>
-            )) ?? null}
+            {propLoading
+              ? Array.from({ length: 2 }).map((_, i) => (
+                  <View key={i} style={{ width: 260, height: 200, borderRadius: 16, backgroundColor: colors.bgSunken }} />
+                ))
+              : properties?.map((p) => (
+                  <View key={p.id} style={{ width: 260 }}>
+                    <PropertyCard property={p} />
+                  </View>
+                )) ?? null}
           </ScrollView>
         </View>
       </ScrollView>
