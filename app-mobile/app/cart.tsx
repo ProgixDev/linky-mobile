@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useQueries } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { Text } from '../src/components/primitives/Text';
 import { Card } from '../src/components/primitives/Card';
@@ -21,6 +22,7 @@ import { haptic } from '../src/lib/haptics';
 
 export default function CartRoute() {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const { lines, setQuantity, remove } = useCart();
 
   // One real-backend fetch per cart line; shared cache with useProduct on the
@@ -65,9 +67,9 @@ export default function CartRoute() {
   if (!allLoaded && lines.length > 0) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Mon panier" back />
+        <TopBar title={t('cart.title')} back />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="bodyM" tone="muted">Synchronisation du panier…</Text>
+          <Text variant="bodyM" tone="muted">{t('cart.syncing')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -76,12 +78,12 @@ export default function CartRoute() {
   if (items.length === 0) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Mon panier" back />
+        <TopBar title={t('cart.title')} back />
         <EmptyState
           icon="cart"
-          title="Ton panier est vide"
-          description="Découvre des milliers d'articles et de boutiques de confiance"
-          ctaLabel="Aller au marché"
+          title={t('cart.emptyTitle')}
+          description={t('cart.emptySub')}
+          ctaLabel={t('cart.emptyCta')}
           onCta={() => router.push('/(tabs)/marche')}
         />
       </SafeAreaView>
@@ -91,9 +93,12 @@ export default function CartRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar
-        title="Mon panier"
+        title={t('cart.title')}
         back
-        subtitle={`${items.length} article${items.length > 1 ? 's' : ''} · ${sellers} vendeur${sellers > 1 ? 's' : ''}`}
+        subtitle={t('cart.subtitle', {
+          itemsLabel: t('cart.article', { count: items.length }),
+          sellersLabel: t('cart.seller', { count: sellers }),
+        })}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 10 }}>
         {items.map(({ line, product }) => (
@@ -166,19 +171,19 @@ export default function CartRoute() {
         <Card padding={14}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
             <Text variant="caption" tone="muted" style={{ letterSpacing: 0 }}>
-              Sous-total
+              {t('cart.subtotal')}
             </Text>
             <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(subtotal)}</Text>
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
             <Text variant="caption" tone="muted" style={{ letterSpacing: 0 }}>
-              Frais Linky <Text style={{ color: colors.primary }}>(3%)</Text>
+              {t('cart.feesLabel')} <Text style={{ color: colors.primary }}>(3%)</Text>
             </Text>
             <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(fees)}</Text>
           </View>
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <Text style={{ fontSize: 13, fontWeight: '600' }}>Total</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('cart.total')}</Text>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={{ fontWeight: '700', fontSize: 18, fontVariant: ['tabular-nums'] }}>
                 {formatGNF(total)}
@@ -192,7 +197,7 @@ export default function CartRoute() {
       </ScrollView>
 
       <StickyBottom>
-        <Button size="lg" block label="Passer au paiement" onPress={() => router.push('/checkout')} />
+        <Button size="lg" block label={t('cart.pay')} onPress={() => router.push('/checkout')} />
       </StickyBottom>
     </SafeAreaView>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -14,6 +14,7 @@ import {
   RotateCcw,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
@@ -24,12 +25,6 @@ import { formatGNF } from '../../src/lib/format';
 import type { Order, OrderStatus } from '../../src/data/types';
 
 type Filter = 'all' | 'active' | 'completed';
-
-const FILTERS: { id: Filter; label: string }[] = [
-  { id: 'all', label: 'Toutes' },
-  { id: 'active', label: 'En cours' },
-  { id: 'completed', label: 'Terminées' },
-];
 
 const STATUS_META: Record<OrderStatus, { label: string; Icon: LucideIcon; bg: string; fg: string }> = {
   placed: { label: 'PASSÉE', Icon: Clock, bg: '#FCF1DC', fg: '#8B5A0A' },
@@ -48,8 +43,18 @@ const STATUS_FALLBACK = { label: '—', Icon: CircleAlert, bg: '#EEEEEE', fg: '#
 
 export default function OrdersIndex() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<Filter>('all');
   const { data: orders = [] } = useMyOrders();
+
+  const FILTERS: { id: Filter; label: string }[] = useMemo(
+    () => [
+      { id: 'all', label: t('orders.filterAll') },
+      { id: 'active', label: t('orders.filterActive') },
+      { id: 'completed', label: t('orders.filterCompleted') },
+    ],
+    [t],
+  );
 
   const filtered = orders.filter((o) => {
     if (filter === 'active') return ['placed', 'paid', 'preparing'].includes(o.status);
@@ -64,8 +69,8 @@ export default function OrdersIndex() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <ScreenHeader
-          title="Mes commandes"
-          subtitle="Suis tes achats et confirme la réception."
+          title={t('orders.title')}
+          subtitle={t('orders.subtitle')}
           trailing={
             <Pressable
               onPress={() => {
@@ -73,7 +78,7 @@ export default function OrdersIndex() {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- new route, regenerates on next expo start
                 router.push('/scan' as any);
               }}
-              accessibilityLabel="Scanner un QR"
+              accessibilityLabel={t('orders.scanQr')}
               style={{
                 height: 40,
                 paddingHorizontal: 14,
@@ -87,7 +92,7 @@ export default function OrdersIndex() {
               }}
             >
               <I.qr size={14} color={colors.text} />
-              <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.text }}>Scanner</Text>
+              <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.text }}>{t('orders.scan')}</Text>
             </Pressable>
           }
         />
@@ -144,7 +149,7 @@ export default function OrdersIndex() {
           ))}
           {filtered.length === 0 && (
             <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-              <Text style={{ color: colors.textMuted, fontSize: 13 }}>Aucune commande.</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>{t('orders.empty')}</Text>
             </View>
           )}
         </View>
@@ -155,6 +160,7 @@ export default function OrdersIndex() {
 
 function OrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const meta = STATUS_META[order.status] ?? { ...STATUS_FALLBACK, label: order.status.toUpperCase() };
   return (
     <Pressable
@@ -243,7 +249,7 @@ function OrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
               {formatGNF(order.totalGnf)}
             </Text>
             <Text style={{ fontSize: 11, color: colors.textMuted }}>
-              · {order.quantity} article{order.quantity > 1 ? 's' : ''}
+              · {t('orders.quantity', { count: order.quantity })}
             </Text>
           </View>
         </View>

@@ -103,7 +103,7 @@
   "property": {
     "fallbackTitle": "Property",
     "descriptionHeading": "Description",
-    "specHeading": "Details",
+    "specHeading": "Specs",
     "specBedrooms": "Bedrooms",
     "specBathrooms": "Bathrooms",
     "specSurface": "Surface",
@@ -113,6 +113,65 @@
     "bookVisit": "Book a visit",
     "contactAgent": "Contact the agent",
     "agentSection": "Agent"
+  },
+  "cart": {
+    "title": "My cart",
+    "syncing": "Syncing your cart…",
+    "emptyTitle": "Your cart is empty",
+    "emptySub": "Discover thousands of items and trusted shops",
+    "emptyCta": "Go to the market",
+    "subtitle": "{{itemsLabel}} · {{sellersLabel}}",
+    "article_one": "1 item",
+    "article_other": "{{count}} items",
+    "seller_one": "1 seller",
+    "seller_other": "{{count}} sellers",
+    "subtotal": "Subtotal",
+    "feesLabel": "Linky fees",
+    "total": "Total",
+    "pay": "Continue to payment"
+  },
+  "checkout": {
+    "title": "Payment",
+    "successTitle": "Payment secured",
+    "successSub": "Your payment is held in escrow. The seller is preparing your item.",
+    "trackOrder": "Track my order",
+    "openDispute": "You can open a dispute from the order while you haven't confirmed delivery.",
+    "confirmAccessTitle": "This order doesn't exist or you don't have access.",
+    "confirmTakingLonger": "This is taking longer than expected. No worries — the order will update automatically once the confirmation arrives.",
+    "confirmPaidJustNow": "Payment just succeeded — your order is confirmed.",
+    "rails": {
+      "orangeMoney": "Orange Money",
+      "orangeMoneyHint": "Available very soon",
+      "mtnMoney": "MTN Mobile Money",
+      "mtnMoneyHint": "Available very soon",
+      "mobileMoneyNote": "Orange Money and MTN Mobile Money are coming very soon. Card payments work today."
+    }
+  },
+  "orders": {
+    "title": "My orders",
+    "subtitle": "Track your purchases and confirm delivery.",
+    "scanQr": "Scan a QR code",
+    "scan": "Scan",
+    "empty": "No orders yet.",
+    "quantity_one": "{{count}} item",
+    "quantity_other": "{{count}} items",
+    "filterAll": "All",
+    "filterActive": "Active",
+    "filterCompleted": "Done",
+    "status": {
+      "placed": "PLACED",
+      "paid": "PAID",
+      "preparing": "PREPARING",
+      "delivered": "DELIVERED",
+      "released": "RELEASED",
+      "disputed": "DISPUTE",
+      "cancelled": "CANCELLED",
+      "refunded": "REFUNDED"
+    }
+  },
+  "order": {
+    "trackingTitle": "Order tracking",
+    "qrInstruction": "To release the payment to the seller, scan the QR code on your parcel with the app. This confirms you received the order — the code proves physical handover."
   },
   "profil": {
     "title": "Profile",

@@ -114,6 +114,65 @@
     "contactAgent": "Contacter l'agent",
     "agentSection": "Agent"
   },
+  "cart": {
+    "title": "Mon panier",
+    "syncing": "Synchronisation du panier…",
+    "emptyTitle": "Ton panier est vide",
+    "emptySub": "Découvre des milliers d'articles et de boutiques de confiance",
+    "emptyCta": "Aller au marché",
+    "subtitle": "{{itemsLabel}} · {{sellersLabel}}",
+    "article_one": "1 article",
+    "article_other": "{{count}} articles",
+    "seller_one": "1 vendeur",
+    "seller_other": "{{count}} vendeurs",
+    "subtotal": "Sous-total",
+    "feesLabel": "Frais Linky",
+    "total": "Total",
+    "pay": "Passer au paiement"
+  },
+  "checkout": {
+    "title": "Paiement",
+    "successTitle": "Paiement sécurisé",
+    "successSub": "On sécurise ton paiement en escrow. Le vendeur prépare ton article.",
+    "trackOrder": "Suivre ma commande",
+    "openDispute": "Tu peux ouvrir un litige depuis la commande tant que tu n'as pas confirmé la réception.",
+    "confirmAccessTitle": "Cette commande n'existe pas ou tu n'y as pas accès.",
+    "confirmTakingLonger": "C'est plus long que prévu. Pas d'inquiétude : la commande se mettra à jour automatiquement dès que la confirmation arrive.",
+    "confirmPaidJustNow": "Le paiement vient d'aboutir — ta commande est confirmée.",
+    "rails": {
+      "orangeMoney": "Orange Money",
+      "orangeMoneyHint": "Disponible très bientôt",
+      "mtnMoney": "MTN Mobile Money",
+      "mtnMoneyHint": "Disponible très bientôt",
+      "mobileMoneyNote": "Orange Money et MTN Mobile Money seront activés très bientôt. En attendant, le paiement par carte bancaire fonctionne déjà."
+    }
+  },
+  "orders": {
+    "title": "Mes commandes",
+    "subtitle": "Suis tes achats et confirme la réception.",
+    "scanQr": "Scanner un QR",
+    "scan": "Scanner",
+    "empty": "Aucune commande.",
+    "quantity_one": "{{count}} article",
+    "quantity_other": "{{count}} articles",
+    "filterAll": "Toutes",
+    "filterActive": "En cours",
+    "filterCompleted": "Terminées",
+    "status": {
+      "placed": "PASSÉE",
+      "paid": "PAYÉE",
+      "preparing": "EN COURS",
+      "delivered": "LIVRÉE",
+      "released": "TERMINÉE",
+      "disputed": "LITIGE",
+      "cancelled": "ANNULÉE",
+      "refunded": "REMBOURSÉE"
+    }
+  },
+  "order": {
+    "trackingTitle": "Suivi de commande",
+    "qrInstruction": "Pour libérer le paiement vers le vendeur, scanne le QR code collé sur ton colis avec l'app. Cela garantit que tu as bien reçu ta commande — le code prouve la remise physique."
+  },
   "profil": {
     "title": "Profil",
     "fallbackName": "Toi",
