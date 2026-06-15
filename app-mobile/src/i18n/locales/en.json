@@ -9,10 +9,12 @@
     "confirm": "Confirm",
     "retry": "Retry",
     "search": "Search",
+    "searchPlaceholder": "Search products, properties…",
     "seeAll": "See all",
     "later": "Later",
     "comingSoon": "Soon",
     "comingSoonAvailable": "Coming soon.",
+    "comingSoonBadge": "COMING SOON",
     "share": "Share",
     "close": "Close",
     "send": "Send",
@@ -21,6 +23,13 @@
     "yes": "Yes",
     "no": "No",
     "ok": "OK"
+  },
+  "a11y": {
+    "back": "Back",
+    "share": "Share",
+    "close": "Close",
+    "searchVisual": "Visual search",
+    "otpCode": "6-digit code"
   },
   "tabs": {
     "home": "Home",
@@ -52,7 +61,12 @@
     "offline": "Offline — your data will sync later",
     "error": "Something went wrong",
     "errorGeneric": "Something went wrong.",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "errorTitle": "Something went wrong",
+    "errorDescription": "We couldn't load this. Try again, or contact support if the issue persists.",
+    "offlineTitle": "No connection",
+    "offlineDescription": "You can still browse what you've already seen. Try again once you're back online.",
+    "offlineBanner": "Offline — your data will sync later"
   },
   "settings": {
     "languageTitle": "Language",

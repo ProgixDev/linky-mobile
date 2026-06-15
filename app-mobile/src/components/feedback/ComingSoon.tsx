@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { I, type IconKey } from '../../icons/Icon';
@@ -19,6 +20,7 @@ export function ComingSoonScreen({
   blurb: string;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const Icon = I[icon] ?? I.package;
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -26,7 +28,7 @@ export function ComingSoonScreen({
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           hitSlop={12}
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('a11y.back')}
           style={{
             width: 40,
             height: 40,
@@ -59,7 +61,7 @@ export function ComingSoonScreen({
               letterSpacing: 0.6,
             }}
           >
-            BIENTÔT DISPONIBLE
+            {t('common.comingSoonBadge')}
           </Text>
         </View>
         <View

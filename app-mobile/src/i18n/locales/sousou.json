@@ -9,10 +9,12 @@
     "confirm": "Confirmer",
     "retry": "Réessayer",
     "search": "Rechercher",
+    "searchPlaceholder": "Cherche un produit, un logement…",
     "seeAll": "Tout voir",
     "later": "Plus tard",
     "comingSoon": "Bientôt",
     "comingSoonAvailable": "Bientôt disponible.",
+    "comingSoonBadge": "BIENTÔT DISPONIBLE",
     "share": "Partager",
     "close": "Fermer",
     "send": "Envoyer",
@@ -21,6 +23,13 @@
     "yes": "Oui",
     "no": "Non",
     "ok": "OK"
+  },
+  "a11y": {
+    "back": "Retour",
+    "share": "Partager",
+    "close": "Fermer",
+    "searchVisual": "Recherche visuelle",
+    "otpCode": "Code à 6 chiffres"
   },
   "tabs": {
     "home": "Accueil",
@@ -52,7 +61,12 @@
     "offline": "Hors ligne — tes données seront synchronisées",
     "error": "Une erreur est survenue",
     "errorGeneric": "Une erreur est survenue.",
-    "tryAgain": "Réessayer"
+    "tryAgain": "Réessayer",
+    "errorTitle": "Une erreur est survenue",
+    "errorDescription": "On n'a pas pu charger ces informations. Réessaie ou contacte le support si le problème persiste.",
+    "offlineTitle": "Pas de connexion",
+    "offlineDescription": "Tu peux toujours consulter ce que tu as déjà vu. Réessaie quand tu auras du réseau.",
+    "offlineBanner": "Hors ligne — tes données seront synchronisées"
   },
   "settings": {
     "languageTitle": "Langue",

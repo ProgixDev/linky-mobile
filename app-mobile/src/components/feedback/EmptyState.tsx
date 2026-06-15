@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { Button } from '../primitives/Button';
@@ -71,26 +72,28 @@ export function ErrorStateView({
   onRetry?: () => void;
   onSupport?: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <EmptyState
       tone="danger"
       icon="warn"
-      title="Une erreur est survenue"
-      description="On n'a pas pu charger ces informations. Réessaie ou contacte le support si le problème persiste."
-      ctaLabel="Réessayer"
+      title={t('states.errorTitle')}
+      description={t('states.errorDescription')}
+      ctaLabel={t('common.retry')}
       onCta={onRetry}
     />
   );
 }
 
 export function OfflineStateView({ onRetry }: { onRetry?: () => void }) {
+  const { t } = useTranslation();
   return (
     <EmptyState
       tone="info"
       icon="cloudOff"
-      title="Pas de connexion"
-      description="Tu peux toujours consulter ce que tu as déjà vu. Réessaie quand tu auras du réseau."
-      ctaLabel="Réessayer"
+      title={t('states.offlineTitle')}
+      description={t('states.offlineDescription')}
+      ctaLabel={t('common.retry')}
       onCta={onRetry}
     />
   );
@@ -98,6 +101,7 @@ export function OfflineStateView({ onRetry }: { onRetry?: () => void }) {
 
 export function OfflineBanner({ visible }: { visible: boolean }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   if (!visible) return null;
   return (
     <View
@@ -112,7 +116,7 @@ export function OfflineBanner({ visible }: { visible: boolean }) {
     >
       <I.cloudOff size={14} color="#FFFFFF" />
       <Text style={{ color: '#FFFFFF', fontSize: 12 }}>
-        Hors ligne — tes données seront synchronisées
+        {t('states.offlineBanner')}
       </Text>
     </View>
   );

@@ -1,6 +1,7 @@
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
 import { router, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { IconButton } from '../primitives/Button';
@@ -29,6 +30,7 @@ export function TopBar({
 }: TopBarProps) {
   const { colors } = useTheme();
   const r = useRouter();
+  const { t } = useTranslation();
   return (
     <View
       style={[
@@ -48,7 +50,7 @@ export function TopBar({
         <IconButton
           variant={dark ? 'glass' : 'secondary'}
           size={36}
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('a11y.back')}
           onPress={() => {
             if (onBack) onBack();
             else if (r.canGoBack()) router.back();

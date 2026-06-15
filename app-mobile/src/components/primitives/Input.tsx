@@ -7,6 +7,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from './Text';
 import { I } from '../../icons/Icon';
@@ -118,13 +119,14 @@ export function OTPCells({
   autoFocus?: boolean;
 }) {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const ref = useRef<TextInput>(null);
   return (
     <Pressable
       onPress={() => ref.current?.focus()}
       style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}
       accessibilityRole="text"
-      accessibilityLabel="Code à 6 chiffres"
+      accessibilityLabel={t('a11y.otpCode')}
     >
       {Array.from({ length }).map((_, i) => {
         const ch = value[i] ?? '';

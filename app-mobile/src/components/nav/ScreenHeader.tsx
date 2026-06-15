@@ -2,6 +2,7 @@ import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { haptic } from '../../lib/haptics';
@@ -18,6 +19,7 @@ export function ScreenHeader({
   showBack?: boolean;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}>
       {showBack && (
@@ -37,7 +39,7 @@ export function ScreenHeader({
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            accessibilityLabel="Retour"
+            accessibilityLabel={t('a11y.back')}
           >
             <ArrowLeft size={18} color={colors.text} strokeWidth={2} />
           </Pressable>
