@@ -11,6 +11,7 @@ import { ScrollView, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { CalendarDays, Clock, MapPin, User as UserIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
@@ -18,24 +19,28 @@ import { EmptyState, ErrorStateView } from '../../../src/components/feedback/Emp
 import { Skeleton } from '../../../src/components/primitives/Skeleton';
 import { useAgentVisits } from '../../../src/data/queries/properties';
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'EN ATTENTE',
-  accepted: 'CONFIRMÉE',
-  rejected: 'REFUSÉE',
-  cancelled: 'ANNULÉE',
-  completed: 'TERMINÉE',
+// Phase I.3j -- status labels resolved via i18n at render. Keys mirror the
+// existing pro.status.* set EXCEPT accepted ("Confirmee" here vs "Acceptee"
+// in the demandes status chip) ; the visite detail screen has used the
+// CONFIRMEE wording since launch, kept as a parallel key.
+const STATUS_LABEL_KEY: Record<string, string> = {
+  pending: 'pro.visiteStatus.pending',
+  accepted: 'pro.visiteStatus.accepted',
+  rejected: 'pro.visiteStatus.rejected',
+  cancelled: 'pro.visiteStatus.cancelled',
+  completed: 'pro.visiteStatus.completed',
 };
 
-function formatDayLabel(iso: string): string {
+function formatDayLabel(iso: string, t: (k: string) => string): string {
   const d = new Date(iso);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const target = new Date(d);
   target.setHours(0, 0, 0, 0);
   const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
-  if (diff === 0) return "AUJOURD'HUI";
-  if (diff === 1) return 'DEMAIN';
-  if (diff === -1) return 'HIER';
+  if (diff === 0) return t('pro.visiteDayToday');
+  if (diff === 1) return t('pro.visiteDayTomorrow');
+  if (diff === -1) return t('pro.visiteDayYesterday');
   return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase();
 }
 
@@ -45,6 +50,7 @@ function formatTime(iso: string): string {
 
 export default function VisitDetailRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const visitsQuery = useAgentVisits();
   const visits = visitsQuery.data ?? [];
@@ -56,7 +62,7 @@ export default function VisitDetailRoute() {
   if (visitsQuery.isError && !visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Visite" />
+        <ScreenHeader title={t('pro.visiteDetailTitle')} />
         <ErrorStateView onRetry={() => void visitsQuery.refetch()} />
       </SafeAreaView>
     );
@@ -65,7 +71,7 @@ export default function VisitDetailRoute() {
   if (visitsQuery.isLoading && !visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Visite" />
+        <ScreenHeader title={t('pro.visiteDetailTitle')} />
         <View style={{ paddingHorizontal: 24, gap: 14, paddingTop: 8 }}>
           <Skeleton height={90} radius={20} />
           <Skeleton height={72} radius={18} />
@@ -78,22 +84,24 @@ export default function VisitDetailRoute() {
   if (!visit) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Visite" />
+        <ScreenHeader title={t('pro.visiteDetailTitle')} />
         <EmptyState
           icon="package"
-          title="Visite introuvable"
-          description="Cette demande de visite n'existe plus ou a été retirée."
-          ctaLabel="Retour"
+          title={t('pro.visiteDetailNotFoundTitle')}
+          description={t('pro.visiteDetailNotFoundBody')}
+          ctaLabel={t('pro.visiteDetailBack')}
           onCta={() => (router.canGoBack() ? router.back() : router.replace('/pro/visites'))}
         />
       </SafeAreaView>
     );
   }
 
-  const dayLabel = formatDayLabel(visit.requestedAt);
+  const dayLabel = formatDayLabel(visit.requestedAt, t);
   const timeLabel = formatTime(visit.requestedAt);
-  const statusLabel = STATUS_LABEL[visit.status] ?? visit.status.toUpperCase();
-  const buyerName = visit.buyer?.displayName ?? 'Acheteur';
+  const statusLabel = STATUS_LABEL_KEY[visit.status]
+    ? t(STATUS_LABEL_KEY[visit.status])
+    : visit.status.toUpperCase();
+  const buyerName = visit.buyer?.displayName ?? t('pro.visiteFallbackBuyer');
   const propertyTitle = visit.property?.title;
   const locationLabel = [visit.property?.district, visit.property?.city].filter(Boolean).join(', ');
 
@@ -103,7 +111,7 @@ export default function VisitDetailRoute() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <ScreenHeader title="Visite" subtitle={statusLabel} />
+        <ScreenHeader title={t('pro.visiteDetailTitle')} subtitle={statusLabel} />
 
         {/* When */}
         <View style={{ paddingHorizontal: 24 }}>
@@ -162,7 +170,7 @@ export default function VisitDetailRoute() {
         </View>
 
         {/* Buyer */}
-        <Section title="Demandeur">
+        <Section title={t('pro.visiteSectionBuyer')}>
           <View
             style={{
               padding: 14,
@@ -208,7 +216,7 @@ export default function VisitDetailRoute() {
                   letterSpacing: 0,
                 }}
               >
-                Contact via la messagerie Linky
+                {t('pro.visiteContactHint')}
               </Text>
             </View>
           </View>
@@ -216,7 +224,7 @@ export default function VisitDetailRoute() {
 
         {/* Note */}
         {visit.note ? (
-          <Section title="Note du demandeur">
+          <Section title={t('pro.visiteSectionNote')}>
             <View
               style={{
                 padding: 14,
@@ -234,7 +242,7 @@ export default function VisitDetailRoute() {
         ) : null}
 
         {/* Property */}
-        <Section title="Bien à visiter">
+        <Section title={t('pro.visiteSectionProperty')}>
           <Pressable
             onPress={() => router.push(`/property/${visit.propertyId}`)}
             style={{
@@ -257,7 +265,7 @@ export default function VisitDetailRoute() {
               }}
               numberOfLines={2}
             >
-              {propertyTitle ?? 'Voir le bien'}
+              {propertyTitle ?? t('pro.visiteFallbackProperty')}
             </Text>
             {locationLabel.length > 0 && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -268,7 +276,7 @@ export default function VisitDetailRoute() {
               </View>
             )}
             <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.primary, marginTop: 4 }}>
-              Voir l'annonce →
+              {t('pro.visiteSeeListing')}
             </Text>
           </Pressable>
         </Section>

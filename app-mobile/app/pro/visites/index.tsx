@@ -23,7 +23,7 @@ const STATUS_META: Record<string, { labelKey: string; bg: 'accent' | 'primary' |
   completed: { labelKey: 'pro.status.completed', bg: 'muted' },
 };
 
-function dayBucketFr(iso: string): { key: string; label: string; sub: string } {
+function dayBucketFr(iso: string, t: (k: string) => string): { key: string; label: string; sub: string } {
   const d = new Date(iso);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -31,12 +31,12 @@ function dayBucketFr(iso: string): { key: string; label: string; sub: string } {
   target.setHours(0, 0, 0, 0);
   const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
   const sub = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace('.', '');
-  if (diffDays === 0) return { key: 'today', label: "Aujourd'hui", sub };
-  if (diffDays === 1) return { key: 'tomorrow', label: 'Demain', sub };
+  if (diffDays === 0) return { key: 'today', label: t('pro.visitsBucketToday'), sub };
+  if (diffDays === 1) return { key: 'tomorrow', label: t('pro.visitsBucketTomorrow'), sub };
   if (diffDays > 1 && diffDays < 7) {
     return { key: `d${diffDays}`, label: d.toLocaleDateString('fr-FR', { weekday: 'long' }), sub };
   }
-  if (diffDays < 0) return { key: `past_${diffDays}`, label: 'Passé', sub };
+  if (diffDays < 0) return { key: `past_${diffDays}`, label: t('pro.visitsBucketPast'), sub };
   return { key: `d${diffDays}`, label: sub, sub };
 }
 
@@ -53,7 +53,7 @@ export default function VisitesIndex() {
 
   const grouped = visits.reduce<Record<string, { label: string; sub: string; items: VisitRequest[] }>>(
     (acc, v) => {
-      const b = dayBucketFr(v.requestedAt);
+      const b = dayBucketFr(v.requestedAt, t);
       if (!acc[b.key]) acc[b.key] = { label: b.label, sub: b.sub, items: [] };
       acc[b.key].items.push(v);
       return acc;
@@ -63,7 +63,7 @@ export default function VisitesIndex() {
 
   const pendingCount = visits.filter((v) => v.status === 'pending').length;
   const acceptedCount = visits.filter((v) => v.status === 'accepted').length;
-  const todayCount = visits.filter((v) => dayBucketFr(v.requestedAt).key === 'today').length;
+  const todayCount = visits.filter((v) => dayBucketFr(v.requestedAt, t).key === 'today').length;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -207,10 +207,10 @@ function VisitCard({ visit }: { visit: VisitRequest }) {
     try {
       haptic.medium();
       await respond.mutateAsync({ visit_request_id: visit.id, decision });
-      toast.show(decision === 'accept' ? 'Visite confirmée' : 'Demande refusée', 'success');
+      toast.show(decision === 'accept' ? t('pro.visitsToastAccepted') : t('pro.visitsToastRejected'), 'success');
     } catch (e: unknown) {
       console.error('[visit-respond] error:', e);
-      toast.show(toToastMessage(e, 'Action impossible'), 'danger');
+      toast.show(toToastMessage(e, t('pro.visitsToastError')), 'danger');
     }
   };
 
@@ -282,7 +282,7 @@ function VisitCard({ visit }: { visit: VisitRequest }) {
               includeFontPadding: false,
             }}
           >
-            {visit.buyer?.displayName || 'Acheteur'}
+            {visit.buyer?.displayName || t('pro.visiteFallbackBuyer')}
           </Text>
           {visit.property && (
             <Text

@@ -46,22 +46,22 @@ export default function SellerOrderDetailRoute() {
   if (isLoading || wrongOwner) {
     // Spinner (not a blank screen) while loading or during the brief
     // wrong-owner redirect — on 3G the blank view read as a frozen screen.
-    return <DetailStateScreen loading title="Commande" />;
+    return <DetailStateScreen loading title={t('seller.orderDetailTitle')} />;
   }
   if (isError && !order) {
-    return <DetailStateScreen loading={false} title="Commande" onRetry={() => void refetch()} />;
+    return <DetailStateScreen loading={false} title={t('seller.orderDetailTitle')} onRetry={() => void refetch()} />;
   }
   if (!order) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Commande" subtitle="Introuvable" />
+        <ScreenHeader title={t('seller.orderDetailTitle')} subtitle={t('seller.orderDetailNotFound')} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 10 }}>
           <PackageX size={28} color={colors.textFaint} strokeWidth={1.75} />
           <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
-            Cette commande n'existe plus
+            {t('seller.orderDetailGoneTitle')}
           </Text>
           <Text style={{ fontSize: 12.5, color: colors.textMuted, textAlign: 'center' }}>
-            Elle a peut-être été annulée ou tu n'as pas accès à ce détail.
+            {t('seller.orderDetailGoneBody')}
           </Text>
         </View>
       </SafeAreaView>
@@ -79,7 +79,7 @@ export default function SellerOrderDetailRoute() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        <ScreenHeader title="Commande" subtitle={order.reference} />
+        <ScreenHeader title={t('seller.orderDetailTitle')} subtitle={order.reference} />
 
         <View style={{ paddingHorizontal: 24 }}>
           <OrderResolutionBanner order={order} viewerRole="seller" />
@@ -134,7 +134,7 @@ export default function SellerOrderDetailRoute() {
         </View>
 
         {/* Money breakdown */}
-        <Section title="Paiement">
+        <Section title={t('seller.orderDetailSectionPayment')}>
           <View
             style={{
               padding: 14,
@@ -148,10 +148,10 @@ export default function SellerOrderDetailRoute() {
             {/* Ledger truth : the buyer pays the fee on top (total = amount +
                 fees) ; on release the seller wallet is credited the FULL
                 amount. The fee is never deducted from the seller. */}
-            <BreakLine label="Montant article" value={formatGNF(order.amountGnf)} />
-            <BreakLine label="Frais Linky (payés par l'acheteur)" value={formatGNF(order.feesGnf)} muted />
+            <BreakLine label={t('seller.orderDetailLineItem')} value={formatGNF(order.amountGnf)} />
+            <BreakLine label={t('seller.orderDetailLineFees')} value={formatGNF(order.feesGnf)} muted />
             <View style={{ height: 1, backgroundColor: colors.border }} />
-            <BreakLine label="Tu recevras" value={formatGNF(order.amountGnf)} bold />
+            <BreakLine label={t('seller.orderDetailLineYouReceive')} value={formatGNF(order.amountGnf)} bold />
             <View
               style={{
                 marginTop: 4,
@@ -173,14 +173,14 @@ export default function SellerOrderDetailRoute() {
                   letterSpacing: 0,
                 }}
               >
-                Le paiement est en escrow. Tu recevras les fonds après confirmation de réception par l'acheteur.
+                {t('seller.orderDetailEscrowNote')}
               </Text>
             </View>
           </View>
         </Section>
 
         {/* Timeline events */}
-        <Section title="Historique">
+        <Section title={t('seller.orderDetailSectionTimeline')}>
           <View
             style={{
               padding: 14,
