@@ -1,7 +1,7 @@
 'use client';
 
 import { Download } from 'lucide-react';
-import { ANDROID_APK_URL } from '@/lib/download';
+import { ANDROID_APK_PATH } from '@/lib/download';
 
 /**
  * Real, working Android APK download. Mirrors the store-badge shape so it sits
@@ -24,8 +24,8 @@ export function AndroidDownloadButton({
 
   return (
     <a
-      href={ANDROID_APK_URL}
-      download
+      href={ANDROID_APK_PATH}
+      download="linky.apk"
       aria-label="Télécharger l'application Android (APK)"
       className={[
         'group inline-flex h-14 items-center gap-3 rounded-2xl pl-4 pr-6 transition-all duration-200',

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/linky.apk",
+      "destination": "https://expo.dev/artifacts/eas/GdFLNzWqP8HjDuIaphl4ZOBiw_L9OZMW1ay1OnORhsY.apk"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/linky.apk",
+      "headers": [
+        { "key": "Content-Disposition", "value": "attachment; filename=\"linky.apk\"" },
+        { "key": "Content-Type", "value": "application/vnd.android.package-archive" }
+      ]
+    }
+  ]
+}
