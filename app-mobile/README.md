@@ -88,11 +88,14 @@ If `tsc --noEmit` warns about Cabinet Grotesk font family names, that's expected
 - Conversion uses a static rate in `src/lib/currency.ts` (`1 EUR = 11000 GNF`). Replace with a live FX feed in V2.
 - Light/dark themes share brand colors but switch surfaces. **Découvrir is always dark**, regardless of theme — the `discoverBg` token.
 
-## Mock data → real API later
+## Data layer
 
-Mock data lives in `src/data/mockProducts.ts`, `mockProperties.ts`, etc. Each TanStack Query hook in `src/data/queries/` wraps the in-memory store with a 300–800 ms simulated latency so loading states are realistic.
-
-To swap to a real backend, replace the body of each query hook with a real `fetch` (the function signatures and return types are stable). The cart and wallet mutations already write to module-level state so the demo flow (add to cart → checkout → escrow → wallet movement) works end-to-end without a server.
+Every TanStack Query hook in `src/data/queries/` calls the real Supabase edge
+functions via the `apiPost` wrapper (self-rolled JWT auth, French error
+envelopes). The old in-memory `mockProducts.ts` / `mockProperties.ts` / … stores
+were removed once the hooks were wired to the backend — there is no mock
+fallback left. The full purchase flow (add to cart → checkout → escrow → wallet
+movement) runs against live functions and the double-entry ledger.
 
 ## EAS builds
 
