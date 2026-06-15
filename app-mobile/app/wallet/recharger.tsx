@@ -1,164 +1,202 @@
-// Phase X.4 -- honest collapse.
-//
-// Pre-X4 this screen offered Orange Money / MTN Mobile Money / Carte
-// bancaire pickers and quick-amount chips, then on tap called
-// useRechargeWallet -> /wallet-topup-intent which only INSERTed a pending
-// topup_intents row. **No money ever credited the wallet** : the Lengopay
-// rail that would normally trigger confirm_topup is contract-blocked, and
-// no Stripe card-topup path exists (Stripe is wired only at checkout
-// today). The "Recharge effectuée" success toast was a lie ; the user
-// went back to wallet with the same balance.
-//
-// Two design choices the prompt allowed :
-//   (a) Build a Stripe card-topup end-to-end. Honest sizing was ~5 medium
-//       pieces (schema migration + new fn + webhook branch + mobile flow
-//       + stale-PI sweep) -- genuinely L-effort, not S. Tracked as a V1.1
-//       item in linky-mobile/PHASE_K_V1_1_BACKLOG.md.
-//   (b) Make the screen honest and point users to the working path.
-//
-// X.4 picks (b). Card payments ALREADY WORK at checkout today (Stripe TEST
-// mode, the same 4242 card that powers the order rail), so the framing
-// matches reality : "no balance needed -- pay by card at checkout."
-//
-// Demo wallets are seeded via the existing confirm_topup RPC (the SQL is
-// documented in SMOKE_MATRIX_2026-06-12.md so the smoke run can demo a
-// wallet-funded purchase without needing the Lengopay rail).
-import { View } from 'react-native';
+// Card-funded wallet top-up. Mobile Money (Orange/MTN) recharge stays blocked
+// on the Lengopay contract, so card is the one wet funding rail: amount entry
+// -> wallet-topup-card (Stripe PaymentIntent) -> PaymentSheet -> the
+// stripe-webhook credits the wallet via confirm_topup a couple seconds later.
+import { useState } from 'react';
+import { ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Smartphone, ShoppingBag, CreditCard } from 'lucide-react-native';
+import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import { CreditCard, Smartphone } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
+import { Chip } from '../../src/components/primitives/Chip';
 import { TopBar } from '../../src/components/nav/TopBar';
-import { Card } from '../../src/components/primitives/Card';
+import { StickyBottom } from '../../src/components/nav/StickyBottom';
+import { MicroLabel } from '../../src/components/lists/SectionHeader';
+import { formatGNF } from '../../src/lib/format';
+import { useToast } from '../../src/components/feedback/Toast';
+import { useTopupCard, useWallet } from '../../src/data/queries';
+import { toToastMessage } from '../../src/lib/api';
+import { haptic } from '../../src/lib/haptics';
+
+const MIN_TOPUP = 10_000;
+const QUICK_AMOUNTS = [50_000, 100_000, 200_000, 500_000];
+const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').startsWith('pk_test_');
 
 export default function RechargerRoute() {
-  const { colors } = useTheme();
+  const { colors, radii } = useTheme();
+  const { show } = useToast();
+  const qc = useQueryClient();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const topup = useTopupCard();
+  const walletQuery = useWallet();
+  const balance = walletQuery.data?.balanceGnf ?? 0;
+
+  const [amount, setAmount] = useState(100_000);
+  const [busy, setBusy] = useState(false);
+
+  const tooLow = amount < MIN_TOPUP;
+  const canPay = !tooLow && !busy && !topup.isPending;
+
+  async function pay() {
+    if (!canPay) return;
+    haptic.medium();
+    setBusy(true);
+    try {
+      const { client_secret } = await topup.mutateAsync(amount);
+      const { error: initErr } = await initPaymentSheet({
+        merchantDisplayName: 'Linky',
+        paymentIntentClientSecret: client_secret,
+        googlePay: { merchantCountryCode: 'US', testEnv: STRIPE_TEST_MODE },
+        returnURL: 'linky://stripe-redirect',
+      });
+      if (initErr) {
+        show('Impossible de préparer le paiement', 'danger');
+        return;
+      }
+      const { error: payErr } = await presentPaymentSheet();
+      if (payErr) {
+        if (payErr.code !== PaymentSheetError.Canceled) show(payErr.message || 'Paiement échoué', 'danger');
+        return;
+      }
+      // Charge succeeded. The webhook credits the wallet in ~1-3s ; invalidate
+      // now and let the wallet screen's refetch-on-focus pick up the new balance.
+      show('Recharge réussie — ton solde se met à jour dans un instant', 'success');
+      qc.invalidateQueries({ queryKey: ['wallet'] });
+      if (router.canGoBack()) router.back();
+      else router.replace('/wallet');
+    } catch (e) {
+      show(toToastMessage(e, 'Recharge impossible'), 'danger');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title="Recharger" back />
-      <View style={{ paddingHorizontal: 16, paddingTop: 8, gap: 14 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ padding: 16, paddingBottom: 160 }}
+      >
+        {/* Balance anchor */}
         <View
           style={{
-            alignSelf: 'flex-start',
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 999,
-            backgroundColor: colors.accentSoft,
-            marginBottom: 4,
+            backgroundColor: colors.primarySoft,
+            borderRadius: 16,
+            paddingVertical: 16,
+            paddingHorizontal: 18,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+            marginBottom: 20,
           }}
         >
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: colors.accentText,
-              letterSpacing: 0.6,
+          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
+            <CreditCard size={18} color={colors.primary} />
+          </View>
+          <View>
+            <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+              Solde actuel
+            </Text>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
+              {formatGNF(balance)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Amount */}
+        <MicroLabel label="Montant à recharger" />
+        <View
+          style={{
+            backgroundColor: colors.bgElev,
+            borderRadius: 16,
+            paddingVertical: 22,
+            paddingHorizontal: 20,
+            borderWidth: 1,
+            borderColor: tooLow ? colors.danger : colors.border,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <TextInput
+            value={amount > 0 ? new Intl.NumberFormat('fr-FR').format(amount) : ''}
+            onChangeText={(t) => {
+              const n = Number(t.replace(/\D/g, ''));
+              setAmount(Number.isFinite(n) ? n : 0);
             }}
-          >
-            BIENTÔT DISPONIBLE
+            keyboardType="number-pad"
+            placeholder="0"
+            placeholderTextColor={colors.textFaint}
+            maxLength={11}
+            accessibilityLabel="Montant à recharger en francs guinéens"
+            style={{
+              fontSize: 36,
+              fontWeight: '700',
+              color: tooLow ? colors.danger : colors.text,
+              textAlign: 'center',
+              minWidth: 60,
+              paddingVertical: 0,
+              fontVariant: ['tabular-nums'],
+            }}
+          />
+          <Text style={{ marginLeft: 8, marginTop: 8, color: colors.textMuted, fontSize: 14, fontWeight: '600' }}>
+            GNF
           </Text>
         </View>
-        <Text variant="dispL" style={{ fontSize: 24, lineHeight: 30 }}>
-          Recharge par Mobile Money
-        </Text>
-        <Text variant="bodyM" tone="muted" style={{ lineHeight: 21 }}>
-          La recharge depuis ton compte Orange Money ou MTN Mobile Money arrive
-          à l'activation du contrat Linky&nbsp;×&nbsp;Lengopay. On te préviendra
-          dès que c'est prêt.
-        </Text>
 
-        <Card padding={14} style={{ marginTop: 6 }}>
-          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                backgroundColor: colors.primarySoft,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CreditCard size={18} color={colors.primary} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="titleM" style={{ fontSize: 14 }}>
-                En attendant
-              </Text>
-              <Text
-                variant="micro"
-                tone="muted"
-                style={{
-                  letterSpacing: 0,
-                  textTransform: 'none',
-                  marginTop: 4,
-                  lineHeight: 18,
-                }}
-              >
-                Tu peux payer par carte directement au moment de l'achat —
-                pas besoin de solde Linky pour acheter.
-              </Text>
-            </View>
-          </View>
-        </Card>
-
-        <Card padding={14}>
-          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                backgroundColor: colors.bgSunken,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Smartphone size={18} color={colors.textMuted} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="titleM" style={{ fontSize: 14 }}>
-                À l'activation du contrat
-              </Text>
-              <Text
-                variant="micro"
-                tone="muted"
-                style={{
-                  letterSpacing: 0,
-                  textTransform: 'none',
-                  marginTop: 4,
-                  lineHeight: 18,
-                }}
-              >
-                Tu pourras créditer ton solde Linky depuis Orange Money ou
-                MTN MoMo en quelques taps, puis l'utiliser pour payer ou
-                envoyer.
-              </Text>
-            </View>
-          </View>
-        </Card>
-
-        <View style={{ marginTop: 18 }}>
-          <Button
-            variant="dark"
-            size="lg"
-            block
-            label="Voir le marché"
-            leading={<ShoppingBag size={16} color={colors.bg} strokeWidth={2.25} />}
-            onPress={() => router.replace('/(tabs)/marche')}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            block
-            label="Retour au portefeuille"
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/wallet'))}
-            style={{ marginTop: 6 }}
-          />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+          {QUICK_AMOUNTS.map((v) => (
+            <Chip key={v} label={new Intl.NumberFormat('fr-FR').format(v)} active={v === amount} onPress={() => setAmount(v)} />
+          ))}
         </View>
-      </View>
+
+        <Text variant="caption" tone="muted" style={{ marginTop: 12, letterSpacing: 0, color: tooLow ? colors.danger : undefined }}>
+          {tooLow ? `Minimum ${formatGNF(MIN_TOPUP)}` : 'Paiement sécurisé par carte bancaire.'}
+        </Text>
+
+        {/* Mobile Money — honest "coming" note */}
+        <View
+          style={{
+            marginTop: 22,
+            flexDirection: 'row',
+            gap: 12,
+            padding: 14,
+            borderRadius: radii.md,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.card,
+            alignItems: 'center',
+          }}
+        >
+          <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
+            <Smartphone size={18} color={colors.textMuted} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600' }}>Orange Money & MTN MoMo</Text>
+            <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}>
+              Recharge par Mobile Money à l'activation du contrat Linky × Lengopay.
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      <StickyBottom>
+        <Button
+          size="lg"
+          block
+          loading={busy || topup.isPending}
+          disabled={!canPay}
+          leading={<CreditCard size={16} color={colors.bg} strokeWidth={2.25} />}
+          label={`Payer ${formatGNF(amount)} par carte`}
+          onPress={pay}
+        />
+      </StickyBottom>
     </SafeAreaView>
   );
 }

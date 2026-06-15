@@ -628,6 +628,9 @@ verify_jwt = false
 [functions.wallet-history]
 verify_jwt = false
 
+[functions.wallet-topup-card]
+verify_jwt = false
+
 [functions.wallet-topup-intent]
 verify_jwt = false
 

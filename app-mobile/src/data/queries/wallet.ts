@@ -108,3 +108,19 @@ export function useWithdrawWallet() {
     },
   });
 }
+
+export interface TopupCardResult {
+  topup_id: string;
+  client_secret: string;
+  publishable_key: string;
+}
+
+// Card-funded wallet top-up. Returns a Stripe PaymentIntent client_secret for
+// the PaymentSheet ; the wallet is credited by the stripe-webhook -> confirm_topup
+// path a couple seconds after the charge succeeds (invalidate ['wallet'] then).
+export function useTopupCard() {
+  return useMutation({
+    mutationFn: async (amountGnf: number): Promise<TopupCardResult> =>
+      apiPost<TopupCardResult>({ path: '/wallet-topup-card', body: { amount_minor: amountGnf } }),
+  });
+}

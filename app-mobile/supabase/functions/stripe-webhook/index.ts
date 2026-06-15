@@ -148,6 +148,38 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const pi = event.data.object as Stripe.PaymentIntent;
   const sb = serviceClient();
 
+  // ── TOPUP branch ─────────────────────────────────────────────────────────
+  // Card wallet funding (wallet-topup-card) tags the PI metadata.kind='topup'.
+  // It has NO payment_intents row — it credits the wallet via confirm_topup
+  // (idempotent, one-sided ledger credit) rather than the order settlement RPC.
+  if (pi.metadata?.kind === 'topup') {
+    const topupId = pi.metadata.topup_intent_id;
+    if (!topupId) {
+      console.error('[stripe-webhook] topup PI missing topup_intent_id', pi.id);
+      return json({ received: true, ignored: true }, 200);
+    }
+    if (pi.currency !== 'gnf') {
+      console.error('[stripe-webhook] CRITICAL topup currency mismatch', { stripe_pi: pi.id, currency: pi.currency });
+      return json({ received: true, mismatch: true }, 200);
+    }
+    // Only a successful charge credits the wallet. failed/canceled leaves the
+    // topup_intent pending (no money moved) ; the user just starts a new one.
+    if (event.type !== 'payment_intent.succeeded') {
+      return json({ received: true, topup_noncomplete: true }, 200);
+    }
+    const { error: topErr } = await sb.rpc('confirm_topup', { p_topup_id: topupId });
+    if (topErr) {
+      const msg = topErr.message ?? '';
+      // Idempotent : a duplicate / out-of-order delivery finds it already done.
+      if (msg.includes('TOPUP_NOT_PENDING') || msg.includes('TOPUP_NOT_FOUND')) {
+        return json({ received: true, topup_already: true }, 200);
+      }
+      console.error('[stripe-webhook] confirm_topup failed:', topErr);
+      return json({ error: 'topup_failed' }, 500); // 500 → Stripe retries
+    }
+    return json({ received: true, topup_credited: true }, 200);
+  }
+
   const { data: intent, error: lookupErr } = await sb
     .from('payment_intents')
     .select('id, status, amount_minor')
