@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { NoiseOverlay } from '../../src/components/visuals/NoiseOverlay';
 import {
   Bell,
@@ -195,6 +196,7 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
 
 function BuyerHome() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const user = useAuth((s) => s.user);
   const cartCount = useCart((s) => s.lines.length);
   const roles = useAuth((s) => s.roles);
@@ -207,7 +209,11 @@ function BuyerHome() {
   const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!wallet;
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
 
-  const firstName = (user?.display_name ?? 'Toi').split(' ')[0];
+  const firstName = (user?.display_name ?? t('home.fallbackName')).split(' ')[0];
+  const CATEGORIES = useMemo(
+    () => CATEGORY_DEFS.map((c) => ({ ...c, label: t(c.labelKey) })),
+    [t],
+  );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -236,7 +242,7 @@ function BuyerHome() {
                 fontWeight: '500',
               }}
             >
-              Bonjour,
+              {t('home.greeting')}
             </Text>
             <Text
               style={{
@@ -252,7 +258,7 @@ function BuyerHome() {
           </View>
           <CircleAction
             onPress={() => router.push('/notifications')}
-            accessibilityLabel="Notifications"
+            accessibilityLabel={t('home.notifications')}
             badge={unreadCount > 0 ? 'dot' : undefined}
           >
             <Bell size={18} color={colors.text} strokeWidth={1.75} />
@@ -263,7 +269,7 @@ function BuyerHome() {
               header carries only universal commerce actions. */}
           <CircleAction
             onPress={() => router.push('/cart')}
-            accessibilityLabel={`Panier (${cartCount} article${cartCount === 1 ? '' : 's'})`}
+            accessibilityLabel={t('home.cart', { count: cartCount })}
             badge={cartCount > 0 ? String(cartCount) : undefined}
           >
             <ShoppingBag size={18} color={colors.text} strokeWidth={1.75} />
@@ -299,17 +305,17 @@ function BuyerHome() {
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <QuickAction
               Icon={QrCode}
-              label="Scanner"
+              label={t('home.qaScan')}
               onPress={() => router.push('/scan')}
             />
             <QuickAction
               Icon={ArrowDownToLine}
-              label="Retirer"
+              label={t('home.qaWithdraw')}
               onPress={() => router.push('/wallet/retirer')}
             />
             <QuickAction
               Icon={Store}
-              label="Vendre"
+              label={t('home.qaSell')}
               onPress={() => {
                 // Phase T.2 — pure buyer used to dead-end into the create
                 // modal's "Va dans Profil → Rôles" copy (a screen that
@@ -324,7 +330,7 @@ function BuyerHome() {
             />
             <QuickAction
               Icon={Wallet}
-              label="Recharger"
+              label={t('home.qaTopup')}
               onPress={() => router.push('/wallet/recharger')}
             />
           </View>
@@ -341,35 +347,35 @@ function BuyerHome() {
             }}
           >
             <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>
-              Catégories
+              {t('home.categoriesSection')}
             </Text>
             <Pressable onPress={() => router.push('/(tabs)/marche')}>
               <Text
                 style={{ fontSize: 13, fontWeight: '600', color: colors.primary, letterSpacing: 0 }}
               >
-                Tout voir
+                {t('home.seeAll')}
               </Text>
             </Pressable>
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             {CATEGORIES.map((c) => (
               <CategoryGridTile
-                key={c.label}
+                key={c.code}
                 Icon={c.Icon}
                 label={c.label}
                 tint={c.tint}
                 onPress={() => {
                   // Seed the marketplace filter so the tile lands on its
-                  // actual category, not an unfiltered marché. Product labels
-                  // match marche's PRODUCT_CATEGORIES exactly; the 3 property
-                  // tiles map to the immobilier tab + property type.
+                  // actual category, not an unfiltered marché. Match by the
+                  // stable filter CODE (legacy FR string the store stores),
+                  // never by translated label.
                   const f = useFilters.getState();
-                  if (c.label === 'Location' || c.label === 'Vente' || c.label === 'Terrains') {
+                  if (c.code === 'Location' || c.code === 'Vente' || c.code === 'Terrains') {
                     f.setMarcheTab('immobilier');
-                    f.setPropertyType(c.label === 'Location' ? 'location' : c.label === 'Vente' ? 'vente' : 'terrain');
+                    f.setPropertyType(c.code === 'Location' ? 'location' : c.code === 'Vente' ? 'vente' : 'terrain');
                   } else {
                     f.setMarcheTab('articles');
-                    f.setProductCategory(c.label);
+                    f.setProductCategory(c.code);
                   }
                   router.push('/(tabs)/marche');
                 }}
@@ -380,7 +386,7 @@ function BuyerHome() {
 
         {/* Featured shops */}
         <View style={{ marginTop: 28 }}>
-          <SectionHeader title="Boutiques mises en avant" action="Tout voir" onAction={() => router.push('/(tabs)/marche')} />
+          <SectionHeader title={t('home.shopsSection')} action={t('home.seeAll')} onAction={() => router.push('/(tabs)/marche')} />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -397,8 +403,8 @@ function BuyerHome() {
         {/* Popular products */}
         <View style={{ marginTop: 28, paddingHorizontal: 20 }}>
           <SectionHeader
-            title="Produits populaires"
-            action="Tout voir"
+            title={t('home.popularSection')}
+            action={t('home.seeAll')}
             onAction={() => router.push('/(tabs)/marche')}
           />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
@@ -453,11 +459,11 @@ function BuyerHome() {
                     letterSpacing: 0.5,
                   }}
                 >
-                  NOUVEAU
+                  {t('home.decouvrirBadge')}
                 </Text>
               </View>
               <Text style={{ fontSize: 20, color: '#FFFFFF', fontWeight: '700', lineHeight: 24 }}>
-                Découvre en swipant.
+                {t('home.decouvrirTitle')}
               </Text>
               <Text
                 style={{
@@ -467,7 +473,7 @@ function BuyerHome() {
                   letterSpacing: 0,
                 }}
               >
-                Articles et logements, à la file.
+                {t('home.decouvrirSub')}
               </Text>
             </View>
             <View
@@ -528,8 +534,8 @@ function BuyerHome() {
         {/* Real estate near */}
         <View style={{ marginTop: 28 }}>
           <SectionHeader
-            title="Immobilier près de toi"
-            action="Tout voir"
+            title={t('home.nearbyPropertiesSection')}
+            action={t('home.seeAll')}
             onAction={() => router.push('/(tabs)/marche')}
           />
           <ScrollView
@@ -647,6 +653,7 @@ function HomeWalletCard({
   onRetirer: () => void;
   onTap: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Pressable onPress={onTap}>
       <View
@@ -705,7 +712,7 @@ function HomeWalletCard({
                 letterSpacing: 0.6,
               }}
             >
-              SOLDE LINKY
+              {t('home.walletBalance')}
             </Text>
             <Image
               source={require('../../assets/images/adaptive-icon-dark.png')}
@@ -763,7 +770,7 @@ function HomeWalletCard({
             >
               <Plus size={14} color="#0A5240" strokeWidth={2.5} />
               <Text style={{ color: '#0A5240', fontWeight: '700', fontSize: 13.5 }}>
-                Recharger
+                {t('home.walletRecharge')}
               </Text>
             </Pressable>
             <Pressable
@@ -787,7 +794,7 @@ function HomeWalletCard({
             >
               <ArrowDownToLine size={14} color="#FFFFFF" strokeWidth={2.25} />
               <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 13.5 }}>
-                Retirer
+                {t('home.walletWithdraw')}
               </Text>
             </Pressable>
           </View>
@@ -847,19 +854,23 @@ function QuickAction({
   );
 }
 
-const CATEGORIES: Array<{
+// Phase I.9 — categories carry a stable filter CODE (matches the legacy
+// hardcoded string used by useFilters + marche's PRODUCT_CATEGORY_DEFS for
+// backward compat) plus a labelKey resolved at render so labels flip live.
+const CATEGORY_DEFS: Array<{
   Icon: LucideIcon;
-  label: string;
+  code: string;
+  labelKey: string;
   tint: 'primary' | 'accent' | 'cream' | 'info' | 'mint' | 'rose' | 'lilac' | 'sand';
 }> = [
-  { Icon: Shirt, label: 'Mode', tint: 'primary' },
-  { Icon: Smartphone, label: 'Électronique', tint: 'accent' },
-  { Icon: Sofa, label: 'Maison', tint: 'cream' },
-  { Icon: Car, label: 'Auto', tint: 'info' },
-  { Icon: SparklesIcon, label: 'Beauté', tint: 'rose' },
-  { Icon: Building2, label: 'Location', tint: 'mint' },
-  { Icon: HomeIcon, label: 'Vente', tint: 'lilac' },
-  { Icon: TreePine, label: 'Terrains', tint: 'sand' },
+  { Icon: Shirt,         code: 'Mode',        labelKey: 'home.catMode',        tint: 'primary' },
+  { Icon: Smartphone,    code: 'Électronique', labelKey: 'home.catElectronique', tint: 'accent' },
+  { Icon: Sofa,          code: 'Maison',      labelKey: 'home.catMaison',      tint: 'cream' },
+  { Icon: Car,           code: 'Auto',        labelKey: 'home.catAuto',        tint: 'info' },
+  { Icon: SparklesIcon,  code: 'Beauté',      labelKey: 'home.catBeaute',      tint: 'rose' },
+  { Icon: Building2,     code: 'Location',    labelKey: 'home.catLocation',    tint: 'mint' },
+  { Icon: HomeIcon,      code: 'Vente',       labelKey: 'home.catVente',       tint: 'lilac' },
+  { Icon: TreePine,      code: 'Terrains',    labelKey: 'home.catTerrains',    tint: 'sand' },
 ];
 
 const TINTS: Record<string, { bg: string; fg: string }> = {
