@@ -95,10 +95,7 @@ export function Trust() {
             {[
               'Orange Money',
               'MTN Mobile Money',
-              'Visa',
-              'Mastercard',
               'Stripe',
-              'Apple Pay',
             ].map((p) => (
               <PartnerLogo key={p} name={p} />
             ))}
