@@ -13,29 +13,44 @@ import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { EmptyState, ErrorStateView } from '../../../src/components/feedback/EmptyState';
 import { formatGNF } from '../../../src/lib/format';
 import { useMyShops } from '../../../src/data/queries/shops';
-import { useProducts } from '../../../src/data/queries';
+import { useProducts, useMyProperties } from '../../../src/data/queries';
+
+type StatRow = {
+  id: string;
+  kind: 'product' | 'property';
+  title: string;
+  photo?: string;
+  priceGnf: number;
+  viewCount: number;
+  status: string;
+};
 
 export default function StatsRoute() {
   const { colors } = useTheme();
   const myShops = useMyShops();
   const firstShopId = myShops.data?.[0]?.id;
   const products = useProducts({ shopId: firstShopId });
+  const properties = useMyProperties();
 
-  // U.0-B1 — without the firstShopId gate, useProducts({}) hits the public
-  // feed before myShops resolves and stats would briefly render the WHOLE
-  // marketplace as "tes annonces".
-  const isLoading = myShops.isLoading || (!!firstShopId && products.isLoading);
-  const isError = myShops.isError || (!!firstShopId && products.isError);
-  const shopReady = !myShops.isLoading && !!firstShopId;
+  // Stats covers BOTH a seller's products and an agent's properties —
+  // "Tes annonces" is every listing the user owns (a pure agent has no shop /
+  // no products, so a products-only screen showed them an empty stats page).
+  // Products need the shop id (U.0-B1 gate so useProducts({}) doesn't briefly
+  // query the public feed) ; properties are owner-scoped already.
+  const isLoading =
+    myShops.isLoading || (!!firstShopId && products.isLoading) || properties.isLoading;
+  const isError = myShops.isError || (!!firstShopId && products.isError) || properties.isError;
 
-  // The seller's full list — list-products defaults to 'recent', so we sort
-  // client-side by view_count. V1 volumes per shop are small, no pagination
-  // needed yet. Only computed once the shop id is resolved (B1 gate).
-  const ranked = shopReady
-    ? [...(products.data ?? [])].sort((a, b) => b.viewCount - a.viewCount)
-    : [];
-  const totalViews = ranked.reduce((s, p) => s + p.viewCount, 0);
-  const activeCount = ranked.filter((p) => p.status === 'active').length;
+  const productRows: StatRow[] = (firstShopId ? products.data ?? [] : []).map((p) => ({
+    id: p.id, kind: 'product', title: p.title, photo: p.photos[0], priceGnf: p.priceGnf, viewCount: p.viewCount, status: p.status,
+  }));
+  const propertyRows: StatRow[] = (properties.data ?? []).map((p) => ({
+    id: p.id, kind: 'property', title: p.title, photo: p.photos[0], priceGnf: p.priceGnf, viewCount: p.viewCount, status: p.status,
+  }));
+  // Sort client-side by view_count ; V1 per-user volumes are small.
+  const ranked = [...productRows, ...propertyRows].sort((a, b) => b.viewCount - a.viewCount);
+  const totalViews = ranked.reduce((s, r) => s + r.viewCount, 0);
+  const activeCount = ranked.filter((r) => r.status === 'active').length;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -150,9 +165,9 @@ export default function StatsRoute() {
               )}
 
               <View style={{ gap: 10 }}>
-                {ranked.map((p, idx) => (
+                {ranked.map((r, idx) => (
                   <View
-                    key={p.id}
+                    key={`${r.kind}-${r.id}`}
                     style={{
                       padding: 12,
                       borderRadius: 18,
@@ -177,7 +192,7 @@ export default function StatsRoute() {
                       {idx + 1}
                     </Text>
                     <Image
-                      source={p.photos[0]}
+                      source={r.photo}
                       style={{
                         width: 48,
                         height: 48,
@@ -198,7 +213,7 @@ export default function StatsRoute() {
                         }}
                         numberOfLines={1}
                       >
-                        {p.title}
+                        {r.title}
                       </Text>
                       <Text
                         style={{
@@ -208,7 +223,7 @@ export default function StatsRoute() {
                           letterSpacing: 0,
                         }}
                       >
-                        {formatGNF(p.priceGnf)}
+                        {formatGNF(r.priceGnf)} · {r.kind === 'property' ? 'Bien' : 'Produit'}
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -221,7 +236,7 @@ export default function StatsRoute() {
                           fontVariant: ['tabular-nums'],
                         }}
                       >
-                        {p.viewCount}
+                        {r.viewCount}
                       </Text>
                     </View>
                   </View>
