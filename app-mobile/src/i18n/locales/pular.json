@@ -40,10 +40,88 @@
     "messagerie": "Messagerie"
   },
   "onboarding": {
-    "welcome": "Bienvenue",
-    "tagline": "Marketplace & Immobilier de Guinée",
-    "start": "Commencer",
-    "haveAccount": "J'ai déjà un compte"
+    "welcome": {
+      "start": "Commencer",
+      "haveAccount": "J'ai déjà un compte",
+      "slide1Title": "Bienvenue",
+      "slide1Sub": "Achète, vends et loue\npartout en Guinée.",
+      "slide2Title": "Ta maison\nt'attend",
+      "slide2Sub": "Loue ou achète ton prochain logement,\nvérifié et sécurisé.",
+      "slide3Title": "Paie en\nsécurité",
+      "slide3Sub": "Orange Money, MTN ou carte.\nLe vendeur est payé après ta confirmation."
+    },
+    "authChoice": {
+      "title": "Tu es où ?",
+      "titleLogin": "Te reconnecter",
+      "subtitle": "On adapte le paiement selon ta région.",
+      "subtitleLogin": "Choisis comment tu t'es inscrit·e pour recevoir ton code.",
+      "phoneTitle": "Je suis en Guinée",
+      "phoneSub": "Téléphone & Mobile Money",
+      "emailTitle": "Je suis à l'étranger",
+      "emailSub": "Email & Carte bancaire",
+      "ctaLogin": "Se connecter"
+    },
+    "phone": {
+      "badge": "SMS",
+      "title": "Ton numéro.",
+      "subtitle": "On t'envoie un code à 6 chiffres pour confirmer.",
+      "label": "NUMÉRO DE TÉLÉPHONE",
+      "placeholder": "6XX XX XX XX",
+      "legal": "En continuant, tu acceptes nos <0>conditions</0> et notre <1>politique de confidentialité</1>.",
+      "cta": "Recevoir le code",
+      "ctaBusy": "Envoi…",
+      "errorSend": "Échec de l'envoi du code"
+    },
+    "email": {
+      "badge": "EMAIL",
+      "title": "Ton email.",
+      "subtitle": "On t'envoie un code à 6 chiffres pour confirmer.",
+      "label": "ADRESSE EMAIL",
+      "placeholder": "toi@exemple.com",
+      "errorSend": "Échec de l'envoi du code"
+    },
+    "otp": {
+      "badge": "VÉRIFICATION",
+      "title": "Entre le code.",
+      "sentToEmail": "Envoyé à",
+      "sentToPhone": "Envoyé au",
+      "resendIn": "Renvoyer dans",
+      "resendCta": "Renvoyer le code",
+      "resendBusy": "Envoi…",
+      "resendError": "Renvoi impossible",
+      "verify": "Vérifier",
+      "verifying": "Vérification…",
+      "errorSessionMissing": "Session OTP introuvable — recommence",
+      "errorInvalid": "Code invalide"
+    },
+    "profile": {
+      "stepBadge": "ÉTAPE {{current}} / {{total}} · {{label}}",
+      "labelIdentite": "IDENTITÉ",
+      "labelVille": "VILLE",
+      "labelRole": "RÔLE",
+      "titleIdentite": "Dis-nous qui tu es.",
+      "titleVille": "Tu es où en Guinée ?",
+      "titleRole": "Tu veux faire quoi ?",
+      "rolesHelp": "Coche tout ce qui s'applique — tu peux changer plus tard.",
+      "roleBuyTitle": "Acheteur",
+      "roleBuyDesc": "Acheter ou louer",
+      "roleSellTitle": "Vendeur",
+      "roleSellDesc": "Vendre tes produits",
+      "roleAgentTitle": "Agent immo",
+      "roleAgentDesc": "Lister des biens",
+      "finish": "Terminer",
+      "nameLabel": "NOM COMPLET",
+      "namePlaceholder": "Ton prénom et nom",
+      "optional": "optionnel",
+      "savedLocal": "Profil sauvegardé sur cet appareil — vérifie ta connexion."
+    },
+    "done": {
+      "greeting": "Bienvenue, {{name}} !",
+      "subtitle": "Ton compte est prêt. Découvre des milliers d'articles et de logements.",
+      "discover": "Découvrir Linky",
+      "kyc": "Vérifier mon identité maintenant",
+      "fallbackName": "toi"
+    }
   },
   "auth": {
     "phoneTitle": "Ton numéro",

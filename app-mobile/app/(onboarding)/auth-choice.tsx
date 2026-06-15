@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, ArrowRight, CreditCard, Phone } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button, IconButton } from '../../src/components/primitives/Button';
@@ -19,19 +20,25 @@ interface Option {
   Icon: LucideIcon;
 }
 
-const OPTIONS: Option[] = [
-  { id: 'phone', title: 'Je suis en Guinée', sub: 'Téléphone & Mobile Money', Icon: Phone },
-  { id: 'email', title: "Je suis à l'étranger", sub: 'Email & Carte bancaire', Icon: CreditCard },
-];
-
 export default function AuthChoiceRoute() {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const setChannel = useAuth((s) => s.setChannel);
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   // Returning users arrive with ?mode=login — the flow is the same passwordless
   // entry, but the copy reflects sign-in rather than sign-up.
   const isLogin = mode === 'login';
   const [choice, setChoice] = useState<Channel>('phone');
+  // Phase I.3b — OPTIONS were at module scope, which froze the labels at the
+  // first language i18next resolved. Memo inside the component so they flip
+  // with the active language.
+  const OPTIONS: Option[] = useMemo(
+    () => [
+      { id: 'phone', title: t('onboarding.authChoice.phoneTitle'), sub: t('onboarding.authChoice.phoneSub'), Icon: Phone },
+      { id: 'email', title: t('onboarding.authChoice.emailTitle'), sub: t('onboarding.authChoice.emailSub'), Icon: CreditCard },
+    ],
+    [t],
+  );
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -41,7 +48,7 @@ export default function AuthChoiceRoute() {
             variant="secondary"
             size={44}
             onPress={() => router.back()}
-            accessibilityLabel="Retour"
+            accessibilityLabel={t('a11y.back')}
             style={{ marginLeft: -4 }}
           >
             <ArrowLeft size={20} color={colors.text} strokeWidth={2.25} />
@@ -50,12 +57,12 @@ export default function AuthChoiceRoute() {
 
         <View style={{ marginTop: 40 }}>
           <Text style={{ fontSize: 32, lineHeight: 38, fontWeight: '800', letterSpacing: -0.6, color: colors.text }}>
-            {isLogin ? 'Te reconnecter' : 'Tu es où ?'}
+            {isLogin ? t('onboarding.authChoice.titleLogin') : t('onboarding.authChoice.title')}
           </Text>
           <Text style={{ marginTop: 10, fontSize: 15, lineHeight: 22, color: colors.textMuted }}>
             {isLogin
-              ? 'Choisis comment tu t’es inscrit·e pour recevoir ton code.'
-              : 'On adapte le paiement selon ta région.'}
+              ? t('onboarding.authChoice.subtitleLogin')
+              : t('onboarding.authChoice.subtitle')}
           </Text>
         </View>
 
@@ -113,7 +120,7 @@ export default function AuthChoiceRoute() {
             variant="dark"
             size="lg"
             block
-            label={isLogin ? 'Se connecter' : 'Continuer'}
+            label={isLogin ? t('onboarding.authChoice.ctaLogin') : t('common.continue')}
             trailing={<ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />}
             onPress={() => {
               haptic.medium();

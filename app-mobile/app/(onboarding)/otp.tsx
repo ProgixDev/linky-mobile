@@ -3,6 +3,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, RefreshCw } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -23,12 +24,13 @@ function OtpCells({
   onChange: (v: string) => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const ref = useRef<TextInput>(null);
   return (
     <Pressable
       onPress={() => ref.current?.focus()}
       style={{ flexDirection: 'row', justifyContent: 'space-between' }}
-      accessibilityLabel="Code à 6 chiffres"
+      accessibilityLabel={t('a11y.otpCode')}
     >
       {Array.from({ length: CODE_LENGTH }).map((_, i) => {
         const ch = value[i] ?? '';
@@ -93,6 +95,7 @@ function OtpCells({
 
 export default function OtpRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const channel = useAuth((s) => s.channel);
   const phone = useAuth((s) => s.pendingPhone);
   const email = useAuth((s) => s.pendingEmail);
@@ -127,7 +130,7 @@ export default function OtpRoute() {
   const verify = () => {
     if (code.length !== CODE_LENGTH || verifyOtp.isPending || firedRef.current) return;
     if (!pendingOtpId) {
-      toast.show('Session OTP introuvable — recommence', 'danger');
+      toast.show(t('onboarding.otp.errorSessionMissing'), 'danger');
       router.replace(channel === 'email' ? '/(onboarding)/email' : '/(onboarding)/phone');
       return;
     }
@@ -145,7 +148,7 @@ export default function OtpRoute() {
         router.push('/(onboarding)/profile-setup');
       } catch (e: unknown) {
         console.error('[otp-verify] error:', e);
-        toast.show(toToastMessage(e, 'Code invalide'), 'danger');
+        toast.show(toToastMessage(e, t('onboarding.otp.errorInvalid')), 'danger');
         setCode('');
         firedRef.current = false; // allow retry after error
         haptic.warning();
@@ -197,19 +200,19 @@ export default function OtpRoute() {
             }}
           >
             <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primaryDeep, letterSpacing: 0.4 }}>
-              VÉRIFICATION
+              {t('onboarding.otp.badge')}
             </Text>
           </View>
 
           <Text variant="dispL" style={{ fontSize: 32, lineHeight: 38 }}>
-            Entre le code.
+            {t('onboarding.otp.title')}
           </Text>
           <Text
             variant="bodyM"
             tone="muted"
             style={{ marginTop: 10, fontSize: 15, lineHeight: 22, letterSpacing: 0 }}
           >
-            {channel === 'email' ? 'Envoyé à' : 'Envoyé au'}{' '}
+            {channel === 'email' ? t('onboarding.otp.sentToEmail') : t('onboarding.otp.sentToPhone')}{' '}
             <Text
               style={{
                 color: colors.text,
@@ -231,7 +234,7 @@ export default function OtpRoute() {
           <View style={{ marginTop: 26, alignItems: 'center' }}>
             {seconds > 0 ? (
               <Text style={{ fontSize: 13, color: colors.textMuted, letterSpacing: 0 }}>
-                Renvoyer dans{' '}
+                {t('onboarding.otp.resendIn')}{' '}
                 <Text
                   style={{
                     color: colors.text,
@@ -256,7 +259,7 @@ export default function OtpRoute() {
                     haptic.light();
                   } catch (e: unknown) {
                     console.error('[otp-resend] error:', e);
-                    toast.show(toToastMessage(e, 'Renvoi impossible'), 'danger');
+                    toast.show(toToastMessage(e, t('onboarding.otp.resendError')), 'danger');
                   }
                 }}
                 style={{
@@ -272,7 +275,7 @@ export default function OtpRoute() {
               >
                 <RefreshCw size={13} color={colors.text} strokeWidth={2} />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-                  {requestOtp.isPending ? 'Envoi…' : 'Renvoyer le code'}
+                  {requestOtp.isPending ? t('onboarding.otp.resendBusy') : t('onboarding.otp.resendCta')}
                 </Text>
               </Pressable>
             )}
@@ -284,7 +287,7 @@ export default function OtpRoute() {
             variant="dark"
             size="lg"
             block
-            label={verifyOtp.isPending ? 'Vérification…' : 'Vérifier'}
+            label={verifyOtp.isPending ? t('onboarding.otp.verifying') : t('onboarding.otp.verify')}
             disabled={code.length !== CODE_LENGTH || verifyOtp.isPending}
             onPress={verify}
           />

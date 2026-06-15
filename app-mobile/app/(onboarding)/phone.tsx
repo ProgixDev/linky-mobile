@@ -3,6 +3,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Lock, MessageSquare } from 'lucide-react-native';
+import { Trans, useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -31,6 +32,7 @@ function GuineaFlag() {
 
 export default function PhoneRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [phone, setPhone] = useState('');
   const [focused, setFocused] = useState(false);
   const setChannel = useAuth((s) => s.setChannel);
@@ -81,24 +83,24 @@ export default function PhoneRoute() {
           >
             <MessageSquare size={11} color={colors.primaryDeep} strokeWidth={2.25} />
             <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primaryDeep, letterSpacing: 0.4 }}>
-              SMS
+              {t('onboarding.phone.badge')}
             </Text>
           </View>
 
           <Text variant="dispL" style={{ fontSize: 32, lineHeight: 38 }}>
-            Ton numéro.
+            {t('onboarding.phone.title')}
           </Text>
           <Text
             variant="bodyM"
             tone="muted"
             style={{ marginTop: 10, fontSize: 15, lineHeight: 22, letterSpacing: 0 }}
           >
-            On t'envoie un code à 6 chiffres pour confirmer.
+            {t('onboarding.phone.subtitle')}
           </Text>
 
           <View style={{ marginTop: 28 }}>
             <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textFaint, letterSpacing: 0.6, marginBottom: 8 }}>
-              NUMÉRO DE TÉLÉPHONE
+              {t('onboarding.phone.label')}
             </Text>
             <View
               style={{
@@ -141,7 +143,7 @@ export default function PhoneRoute() {
                   // Guinea mobile numbers are 9 digits; allow a little slack for
                   // any spaces a user types (the request strips non-digits).
                   maxLength={12}
-                  placeholder="6XX XX XX XX"
+                  placeholder={t('onboarding.phone.placeholder')}
                   placeholderTextColor={colors.textFaint}
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
@@ -178,9 +180,13 @@ export default function PhoneRoute() {
                 letterSpacing: 0,
               }}
             >
-              En continuant, tu acceptes nos{' '}
-              <Text style={{ color: colors.primaryDeep, fontWeight: '600' }}>conditions</Text> et notre{' '}
-              <Text style={{ color: colors.primaryDeep, fontWeight: '600' }}>politique de confidentialité</Text>.
+              <Trans
+                i18nKey="onboarding.phone.legal"
+                components={[
+                  <Text key="0" style={{ color: colors.primaryDeep, fontWeight: '600' }} />,
+                  <Text key="1" style={{ color: colors.primaryDeep, fontWeight: '600' }} />,
+                ]}
+              />
             </Text>
           </View>
         </View>
@@ -190,7 +196,7 @@ export default function PhoneRoute() {
             variant="dark"
             size="lg"
             block
-            label={busy ? 'Envoi…' : 'Recevoir le code'}
+            label={busy ? t('onboarding.phone.ctaBusy') : t('onboarding.phone.cta')}
             disabled={!valid || busy}
             onPress={async () => {
               const target = `+224${phone.replace(/\D/g, '')}`;
@@ -203,7 +209,7 @@ export default function PhoneRoute() {
                 router.push('/(onboarding)/otp');
               } catch (e: unknown) {
                 console.error('[otp-request] error:', e);
-                toast.show(toToastMessage(e, 'Échec de l’envoi du code'), 'danger');
+                toast.show(toToastMessage(e, t('onboarding.phone.errorSend')), 'danger');
               }
             }}
           />

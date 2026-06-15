@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -14,9 +15,10 @@ const CONFETTI = Array.from({ length: 24 }, (_, i) => i);
 
 export default function OnboardingDoneRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const complete = useAuth((s) => s.completeOnboarding);
   const user = useAuth((s) => s.user);
-  const firstName = (user?.display_name ?? '').split(' ')[0] || 'toi';
+  const firstName = (user?.display_name ?? '').split(' ')[0] || t('onboarding.done.fallbackName');
 
   useEffect(() => {
     haptic.success();
@@ -66,10 +68,10 @@ export default function OnboardingDoneRoute() {
           <I.check size={38} color="#FFFFFF" stroke={2.5} />
         </View>
         <Text variant="dispL" center>
-          {`Bienvenue, ${firstName} !`}
+          {t('onboarding.done.greeting', { name: firstName })}
         </Text>
         <Text variant="bodyM" tone="muted" center style={{ marginTop: 6, maxWidth: 260 }}>
-          Ton compte est prêt. Découvre des milliers d'articles et de logements.
+          {t('onboarding.done.subtitle')}
         </Text>
 
         <View style={{ marginTop: 28, width: '100%', gap: 8 }}>
@@ -77,7 +79,7 @@ export default function OnboardingDoneRoute() {
             variant="dark"
             size="compact"
             block
-            label="Découvrir Linky"
+            label={t('onboarding.done.discover')}
             onPress={() => {
               complete();
               router.replace('/(tabs)');
@@ -87,7 +89,7 @@ export default function OnboardingDoneRoute() {
             variant="ghost"
             size="sm"
             block
-            label="Vérifier mon identité maintenant"
+            label={t('onboarding.done.kyc')}
             onPress={() => {
               complete();
               router.replace('/kyc/intro');

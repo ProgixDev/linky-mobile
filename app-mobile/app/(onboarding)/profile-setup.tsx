@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { User as UserIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -22,25 +23,11 @@ import { useToast } from '../../src/components/feedback/Toast';
 
 type RoleId = 'buy' | 'sell' | 'agent';
 
-const ROLES: {
-  id: RoleId;
-  title: string;
-  desc: string;
-  icon: IconKey;
-  image: number;
-}[] = [
-  { id: 'buy', title: 'Acheteur', desc: 'Acheter ou louer', icon: 'cart', image: roleHeroes.buy },
-  { id: 'sell', title: 'Vendeur', desc: 'Vendre tes produits', icon: 'store', image: roleHeroes.sell },
-  { id: 'agent', title: 'Agent immo', desc: 'Lister des biens', icon: 'building', image: roleHeroes.agent },
-];
-
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-
-const LABELS = ['IDENTITÉ', 'VILLE', 'RÔLE'];
-const TITLES = ['Dis-nous qui tu es.', 'Tu es où en Guinée ?', 'Tu veux faire quoi ?'];
 
 export default function ProfileSetupRoute() {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const setRolesInStore = useAuth((s) => s.setRoles);
   const signIn = useAuth((s) => s.signIn);
   const currentUser = useAuth((s) => s.user);
@@ -50,6 +37,26 @@ export default function ProfileSetupRoute() {
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
   const [roles, setRoles] = useState<Set<string>>(new Set());
+
+  // Phase I.3b — ROLES + LABELS + TITLES were module-scope, freezing copy
+  // at the language i18next first resolved. Memo inside the component so
+  // language switches re-render.
+  const ROLES = useMemo(
+    () => [
+      { id: 'buy' as const, title: t('onboarding.profile.roleBuyTitle'), desc: t('onboarding.profile.roleBuyDesc'), icon: 'cart' as IconKey, image: roleHeroes.buy },
+      { id: 'sell' as const, title: t('onboarding.profile.roleSellTitle'), desc: t('onboarding.profile.roleSellDesc'), icon: 'store' as IconKey, image: roleHeroes.sell },
+      { id: 'agent' as const, title: t('onboarding.profile.roleAgentTitle'), desc: t('onboarding.profile.roleAgentDesc'), icon: 'building' as IconKey, image: roleHeroes.agent },
+    ],
+    [t],
+  );
+  const LABELS = useMemo(
+    () => [t('onboarding.profile.labelIdentite'), t('onboarding.profile.labelVille'), t('onboarding.profile.labelRole')],
+    [t],
+  );
+  const TITLES = useMemo(
+    () => [t('onboarding.profile.titleIdentite'), t('onboarding.profile.titleVille'), t('onboarding.profile.titleRole')],
+    [t],
+  );
 
   const toggleRole = (id: string) => {
     setRoles((prev) => {
@@ -101,7 +108,7 @@ export default function ProfileSetupRoute() {
           roles: canonical,
         });
       }
-      toast.show('Profil sauvegardé sur cet appareil — vérifie ta connexion.', 'info');
+      toast.show(t('onboarding.profile.savedLocal'), 'info');
     }
     router.replace('/(onboarding)/done');
   };
@@ -136,7 +143,7 @@ export default function ProfileSetupRoute() {
           }}
         >
           <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primaryDeep, letterSpacing: 0.4 }}>
-            ÉTAPE {step + 1} / 3 · {LABELS[step]}
+            {t('onboarding.profile.stepBadge', { current: step + 1, total: 3, label: LABELS[step] })}
           </Text>
         </View>
 
@@ -156,7 +163,7 @@ export default function ProfileSetupRoute() {
                 tone="muted"
                 style={{ fontSize: 14, lineHeight: 20, letterSpacing: 0, marginBottom: 4 }}
               >
-                Coche tout ce qui s'applique — tu peux changer plus tard.
+                {t('onboarding.profile.rolesHelp')}
               </Text>
               {ROLES.map((r) => (
                 <RoleCard
@@ -174,7 +181,7 @@ export default function ProfileSetupRoute() {
           <Button
             variant="outline"
             size="lg"
-            label="Retour"
+            label={t('common.back')}
             style={{ flex: 1 }}
             onPress={() => (step === 0 ? router.back() : setStep((s) => s - 1))}
             disabled={updateProfile.isPending}
@@ -182,7 +189,7 @@ export default function ProfileSetupRoute() {
           <Button
             variant="dark"
             size="lg"
-            label={step === 2 ? 'Terminer' : 'Continuer'}
+            label={step === 2 ? t('onboarding.profile.finish') : t('common.continue')}
             style={{ flex: 2 }}
             onPress={next}
             loading={step === 2 && updateProfile.isPending}
@@ -207,6 +214,7 @@ function IdentityStep({
   setName: (v: string) => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <View>
       {/* Avatar — photo upload not wired in onboarding (no upload flow here);
@@ -231,10 +239,10 @@ function IdentityStep({
       {/* Inputs */}
       <View style={{ gap: 14 }}>
         <IdField
-          label="NOM COMPLET"
+          label={t('onboarding.profile.nameLabel')}
           value={name}
           onChangeText={setName}
-          placeholder="Ton prénom et nom"
+          placeholder={t('onboarding.profile.namePlaceholder')}
           Icon={UserIcon}
         />
       </View>
@@ -258,6 +266,7 @@ function IdField({
   optional?: boolean;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   return (
     <View>
@@ -267,7 +276,7 @@ function IdField({
         </Text>
         {optional && (
           <Text style={{ fontSize: 10, color: colors.textFaint, letterSpacing: 0 }}>
-            · optionnel
+            · {t('onboarding.profile.optional')}
           </Text>
         )}
       </View>

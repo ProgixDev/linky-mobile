@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, FlatList, View, type ViewToken } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -12,33 +13,40 @@ import { welcomeHeroes } from '../../src/data/photos';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
-const SLIDES = [
-  {
-    hero: welcomeHeroes.marche,
-    title: 'Bienvenue',
-    sub: 'Achète, vends et loue\npartout en Guinée.',
-  },
-  {
-    hero: welcomeHeroes.immobilier,
-    title: "Ta maison\nt'attend",
-    sub: 'Loue ou achète ton prochain logement,\nvérifié et sécurisé.',
-  },
-  {
-    hero: welcomeHeroes.paiement,
-    title: 'Paie en\nsécurité',
-    sub: 'Orange Money, MTN ou carte.\nLe vendeur est payé après ta confirmation.',
-  },
-];
-
 const HERO_RATIO = 0.55;
 const CURVE_HEIGHT = 36;
 const AUTO_ADVANCE_MS = 4000;
 
 export default function WelcomeRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [idx, setIdx] = useState(0);
   const listRef = useRef<FlatList>(null);
   const userPaused = useRef(false);
+
+  // Phase I.3b — SLIDES used to be at module scope, which froze the strings
+  // at the first language i18next resolved. Moved inside the component and
+  // gated on t so swapping language re-builds the slide content.
+  const SLIDES = useMemo(
+    () => [
+      {
+        hero: welcomeHeroes.marche,
+        title: t('onboarding.welcome.slide1Title'),
+        sub: t('onboarding.welcome.slide1Sub'),
+      },
+      {
+        hero: welcomeHeroes.immobilier,
+        title: t('onboarding.welcome.slide2Title'),
+        sub: t('onboarding.welcome.slide2Sub'),
+      },
+      {
+        hero: welcomeHeroes.paiement,
+        title: t('onboarding.welcome.slide3Title'),
+        sub: t('onboarding.welcome.slide3Sub'),
+      },
+    ],
+    [t],
+  );
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     const i = viewableItems[0]?.index ?? 0;
@@ -172,14 +180,14 @@ export default function WelcomeRoute() {
             variant="dark"
             size="lg"
             block
-            label="Commencer"
+            label={t('onboarding.welcome.start')}
             onPress={() => router.push('/(onboarding)/auth-choice')}
           />
           <Button
             variant="outline"
             size="lg"
             block
-            label="J'ai déjà un compte"
+            label={t('onboarding.welcome.haveAccount')}
             onPress={() => router.push('/(onboarding)/auth-choice?mode=login')}
           />
         </View>

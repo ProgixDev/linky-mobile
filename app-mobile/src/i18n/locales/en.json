@@ -40,10 +40,88 @@
     "messagerie": "Messages"
   },
   "onboarding": {
-    "welcome": "Welcome",
-    "tagline": "Guinea Marketplace & Real Estate",
-    "start": "Get started",
-    "haveAccount": "I already have an account"
+    "welcome": {
+      "start": "Get started",
+      "haveAccount": "I already have an account",
+      "slide1Title": "Welcome",
+      "slide1Sub": "Buy, sell and rent\nall across Guinea.",
+      "slide2Title": "Your home\nis waiting",
+      "slide2Sub": "Rent or buy your next home,\nverified and secure.",
+      "slide3Title": "Pay safely",
+      "slide3Sub": "Orange Money, MTN or card.\nThe seller is paid after you confirm."
+    },
+    "authChoice": {
+      "title": "Where are you?",
+      "titleLogin": "Sign back in",
+      "subtitle": "We adapt payment to your region.",
+      "subtitleLogin": "Pick how you signed up to receive your code.",
+      "phoneTitle": "I'm in Guinea",
+      "phoneSub": "Phone & Mobile Money",
+      "emailTitle": "I'm abroad",
+      "emailSub": "Email & Card",
+      "ctaLogin": "Sign in"
+    },
+    "phone": {
+      "badge": "SMS",
+      "title": "Your number.",
+      "subtitle": "We'll send you a 6-digit code to confirm.",
+      "label": "PHONE NUMBER",
+      "placeholder": "6XX XX XX XX",
+      "legal": "By continuing, you accept our <0>terms</0> and our <1>privacy policy</1>.",
+      "cta": "Send the code",
+      "ctaBusy": "Sending…",
+      "errorSend": "Couldn't send the code"
+    },
+    "email": {
+      "badge": "EMAIL",
+      "title": "Your email.",
+      "subtitle": "We'll send you a 6-digit code to confirm.",
+      "label": "EMAIL ADDRESS",
+      "placeholder": "you@example.com",
+      "errorSend": "Couldn't send the code"
+    },
+    "otp": {
+      "badge": "VERIFICATION",
+      "title": "Enter the code.",
+      "sentToEmail": "Sent to",
+      "sentToPhone": "Sent to",
+      "resendIn": "Resend in",
+      "resendCta": "Resend the code",
+      "resendBusy": "Sending…",
+      "resendError": "Couldn't resend",
+      "verify": "Verify",
+      "verifying": "Verifying…",
+      "errorSessionMissing": "OTP session missing — start over",
+      "errorInvalid": "Invalid code"
+    },
+    "profile": {
+      "stepBadge": "STEP {{current}} / {{total}} · {{label}}",
+      "labelIdentite": "IDENTITY",
+      "labelVille": "CITY",
+      "labelRole": "ROLE",
+      "titleIdentite": "Tell us who you are.",
+      "titleVille": "Where are you in Guinea?",
+      "titleRole": "What do you want to do?",
+      "rolesHelp": "Check everything that applies — you can change this later.",
+      "roleBuyTitle": "Buyer",
+      "roleBuyDesc": "Buy or rent",
+      "roleSellTitle": "Seller",
+      "roleSellDesc": "Sell your products",
+      "roleAgentTitle": "Real-estate agent",
+      "roleAgentDesc": "List properties",
+      "finish": "Finish",
+      "nameLabel": "FULL NAME",
+      "namePlaceholder": "Your first and last name",
+      "optional": "optional",
+      "savedLocal": "Profile saved on this device — check your connection."
+    },
+    "done": {
+      "greeting": "Welcome, {{name}}!",
+      "subtitle": "Your account is ready. Discover thousands of items and homes.",
+      "discover": "Explore Linky",
+      "kyc": "Verify my ID now",
+      "fallbackName": "friend"
+    }
   },
   "auth": {
     "phoneTitle": "Your phone number",
