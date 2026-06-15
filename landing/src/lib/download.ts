@@ -1,15 +1,14 @@
-// Direct Android APK download.
+// Stable Android APK download, hosted on Vercel Blob at a fixed path.
 //
-// This points at the EAS build artifact for the current preview build. EAS
-// artifact URLs are public (no login) and stay valid for the build's retention
-// window. Two things to know:
-//   1. To publish a NEW build, replace ANDROID_APK_URL with the new artifact
-//      link (eas build:view <id> --json → .artifacts.buildUrl).
-//   2. For a permanent public download, host the .apk on a CDN / object store
-//      (e.g. Vercel Blob, S3, the client's server) and point this there — the
-//      file is ~238 MB so it should NOT be committed to the repo.
+// The landing serves it at the same-origin /linky.apk (see vercel.json rewrite),
+// so the file saves as "linky.apk" and the share URL stays clean.
+//
+// To ship a NEW build (set-and-forget — the URL never changes):
+//   1. eas build → download the .apk
+//   2. node scripts/upload-apk.mjs <path-to.apk>   (overwrites linky.apk in Blob)
+// No code edit or redeploy needed — the rewrite already points at this URL.
 export const ANDROID_APK_URL =
-  'https://expo.dev/artifacts/eas/GdFLNzWqP8HjDuIaphl4ZOBiw_L9OZMW1ay1OnORhsY.apk';
+  'https://njii6olstwjlpvas.public.blob.vercel-storage.com/linky.apk';
 
 // Same-origin path the download button actually links to. `vercel.json`
 // rewrites `/linky.apk` to ANDROID_APK_URL and sets Content-Disposition so the

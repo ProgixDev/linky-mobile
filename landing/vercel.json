@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/linky.apk",
-      "destination": "https://expo.dev/artifacts/eas/GdFLNzWqP8HjDuIaphl4ZOBiw_L9OZMW1ay1OnORhsY.apk"
+      "destination": "https://njii6olstwjlpvas.public.blob.vercel-storage.com/linky.apk"
     }
   ],
   "headers": [

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { motion } from 'motion/react';
 import { ShieldCheck, Wallet, Sparkles } from 'lucide-react';
 import { AndroidDownloadButton } from './AndroidDownloadButton';
+import { AppStoreBadges } from './AppStoreBadges';
 
 export function Hero() {
   return (
@@ -85,12 +86,15 @@ export function Hero() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15 }}
-            className="mt-10 flex flex-col items-start gap-3"
+            className="mt-10 flex flex-col items-start gap-5"
           >
             <AndroidDownloadButton variant="primary" />
-            <p className="text-[13px] font-medium text-[#1E2825]/75">
-              Installation directe sur Android · iOS et stores bientôt
-            </p>
+            <div className="flex flex-col gap-2.5">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-[#1E2825]/45">
+                Bientôt aussi sur
+              </span>
+              <AppStoreBadges variant="dark" />
+            </div>
           </motion.div>
 
           <motion.div
