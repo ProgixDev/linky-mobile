@@ -7,12 +7,13 @@
 // Path layout:
 //   product:  products/<user_id>/<random>-<safe-filename>   in bucket product-photos
 //   property: properties/<user_id>/<random>-<safe-filename> in bucket property-photos
+//   avatar:   avatars/<user_id>/<random>-<safe-filename>    in bucket avatars
 // The user_id prefix makes housekeeping (e.g. delete-on-account-deletion) trivial.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 
-type Kind = 'product' | 'property';
+type Kind = 'product' | 'property' | 'avatar';
 interface Body { kind: Kind; filename: string; content_type: string }
 
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
@@ -21,12 +22,13 @@ const NAME_RE = /^[A-Za-z0-9._-]{1,80}$/;
 const BUCKETS: Record<Kind, { bucket: string; folder: string }> = {
   product:  { bucket: 'product-photos',  folder: 'products' },
   property: { bucket: 'property-photos', folder: 'properties' },
+  avatar:   { bucket: 'avatars',         folder: 'avatars' },
 };
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
   const x = b as Record<string, unknown>;
-  if (x.kind !== 'product' && x.kind !== 'property') return false;
+  if (x.kind !== 'product' && x.kind !== 'property' && x.kind !== 'avatar') return false;
   if (typeof x.filename !== 'string' || !NAME_RE.test(x.filename)) return false;
   if (typeof x.content_type !== 'string' || !ALLOWED.includes(x.content_type)) return false;
   return true;

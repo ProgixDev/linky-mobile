@@ -24,11 +24,21 @@ const columns: ColumnDef<AdminUser>[] = [
     cell: ({ row }) => {
       const u = row.original;
       const name = u.display_name ?? 'Utilisateur Linky';
+      const initials = name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
       return (
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sunken text-xs font-bold">
-            {name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}
-          </div>
+          {u.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- external Supabase storage URL, no next/image domain config needed
+            <img
+              src={u.avatar_url}
+              alt=""
+              className="h-9 w-9 rounded-full bg-sunken object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sunken text-xs font-bold">
+              {initials}
+            </div>
+          )}
           <div>
             <div className="font-bold">{name}</div>
             <div className="text-xs text-muted tabular-nums">{u.id.slice(0, 8)}…</div>

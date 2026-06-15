@@ -3,35 +3,74 @@
 // display_name + city via the existing update-profile endpoint, no avatar
 // upload yet (deferred to V1.1 — needs the photo-upload-url storage flow).
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { ChevronLeft, User as UserIcon } from 'lucide-react-native';
+import { Camera, ChevronLeft, User as UserIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { CityMapPicker } from '../../src/components/onboarding/CityMapPicker';
 import { useAuth } from '../../src/stores/auth';
-import { useUpdateProfile } from '../../src/data/queries/auth';
+import { useUpdateProfile, useUploadAvatar } from '../../src/data/queries/auth';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
+
+type AvatarMime = 'image/jpeg' | 'image/png' | 'image/webp';
+function resolveMime(asset: ImagePicker.ImagePickerAsset): AvatarMime {
+  const m = asset.mimeType?.toLowerCase();
+  if (m === 'image/jpeg' || m === 'image/png' || m === 'image/webp') return m;
+  const ext = (asset.fileName || asset.uri).toLowerCase().split('.').pop() ?? '';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  return 'image/jpeg';
+}
 
 export default function ProfilEditRoute() {
   const { colors } = useTheme();
   const currentUser = useAuth((s) => s.user);
   const signIn = useAuth((s) => s.signIn);
   const updateProfile = useUpdateProfile();
+  const uploadAvatar = useUploadAvatar();
   const toast = useToast();
 
   const [name, setName] = useState(currentUser?.display_name ?? '');
   const [city, setCity] = useState(currentUser?.city ?? '');
+  const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatar_url ?? '');
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [focusName, setFocusName] = useState(false);
 
+  const initialAvatar = currentUser?.avatar_url ?? '';
   const dirty =
     name.trim() !== (currentUser?.display_name ?? '') ||
-    city.trim() !== (currentUser?.city ?? '');
-  const canSave = dirty && !!name.trim();
+    city.trim() !== (currentUser?.city ?? '') ||
+    avatarUrl !== initialAvatar;
+  const canSave = dirty && !!name.trim() && !uploadAvatar.isPending;
+
+  const onPickAvatar = async () => {
+    if (uploadAvatar.isPending) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      toast.show("Autorise l'accès aux photos pour changer ta photo.", 'danger');
+      return;
+    }
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+    });
+    if (picked.canceled || picked.assets.length === 0) return;
+    const asset = picked.assets[0];
+    try {
+      const url = await uploadAvatar.mutateAsync({ uri: asset.uri, mime: resolveMime(asset) });
+      setAvatarUrl(url);
+    } catch (e) {
+      toast.show(toToastMessage(e, 'Téléversement de la photo échoué.'), 'danger');
+    }
+  };
 
   const onSave = async () => {
     if (!canSave || updateProfile.isPending) return;
@@ -39,6 +78,7 @@ export default function ProfilEditRoute() {
       const res = await updateProfile.mutateAsync({
         display_name: name.trim(),
         city: city.trim(),
+        ...(avatarUrl !== initialAvatar ? { avatar_url: avatarUrl } : {}),
       });
       if (currentUser) signIn({ ...currentUser, ...res.user });
       toast.show('Profil mis à jour.', 'success');
@@ -88,6 +128,65 @@ export default function ProfilEditRoute() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}>
+        {/* Photo de profil */}
+        <View style={{ alignItems: 'center', marginTop: 12 }}>
+          <Pressable
+            onPress={onPickAvatar}
+            disabled={uploadAvatar.isPending}
+            accessibilityRole="button"
+            accessibilityLabel="Changer la photo de profil"
+            style={{ width: 100, height: 100 }}
+          >
+            {avatarUrl ? (
+              <Image
+                source={avatarUrl}
+                contentFit="cover"
+                style={{ width: 100, height: 100, borderRadius: 999, backgroundColor: colors.bgSunken }}
+                transition={120}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 999,
+                  backgroundColor: colors.bgSunken,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <UserIcon size={40} color={colors.textMuted} strokeWidth={1.5} />
+              </View>
+            )}
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 32,
+                height: 32,
+                borderRadius: 999,
+                backgroundColor: colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 2,
+                borderColor: colors.bg,
+              }}
+            >
+              {uploadAvatar.isPending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Camera size={16} color="#FFFFFF" strokeWidth={2} />
+              )}
+            </View>
+          </Pressable>
+          <Pressable onPress={onPickAvatar} disabled={uploadAvatar.isPending} hitSlop={8}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary, marginTop: 10 }}>
+              {uploadAvatar.isPending ? 'Téléversement…' : 'Changer la photo'}
+            </Text>
+          </Pressable>
+        </View>
+
         {/* Nom */}
         <Text
           style={{
