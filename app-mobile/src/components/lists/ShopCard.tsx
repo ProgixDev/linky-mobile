@@ -32,7 +32,8 @@ export function ShopMiniCard({ shop }: { shop: Shop }) {
         {shop.verified && <I.check size={11} color={colors.accent} stroke={2.5} />}
       </View>
       <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-        {shop.productCount} articles · ★ {shop.rating}
+        {shop.productCount} {shop.productCount === 1 ? 'article' : 'articles'}
+        {shop.reviewCount > 0 ? ` · ★ ${shop.rating.toFixed(1)}` : ' · Nouveau'}
       </Text>
     </Pressable>
   );

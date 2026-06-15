@@ -57,6 +57,19 @@ export default function ShopRoute() {
   // ship a mojibake em-dash placeholder ; we now blank that and only show the
   // segment when a real value is present.
   const hasResponseTime = shop.responseTime.trim().length > 0;
+  // Phase Y.2 — count/rating honesty.
+  const articlesLabel = shop.productCount === 1 ? 'Article' : 'Articles';
+  const isNewShop = shop.reviewCount === 0;
+  const hasAbout = shop.about.trim().length > 0;
+  const hasAvatar = typeof shop.avatar === 'string' && shop.avatar.length > 0;
+  const initials = (shop.name || '?')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((s) => s.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -117,16 +130,41 @@ export default function ShopRoute() {
           >
             <View style={{ flexDirection: 'row', gap: 14, alignItems: 'flex-start' }}>
               <View style={{ position: 'relative' }}>
-                <Image
-                  source={shop.avatar}
-                  style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: 20,
-                    backgroundColor: colors.bgSunken,
-                  }}
-                  contentFit="cover"
-                />
+                {hasAvatar ? (
+                  <Image
+                    source={shop.avatar}
+                    style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: 20,
+                      backgroundColor: colors.bgSunken,
+                    }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: 20,
+                      backgroundColor: colors.accentSoft,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    accessibilityLabel={shop.name}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 26,
+                        fontWeight: '700',
+                        color: colors.accentText,
+                        letterSpacing: 0,
+                      }}
+                    >
+                      {initials}
+                    </Text>
+                  </View>
+                )}
                 {shop.verified && (
                   <View
                     style={{
@@ -214,16 +252,20 @@ export default function ShopRoute() {
                     ? `${(shop.followerCount / 1000).toFixed(1)}k`
                     : String(shop.followerCount)
                 }
-                label="Abonnés"
+                label={shop.followerCount === 1 ? 'Abonné' : 'Abonnés'}
               />
               <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 4 }} />
-              <StatColumn value={String(shop.productCount)} label="Articles" />
+              <StatColumn value={String(shop.productCount)} label={articlesLabel} />
               <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 4 }} />
-              <StatColumn
-                value={shop.rating.toFixed(1)}
-                label={`${shop.reviewCount} avis`}
-                trailing={<Star size={11} color={colors.accent} fill={colors.accent} />}
-              />
+              {isNewShop ? (
+                <StatColumn value="Nouveau" label="Pas encore d'avis" />
+              ) : (
+                <StatColumn
+                  value={shop.rating.toFixed(1)}
+                  label={`${shop.reviewCount} avis`}
+                  trailing={<Star size={11} color={colors.accent} fill={colors.accent} />}
+                />
+              )}
             </View>
 
             {/* Actions */}
@@ -348,26 +390,28 @@ export default function ShopRoute() {
               <View>
                 <Text
                   style={{
-                    fontSize: 36,
+                    fontSize: isNewShop ? 22 : 36,
                     fontWeight: '700',
                     color: colors.text,
-                    lineHeight: 40,
-                    fontVariant: ['tabular-nums'],
-                    letterSpacing: -1,
+                    lineHeight: isNewShop ? 26 : 40,
+                    fontVariant: isNewShop ? undefined : ['tabular-nums'],
+                    letterSpacing: isNewShop ? 0 : -1,
                   }}
                 >
-                  {shop.rating.toFixed(1)}
+                  {isNewShop ? 'Nouveau' : shop.rating.toFixed(1)}
                 </Text>
-                <View style={{ flexDirection: 'row', gap: 1, marginTop: 4 }}>
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <Star
-                      key={i}
-                      size={13}
-                      color={i < Math.round(shop.rating) ? colors.accent : colors.border}
-                      fill={i < Math.round(shop.rating) ? colors.accent : 'transparent'}
-                    />
-                  ))}
-                </View>
+                {!isNewShop && (
+                  <View style={{ flexDirection: 'row', gap: 1, marginTop: 4 }}>
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <Star
+                        key={i}
+                        size={13}
+                        color={i < Math.round(shop.rating) ? colors.accent : colors.border}
+                        fill={i < Math.round(shop.rating) ? colors.accent : 'transparent'}
+                      />
+                    ))}
+                  </View>
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <Text
@@ -378,22 +422,25 @@ export default function ShopRoute() {
                     letterSpacing: 0,
                   }}
                 >
-                  Note basée sur les {shop.reviewCount} avis vérifiés de clients ayant acheté
-                  chez {shop.name}.
+                  {isNewShop
+                    ? `Pas encore d'avis pour ${shop.name}. Sois le premier à laisser un retour après ton achat.`
+                    : `Note basée sur les ${shop.reviewCount} avis vérifiés de clients ayant acheté chez ${shop.name}.`}
                 </Text>
               </View>
             </View>
-            <Text
-              style={{
-                fontSize: 13,
-                color: colors.textMuted,
-                marginTop: 20,
-                textAlign: 'center',
-                letterSpacing: 0,
-              }}
-            >
-              Les avis détaillés arrivent bientôt.
-            </Text>
+            {!isNewShop && (
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: colors.textMuted,
+                  marginTop: 20,
+                  textAlign: 'center',
+                  letterSpacing: 0,
+                }}
+              >
+                Les avis détaillés arrivent bientôt.
+              </Text>
+            )}
           </View>
         )}
 
@@ -422,12 +469,15 @@ export default function ShopRoute() {
               <Text
                 style={{
                   fontSize: 14.5,
-                  color: colors.text,
+                  color: hasAbout ? colors.text : colors.textMuted,
                   lineHeight: 22,
                   letterSpacing: 0,
+                  fontStyle: hasAbout ? 'normal' : 'italic',
                 }}
               >
-                {shop.about}
+                {hasAbout
+                  ? shop.about
+                  : "Cette boutique n'a pas encore ajouté de description."}
               </Text>
             </View>
 
