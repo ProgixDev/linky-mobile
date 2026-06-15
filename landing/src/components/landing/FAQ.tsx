@@ -37,13 +37,13 @@ const FAQS: { q: string; a: string }[] = [
 export function FAQ() {
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section id="faq" className="py-20 md:py-28">
-      <div className="mx-auto max-w-3xl px-6 lg:px-10">
+    <section id="faq" className="scroll-mt-20 py-20 md:py-28">
+      <div className="mx-auto max-w-3xl px-5 sm:px-6 lg:px-10">
         <div className="text-center">
           <div className="inline-flex items-center rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted">
             Questions fréquentes
           </div>
-          <h2 className="font-display mt-5 text-4xl font-bold tracking-tight md:text-5xl">
+          <h2 className="font-display mt-5 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             On répond aux essentiels.
           </h2>
         </div>
@@ -55,7 +55,8 @@ export function FAQ() {
               <div key={f.q}>
                 <button
                   onClick={() => setOpen(isOpen ? null : i)}
-                  className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-sunken/40"
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left transition-colors hover:bg-sunken/40 sm:px-6"
                 >
                   <span className="font-display text-base font-bold tracking-tight md:text-lg">
                     {f.q}
@@ -69,7 +70,7 @@ export function FAQ() {
                   </div>
                 </button>
                 {isOpen && (
-                  <div className="px-6 pb-6 text-[15px] leading-relaxed text-muted">
+                  <div className="px-5 pb-6 text-[15px] leading-relaxed text-muted sm:px-6">
                     {f.a}
                   </div>
                 )}

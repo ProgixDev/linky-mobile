@@ -16,24 +16,24 @@ export function PageShell({ eyebrow, title, subtitle, children }: PageShellProps
       <header className="relative overflow-hidden pt-32 pb-12 md:pt-40 md:pb-16">
         <div className="pointer-events-none absolute -left-32 top-20 -z-10 h-[420px] w-[420px] rounded-full bg-[#0e6e55]/12 blur-3xl" />
         <div className="pointer-events-none absolute -right-32 top-32 -z-10 h-[360px] w-[360px] rounded-full bg-[#e8a53d]/18 blur-3xl" />
-        <div className="mx-auto max-w-4xl px-6 lg:px-10">
+        <div className="mx-auto max-w-4xl px-5 sm:px-6 lg:px-10">
           {eyebrow && (
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-[#5e6864] ring-1 ring-[#E5DED1]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#0e6e55]" />
               {eyebrow}
             </div>
           )}
-          <h1 className="font-display mt-5 text-[40px] font-bold leading-[1.05] tracking-tight text-[#0E1311] md:text-[60px]">
+          <h1 className="font-display mt-5 text-[clamp(2rem,8vw,2.5rem)] font-bold leading-[1.05] tracking-tight text-[#0E1311] sm:text-5xl md:text-[60px]">
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[#5e6864]">
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#5e6864] sm:text-lg">
               {subtitle}
             </p>
           )}
         </div>
       </header>
-      <section className="mx-auto max-w-4xl px-6 pb-24 lg:px-10 md:pb-32">
+      <section className="mx-auto max-w-4xl px-5 pb-24 sm:px-6 md:pb-32 lg:px-10">
         {children}
       </section>
       <Footer />

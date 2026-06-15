@@ -57,12 +57,12 @@ function PartnerLogo({ name }: { name: string }) {
 export function Trust() {
   return (
     <section className="bg-surface py-20 md:py-28">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-10">
         <div className="mx-auto max-w-2xl text-center">
           <div className="inline-flex items-center rounded-full border border-line bg-[#F7F3EC] px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted">
             Confiance
           </div>
-          <h2 className="font-display mt-5 text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl">
+          <h2 className="font-display mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
             Pourquoi des milliers de Guinéens nous confient leur argent.
           </h2>
         </div>

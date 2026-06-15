@@ -3,15 +3,18 @@ import { AndroidDownloadButton } from './AndroidDownloadButton';
 
 export function CTABand() {
   return (
-    <section id="download" className="px-6 py-20 lg:px-10 md:py-24">
+    <section
+      id="download"
+      className="scroll-mt-20 px-5 py-20 sm:px-6 md:py-24 lg:px-10"
+    >
       <div className="mx-auto max-w-7xl">
-        <div className="grain relative overflow-hidden rounded-[36px] bg-gradient-to-br from-primary via-primary-deep to-[#063929] px-8 py-16 text-white md:px-16 md:py-24">
+        <div className="grain relative overflow-hidden rounded-[28px] bg-gradient-to-br from-primary via-primary-deep to-[#063929] px-6 py-14 text-white sm:rounded-[36px] sm:px-8 sm:py-16 md:px-16 md:py-24">
           {/* Saffron bleed */}
           <div className="pointer-events-none absolute -right-32 -top-32 h-[420px] w-[420px] rounded-full bg-accent/30 blur-3xl" />
           <div className="pointer-events-none absolute -left-32 -bottom-32 h-[420px] w-[420px] rounded-full bg-[#5FE3B4]/20 blur-3xl" />
 
           <div className="relative z-10 mx-auto max-w-3xl text-center">
-            <h2 className="font-display text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
+            <h2 className="font-display text-[clamp(2rem,8vw,2.5rem)] font-bold leading-[1.05] tracking-tight md:text-6xl">
               Télécharge Linky.{' '}
               <span className="text-accent">C&apos;est gratuit.</span>
             </h2>

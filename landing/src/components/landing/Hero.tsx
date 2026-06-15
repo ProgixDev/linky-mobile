@@ -18,9 +18,21 @@ export function Hero() {
         className="object-cover object-center"
         style={{ zIndex: 0 }}
       />
-      {/* Readability gradient — fade the left so copy stays legible but image shows */}
+      {/* Readability gradient.
+          On phones the copy spans the full width, so a left→right fade leaves
+          the right edge of the text sitting on a bright image. We stack a
+          vertical bottom-up wash (mobile-friendly) under the horizontal fade
+          so copy stays legible at every breakpoint. */}
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 md:hidden"
+        style={{
+          zIndex: 1,
+          background:
+            'linear-gradient(to bottom, rgba(247,243,236,0.92) 0%, rgba(247,243,236,0.82) 45%, rgba(247,243,236,0.55) 75%, rgba(247,243,236,0.25) 100%)',
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0 hidden md:block"
         style={{
           zIndex: 1,
           background:
@@ -29,7 +41,7 @@ export function Hero() {
       />
 
       <div
-        className="relative mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-6 pt-32 pb-20 lg:px-10"
+        className="relative mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-5 pt-28 pb-20 sm:px-6 lg:px-10"
         style={{ zIndex: 2 }}
       >
         <div className="max-w-3xl">
@@ -49,7 +61,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.05 }}
-            className="font-display mt-6 text-[44px] font-bold leading-[1.02] tracking-tight text-[#0E1311] md:text-[68px]"
+            className="font-display mt-6 text-[clamp(2.25rem,9vw,2.75rem)] font-bold leading-[1.04] tracking-tight text-[#0E1311] sm:text-5xl md:text-[68px] md:leading-[1.02]"
           >
             Le marché et{' '}
             <span className="bg-gradient-to-r from-[#0e6e55] to-[#e8a53d] bg-clip-text text-transparent">
@@ -76,7 +88,7 @@ export function Hero() {
             className="mt-10 flex flex-col items-start gap-3"
           >
             <AndroidDownloadButton variant="primary" />
-            <p className="text-[13px] font-medium text-[#1E2825]/60">
+            <p className="text-[13px] font-medium text-[#1E2825]/75">
               Installation directe sur Android · iOS et stores bientôt
             </p>
           </motion.div>

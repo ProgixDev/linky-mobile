@@ -108,13 +108,45 @@ body {
   font-feature-settings: "ss01", "cv11";
 }
 
+/* Guard against accidental horizontal overflow on narrow phones. */
+html,
+body {
+  overflow-x: clip;
+}
+
 html {
   scroll-behavior: smooth;
+  /* Keep anchor targets clear of the fixed nav when jumping via #links. */
+  scroll-padding-top: 5rem;
+}
+
+/* Honour users who ask for reduced motion: kill long/looping animations,
+   smooth-scroll, and transitions. Motion (framer) also reads this token. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 button {
   font: inherit;
   cursor: pointer;
+}
+
+/* Consistent, accessible focus ring for keyboard users across the site.
+   Mouse clicks don't trigger :focus-visible, so this stays unobtrusive. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 a {

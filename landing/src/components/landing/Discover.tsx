@@ -1,20 +1,21 @@
 'use client';
 
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Sparkles, Heart, MessageCircle, Bookmark } from 'lucide-react';
 
 export function Discover() {
+  const reduceMotion = useReducedMotion();
   return (
     <section
       id="decouvrir"
-      className="relative overflow-hidden bg-[#0E1311] py-24 text-white md:py-32"
+      className="relative scroll-mt-20 overflow-hidden bg-[#0E1311] py-20 text-white md:py-32"
     >
       <div className="pointer-events-none absolute inset-0 opacity-60">
         <div className="absolute -left-32 top-1/4 h-[420px] w-[420px] rounded-full bg-primary/30 blur-3xl" />
         <div className="absolute right-[-10%] bottom-0 h-[360px] w-[360px] rounded-full bg-accent/25 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-20 lg:px-10">
+      <div className="relative mx-auto grid max-w-7xl gap-12 px-5 sm:px-6 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-20 lg:px-10">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1.5 ring-1 ring-accent/30">
             <Sparkles size={13} className="text-accent" />
@@ -22,7 +23,7 @@ export function Discover() {
               Découvrir
             </span>
           </div>
-          <h2 className="font-display mt-5 text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
+          <h2 className="font-display mt-5 text-[clamp(2rem,8vw,2.5rem)] font-bold leading-[1.05] tracking-tight md:text-6xl">
             Le marché qui se{' '}
             <span className="bg-gradient-to-r from-[#5FE3B4] to-accent bg-clip-text text-transparent">
               feuillette.
@@ -84,7 +85,11 @@ export function Discover() {
                 ].map((it, i) => (
                   <div key={i} className="flex flex-col items-center gap-1">
                     <motion.div
-                      animate={i === 0 ? { scale: [1, 1.12, 1] } : undefined}
+                      animate={
+                        i === 0 && !reduceMotion
+                          ? { scale: [1, 1.12, 1] }
+                          : undefined
+                      }
                       transition={{ duration: 1.5, repeat: Infinity }}
                       className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 ring-1 ring-white/15"
                     >

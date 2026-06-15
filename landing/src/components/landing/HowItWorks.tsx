@@ -61,13 +61,13 @@ export function HowItWorks() {
   const steps = STEPS[audience];
 
   return (
-    <section className="py-20 md:py-28" id="how">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
+    <section className="scroll-mt-20 py-20 md:py-28" id="how">
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-10">
         <div className="mx-auto max-w-2xl text-center">
           <div className="inline-flex items-center rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted">
             Comment ça marche
           </div>
-          <h2 className="font-display mt-5 text-4xl font-bold tracking-tight md:text-5xl">
+          <h2 className="font-display mt-5 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             3 étapes, peu importe le côté.
           </h2>
         </div>
@@ -80,9 +80,10 @@ export function HowItWorks() {
               <button
                 key={a}
                 onClick={() => setAudience(a)}
-                className={`rounded-full px-6 py-2.5 text-sm font-bold transition-all ${
+                aria-pressed={active}
+                className={`inline-flex min-h-11 items-center rounded-full px-5 text-sm font-bold transition-all sm:px-6 ${
                   active
-                    ? 'bg-black text-white'
+                    ? 'bg-[#0E1311] text-white'
                     : 'text-muted hover:text-[#0E1311]'
                 }`}
               >

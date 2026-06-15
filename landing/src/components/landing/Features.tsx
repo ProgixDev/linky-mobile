@@ -15,8 +15,8 @@ import {
  */
 export function Features() {
   return (
-    <section id="comment" className="bg-[#F7F3EC] py-20 md:py-28">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
+    <section id="comment" className="scroll-mt-20 bg-[#F7F3EC] py-20 md:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-10">
         {/* Heading — two-column, copy left, sub-text right */}
         <div className="grid items-end gap-8 md:grid-cols-[1.4fr_1fr]">
           <div>
@@ -24,7 +24,7 @@ export function Features() {
               <span className="h-1.5 w-1.5 rounded-full bg-[#0e6e55]" />
               Pourquoi Linky
             </div>
-            <h2 className="font-display mt-5 text-[40px] font-bold leading-[1.05] tracking-tight text-[#0E1311] md:text-[56px]">
+            <h2 className="font-display mt-5 text-[clamp(2rem,8vw,2.5rem)] font-bold leading-[1.05] tracking-tight text-[#0E1311] md:text-[56px]">
               Un seul outil.{' '}
               <span className="italic font-normal text-[#5e6864]">
                 Cinq raisons d&apos;y rester.
@@ -41,7 +41,7 @@ export function Features() {
         {/* Bento */}
         <div className="mt-14 grid gap-5 lg:grid-cols-12">
           {/* HERO — Marketplace (left, tall, 2 rows) */}
-          <article className="relative overflow-hidden rounded-[28px] bg-white p-8 ring-1 ring-[#E5DED1] lg:col-span-7 lg:row-span-2 lg:p-10">
+          <article className="relative overflow-hidden rounded-[28px] bg-white p-6 ring-1 ring-[#E5DED1] sm:p-8 lg:col-span-7 lg:row-span-2 lg:p-10">
             <div className="flex h-full flex-col">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -100,7 +100,7 @@ export function Features() {
           </article>
 
           {/* KYC big-stat dark card */}
-          <article className="rounded-[28px] bg-[#0E1311] p-8 text-white lg:col-span-5">
+          <article className="rounded-[28px] bg-[#0E1311] p-6 text-white sm:p-8 lg:col-span-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[1.2px] text-[#e8a53d]">
@@ -129,7 +129,7 @@ export function Features() {
           </article>
 
           {/* Wallet — emerald gradient */}
-          <article className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#118866] via-[#0A5240] to-[#063929] p-8 text-white lg:col-span-5">
+          <article className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#118866] via-[#0A5240] to-[#063929] p-6 text-white sm:p-8 lg:col-span-5">
             <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-[#e8a53d]/30 blur-3xl" />
             <div className="relative">
               <div className="flex items-center justify-between">
@@ -157,7 +157,7 @@ export function Features() {
           </article>
 
           {/* Découvrir — image-rich, wider */}
-          <article className="relative overflow-hidden rounded-[28px] bg-white p-8 ring-1 ring-[#E5DED1] lg:col-span-7">
+          <article className="relative overflow-hidden rounded-[28px] bg-white p-6 ring-1 ring-[#E5DED1] sm:p-8 lg:col-span-7">
             <div className="grid items-center gap-8 sm:grid-cols-[1fr_140px]">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[1.2px] text-[#0e6e55]">
@@ -201,7 +201,7 @@ export function Features() {
           </article>
 
           {/* Escrow — soft emerald */}
-          <article className="rounded-[28px] bg-[#E8F2EE] p-8 ring-1 ring-[#0e6e55]/10 lg:col-span-5">
+          <article className="rounded-[28px] bg-[#E8F2EE] p-6 ring-1 ring-[#0e6e55]/10 sm:p-8 lg:col-span-5">
             <div className="text-[11px] font-bold uppercase tracking-[1.2px] text-[#0A5240]">
               05 · Escrow
             </div>

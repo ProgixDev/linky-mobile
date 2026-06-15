@@ -32,9 +32,9 @@ export function Diaspora() {
   return (
     <section
       id="diaspora"
-      className="relative overflow-hidden py-20 md:py-28"
+      className="relative scroll-mt-20 overflow-hidden py-20 md:py-28"
     >
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-10">
         <div className="grid gap-12 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:gap-16">
           {/* Left: visual */}
           <motion.div
@@ -53,7 +53,7 @@ export function Diaspora() {
                     Pour la diaspora
                   </span>
                 </div>
-                <h3 className="font-display mt-6 text-[40px] font-bold leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">
+                <h3 className="font-display mt-6 text-[clamp(2rem,8vw,2.5rem)] font-bold leading-[0.98] tracking-tight sm:text-5xl sm:leading-[0.95] md:text-6xl">
                   Reste connecté{' '}
                   <span className="text-accent">au pays.</span>
                 </h3>
@@ -80,7 +80,7 @@ export function Diaspora() {
             <div className="inline-flex items-center rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted">
               Diaspora
             </div>
-            <h2 className="font-display mt-5 text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl">
+            <h2 className="font-display mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
               Depuis Paris, Bruxelles ou Washington — comme si tu étais à Conakry.
             </h2>
 

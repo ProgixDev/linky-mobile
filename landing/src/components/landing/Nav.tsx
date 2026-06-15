@@ -30,8 +30,12 @@ export function Nav() {
           : 'border-b border-transparent bg-transparent'
       }`}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-10">
-        <a href="#" className="flex items-center gap-2.5">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-10">
+        <a
+          href="#"
+          aria-label="Linky — accueil"
+          className="flex items-center gap-2.5 rounded-full"
+        >
           <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-primary">
             <Image
               src="/images/adaptive-icon-dark.png"
@@ -51,7 +55,7 @@ export function Nav() {
             <a
               key={l.href}
               href={l.href}
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-[#0E1311]"
+              className="rounded-full px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-[#0E1311] focus-visible:bg-surface focus-visible:text-[#0E1311]"
             >
               {l.label}
             </a>
@@ -80,23 +84,25 @@ export function Nav() {
         </div>
 
         <button
-          aria-label="Menu"
+          aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
+          aria-expanded={open}
+          aria-controls="mobile-nav"
           onClick={() => setOpen((s) => !s)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface md:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-[#0E1311] transition-colors hover:bg-[#EFE8DA] md:hidden"
         >
           {open ? <X size={18} /> : <Menu size={18} />}
         </button>
       </div>
 
       {open && (
-        <div className="border-t border-line bg-surface md:hidden">
+        <div id="mobile-nav" className="border-t border-line bg-surface md:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-1 px-6 py-3">
             {NAV_LINKS.map((l) => (
               <a
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm font-medium text-muted hover:bg-[#F7F3EC] hover:text-[#0E1311]"
+                className="flex min-h-11 items-center rounded-lg px-3 text-[15px] font-medium text-muted transition-colors hover:bg-[#F7F3EC] hover:text-[#0E1311] focus-visible:bg-[#F7F3EC] focus-visible:text-[#0E1311]"
               >
                 {l.label}
               </a>
@@ -104,9 +110,9 @@ export function Nav() {
             <a
               href="#download"
               onClick={() => setOpen(false)}
-              className="mt-2 inline-flex h-11 items-center justify-center rounded-full bg-black px-5 text-sm font-semibold text-white"
+              className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-[#0E1311] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#1E2825]"
             >
-              Télécharger l'app
+              Télécharger l&apos;app
             </a>
           </div>
         </div>

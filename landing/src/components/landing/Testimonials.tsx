@@ -39,12 +39,12 @@ const QUOTES: Quote[] = [
 export function Testimonials() {
   return (
     <section className="py-20 md:py-28">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-10">
         <div className="mx-auto max-w-2xl text-center">
           <div className="inline-flex items-center rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted">
             Avis utilisateurs
           </div>
-          <h2 className="font-display mt-5 text-4xl font-bold tracking-tight md:text-5xl">
+          <h2 className="font-display mt-5 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             Ils nous font confiance.
           </h2>
         </div>

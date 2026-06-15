@@ -43,7 +43,7 @@ const LINKS: { title: string; items: { label: string; href: string }[] }[] = [
 export function Footer() {
   return (
     <footer className="bg-[#0E1311] py-16 text-white md:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-10">
         <div className="grid gap-12 lg:grid-cols-[1.3fr_2fr] lg:gap-20">
           <div>
             <div className="flex items-center gap-3">
@@ -66,11 +66,17 @@ export function Footer() {
             </p>
 
             <div className="mt-7 flex gap-2">
-              {[AtSign, Hash, Send, Play].map((Icon, i) => (
+              {[
+                { Icon: AtSign, label: 'Email' },
+                { Icon: Hash, label: 'Réseaux sociaux' },
+                { Icon: Send, label: 'Telegram' },
+                { Icon: Play, label: 'Vidéos' },
+              ].map(({ Icon, label }) => (
                 <a
-                  key={i}
+                  key={label}
                   href="#"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 transition-colors hover:bg-white/10"
+                  aria-label={label}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 transition-colors hover:bg-white/10 focus-visible:bg-white/10"
                 >
                   <Icon size={16} />
                 </a>
@@ -89,7 +95,7 @@ export function Footer() {
                     <li key={item.label}>
                       <a
                         href={item.href}
-                        className="text-sm text-white/80 transition-colors hover:text-white"
+                        className="inline-block py-0.5 text-sm text-white/80 transition-colors hover:text-white focus-visible:text-white"
                       >
                         {item.label}
                       </a>
