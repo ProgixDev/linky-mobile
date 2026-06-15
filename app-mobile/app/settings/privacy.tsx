@@ -9,6 +9,7 @@ import {
   Lock,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Switch } from '../../src/components/primitives/Switch';
@@ -19,6 +20,7 @@ import { useToast } from '../../src/components/feedback/Toast';
 
 export default function PrivacyRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const toast = useToast();
   // Backed by the persisted prefs store (MMKV) so they survive an app reopen.
   const personalize = usePrefs((s) => s.privacyPersonalize);
@@ -37,19 +39,19 @@ export default function PrivacyRoute() {
   // workflow, not an automated 30-day countdown.
   const onDeleteAccount = () => {
     Alert.alert(
-      'Supprimer mon compte',
-      "On va ouvrir ton application mail pour envoyer une demande à notre équipe support. Ils confirmeront la suppression par retour de mail.",
+      t('settings.privacy.deleteConfirmTitle'),
+      t('settings.privacy.deleteConfirmBody'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Continuer',
+          text: t('settings.privacy.deleteContinue'),
           style: 'destructive',
           onPress: () => {
             Linking.openURL(
               'mailto:support@linky.gn?subject=' +
                 encodeURIComponent('Demande de suppression de mon compte Linky'),
             ).catch(() => {
-              toast.show('Impossible d\'ouvrir ton application mail.', 'danger');
+              toast.show(t('settings.privacy.deleteMailError'), 'danger');
             });
           },
         },
@@ -64,42 +66,42 @@ export default function PrivacyRoute() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <ScreenHeader
-          title="Confidentialité"
-          subtitle="Tu décides ce que Linky peut faire de tes données."
+          title={t('settings.privacy.title')}
+          subtitle={t('settings.privacy.subtitle')}
         />
 
-        <SectionLabel label="Données" />
+        <SectionLabel label={t('settings.privacy.sectionData')} />
         <Card>
           <ToggleRow
             Icon={Sparkles}
-            label="Recommandations personnalisées"
-            sub="Adapte ton feed Découvrir à tes goûts."
+            label={t('settings.privacy.togglePersonalize')}
+            sub={t('settings.privacy.togglePersonalizeSub')}
             value={personalize}
             onChange={setPersonalize}
           />
           <ToggleRow
             Icon={BarChart3}
-            label="Statistiques anonymes"
-            sub="Aide-nous à améliorer l'app avec des stats agrégées."
+            label={t('settings.privacy.toggleAnalytics')}
+            sub={t('settings.privacy.toggleAnalyticsSub')}
             value={analytics}
             onChange={setAnalytics}
           />
           <ToggleRow
             Icon={Eye}
-            label="Pub personnalisée"
-            sub="Reçois des promos plus pertinentes."
+            label={t('settings.privacy.toggleAds')}
+            sub={t('settings.privacy.toggleAdsSub')}
             value={adTracking}
             onChange={setAdTracking}
             last
           />
         </Card>
 
-        <SectionLabel label="Profil" />
+        <SectionLabel label={t('settings.privacy.sectionProfile')} />
         <Card>
           <ToggleRow
             Icon={Lock}
-            label="Profil public"
-            sub="Les autres utilisateurs peuvent voir ton nom et tes annonces."
+            label={t('settings.privacy.toggleProfilePublic')}
+            sub={t('settings.privacy.toggleProfilePublicSub')}
             value={profilePublic}
             onChange={setProfilePublic}
             last
@@ -110,19 +112,19 @@ export default function PrivacyRoute() {
             it's now an honest "Bientôt" row (no mailto, no fake "we sent you
             an email"). "Supprimer mon compte" stays actionable via support
             mail with an explicit confirm dialog — GDPR requires a path. */}
-        <SectionLabel label="Mes données" />
+        <SectionLabel label={t('settings.privacy.sectionMyData')} />
         <Card>
           <ActionRow
             Icon={Download}
-            label="Télécharger mes données"
-            sub="Bientôt — pour l'instant, écris-nous à support@linky.gn."
+            label={t('settings.privacy.downloadLabel')}
+            sub={t('settings.privacy.downloadSub')}
             comingSoon
-            onPress={() => toast.show('Bientôt disponible.', 'info')}
+            onPress={() => toast.show(t('common.comingSoonAvailable'), 'info')}
           />
           <ActionRow
             Icon={Trash2}
-            label="Supprimer mon compte"
-            sub="Demande à notre équipe la suppression définitive de ton compte."
+            label={t('settings.privacy.deleteLabel')}
+            sub={t('settings.privacy.deleteSub')}
             danger
             last
             onPress={onDeleteAccount}
@@ -260,6 +262,7 @@ function ActionRow({
   onPress?: () => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const fg = comingSoon ? colors.textMuted : danger ? colors.danger : colors.text;
   return (
     <Pressable
@@ -319,7 +322,7 @@ function ActionRow({
                   letterSpacing: 0.4,
                 }}
               >
-                BIENTÔT
+                {t('settings.privacy.bientotBadge')}
               </Text>
             </View>
           )}

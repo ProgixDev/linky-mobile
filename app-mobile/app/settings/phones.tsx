@@ -1,6 +1,7 @@
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Phone, ShieldCheck } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
@@ -12,6 +13,7 @@ import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 
 export default function PhonesRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -20,8 +22,8 @@ export default function PhonesRoute() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <ScreenHeader
-          title="Numéros de téléphone"
-          subtitle="Les numéros utilisés pour ta connexion et tes notifications SMS."
+          title={t('settings.phones.title')}
+          subtitle={t('settings.phones.subtitle')}
         />
 
         <View style={{ paddingHorizontal: 24 }}>
@@ -66,11 +68,11 @@ export default function PhonesRoute() {
                   letterSpacing: 0.5,
                 }}
               >
-                BIENTÔT
+                {t('settings.privacy.bientotBadge')}
               </Text>
             </View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-              Gestion des numéros
+              {t('settings.phones.cardTitle')}
             </Text>
             <Text
               style={{
@@ -81,7 +83,7 @@ export default function PhonesRoute() {
                 lineHeight: 17,
               }}
             >
-              Tu pourras bientôt ajouter ou changer ton numéro de téléphone ici. En attendant, ton numéro de connexion reste actif.
+              {t('settings.phones.cardSub')}
             </Text>
           </View>
         </View>
@@ -107,7 +109,7 @@ export default function PhonesRoute() {
                 letterSpacing: 0,
               }}
             >
-              Tes numéros restent privés. On ne les partage jamais avec les autres utilisateurs sans ton accord.
+              {t('settings.phones.note')}
             </Text>
           </View>
         </View>

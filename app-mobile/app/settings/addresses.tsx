@@ -1,6 +1,7 @@
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, Truck } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
@@ -12,6 +13,7 @@ import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 
 export default function AddressesRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -20,8 +22,8 @@ export default function AddressesRoute() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <ScreenHeader
-          title="Adresses"
-          subtitle="Où on doit livrer ou venir chercher tes commandes."
+          title={t('settings.addresses.title')}
+          subtitle={t('settings.addresses.subtitle')}
         />
 
         <View style={{ paddingHorizontal: 24 }}>
@@ -66,11 +68,11 @@ export default function AddressesRoute() {
                   letterSpacing: 0.5,
                 }}
               >
-                BIENTÔT
+                {t('settings.privacy.bientotBadge')}
               </Text>
             </View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-              Gestion des adresses
+              {t('settings.addresses.cardTitle')}
             </Text>
             <Text
               style={{
@@ -81,7 +83,7 @@ export default function AddressesRoute() {
                 lineHeight: 17,
               }}
             >
-              Tu pourras bientôt enregistrer une adresse de livraison ici. En attendant, indique-la au moment de payer.
+              {t('settings.addresses.cardSub')}
             </Text>
           </View>
         </View>
@@ -107,7 +109,7 @@ export default function AddressesRoute() {
                 letterSpacing: 0,
               }}
             >
-              L'adresse principale est utilisée par défaut pour les livraisons. Tu peux toujours en changer au moment de payer.
+              {t('settings.addresses.note')}
             </Text>
           </View>
         </View>

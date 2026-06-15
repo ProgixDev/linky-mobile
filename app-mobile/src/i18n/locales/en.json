@@ -215,7 +215,70 @@
     "languageTitle": "Language",
     "languageSubtitle": "Pick the app language.",
     "languageDefault": "Default language",
-    "languageComingSoonHint": "Coming soon"
+    "languageComingSoonHint": "Coming soon",
+    "theme": {
+      "title": "Theme",
+      "subtitle": "Pick the app appearance.",
+      "systemLabel": "System",
+      "systemSub": "Follow your device setting",
+      "lightLabel": "Light",
+      "lightSub": "Always light mode",
+      "darkLabel": "Dark",
+      "darkSub": "Always dark mode"
+    },
+    "dataSaver": {
+      "title": "Data saver",
+      "subtitle": "Ideal on 3G or a limited plan.",
+      "toggleLabel": "Enable data saver",
+      "on": "On",
+      "off": "Off",
+      "impactLabel": "WHAT CHANGES",
+      "row1Title": "Videos paused by default",
+      "row1Sub": "No autoplay in Discover or on listings.",
+      "row2Title": "Lower image quality",
+      "row2Sub": "Photos load in standard quality instead of HD.",
+      "row3Title": "Single-column list on 3G",
+      "row3Sub": "The market switches to a compact view when the network is slow.",
+      "autoNote": "We turn this on automatically when we detect a slow connection, even if you haven't enabled it."
+    },
+    "addresses": {
+      "title": "Addresses",
+      "subtitle": "Where to deliver or pick up your orders.",
+      "cardTitle": "Address management",
+      "cardSub": "You'll soon be able to save a delivery address here. For now, share it at checkout.",
+      "note": "Your main address is used by default. You can still pick a different one at checkout."
+    },
+    "phones": {
+      "title": "Phone numbers",
+      "subtitle": "Numbers used for sign-in and SMS notifications.",
+      "cardTitle": "Phone management",
+      "cardSub": "You'll soon be able to add or change your phone number here. Your sign-in number stays active.",
+      "note": "Your numbers stay private. We never share them with other users without your consent."
+    },
+    "privacy": {
+      "title": "Privacy",
+      "subtitle": "You decide what Linky can do with your data.",
+      "sectionData": "Data",
+      "sectionProfile": "Profile",
+      "sectionMyData": "My data",
+      "togglePersonalize": "Personalized recommendations",
+      "togglePersonalizeSub": "Tailor your Discover feed to your taste.",
+      "toggleAnalytics": "Anonymous analytics",
+      "toggleAnalyticsSub": "Help us improve the app with aggregate stats.",
+      "toggleAds": "Personalized ads",
+      "toggleAdsSub": "See more relevant promotions.",
+      "toggleProfilePublic": "Public profile",
+      "toggleProfilePublicSub": "Other users can see your name and listings.",
+      "downloadLabel": "Download my data",
+      "downloadSub": "Coming soon — for now, email us at support@linky.gn.",
+      "deleteLabel": "Delete my account",
+      "deleteSub": "Ask our team to permanently delete your account.",
+      "deleteConfirmTitle": "Delete my account",
+      "deleteConfirmBody": "We'll open your mail app so you can send a request to our support team. They'll confirm the deletion by return mail.",
+      "deleteContinue": "Continue",
+      "deleteMailError": "Couldn't open your mail app.",
+      "bientotBadge": "SOON"
+    }
   },
   "languages": {
     "fr": "Français",

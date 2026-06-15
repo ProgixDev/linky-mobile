@@ -215,7 +215,70 @@
     "languageTitle": "Langue",
     "languageSubtitle": "Choisis la langue de l'application.",
     "languageDefault": "Langue par défaut",
-    "languageComingSoonHint": "À venir"
+    "languageComingSoonHint": "À venir",
+    "theme": {
+      "title": "Thème",
+      "subtitle": "Choisis l'apparence de l'application.",
+      "systemLabel": "Système",
+      "systemSub": "Suit le réglage de ton appareil",
+      "lightLabel": "Clair",
+      "lightSub": "Toujours en mode lumineux",
+      "darkLabel": "Sombre",
+      "darkSub": "Toujours en mode foncé"
+    },
+    "dataSaver": {
+      "title": "Économie de données",
+      "subtitle": "Idéal en 3G ou avec un forfait limité.",
+      "toggleLabel": "Activer le mode économie",
+      "on": "Activé",
+      "off": "Désactivé",
+      "impactLabel": "CE QUI CHANGE",
+      "row1Title": "Vidéos pausées par défaut",
+      "row1Sub": "Plus d'autoplay dans Découvrir et sur les annonces.",
+      "row2Title": "Qualité d'image réduite",
+      "row2Sub": "Les photos chargent en qualité standard au lieu de HD.",
+      "row3Title": "Liste sur 1 colonne en 3G",
+      "row3Sub": "Marché bascule sur une vue compacte quand le réseau est lent.",
+      "autoNote": "On active automatiquement ce mode quand on détecte une connexion lente, même si tu ne l'as pas allumé."
+    },
+    "addresses": {
+      "title": "Adresses",
+      "subtitle": "Où on doit livrer ou venir chercher tes commandes.",
+      "cardTitle": "Gestion des adresses",
+      "cardSub": "Tu pourras bientôt enregistrer une adresse de livraison ici. En attendant, indique-la au moment de payer.",
+      "note": "L'adresse principale est utilisée par défaut pour les livraisons. Tu peux toujours en changer au moment de payer."
+    },
+    "phones": {
+      "title": "Numéros de téléphone",
+      "subtitle": "Les numéros utilisés pour ta connexion et tes notifications SMS.",
+      "cardTitle": "Gestion des numéros",
+      "cardSub": "Tu pourras bientôt ajouter ou changer ton numéro de téléphone ici. En attendant, ton numéro de connexion reste actif.",
+      "note": "Tes numéros restent privés. On ne les partage jamais avec les autres utilisateurs sans ton accord."
+    },
+    "privacy": {
+      "title": "Confidentialité",
+      "subtitle": "Tu décides ce que Linky peut faire de tes données.",
+      "sectionData": "Données",
+      "sectionProfile": "Profil",
+      "sectionMyData": "Mes données",
+      "togglePersonalize": "Recommandations personnalisées",
+      "togglePersonalizeSub": "Adapte ton feed Découvrir à tes goûts.",
+      "toggleAnalytics": "Statistiques anonymes",
+      "toggleAnalyticsSub": "Aide-nous à améliorer l'app avec des stats agrégées.",
+      "toggleAds": "Pub personnalisée",
+      "toggleAdsSub": "Reçois des promos plus pertinentes.",
+      "toggleProfilePublic": "Profil public",
+      "toggleProfilePublicSub": "Les autres utilisateurs peuvent voir ton nom et tes annonces.",
+      "downloadLabel": "Télécharger mes données",
+      "downloadSub": "Bientôt — pour l'instant, écris-nous à support@linky.gn.",
+      "deleteLabel": "Supprimer mon compte",
+      "deleteSub": "Demande à notre équipe la suppression définitive de ton compte.",
+      "deleteConfirmTitle": "Supprimer mon compte",
+      "deleteConfirmBody": "On va ouvrir ton application mail pour envoyer une demande à notre équipe support. Ils confirmeront la suppression par retour de mail.",
+      "deleteContinue": "Continuer",
+      "deleteMailError": "Impossible d'ouvrir ton application mail.",
+      "bientotBadge": "BIENTÔT"
+    }
   },
   "languages": {
     "fr": "Français",

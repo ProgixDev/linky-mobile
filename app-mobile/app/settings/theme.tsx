@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check, Sun, Moon, Smartphone } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme, type ThemePreference } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
@@ -19,44 +21,50 @@ interface ThemeOption {
   border: string;
 }
 
-const OPTIONS: ThemeOption[] = [
-  {
-    id: 'system',
-    label: 'Système',
-    sub: 'Suit le réglage de ton appareil',
-    Icon: Smartphone,
-    bg: '#F7F3EC',
-    card: '#FFFFFF',
-    text: '#0E1311',
-    accent: '#0F7256',
-    border: '#E5DDC9',
-  },
-  {
-    id: 'light',
-    label: 'Clair',
-    sub: 'Toujours en mode lumineux',
-    Icon: Sun,
-    bg: '#F7F3EC',
-    card: '#FFFFFF',
-    text: '#0E1311',
-    accent: '#0F7256',
-    border: '#E5DDC9',
-  },
-  {
-    id: 'dark',
-    label: 'Sombre',
-    sub: 'Toujours en mode foncé',
-    Icon: Moon,
-    bg: '#0E1311',
-    card: '#1A2220',
-    text: '#FFFFFF',
-    accent: '#5FE3B4',
-    border: '#2A332F',
-  },
-];
-
 export default function ThemeSettingsRoute() {
   const { colors, preference, setPreference } = useTheme();
+  const { t } = useTranslation();
+
+  // Phase I.3g — OPTIONS were module-scope, freezing labels at first
+  // language resolution. Memo inside the component on t.
+  const OPTIONS: ThemeOption[] = useMemo(
+    () => [
+      {
+        id: 'system',
+        label: t('settings.theme.systemLabel'),
+        sub: t('settings.theme.systemSub'),
+        Icon: Smartphone,
+        bg: '#F7F3EC',
+        card: '#FFFFFF',
+        text: '#0E1311',
+        accent: '#0F7256',
+        border: '#E5DDC9',
+      },
+      {
+        id: 'light',
+        label: t('settings.theme.lightLabel'),
+        sub: t('settings.theme.lightSub'),
+        Icon: Sun,
+        bg: '#F7F3EC',
+        card: '#FFFFFF',
+        text: '#0E1311',
+        accent: '#0F7256',
+        border: '#E5DDC9',
+      },
+      {
+        id: 'dark',
+        label: t('settings.theme.darkLabel'),
+        sub: t('settings.theme.darkSub'),
+        Icon: Moon,
+        bg: '#0E1311',
+        card: '#1A2220',
+        text: '#FFFFFF',
+        accent: '#5FE3B4',
+        border: '#2A332F',
+      },
+    ],
+    [t],
+  );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -65,8 +73,8 @@ export default function ThemeSettingsRoute() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <ScreenHeader
-          title="Thème"
-          subtitle="Choisis l'apparence de l'application."
+          title={t('settings.theme.title')}
+          subtitle={t('settings.theme.subtitle')}
         />
 
         <View style={{ paddingHorizontal: 24, gap: 12 }}>

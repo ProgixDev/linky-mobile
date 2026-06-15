@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CloudOff, Wifi, Image as ImageIcon, Play } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Switch } from '../../src/components/primitives/Switch';
@@ -14,33 +16,26 @@ interface ImpactRow {
   sub: string;
 }
 
-const IMPACT: ImpactRow[] = [
-  {
-    Icon: Play,
-    label: 'Vidéos pausées par défaut',
-    sub: 'Plus d\'autoplay dans Découvrir et sur les annonces.',
-  },
-  {
-    Icon: ImageIcon,
-    label: 'Qualité d\'image réduite',
-    sub: 'Les photos chargent en qualité standard au lieu de HD.',
-  },
-  {
-    Icon: Wifi,
-    label: 'Liste sur 1 colonne en 3G',
-    sub: 'Marché bascule sur une vue compacte quand le réseau est lent.',
-  },
-];
-
 export default function DataSaverRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { dataSaver, setDataSaver } = usePrefs();
+
+  // Phase I.3g — IMPACT was module-scope. Memo inside the component on t.
+  const IMPACT: ImpactRow[] = useMemo(
+    () => [
+      { Icon: Play, label: t('settings.dataSaver.row1Title'), sub: t('settings.dataSaver.row1Sub') },
+      { Icon: ImageIcon, label: t('settings.dataSaver.row2Title'), sub: t('settings.dataSaver.row2Sub') },
+      { Icon: Wifi, label: t('settings.dataSaver.row3Title'), sub: t('settings.dataSaver.row3Sub') },
+    ],
+    [t],
+  );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScreenHeader
-        title="Économie de données"
-        subtitle="Idéal en 3G ou avec un forfait limité."
+        title={t('settings.dataSaver.title')}
+        subtitle={t('settings.dataSaver.subtitle')}
       />
 
       <View style={{ paddingHorizontal: 24, gap: 12 }}>
@@ -84,7 +79,7 @@ export default function DataSaverRoute() {
                 includeFontPadding: false,
               }}
             >
-              Activer le mode économie
+              {t('settings.dataSaver.toggleLabel')}
             </Text>
             <Text
               style={{
@@ -95,7 +90,7 @@ export default function DataSaverRoute() {
                 lineHeight: 15,
               }}
             >
-              {dataSaver ? 'Activé' : 'Désactivé'}
+              {dataSaver ? t('settings.dataSaver.on') : t('settings.dataSaver.off')}
             </Text>
           </View>
           <Switch value={dataSaver} onChange={setDataSaver} />
@@ -122,7 +117,7 @@ export default function DataSaverRoute() {
               paddingBottom: 6,
             }}
           >
-            CE QUI CHANGE
+            {t('settings.dataSaver.impactLabel')}
           </Text>
           {IMPACT.map((row, idx) => (
             <View
@@ -199,7 +194,7 @@ export default function DataSaverRoute() {
               letterSpacing: 0,
             }}
           >
-            On active automatiquement ce mode quand on détecte une connexion lente, même si tu ne l'as pas allumé.
+            {t('settings.dataSaver.autoNote')}
           </Text>
         </View>
       </View>
