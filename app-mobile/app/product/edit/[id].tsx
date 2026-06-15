@@ -1,10 +1,11 @@
 // Seller edits an existing product. Reachable from the boutique dashboard's
 // manage sheet. Covers every product field except photos (photo swap/reorder is
 // a separate flow). Wired to useUpdateProduct -> /product-update.
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Input } from '../../../src/components/primitives/Input';
@@ -20,16 +21,25 @@ import { toToastMessage } from '../../../src/lib/api';
 import { gnfToEur } from '../../../src/lib/currency';
 
 const CONDITIONS = ['neuf', 'occasion', 'reconditionné'] as const;
-const CONDITION_LABEL: Record<(typeof CONDITIONS)[number], string> = {
-  neuf: 'Neuf',
-  occasion: 'Occasion',
-  reconditionné: 'Reconditionné',
+// Phase I.3j — stable backend ids ; the visible label is resolved at render
+// time via t() so the chip strip flips with the active language.
+const CONDITION_LABEL_KEY: Record<(typeof CONDITIONS)[number], string> = {
+  neuf: 'productEdit.condNeuf',
+  occasion: 'productEdit.condOccasion',
+  reconditionné: 'productEdit.condReconditionne',
 };
 
 export default function ProductEditRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const toast = useToast();
+  const conditionLabel = useMemo(
+    () => Object.fromEntries(
+      CONDITIONS.map((c) => [c, t(CONDITION_LABEL_KEY[c])]),
+    ) as Record<(typeof CONDITIONS)[number], string>,
+    [t],
+  );
   const productQuery = useProduct(id);
   const update = useUpdateProduct();
   const product = productQuery.data;
@@ -71,18 +81,18 @@ export default function ProductEditRoute() {
         condition,
         city: city.trim(),
       });
-      toast.show('Annonce mise à jour.', 'success');
+      toast.show(t('productEdit.successToast'), 'success');
       if (router.canGoBack()) router.back();
       else router.replace('/(tabs)/boutique');
     } catch (e) {
-      toast.show(toToastMessage(e, "Impossible de mettre à jour l'annonce."), 'danger');
+      toast.show(toToastMessage(e, t('productEdit.errorToast')), 'danger');
     }
   }
 
   if (productQuery.isLoading) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Modifier l'annonce" back />
+        <TopBar title={t('productEdit.topbar')} back />
         <View style={{ padding: 16, gap: 14 }}>
           <Skeleton height={56} radius={12} />
           <Skeleton height={120} radius={12} />
@@ -94,7 +104,7 @@ export default function ProductEditRoute() {
   if (productQuery.isError || !product) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Modifier l'annonce" back />
+        <TopBar title={t('productEdit.topbar')} back />
         <ErrorStateView onRetry={() => void productQuery.refetch()} />
       </SafeAreaView>
     );
@@ -102,39 +112,39 @@ export default function ProductEditRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Modifier l'annonce" back />
+      <TopBar title={t('productEdit.topbar')} back />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
           <View style={{ gap: 12, marginTop: 12 }}>
-            <Input label="Titre" value={title} onChangeText={setTitle} />
+            <Input label={t('productEdit.titleLabel')} value={title} onChangeText={setTitle} />
 
             <View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
                 <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
-                  Description
+                  {t('productEdit.descriptionLabel')}
                 </Text>
                 <Text variant="micro" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
                   {description.length} / 600
                 </Text>
               </View>
-              <Input multiline value={description} onChangeText={(t) => setDescription(t.slice(0, 600))} />
+              <Input multiline value={description} onChangeText={(txt) => setDescription(txt.slice(0, 600))} />
             </View>
 
             <Input
-              label="Prix"
+              label={t('productEdit.priceLabel')}
               value={new Intl.NumberFormat('fr-FR').format(price)}
-              onChangeText={(t) => setPrice(Number(t.replace(/\D/g, '')) || 0)}
+              onChangeText={(txt) => setPrice(Number(txt.replace(/\D/g, '')) || 0)}
               keyboardType="number-pad"
               helperText={`≈ ${gnfToEur(price)} €`}
             />
 
             <View>
               <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginBottom: 6 }}>
-                État
+                {t('productEdit.conditionLabel')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 {CONDITIONS.map((c) => (
-                  <Chip key={c} label={CONDITION_LABEL[c]} active={condition === c} onPress={() => setCondition(c)} block />
+                  <Chip key={c} label={conditionLabel[c]} active={condition === c} onPress={() => setCondition(c)} block />
                 ))}
               </View>
             </View>
@@ -144,7 +154,7 @@ export default function ProductEditRoute() {
         </ScrollView>
 
         <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
-          <Button variant="dark" size="lg" block label="Enregistrer" onPress={onSave} loading={update.isPending} disabled={!canSave} />
+          <Button variant="dark" size="lg" block label={t('productEdit.save')} onPress={onSave} loading={update.isPending} disabled={!canSave} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

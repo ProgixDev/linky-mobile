@@ -22,7 +22,18 @@
     "loading": "Chargement…",
     "yes": "Oui",
     "no": "Non",
-    "ok": "OK"
+    "ok": "OK",
+    "city": {
+      "label": "Ville",
+      "placeholder": "Choisis une ville",
+      "modalTitle": "Choisis une ville",
+      "searchPlaceholder": "Rechercher une ville ou une région",
+      "empty": "Aucune ville trouvée.",
+      "regionSub": "Région de {{region}}",
+      "a11yClose": "Fermer",
+      "a11yHint": "Champ requis · ouvre la liste des villes",
+      "a11yValue": "Ville : {{city}}"
+    }
   },
   "a11y": {
     "back": "Retour",
@@ -768,6 +779,55 @@
     "infoResponseTime": "Temps de réponse",
     "infoVerified": "Vérifié",
     "infoVerifiedValue": "Vendeur identifié par Linky"
+  },
+  "shopEdit": {
+    "topbar": "Ma boutique",
+    "nameLabel": "NOM DE LA BOUTIQUE",
+    "namePlaceholder": "Ex: Chez Aïssatou",
+    "cityLabel": "VILLE",
+    "aboutLabel": "À PROPOS",
+    "aboutPlaceholder": "Décris ta boutique en quelques mots…",
+    "addCover": "Ajouter une couverture",
+    "changeLogoA11y": "Changer le logo de la boutique",
+    "save": "Enregistrer",
+    "successToast": "Boutique mise à jour.",
+    "errorToast": "Impossible de mettre à jour la boutique.",
+    "uploadError": "Téléversement échoué.",
+    "photoPermission": "Autorise l'accès aux photos pour continuer."
+  },
+  "productEdit": {
+    "topbar": "Modifier l'annonce",
+    "titleLabel": "Titre",
+    "descriptionLabel": "Description",
+    "priceLabel": "Prix",
+    "conditionLabel": "État",
+    "condNeuf": "Neuf",
+    "condOccasion": "Occasion",
+    "condReconditionne": "Reconditionné",
+    "save": "Enregistrer",
+    "successToast": "Annonce mise à jour.",
+    "errorToast": "Impossible de mettre à jour l'annonce."
+  },
+  "propertyEdit": {
+    "topbar": "Modifier le bien",
+    "typeLabel": "Type de bien",
+    "typeLocation": "Location",
+    "typeVente": "Vente",
+    "typeTerrain": "Terrain",
+    "titleLabel": "Titre",
+    "descriptionLabel": "Description",
+    "pricePerMonth": "Prix / mois",
+    "priceLabel": "Prix",
+    "areaLabel": "Surface (m²)",
+    "roomsLabel": "Pièces",
+    "districtLabel": "Quartier",
+    "districtPlaceholder": "Ex: Kaloum, Lambanyi…",
+    "distanceLabel": "DISTANCE AU GOUDRON · CHAMP CLÉ",
+    "furnishedLabel": "Meublé",
+    "furnishedSub": "Cuisine équipée, lit, salon",
+    "save": "Enregistrer",
+    "successToast": "Annonce mise à jour.",
+    "errorToast": "Impossible de mettre à jour l'annonce."
   },
   "product": {
     "fallbackTitle": "Annonce",

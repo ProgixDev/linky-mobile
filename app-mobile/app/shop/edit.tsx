@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { Camera, ImagePlus, Store } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -35,6 +36,7 @@ function resolveMime(asset: ImagePicker.ImagePickerAsset): ImgMime {
 
 export default function ShopEditRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const toast = useToast();
   const shopsQuery = useMyShops();
   const upsert = useUpsertShop();
@@ -75,7 +77,7 @@ export default function ShopEditRoute() {
     if (m.isPending) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      toast.show("Autorise l'accès aux photos pour continuer.", 'danger');
+      toast.show(t('shopEdit.photoPermission'), 'danger');
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
@@ -91,7 +93,7 @@ export default function ShopEditRoute() {
       if (kind === 'logo') setAvatar(url);
       else setCover(url);
     } catch (e) {
-      toast.show(toToastMessage(e, 'Téléversement échoué.'), 'danger');
+      toast.show(toToastMessage(e, t('shopEdit.uploadError')), 'danger');
     }
   }
 
@@ -106,18 +108,18 @@ export default function ShopEditRoute() {
         avatar_url: avatar || null,
         cover_url: cover || null,
       });
-      toast.show('Boutique mise à jour.', 'success');
+      toast.show(t('shopEdit.successToast'), 'success');
       if (router.canGoBack()) router.back();
       else router.replace('/(tabs)/boutique');
     } catch (e) {
-      toast.show(toToastMessage(e, 'Impossible de mettre à jour la boutique.'), 'danger');
+      toast.show(toToastMessage(e, t('shopEdit.errorToast')), 'danger');
     }
   }
 
   if (shopsQuery.isLoading) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Ma boutique" back />
+        <TopBar title={t('shopEdit.topbar')} back />
         <View style={{ padding: 16, gap: 14 }}>
           <Skeleton height={150} radius={16} />
           <Skeleton height={56} radius={12} />
@@ -129,7 +131,7 @@ export default function ShopEditRoute() {
   if (shopsQuery.isError) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Ma boutique" back />
+        <TopBar title={t('shopEdit.topbar')} back />
         <ErrorStateView onRetry={() => void shopsQuery.refetch()} />
       </SafeAreaView>
     );
@@ -140,9 +142,9 @@ export default function ShopEditRoute() {
     return null;
   }
 
-  const label = (t: string) => (
+  const label = (txt: string) => (
     <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textFaint, letterSpacing: 0.6, marginTop: 18, marginBottom: 8 }}>
-      {t}
+      {txt}
     </Text>
   );
   const inputStyle = {
@@ -159,7 +161,7 @@ export default function ShopEditRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Ma boutique" back />
+      <TopBar title={t('shopEdit.topbar')} back />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}>
           {/* Cover + logo */}
@@ -171,7 +173,7 @@ export default function ShopEditRoute() {
                 ) : (
                   <View style={{ alignItems: 'center', gap: 6 }}>
                     <ImagePlus size={26} color={colors.textMuted} strokeWidth={1.75} />
-                    <Text variant="caption" tone="muted">Ajouter une couverture</Text>
+                    <Text variant="caption" tone="muted">{t('shopEdit.addCover')}</Text>
                   </View>
                 )}
                 {uploadCover.isPending && (
@@ -187,7 +189,7 @@ export default function ShopEditRoute() {
               onPress={() => pick('logo')}
               disabled={uploadLogo.isPending}
               style={{ width: 76, height: 76, marginTop: -38, marginLeft: 12 }}
-              accessibilityLabel="Changer le logo de la boutique"
+              accessibilityLabel={t('shopEdit.changeLogoA11y')}
             >
               {avatar ? (
                 <Image source={avatar} contentFit="cover" style={{ width: 76, height: 76, borderRadius: 18, borderWidth: 3, borderColor: colors.bg, backgroundColor: colors.bgSunken }} transition={120} />
@@ -202,17 +204,17 @@ export default function ShopEditRoute() {
             </Pressable>
           </View>
 
-          {label('NOM DE LA BOUTIQUE')}
-          <TextInput value={name} onChangeText={setName} placeholder="Ex: Chez Aïssatou" placeholderTextColor={colors.textFaint} maxLength={80} style={inputStyle} />
+          {label(t('shopEdit.nameLabel'))}
+          <TextInput value={name} onChangeText={setName} placeholder={t('shopEdit.namePlaceholder')} placeholderTextColor={colors.textFaint} maxLength={80} style={inputStyle} />
 
-          {label('VILLE')}
+          {label(t('shopEdit.cityLabel'))}
           <CitySelectField label="" value={city} onChange={setCity} />
 
-          {label('À PROPOS')}
+          {label(t('shopEdit.aboutLabel'))}
           <TextInput
             value={about}
-            onChangeText={(t) => setAbout(t.slice(0, 800))}
-            placeholder="Décris ta boutique en quelques mots…"
+            onChangeText={(txt) => setAbout(txt.slice(0, 800))}
+            placeholder={t('shopEdit.aboutPlaceholder')}
             placeholderTextColor={colors.textFaint}
             multiline
             style={{ ...inputStyle, height: 120, paddingTop: 14, textAlignVertical: 'top' }}
@@ -223,7 +225,7 @@ export default function ShopEditRoute() {
         </ScrollView>
 
         <View style={{ paddingHorizontal: 20, paddingVertical: 16 }}>
-          <Button variant="dark" size="lg" block label="Enregistrer" onPress={onSave} loading={upsert.isPending} disabled={!canSave} />
+          <Button variant="dark" size="lg" block label={t('shopEdit.save')} onPress={onSave} loading={upsert.isPending} disabled={!canSave} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -22,7 +22,18 @@
     "loading": "Loading…",
     "yes": "Yes",
     "no": "No",
-    "ok": "OK"
+    "ok": "OK",
+    "city": {
+      "label": "City",
+      "placeholder": "Choose a city",
+      "modalTitle": "Choose a city",
+      "searchPlaceholder": "Search a city or region",
+      "empty": "No city found.",
+      "regionSub": "{{region}} region",
+      "a11yClose": "Close",
+      "a11yHint": "Required field · opens the city list",
+      "a11yValue": "City: {{city}}"
+    }
   },
   "a11y": {
     "back": "Back",
@@ -768,6 +779,55 @@
     "infoResponseTime": "Response time",
     "infoVerified": "Verified",
     "infoVerifiedValue": "Identified by Linky"
+  },
+  "shopEdit": {
+    "topbar": "My shop",
+    "nameLabel": "SHOP NAME",
+    "namePlaceholder": "e.g. Chez Aïssatou",
+    "cityLabel": "CITY",
+    "aboutLabel": "ABOUT",
+    "aboutPlaceholder": "Describe your shop in a few words…",
+    "addCover": "Add a cover",
+    "changeLogoA11y": "Change the shop logo",
+    "save": "Save",
+    "successToast": "Shop updated.",
+    "errorToast": "Couldn't update the shop.",
+    "uploadError": "Upload failed.",
+    "photoPermission": "Allow photo access to continue."
+  },
+  "productEdit": {
+    "topbar": "Edit listing",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description",
+    "priceLabel": "Price",
+    "conditionLabel": "Condition",
+    "condNeuf": "New",
+    "condOccasion": "Used",
+    "condReconditionne": "Refurbished",
+    "save": "Save",
+    "successToast": "Listing updated.",
+    "errorToast": "Couldn't update the listing."
+  },
+  "propertyEdit": {
+    "topbar": "Edit property",
+    "typeLabel": "Property type",
+    "typeLocation": "Rental",
+    "typeVente": "Sale",
+    "typeTerrain": "Land",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description",
+    "pricePerMonth": "Price / month",
+    "priceLabel": "Price",
+    "areaLabel": "Area (m²)",
+    "roomsLabel": "Rooms",
+    "districtLabel": "Neighborhood",
+    "districtPlaceholder": "e.g. Kaloum, Lambanyi…",
+    "distanceLabel": "DISTANCE TO PAVED ROAD · KEY FIELD",
+    "furnishedLabel": "Furnished",
+    "furnishedSub": "Fitted kitchen, bed, living room",
+    "save": "Save",
+    "successToast": "Listing updated.",
+    "errorToast": "Couldn't update the listing."
   },
   "product": {
     "fallbackTitle": "Listing",

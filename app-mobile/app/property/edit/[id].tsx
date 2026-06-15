@@ -3,10 +3,11 @@
 // rooms, city, district, distance-to-road, furnished) + an editable description
 // the create flow never collected. Photos are out of scope here. Wired to
 // useUpdateProperty -> /property-update.
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Input } from '../../../src/components/primitives/Input';
@@ -23,16 +24,23 @@ import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 
 type PType = 'location' | 'vente' | 'terrain';
-const PROPERTY_TYPES: { id: PType; label: string }[] = [
-  { id: 'location', label: 'Location' },
-  { id: 'vente', label: 'Vente' },
-  { id: 'terrain', label: 'Terrain' },
+// Phase I.3j — stable backend ids ; the visible label is resolved at render
+// time via t() so the chip strip flips with the active language.
+const PROPERTY_TYPE_DEFS: { id: PType; labelKey: string }[] = [
+  { id: 'location', labelKey: 'propertyEdit.typeLocation' },
+  { id: 'vente', labelKey: 'propertyEdit.typeVente' },
+  { id: 'terrain', labelKey: 'propertyEdit.typeTerrain' },
 ];
 
 export default function PropertyEditRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const toast = useToast();
+  const PROPERTY_TYPES = useMemo(
+    () => PROPERTY_TYPE_DEFS.map((d) => ({ id: d.id, label: t(d.labelKey) })),
+    [t],
+  );
   const propertyQuery = useProperty(id);
   const update = useUpdateProperty();
   const prop = propertyQuery.data;
@@ -103,18 +111,18 @@ export default function PropertyEditRoute() {
         district: district.trim() || null,
         distance_to_road_m: distance,
       });
-      toast.show('Annonce mise à jour.', 'success');
+      toast.show(t('propertyEdit.successToast'), 'success');
       if (router.canGoBack()) router.back();
       else router.replace('/(tabs)/boutique');
     } catch (e) {
-      toast.show(toToastMessage(e, "Impossible de mettre à jour l'annonce."), 'danger');
+      toast.show(toToastMessage(e, t('propertyEdit.errorToast')), 'danger');
     }
   }
 
   if (propertyQuery.isLoading) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Modifier le bien" back />
+        <TopBar title={t('propertyEdit.topbar')} back />
         <View style={{ padding: 16, gap: 14 }}>
           <Skeleton height={44} radius={12} />
           <Skeleton height={56} radius={12} />
@@ -126,7 +134,7 @@ export default function PropertyEditRoute() {
   if (propertyQuery.isError || !prop) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Modifier le bien" back />
+        <TopBar title={t('propertyEdit.topbar')} back />
         <ErrorStateView onRetry={() => void propertyQuery.refetch()} />
       </SafeAreaView>
     );
@@ -134,13 +142,13 @@ export default function PropertyEditRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Modifier le bien" back />
+      <TopBar title={t('propertyEdit.topbar')} back />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
           <View style={{ gap: 12, marginTop: 12 }}>
             <View>
               <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginBottom: 6 }}>
-                Type de bien
+                {t('propertyEdit.typeLabel')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 {PROPERTY_TYPES.map((tp) => (
@@ -149,22 +157,22 @@ export default function PropertyEditRoute() {
               </View>
             </View>
 
-            <Input label="Titre" value={title} onChangeText={setTitle} />
+            <Input label={t('propertyEdit.titleLabel')} value={title} onChangeText={setTitle} />
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <Input
-                  label={type === 'location' ? 'Prix / mois' : 'Prix'}
+                  label={type === 'location' ? t('propertyEdit.pricePerMonth') : t('propertyEdit.priceLabel')}
                   value={new Intl.NumberFormat('fr-FR').format(price)}
-                  onChangeText={(t) => setPrice(Number(t.replace(/\D/g, '')) || 0)}
+                  onChangeText={(txt) => setPrice(Number(txt.replace(/\D/g, '')) || 0)}
                   keyboardType="number-pad"
                 />
               </View>
               <View style={{ width: 110 }}>
                 <Input
-                  label="Surface (m²)"
+                  label={t('propertyEdit.areaLabel')}
                   value={String(area)}
-                  onChangeText={(t) => setArea(Number(t.replace(/\D/g, '')) || 0)}
+                  onChangeText={(txt) => setArea(Number(txt.replace(/\D/g, '')) || 0)}
                   keyboardType="number-pad"
                 />
               </View>
@@ -177,27 +185,27 @@ export default function PropertyEditRoute() {
               {!isTerrain && (
                 <View style={{ width: 100 }}>
                   <Input
-                    label="Pièces"
+                    label={t('propertyEdit.roomsLabel')}
                     value={String(rooms)}
-                    onChangeText={(t) => setRooms(Number(t.replace(/\D/g, '')) || 0)}
+                    onChangeText={(txt) => setRooms(Number(txt.replace(/\D/g, '')) || 0)}
                     keyboardType="number-pad"
                   />
                 </View>
               )}
             </View>
 
-            <Input label="Quartier" value={district} onChangeText={setDistrict} placeholder="Ex: Kaloum, Lambanyi…" />
+            <Input label={t('propertyEdit.districtLabel')} value={district} onChangeText={setDistrict} placeholder={t('propertyEdit.districtPlaceholder')} />
 
             <View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
                 <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
-                  Description
+                  {t('propertyEdit.descriptionLabel')}
                 </Text>
                 <Text variant="micro" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
                   {description.length} / 600
                 </Text>
               </View>
-              <Input multiline value={description} onChangeText={(t) => setDescription(t.slice(0, 600))} />
+              <Input multiline value={description} onChangeText={(txt) => setDescription(txt.slice(0, 600))} />
             </View>
 
             <View
@@ -212,12 +220,12 @@ export default function PropertyEditRoute() {
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 8 }}>
                 <I.road size={14} color={colors.accentText} />
                 <Text style={{ fontSize: 11, color: colors.accentText, fontWeight: '700', letterSpacing: 0.4 }}>
-                  DISTANCE AU GOUDRON · CHAMP CLÉ
+                  {t('propertyEdit.distanceLabel')}
                 </Text>
               </View>
               <Input
                 value={String(distance)}
-                onChangeText={(t) => setDistance(Number(t.replace(/\D/g, '')) || 0)}
+                onChangeText={(txt) => setDistance(Number(txt.replace(/\D/g, '')) || 0)}
                 keyboardType="number-pad"
               />
             </View>
@@ -236,9 +244,9 @@ export default function PropertyEditRoute() {
                 }}
               >
                 <View>
-                  <Text style={{ fontSize: 13, fontWeight: '600' }}>Meublé</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('propertyEdit.furnishedLabel')}</Text>
                   <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                    Cuisine équipée, lit, salon
+                    {t('propertyEdit.furnishedSub')}
                   </Text>
                 </View>
                 <Switch value={furnished} onChange={setFurnished} />
@@ -248,7 +256,7 @@ export default function PropertyEditRoute() {
         </ScrollView>
 
         <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
-          <Button variant="dark" size="lg" block label="Enregistrer" onPress={onSave} loading={update.isPending} disabled={!canSave} />
+          <Button variant="dark" size="lg" block label={t('propertyEdit.save')} onPress={onSave} loading={update.isPending} disabled={!canSave} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

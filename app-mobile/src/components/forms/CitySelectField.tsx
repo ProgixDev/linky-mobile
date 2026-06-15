@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDown, Check, MapPin, Search, X } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { GUINEA_CITIES } from '../onboarding/CityMapPicker';
@@ -12,10 +13,10 @@ import { haptic } from '../../lib/haptics';
 // Marché city filter offers. Free-text city inputs produced un-filterable
 // values ("Conakry" vs "conakry" vs "Konakri") ; this guarantees clean data.
 export function CitySelectField({
-  label = 'Ville',
+  label,
   value,
   onChange,
-  placeholder = 'Choisis une ville',
+  placeholder,
 }: {
   label?: string;
   value: string;
@@ -23,6 +24,9 @@ export function CitySelectField({
   placeholder?: string;
 }) {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t('common.city.label');
+  const resolvedPlaceholder = placeholder ?? t('common.city.placeholder');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -47,9 +51,9 @@ export function CitySelectField({
 
   return (
     <View>
-      {label && (
+      {resolvedLabel && (
         <Text variant="micro" tone="muted" style={{ marginBottom: 6, textTransform: 'none', letterSpacing: 0 }}>
-          {label}
+          {resolvedLabel}
         </Text>
       )}
       <Pressable
@@ -58,8 +62,8 @@ export function CitySelectField({
           setOpen(true);
         }}
         accessibilityRole="button"
-        accessibilityLabel={value ? `Ville : ${value}` : placeholder}
-        accessibilityHint="Champ requis · ouvre la liste des villes"
+        accessibilityLabel={value ? t('common.city.a11yValue', { city: value }) : resolvedPlaceholder}
+        accessibilityHint={t('common.city.a11yHint')}
         style={{
           height: 48,
           borderRadius: radii.md,
@@ -74,7 +78,7 @@ export function CitySelectField({
       >
         <MapPin size={18} color={value ? colors.primary : colors.textMuted} strokeWidth={2} />
         <Text style={{ flex: 1, fontSize: 14, color: value ? colors.text : colors.textFaint }}>
-          {value || placeholder}
+          {value || resolvedPlaceholder}
         </Text>
         <ChevronDown size={18} color={colors.textMuted} strokeWidth={2} />
       </Pressable>
@@ -110,12 +114,12 @@ export function CitySelectField({
               }}
             >
               <Text variant="titleM" style={{ fontSize: 16 }}>
-                Choisis une ville
+                {t('common.city.modalTitle')}
               </Text>
               <Pressable
                 onPress={closeModal}
                 hitSlop={10}
-                accessibilityLabel="Fermer"
+                accessibilityLabel={t('common.city.a11yClose')}
                 style={{
                   width: 32,
                   height: 32,
@@ -148,7 +152,7 @@ export function CitySelectField({
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Rechercher une ville ou une région"
+                  placeholder={t('common.city.searchPlaceholder')}
                   placeholderTextColor={colors.textFaint}
                   autoCorrect={false}
                   style={{ flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0 }}
@@ -170,7 +174,7 @@ export function CitySelectField({
             >
               {results.length === 0 ? (
                 <Text tone="muted" style={{ textAlign: 'center', paddingVertical: 28 }}>
-                  Aucune ville trouvée.
+                  {t('common.city.empty')}
                 </Text>
               ) : (
                 results.map((c) => {
@@ -193,7 +197,7 @@ export function CitySelectField({
                           {c.name}
                         </Text>
                         <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                          Région de {c.region}
+                          {t('common.city.regionSub', { region: c.region })}
                         </Text>
                       </View>
                       {active && <Check size={18} color={colors.primary} strokeWidth={2.5} />}
