@@ -44,6 +44,7 @@ export default function PropertyPhotosRoute() {
   const { colors } = useTheme();
   const propertyPhotos = useCreateListing((s) => s.propertyPhotos);
   const setVal = useCreateListing((s) => s.set);
+  const propertyType = useCreateListing((s) => s.propertyType);
   const valid = propertyPhotos.length >= 3;
   const requestUploadUrl = useRequestPhotoUploadUrl();
   const toast = useToast();
@@ -313,7 +314,8 @@ export default function PropertyPhotosRoute() {
           disabled={!valid}
           onPress={() => {
             haptic.medium();
-            router.push('/create/property/amenities');
+            // Terrain has no amenities (land) — skip straight to the preview.
+            router.push(propertyType === 'terrain' ? '/create/property/preview' : '/create/property/amenities');
           }}
           style={{
             height: 56,

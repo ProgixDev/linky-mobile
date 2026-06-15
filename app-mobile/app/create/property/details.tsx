@@ -24,6 +24,17 @@ export default function CreatePropertyDetailsRoute() {
   const { colors, radii } = useTheme();
   const state = useCreateListing();
   const isTerrain = state.propertyType === 'terrain';
+  // Switching to terrain clears the fields that don't apply to land, so a
+  // listing that started as a flat never ships stale rooms / furnished /
+  // amenities to the backend.
+  const selectType = (tp: (typeof PROPERTY_TYPES)[number]['id']) => {
+    state.set('propertyType', tp);
+    if (tp === 'terrain') {
+      state.set('rooms', 0);
+      state.set('furnished', false);
+      state.set('amenities', []);
+    }
+  };
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title="Nouveau bien" back />
@@ -50,7 +61,7 @@ export default function CreatePropertyDetailsRoute() {
                   key={tp.id}
                   label={tp.label}
                   active={state.propertyType === tp.id}
-                  onPress={() => state.set('propertyType', tp.id)}
+                  onPress={() => selectType(tp.id)}
                   block
                 />
               ))}

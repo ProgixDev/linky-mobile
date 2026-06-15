@@ -37,6 +37,10 @@ export function CitySelectField({
   function pick(name: string) {
     haptic.selection();
     onChange(name);
+    closeModal();
+  }
+
+  function closeModal() {
     setOpen(false);
     setQuery('');
   }
@@ -55,6 +59,7 @@ export function CitySelectField({
         }}
         accessibilityRole="button"
         accessibilityLabel={value ? `Ville : ${value}` : placeholder}
+        accessibilityHint="Champ requis · ouvre la liste des villes"
         style={{
           height: 48,
           borderRadius: radii.md,
@@ -74,9 +79,9 @@ export function CitySelectField({
         <ChevronDown size={18} color={colors.textMuted} strokeWidth={2} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)} statusBarTranslucent>
+      <Modal visible={open} transparent animationType="slide" onRequestClose={closeModal} statusBarTranslucent>
         <Pressable
-          onPress={() => setOpen(false)}
+          onPress={closeModal}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }}
         />
         <View
@@ -108,7 +113,7 @@ export function CitySelectField({
                 Choisis une ville
               </Text>
               <Pressable
-                onPress={() => setOpen(false)}
+                onPress={closeModal}
                 hitSlop={10}
                 accessibilityLabel="Fermer"
                 style={{
@@ -159,6 +164,7 @@ export function CitySelectField({
             {/* List */}
             <ScrollView
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
             >

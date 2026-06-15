@@ -182,7 +182,7 @@ export default function PreviewRoute() {
                   borderTopColor: colors.border,
                 }}
               >
-                <SpecMini Icon={BedDouble} label={`${state.rooms} ch.`} />
+                {state.propertyType !== 'terrain' && <SpecMini Icon={BedDouble} label={`${state.rooms} ch.`} />}
                 <SpecMini Icon={Maximize2} label={`${state.areaSqm} m²`} />
               </View>
 
@@ -233,7 +233,7 @@ export default function PreviewRoute() {
         }}
       >
         <Pressable
-          disabled={createProperty.isPending || !state.title.trim() || state.priceGnf <= 0 || state.propertyPhotos.length === 0}
+          disabled={createProperty.isPending || !state.title.trim() || state.priceGnf <= 0 || state.propertyPhotos.length === 0 || !state.city.trim()}
           onPress={async () => {
             if (createProperty.isPending) return;
             try {

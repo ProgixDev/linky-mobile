@@ -56,6 +56,12 @@ export default function CreatePreviewRoute() {
             <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 17, marginTop: 4, fontVariant: ['tabular-nums'] }}>
               {formatGNF(state.priceGnf)}
             </Text>
+            {!!state.city && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                <I.pin size={12} color="rgba(255,255,255,0.9)" />
+                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12 }}>{state.city}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -65,7 +71,7 @@ export default function CreatePreviewRoute() {
         <Button
           label={createProduct.isPending ? 'Publication…' : 'Publier mon annonce'}
           style={{ flex: 1 }}
-          disabled={createProduct.isPending || !state.title.trim() || state.priceGnf <= 0 || state.photos.length === 0}
+          disabled={createProduct.isPending || !state.title.trim() || state.priceGnf <= 0 || state.photos.length === 0 || !state.city.trim()}
           onPress={async () => {
             try {
               const body = {
