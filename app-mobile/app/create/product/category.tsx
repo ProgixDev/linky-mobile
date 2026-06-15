@@ -12,13 +12,13 @@ import { useCreateListing } from '../../../src/stores/createListing';
 
 type Tint = 'primary' | 'accent' | 'cream' | 'info';
 
-const CATEGORIES: { t: string; c: string; icon: IconKey; tint: Tint }[] = [
-  { t: 'Mode & Beauté', c: '1240 articles', icon: 'shirt', tint: 'primary' },
-  { t: 'Électronique', c: '832 articles', icon: 'phone', tint: 'accent' },
-  { t: 'Maison', c: '560 articles', icon: 'sofa', tint: 'cream' },
-  { t: 'Auto & Moto', c: '298 articles', icon: 'car', tint: 'info' },
-  { t: 'Beauté & Soin', c: '412 articles', icon: 'drop', tint: 'primary' },
-  { t: 'Services', c: '168 services', icon: 'zap', tint: 'accent' },
+const CATEGORIES: { t: string; icon: IconKey; tint: Tint }[] = [
+  { t: 'Mode & Beauté', icon: 'shirt', tint: 'primary' },
+  { t: 'Électronique', icon: 'phone', tint: 'accent' },
+  { t: 'Maison', icon: 'sofa', tint: 'cream' },
+  { t: 'Auto & Moto', icon: 'car', tint: 'info' },
+  { t: 'Beauté & Soin', icon: 'drop', tint: 'primary' },
+  { t: 'Services', icon: 'zap', tint: 'accent' },
 ];
 
 export default function CreateCategoryRoute() {
@@ -75,16 +75,13 @@ export default function CreateCategoryRoute() {
                   <Icon size={18} color={palette.fg} />
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: '600' }}>{cat.t}</Text>
-                <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                  {cat.c}
-                </Text>
               </Pressable>
             );
           })}
         </View>
       </View>
       <StickyBottom>
-        <Button size="lg" block label="Continuer" onPress={() => router.push('/create/product/details')} />
+        <Button size="lg" block label="Continuer" disabled={!category} onPress={() => router.push('/create/product/details')} />
       </StickyBottom>
     </SafeAreaView>
   );

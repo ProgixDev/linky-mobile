@@ -120,7 +120,12 @@ export default function CreatePropertyDetailsRoute() {
       </ScrollView>
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
         <Button variant="secondary" label="Retour" onPress={() => router.back()} />
-        <Button label="Continuer" style={{ flex: 1 }} onPress={() => router.push('/create/property/location')} />
+        <Button
+          label="Continuer"
+          style={{ flex: 1 }}
+          disabled={!state.title.trim() || state.priceGnf <= 0 || !state.city.trim()}
+          onPress={() => router.push('/create/property/location')}
+        />
       </StickyBottom>
     </SafeAreaView>
   );

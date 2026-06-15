@@ -89,7 +89,12 @@ export default function CreateProductDetailsRoute() {
 
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
         <Button variant="secondary" label="Retour" onPress={() => router.back()} />
-        <Button label="Continuer" style={{ flex: 1 }} onPress={() => router.push('/create/product/photos')} />
+        <Button
+          label="Continuer"
+          style={{ flex: 1 }}
+          disabled={!state.title.trim() || state.priceGnf <= 0}
+          onPress={() => router.push('/create/product/photos')}
+        />
       </StickyBottom>
     </SafeAreaView>
   );

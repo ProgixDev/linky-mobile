@@ -409,7 +409,7 @@ function BuyerHome() {
 
         {/* Featured shops */}
         <View style={{ marginTop: 28 }}>
-          <SectionHeader title="Boutiques mises en avant" action="Tout voir" />
+          <SectionHeader title="Boutiques mises en avant" action="Tout voir" onAction={() => router.push('/(tabs)/marche')} />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

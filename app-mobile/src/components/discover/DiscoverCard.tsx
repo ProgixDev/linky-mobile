@@ -152,9 +152,6 @@ export function DiscoverCard({
               alignItems: 'center',
             }}
           >
-            <FeedPill label="Tout" active />
-            <FeedPill label="Articles" />
-            <FeedPill label="Immo" />
             <View style={{ flex: 1 }} />
             {dataSaver && (
               <View

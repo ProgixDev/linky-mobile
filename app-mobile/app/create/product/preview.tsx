@@ -65,7 +65,7 @@ export default function CreatePreviewRoute() {
         <Button
           label={createProduct.isPending ? 'Publication…' : 'Publier mon annonce'}
           style={{ flex: 1 }}
-          disabled={createProduct.isPending}
+          disabled={createProduct.isPending || !state.title.trim() || state.priceGnf <= 0 || state.photos.length === 0}
           onPress={async () => {
             try {
               const body = {

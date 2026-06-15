@@ -26,6 +26,9 @@ interface MethodOption {
   badge: string;
   badgeColor: string;
   iconKey?: IconKey;
+  /** Mobile-money rails go live once the client signs the Lengopay contract.
+   *  Until then they're shown but not selectable — card is the active path. */
+  comingSoon?: boolean;
 }
 
 // Google Pay test mode must follow the KEY, not a hardcoded flag — otherwise
@@ -33,13 +36,13 @@ interface MethodOption {
 const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').startsWith('pk_test_');
 
 const METHODS: MethodOption[] = [
-  { id: 'orange-money', name: 'Orange Money', hint: 'Tu confirmes au prochain écran', badge: 'OM', badgeColor: '#FF7900' },
-  { id: 'mtn-money', name: 'MTN Mobile Money', hint: 'Tu confirmes au prochain écran', badge: 'M', badgeColor: '#FFC500' },
+  { id: 'orange-money', name: 'Orange Money', hint: 'Disponible très bientôt', badge: 'OM', badgeColor: '#FF7900', comingSoon: true },
+  { id: 'mtn-money', name: 'MTN Mobile Money', hint: 'Disponible très bientôt', badge: 'M', badgeColor: '#FFC500', comingSoon: true },
 ];
 
 export default function CheckoutRoute() {
   const { colors } = useTheme();
-  const [selected, setSelected] = useState<PaymentMethod>('orange-money');
+  const [selected, setSelected] = useState<PaymentMethod>('card');
   const lines = useCart((s) => s.lines);
   const placeOrder = usePlaceOrder();
   const { show } = useToast();
@@ -135,7 +138,13 @@ export default function CheckoutRoute() {
             return (
               <Pressable
                 key={m.id}
-                onPress={() => setSelected(m.id)}
+                onPress={() => {
+                  if (m.comingSoon) {
+                    show('Bientôt disponible — paie par carte bancaire en attendant.', 'info');
+                    return;
+                  }
+                  setSelected(m.id);
+                }}
                 style={{
                   padding: 14,
                   flexDirection: 'row',
@@ -143,6 +152,7 @@ export default function CheckoutRoute() {
                   alignItems: 'center',
                   borderBottomWidth: i < METHODS.length - 1 ? 1 : 0,
                   borderBottomColor: colors.border,
+                  opacity: m.comingSoon ? 0.55 : 1,
                 }}
               >
                 <View
@@ -163,24 +173,34 @@ export default function CheckoutRoute() {
                     {m.hint}
                   </Text>
                 </View>
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 999,
-                    backgroundColor: sel ? colors.primary : 'transparent',
-                    borderWidth: sel ? 0 : 1.5,
-                    borderColor: colors.borderStrong,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {sel && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
-                </View>
+                {m.comingSoon ? (
+                  <View style={{ paddingHorizontal: 10, height: 22, borderRadius: 999, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: colors.accentText }}>Bientôt</Text>
+                  </View>
+                ) : (
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 999,
+                      backgroundColor: sel ? colors.primary : 'transparent',
+                      borderWidth: sel ? 0 : 1.5,
+                      borderColor: colors.borderStrong,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {sel && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
+                  </View>
+                )}
               </Pressable>
             );
           })}
         </Card>
+
+        <Text variant="micro" tone="muted" style={{ marginTop: -8, marginBottom: 16, paddingHorizontal: 4, letterSpacing: 0, textTransform: 'none', lineHeight: 15 }}>
+          Orange Money et MTN Mobile Money seront activés très bientôt. En attendant, le paiement par carte bancaire fonctionne déjà.
+        </Text>
 
         <MicroLabel label="Autres options" />
         <Card padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>

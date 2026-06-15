@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Search, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 // Env badge is now driven by NEXT_PUBLIC_ADMIN_ENV (set in .env.local).
 // Defaults to 'staging' when the var is unset; only literal 'production'
@@ -36,21 +36,6 @@ export function Topbar({
         {subtitle && (
           <p className="mt-1 text-sm text-muted">{subtitle}</p>
         )}
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="hidden h-10 items-center gap-2 rounded-full border border-line bg-sunken px-4 md:flex md:w-72">
-          <Search size={15} className="text-muted" />
-          <input
-            placeholder="Rechercher utilisateur, commande, annonce…"
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
-          />
-          <kbd className="text-[10px] font-bold text-faint">⌘K</kbd>
-        </div>
-        <button className="relative flex h-10 w-10 items-center justify-center rounded-full border border-line bg-sunken">
-          <Bell size={16} />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-danger ring-2 ring-bg-elev" />
-        </button>
       </div>
     </header>
   );

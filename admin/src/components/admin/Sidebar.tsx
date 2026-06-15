@@ -152,13 +152,6 @@ export function Sidebar() {
             <LogOut size={15} />
           </button>
         </div>
-        <Link
-          href="/settings"
-          className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-muted hover:bg-sunken"
-        >
-          <Settings size={13} />
-          Paramètres
-        </Link>
       </div>
     </aside>
   );

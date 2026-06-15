@@ -12,6 +12,7 @@ import {
   Snowflake,
   Eye,
   Edit3,
+  Check,
 } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -23,6 +24,15 @@ import { useCreateListing } from '../../../src/stores/createListing';
 import { useCreateProperty } from '../../../src/data/queries/properties';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
+
+// id → label, mirroring app/create/property/amenities.tsx (amenities are stored
+// as ids in state.amenities). Used to render the user's ACTUAL selection in the
+// preview instead of a hardcoded Wi-Fi/Parking/Clim. strip.
+const AMENITY_LABELS: Record<string, string> = {
+  wifi: 'Wi-Fi', park: 'Parking', ac: 'Climatisation', bath: 'Salle de bain privée',
+  kitchen: 'Cuisine équipée', furn: 'Meublé', tv: 'TV', sec: 'Gardien / sécurité',
+  garden: 'Jardin / cour', pool: 'Piscine', lift: 'Ascenseur', terrace: 'Balcon / terrasse',
+};
 
 export default function PreviewRoute() {
   const { colors } = useTheme();
@@ -42,7 +52,9 @@ export default function PreviewRoute() {
       >
         <ScreenHeader
           title="Aperçu de l'annonce"
-          subtitle="C'est ce que verront tes futurs locataires."
+          subtitle={state.propertyType === 'location'
+            ? "C'est ce que verront tes futurs locataires."
+            : "C'est ce que verront tes futurs acheteurs."}
         />
 
         {/* Phone-style preview card */}
@@ -174,12 +186,14 @@ export default function PreviewRoute() {
                 <SpecMini Icon={Maximize2} label={`${state.areaSqm} m²`} />
               </View>
 
-              {/* Amenity chips */}
-              <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-                <AmenityChip Icon={Wifi} label="Wi-Fi" />
-                <AmenityChip Icon={Car} label="Parking" />
-                <AmenityChip Icon={Snowflake} label="Clim." />
-              </View>
+              {/* Amenity chips — the user's actual selection, not hardcoded */}
+              {state.amenities.length > 0 && (
+                <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+                  {state.amenities.map((aid) => (
+                    <AmenityChip key={aid} Icon={Check} label={AMENITY_LABELS[aid] ?? aid} />
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -219,7 +233,7 @@ export default function PreviewRoute() {
         }}
       >
         <Pressable
-          disabled={createProperty.isPending}
+          disabled={createProperty.isPending || !state.title.trim() || state.priceGnf <= 0 || state.propertyPhotos.length === 0}
           onPress={async () => {
             if (createProperty.isPending) return;
             try {

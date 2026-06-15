@@ -212,6 +212,7 @@ export default function CreatePropertyLocationRoute() {
         <Button
           label="Continuer"
           style={{ flex: 1 }}
+          disabled={lat == null || lng == null}
           onPress={() => router.push('/create/property/photos')}
         />
       </StickyBottom>

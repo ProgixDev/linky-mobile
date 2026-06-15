@@ -35,23 +35,28 @@ interface CreateListingState {
   reset: () => void;
 }
 
+// Empty defaults — these are the LIVE initial state of the create flow. Any
+// non-empty value here is publishable fake data (a seller could ship the
+// prefilled "iPhone 12 Pro" without typing anything). Every text field starts
+// empty, every number at 0, and the flow's Continuer/Publier buttons gate on
+// real values.
 const DEFAULTS = {
   kind: 'product' as ListingKind,
   sellerType: 'particular' as const,
-  category: 'Électronique',
-  title: 'iPhone 12 Pro 256Go',
-  description: 'Comme neuf, peu utilisé. Avec boîte et chargeur.',
-  priceGnf: 4_800_000,
+  category: '',
+  title: '',
+  description: '',
+  priceGnf: 0,
   quantity: 1,
   condition: 'occasion' as const,
   photos: [] as string[],
   propertyType: 'location' as const,
-  rooms: 2,
-  areaSqm: 68,
-  city: 'Conakry',
-  district: 'Kaloum',
-  distanceToRoadMeters: 250,
-  furnished: true,
+  rooms: 0,
+  areaSqm: 0,
+  city: '',
+  district: '',
+  distanceToRoadMeters: 0,
+  furnished: false,
   amenities: [] as string[],
   propertyPhotos: [] as PropertyPhoto[],
   lat: undefined as number | undefined,
