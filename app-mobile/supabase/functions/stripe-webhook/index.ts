@@ -158,14 +158,41 @@ Deno.serve(async (req: Request): Promise<Response> => {
       console.error('[stripe-webhook] topup PI missing topup_intent_id', pi.id);
       return json({ received: true, ignored: true }, 200);
     }
-    if (pi.currency !== 'gnf') {
-      console.error('[stripe-webhook] CRITICAL topup currency mismatch', { stripe_pi: pi.id, currency: pi.currency });
+    // Settlement integrity — mirrors the order rail's pi.amount check. confirm_topup
+    // credits the RECORDED topup amount, so the amount Stripe actually settled MUST
+    // equal what we recorded ; a divergence (tampered row, reused / cross-env PI,
+    // any Stripe-side anomaly) must NOT credit. We look the row up here and refuse
+    // on mismatch rather than trusting metadata alone.
+    const { data: rec, error: recErr } = await sb
+      .from('topup_intents')
+      .select('amount_minor, currency, status')
+      .eq('id', topupId)
+      .maybeSingle();
+    if (recErr) {
+      console.error('[stripe-webhook] topup lookup failed:', recErr);
+      return json({ error: 'topup_lookup_failed' }, 500);
+    }
+    if (!rec) {
+      console.error('[stripe-webhook] no topup_intents row for', topupId, pi.id);
+      return json({ received: true, ignored: true }, 200);
+    }
+    if (pi.amount !== Number(rec.amount_minor) || pi.currency !== 'gnf' || rec.currency !== 'GNF') {
+      console.error('[stripe-webhook] CRITICAL topup amount/currency mismatch — NOT credited', {
+        stripe_pi: pi.id, topup_id: topupId,
+        pi_amount: pi.amount, pi_currency: pi.currency,
+        rec_amount: rec.amount_minor, rec_currency: rec.currency,
+      });
       return json({ received: true, mismatch: true }, 200);
     }
     // Only a successful charge credits the wallet. failed/canceled leaves the
     // topup_intent pending (no money moved) ; the user just starts a new one.
     if (event.type !== 'payment_intent.succeeded') {
       return json({ received: true, topup_noncomplete: true }, 200);
+    }
+    // Idempotent short-circuit before the RPC (confirm_topup's row lock is the
+    // real guard against a concurrent double-credit).
+    if (rec.status !== 'pending') {
+      return json({ received: true, topup_already: true }, 200);
     }
     const { error: topErr } = await sb.rpc('confirm_topup', { p_topup_id: topupId });
     if (topErr) {
