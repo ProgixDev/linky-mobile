@@ -246,7 +246,10 @@ export default function SellerOrderDetailRoute() {
         </Section>
       </ScrollView>
 
-      {/* Sticky CTA */}
+      {/* Sticky CTA — only render when there's an action (ship) or a wait
+          state (placed/unpaid) to show, so other statuses don't leave an
+          empty bordered bar. */}
+      {(needsShip || order.status === 'placed') && (
       <SafeAreaView
         edges={['bottom']}
         style={{
@@ -291,11 +294,17 @@ export default function SellerOrderDetailRoute() {
               Marquer comme expédiée
             </Text>
           </Pressable>
-        ) : null}
-        {/* Phase X.7 — "Voir le reçu" Pressable removed (haptic-only ;
-            no V1 receipt screen). Once an order is past needs-ship,
-            the sticky CTA bar simply disappears. */}
+        ) : (
+          // 'placed' = payment still pending. Explain the empty action area so
+          // the seller knows the order is recognized, just not shippable yet.
+          <View style={{ height: 56, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 13.5, fontWeight: '600', color: colors.textMuted }}>
+              En attente du paiement de l'acheteur
+            </Text>
+          </View>
+        )}
       </SafeAreaView>
+      )}
     </SafeAreaView>
   );
 }

@@ -71,7 +71,11 @@ export function IdentityPill({ mode }: { mode: ProMode }) {
   return (
     <Pressable
       onPress={() => {
+        // noShop → scaffold via the publish flow ; existing shop → edit it ;
+        // estate (agent) → the agent identity IS the user profile.
         if (noShop) router.push('/create');
+        else if (isShop) router.push('/shop/edit');
+        else router.push('/profil/edit');
       }}
       style={{
         flexDirection: 'row',
