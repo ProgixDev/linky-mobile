@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Input } from '../../src/components/primitives/Input';
@@ -15,33 +16,40 @@ import { useOrder, useDisputeOrder, type DisputeReason } from '../../src/data/qu
 
 interface IssueDef {
   id: DisputeReason;
-  t: string;
+  labelKey: string;
   icon: IconKey;
 }
 
-const ISSUES: IssueDef[] = [
-  { id: 'not_received', t: "Je n'ai pas reçu mon article",        icon: 'package' },
-  { id: 'wrong',        t: "L'article est différent de l'annonce", icon: 'warn'    },
-  { id: 'damaged',      t: "L'article est endommagé",              icon: 'trash'   },
+// Phase I.8 — labelKey only ; resolve at render so the rows flip on language
+// switch.
+const ISSUE_DEFS: IssueDef[] = [
+  { id: 'not_received', labelKey: 'dispute.reason.notReceived', icon: 'package' },
+  { id: 'wrong',        labelKey: 'dispute.reason.wrong',        icon: 'warn'    },
+  { id: 'damaged',      labelKey: 'dispute.reason.damaged',      icon: 'trash'   },
 ];
 
 export default function DisputeRoute() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const [issue, setIssue] = useState<DisputeReason | null>(null);
   const [description, setDescription] = useState('');
   const { show } = useToast();
   const { data: order } = useOrder(orderId);
   const dispute = useDisputeOrder();
   const canSubmit = !!issue && !!order && !dispute.isPending;
+  const ISSUES = useMemo(
+    () => ISSUE_DEFS.map((d) => ({ ...d, label: t(d.labelKey) })),
+    [t],
+  );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Signaler un problème" back subtitle={`Commande #${orderId}`} />
+      <TopBar title={t('dispute.topbar')} back subtitle={t('dispute.orderRef', { ref: orderId })} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
         <ProgressDots total={4} current={0} />
         <Text variant="dispL" style={{ fontSize: 20, marginTop: 14, marginBottom: 14 }}>
-          Que s'est-il passé ?
+          {t('dispute.title')}
         </Text>
 
         {ISSUES.map((o) => {
@@ -75,7 +83,7 @@ export default function DisputeRoute() {
               >
                 <Icon size={17} color={sel ? colors.danger : colors.text} />
               </View>
-              <Text style={{ flex: 1, fontSize: 13, fontWeight: '500' }}>{o.t}</Text>
+              <Text style={{ flex: 1, fontSize: 13, fontWeight: '500' }}>{o.label}</Text>
               <View
                 style={{
                   width: 22,
@@ -96,18 +104,18 @@ export default function DisputeRoute() {
 
         <View style={{ marginTop: 16 }}>
           <Input
-            label="Décris ce qui s'est passé"
+            label={t('dispute.descLabel')}
             multiline
             maxLength={500}
             value={description}
             onChangeText={setDescription}
-            placeholder="Donne le maximum de détails…"
+            placeholder={t('dispute.descPlaceholder')}
           />
         </View>
 
         <View style={{ marginTop: 12 }}>
           <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginBottom: 6 }}>
-            Photos (optionnel)
+            {t('dispute.photosOptional')}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View
@@ -134,14 +142,14 @@ export default function DisputeRoute() {
           size="lg"
           block
           disabled={!canSubmit}
-          label="Envoyer le signalement"
+          label={t('dispute.submit')}
           onPress={() => {
             if (!issue || !order) return;
             dispute.mutate(
               { orderId: order.id, reason: issue, note: description.trim() || undefined },
               {
                 onSuccess: () => {
-                  show('Litige signalé', 'success');
+                  show(t('dispute.signaled'), 'success');
                   router.replace('/orders');
                 },
               },

@@ -37,17 +37,41 @@ import { useAuth } from '../../src/stores/auth';
 import { useProductsInfinite, useInfiniteProperties } from '../../src/data/queries';
 import { GUINEA_CITIES } from '../../src/components/onboarding/CityMapPicker';
 import { haversineKm } from '../../src/lib/distance';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
-const PRODUCT_CATEGORIES = ['Tout', 'Mode', 'Électronique', 'Maison', 'Beauté', 'Auto'];
-const PROPERTY_TYPES: { value: 'location' | 'vente' | 'terrain'; label: string }[] = [
-  { value: 'location', label: 'Location' },
-  { value: 'vente', label: 'Vente' },
-  { value: 'terrain', label: 'Terrains' },
+// Phase I.8 — categories now carry a CODE + i18n labelKey. The code is the
+// stable filter value (matches the legacy hardcoded string for backward
+// compat with the filters store), the labelKey is resolved at render so
+// labels flip with the active language.
+const PRODUCT_CATEGORY_DEFS = [
+  { code: 'Tout', labelKey: 'marche.catTout' },
+  { code: 'Mode', labelKey: 'marche.catMode' },
+  { code: 'Électronique', labelKey: 'marche.catElectronique' },
+  { code: 'Maison', labelKey: 'marche.catMaison' },
+  { code: 'Beauté', labelKey: 'marche.catBeaute' },
+  { code: 'Auto', labelKey: 'marche.catAuto' },
+] as const;
+const PROPERTY_TYPE_DEFS: { value: 'location' | 'vente' | 'terrain'; labelKey: string }[] = [
+  { value: 'location', labelKey: 'marche.propLocation' },
+  { value: 'vente', labelKey: 'marche.propVente' },
+  { value: 'terrain', labelKey: 'marche.propTerrain' },
 ];
 
 export default function MarcheRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const filters = useFilters();
+  // Resolve the static def lists into actual i18n labels at render so they
+  // re-translate when the user switches language.
+  const PRODUCT_CATEGORIES = useMemo(
+    () => PRODUCT_CATEGORY_DEFS.map((c) => ({ code: c.code, label: t(c.labelKey) })),
+    [t],
+  );
+  const PROPERTY_TYPES = useMemo(
+    () => PROPERTY_TYPE_DEFS.map((p) => ({ value: p.value, label: t(p.labelKey) })),
+    [t],
+  );
   const roles = useAuth((s) => s.roles);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -184,7 +208,7 @@ export default function MarcheRoute() {
               lineHeight: 38,
             }}
           >
-            {isPurePro ? 'Concurrence' : 'Marché'}
+            {isPurePro ? t('marche.titleConcurrence') : t('marche.titleMarche')}
           </Text>
           <Text
             style={{
@@ -196,12 +220,12 @@ export default function MarcheRoute() {
             }}
           >
             {isPureSeller
-              ? 'Scout les autres boutiques de ta catégorie.'
+              ? t('marche.subtitleSeller')
               : isPureAgent
-                ? 'Surveille les autres biens à Conakry.'
+                ? t('marche.subtitleAgent')
                 : isArticles
-                  ? 'Découvre des milliers d\'articles.'
-                  : 'Trouve ton prochain logement.'}
+                  ? t('marche.subtitleArticles')
+                  : t('marche.subtitleProperties')}
           </Text>
         </View>
 
@@ -243,7 +267,7 @@ export default function MarcheRoute() {
                     includeFontPadding: false,
                   }}
                 >
-                  Mode scout
+                  {t('marche.scoutMode')}
                 </Text>
                 <Text
                   style={{
@@ -256,8 +280,8 @@ export default function MarcheRoute() {
                   }}
                 >
                   {isPureSeller
-                    ? 'Compare tes prix et idées avec les autres vendeurs.'
-                    : 'Compare tes biens avec ceux du marché.'}
+                    ? t('marche.scoutSubSeller')
+                    : t('marche.scoutSubAgent')}
                 </Text>
               </View>
             </View>
@@ -275,13 +299,13 @@ export default function MarcheRoute() {
             >
               <TabPill
                 Icon={ShoppingBag}
-                label="Articles"
+                label={t('marche.tabArticles')}
                 active={isArticles}
                 onPress={() => filters.setMarcheTab('articles')}
               />
               <TabPill
                 Icon={HomeIcon}
-                label="Immobilier"
+                label={t('marche.tabImmobilier')}
                 active={!isArticles}
                 onPress={() => filters.setMarcheTab('immobilier')}
               />
@@ -329,7 +353,7 @@ export default function MarcheRoute() {
               }}
               returnKeyType="search"
               autoCorrect={false}
-              accessibilityLabel="Recherche"
+              accessibilityLabel={t('marche.searchA11y')}
             />
             {/* Camera "visual search" badge removed — it was a static View with
                 no onPress, implying an image-search feature that doesn't exist. */}
@@ -339,7 +363,7 @@ export default function MarcheRoute() {
               haptic.light();
               setSheetOpen(true);
             }}
-            accessibilityLabel="Filtres"
+            accessibilityLabel={t('marche.filtersA11y')}
             style={{
               width: 54,
               height: 54,
@@ -367,22 +391,22 @@ export default function MarcheRoute() {
             {isArticles
               ? PRODUCT_CATEGORIES.map((c) => {
                   const active =
-                    filters.productCategory === 'all' ? c === 'Tout' : c === filters.productCategory;
+                    filters.productCategory === 'all' ? c.code === 'Tout' : c.code === filters.productCategory;
                   return (
                     <CategoryPill
-                      key={c}
-                      label={c}
+                      key={c.code}
+                      label={c.label}
                       active={active}
-                      onPress={() => filters.setProductCategory(c === 'Tout' ? 'all' : c)}
+                      onPress={() => filters.setProductCategory(c.code === 'Tout' ? 'all' : c.code)}
                     />
                   );
                 })
-              : PROPERTY_TYPES.map((t) => (
+              : PROPERTY_TYPES.map((pt) => (
                   <CategoryPill
-                    key={t.value}
-                    label={t.label}
-                    active={filters.propertyType === t.value}
-                    onPress={() => filters.setPropertyType(t.value)}
+                    key={pt.value}
+                    label={pt.label}
+                    active={filters.propertyType === pt.value}
+                    onPress={() => filters.setPropertyType(pt.value)}
                   />
                 ))}
           </ScrollView>
@@ -414,7 +438,7 @@ export default function MarcheRoute() {
                 : (isArticles ? products?.length : properties?.length) ?? 0}
             </Text>
             <Text style={{ fontSize: 13.5, color: colors.textMuted, letterSpacing: 0 }}>
-              résultats
+              {t('marche.resultsLabel')}
             </Text>
           </View>
           {/* Phase R.3 — the sort pill was decorative ; it now toggles
@@ -454,7 +478,7 @@ export default function MarcheRoute() {
                   includeFontPadding: false,
                 }}
               >
-                {filters.productSort === 'popular' ? 'Populaires' : 'Récents'}
+                {filters.productSort === 'popular' ? t('marche.sortPopular') : t('marche.sortRecent')}
               </Text>
             </Pressable>
           )}
@@ -494,7 +518,7 @@ export default function MarcheRoute() {
                 ))
               ) : debouncedSearch ? (
                 <View style={{ width: '100%', paddingVertical: 40, alignItems: 'center' }}>
-                  <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
+                  <Text tone="muted">{t('marche.noResultsFor', { q: debouncedSearch })}</Text>
                 </View>
               ) : hasActiveFilters(filters, true) ? (
                 <View
@@ -505,11 +529,11 @@ export default function MarcheRoute() {
                     gap: 14,
                   }}
                 >
-                  <Text tone="muted">Aucun résultat</Text>
+                  <Text tone="muted">{t('marche.noResults')}</Text>
                   <Button
                     variant="outline"
                     size="md"
-                    label="Effacer les filtres"
+                    label={t('marche.clearFilters')}
                     onPress={() => {
                       filters.reset();
                       setSearch('');
@@ -518,7 +542,7 @@ export default function MarcheRoute() {
                 </View>
               ) : (
                 <View style={{ width: '100%', paddingVertical: 40, alignItems: 'center' }}>
-                  <Text tone="muted">Aucune annonce pour le moment. Reviens bientôt.</Text>
+                  <Text tone="muted">{t('marche.emptyListings')}</Text>
                 </View>
               )}
             </View>
@@ -562,7 +586,7 @@ export default function MarcheRoute() {
               </View>
             ) : (
               <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                <Text tone="muted">Aucune annonce pour le moment. Reviens bientôt.</Text>
+                <Text tone="muted">{t('marche.emptyListings')}</Text>
               </View>
             )}
           </View>
@@ -576,25 +600,25 @@ export default function MarcheRoute() {
       </ScrollView>
 
       {/* ===== Filter sheet ===== */}
-      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Filtres" snapPoints={['80%']}>
+      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('marche.filterSheetTitle')} snapPoints={['80%']}>
         <ScrollView style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-          <MicroLabel label="Type" />
+          <MicroLabel label={t('marche.filterType')} />
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
-            {PROPERTY_TYPES.map((t) => (
+            {PROPERTY_TYPES.map((pt) => (
               <Chip
-                key={t.value}
-                label={t.label}
-                active={filters.propertyType === t.value}
-                onPress={() => filters.setPropertyType(t.value)}
+                key={pt.value}
+                label={pt.label}
+                active={filters.propertyType === pt.value}
+                onPress={() => filters.setPropertyType(pt.value)}
                 block
               />
             ))}
           </View>
 
-          <MicroLabel label="Prix max par mois" />
+          <MicroLabel label={t('marche.filterMaxPrice')} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
             {[
-              { label: 'Tout', value: 0 },
+              { label: t('marche.catTout'), value: 0 },
               { label: '< 1M', value: 1_000_000 },
               { label: '< 2M', value: 2_000_000 },
               { label: '< 5M', value: 5_000_000 },
@@ -609,7 +633,7 @@ export default function MarcheRoute() {
             ))}
           </View>
 
-          <MicroLabel label="Ville" />
+          <MicroLabel label={t('marche.filterCity')} />
           {/* Phase R.3 — full 39-city list (was the 8 regional capitals only :
               a property saved with city='Ratoma' was unreachable via filter).
               Same list the onboarding + création wizards use. */}
@@ -624,9 +648,9 @@ export default function MarcheRoute() {
             ))}
           </View>
 
-          <MicroLabel label="Pièces" />
+          <MicroLabel label={t('marche.filterRooms')} />
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
-            {['Studio', '1', '2', '3', '4+'].map((r) => {
+            {[t('marche.filterRoomStudio'), '1', '2', '3', '4+'].map((r) => {
               const value = r.toLowerCase();
               return (
                 <Chip
@@ -640,10 +664,10 @@ export default function MarcheRoute() {
             })}
           </View>
 
-          <MicroLabel label="Distance max au goudron" />
+          <MicroLabel label={t('marche.filterDistanceRoad')} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
             {[
-              { label: 'Tout', value: 0 },
+              { label: t('marche.catTout'), value: 0 },
               { label: '< 250 m', value: 250 },
               { label: '< 500 m', value: 500 },
               { label: '< 1 km', value: 1000 },
@@ -658,7 +682,7 @@ export default function MarcheRoute() {
             ))}
           </View>
 
-          <MicroLabel label="Meublé" />
+          <MicroLabel label={t('marche.filterFurnished')} />
           <View
             style={{
               flexDirection: 'row',
@@ -667,7 +691,7 @@ export default function MarcheRoute() {
               paddingVertical: 6,
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: '500' }}>Uniquement meublé</Text>
+            <Text style={{ fontSize: 13, fontWeight: '500' }}>{t('marche.filterFurnishedOnly')}</Text>
             <Switch value={filters.furnishedOnly} onChange={filters.setFurnishedOnly} />
           </View>
         </ScrollView>
@@ -682,17 +706,18 @@ export default function MarcheRoute() {
         >
           <Button
             variant="secondary"
-            label="Effacer"
+            label={t('marche.clear')}
             style={{ flex: 1 }}
             onPress={() => filters.reset()}
           />
           <Button
             variant="primary"
-            // Phase Y.4 — pluralize the count noun (1 article, 2 articles).
+            // Phase I.8 — pluralize via i18next (marche.see_one/_other,
+            // marche.seeProp_one/_other).
             label={
               isArticles
-                ? `Voir ${products?.length ?? 0} article${(products?.length ?? 0) === 1 ? '' : 's'}`
-                : `Voir ${properties?.length ?? 0} bien${(properties?.length ?? 0) === 1 ? '' : 's'}`
+                ? t('marche.see', { count: products?.length ?? 0 })
+                : t('marche.seeProp', { count: properties?.length ?? 0 })
             }
             style={{ flex: 2 }}
             onPress={() => setSheetOpen(false)}

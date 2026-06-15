@@ -17,6 +17,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { Avatar } from '../primitives/Avatar';
@@ -33,6 +34,7 @@ type Filter = 'all' | 'product' | 'real-estate';
 
 export default function MessagesListScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const convQuery = useConversations();
   const convs = convQuery.data;
   const [filter, setFilter] = useState<Filter>('all');
@@ -74,7 +76,7 @@ export default function MessagesListScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar
-        title="Messages"
+        title={t('messages.title')}
         back
         right={
           <IconButton
@@ -107,7 +109,7 @@ export default function MessagesListScreen() {
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder="Cherche un nom ou un message…"
+              placeholder={t('messages.searchPlaceholder')}
               placeholderTextColor={colors.textFaint}
               autoFocus
               style={{ flex: 1, fontSize: 14, color: colors.text, padding: 0 }}
@@ -115,7 +117,7 @@ export default function MessagesListScreen() {
             {search.length > 0 && (
               <Pressable onPress={() => setSearch('')} hitSlop={14}>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>
-                  Effacer
+                  {t('messages.clearSearch')}
                 </Text>
               </Pressable>
             )}
@@ -125,9 +127,9 @@ export default function MessagesListScreen() {
 
       <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-          <Chip label="Toutes" active={filter === 'all'} onPress={() => setFilter('all')} />
-          <Chip label="Annonces" active={filter === 'product'} onPress={() => setFilter('product')} />
-          <Chip label="Immobilier" active={filter === 'real-estate'} onPress={() => setFilter('real-estate')} />
+          <Chip label={t('messages.filterAll')} active={filter === 'all'} onPress={() => setFilter('all')} />
+          <Chip label={t('messages.filterListings')} active={filter === 'product'} onPress={() => setFilter('product')} />
+          <Chip label={t('messages.filterRealEstate')} active={filter === 'real-estate'} onPress={() => setFilter('real-estate')} />
         </ScrollView>
       </View>
 
@@ -164,17 +166,17 @@ export default function MessagesListScreen() {
             icon="msg"
             title={
               search.trim().length > 0
-                ? 'Aucun résultat'
+                ? t('messages.noResult')
                 : (convs?.length ?? 0) === 0
-                  ? 'Aucune conversation'
-                  : 'Aucune conversation dans ce filtre'
+                  ? t('messages.noConversation')
+                  : t('messages.noConversationInFilter')
             }
             description={
               search.trim().length > 0
-                ? 'Essaie un autre mot-clé.'
+                ? t('messages.noResultSub')
                 : (convs?.length ?? 0) === 0
-                  ? 'Contacte un vendeur depuis une annonce pour démarrer une discussion.'
-                  : 'Bascule sur Toutes pour voir tes autres discussions.'
+                  ? t('messages.noConversationSub')
+                  : t('messages.noConversationInFilterSub')
             }
           />
         ) : (
@@ -195,7 +197,7 @@ export default function MessagesListScreen() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={{ fontSize: 13, fontWeight: c.unread > 0 ? '600' : '500' }} numberOfLines={1}>
-                    {c.otherUserDisplayName ?? 'Utilisateur'}
+                    {c.otherUserDisplayName ?? t('messages.fallbackUser')}
                   </Text>
                   <Text style={{ fontSize: 10, color: c.unread > 0 ? colors.primary : colors.textMuted, fontWeight: c.unread > 0 ? '600' : '400' }}>
                     {c.lastAt ? formatRelativeFR(c.lastAt) : ''}

@@ -2,6 +2,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button, IconButton } from '../../src/components/primitives/Button';
@@ -13,25 +14,28 @@ import { useWallet, useMyWithdrawals, type WithdrawalRequestItem } from '../../s
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 
-const STATUS_LABEL: Record<string, string> = {
-  received: 'Reçu',
-  escrow: 'En séquestre',
-  completed: 'Effectué',
-  pending: 'En attente',
+// Phase I.8 — STATUS_LABEL carries i18n keys only ; the row resolves them
+// with t() at render so the chips flip language live.
+const STATUS_LABEL_KEY: Record<string, string> = {
+  received: 'wallet.movementStatus.received',
+  escrow: 'wallet.movementStatus.escrow',
+  completed: 'wallet.movementStatus.completed',
+  pending: 'wallet.movementStatus.pending',
 };
 
-// Phase S — chips for the « Retraits » tab. 'approved' is an intermediate the
-// V1 manual flow doesn't produce ; map it to the waiting label just in case.
-const WITHDRAWAL_STATUS: Record<WithdrawalRequestItem['status'], { label: string; tone: 'wait' | 'ok' | 'bad' | 'off' }> = {
-  pending: { label: 'En attente', tone: 'wait' },
-  approved: { label: 'En attente', tone: 'wait' },
-  paid: { label: 'Payé', tone: 'ok' },
-  rejected: { label: 'Refusé', tone: 'bad' },
-  cancelled: { label: 'Annulé', tone: 'off' },
+// Withdrawal chips per status. 'approved' is an intermediate the V1 manual
+// flow doesn't produce ; map it to the waiting label just in case.
+const WITHDRAWAL_STATUS_META: Record<WithdrawalRequestItem['status'], { labelKey: string; tone: 'wait' | 'ok' | 'bad' | 'off' }> = {
+  pending: { labelKey: 'wallet.withdrawalStatusLabel.pending', tone: 'wait' },
+  approved: { labelKey: 'wallet.withdrawalStatusLabel.approved', tone: 'wait' },
+  paid: { labelKey: 'wallet.withdrawalStatusLabel.paid', tone: 'ok' },
+  rejected: { labelKey: 'wallet.withdrawalStatusLabel.rejected', tone: 'bad' },
+  cancelled: { labelKey: 'wallet.withdrawalStatusLabel.cancelled', tone: 'off' },
 };
 
 export default function WalletRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const walletQuery = useWallet();
   const withdrawalsQuery = useMyWithdrawals();
   const wallet = walletQuery.data;
@@ -50,7 +54,7 @@ export default function WalletRoute() {
   if (walletQuery.isError) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Mon portefeuille" back />
+        <TopBar title={t('wallet.title')} back />
         <ErrorStateView onRetry={() => walletQuery.refetch()} />
       </SafeAreaView>
     );
@@ -59,7 +63,7 @@ export default function WalletRoute() {
   if (walletQuery.isLoading || !wallet) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Mon portefeuille" back />
+        <TopBar title={t('wallet.title')} back />
         <View style={{ padding: 16, gap: 12 }}>
           <Skeleton height={160} radius={16} />
           <Skeleton height={16} />
@@ -75,7 +79,7 @@ export default function WalletRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar
-        title="Mon portefeuille"
+        title={t('wallet.title')}
         back
         right={
           // Phase U.0 should-fix — was IconButton with no onPress ; wired to /scan.
@@ -83,7 +87,7 @@ export default function WalletRoute() {
             variant="secondary"
             size={36}
             onPress={() => router.push('/scan')}
-            accessibilityLabel="Scanner un QR"
+            accessibilityLabel={t('wallet.scanQr')}
           >
             <I.qr size={16} color={colors.text} />
           </IconButton>
@@ -110,12 +114,12 @@ export default function WalletRoute() {
         </View>
 
         <View style={{ marginTop: 18, paddingHorizontal: 16, flexDirection: 'row', gap: 18, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          {(['movements', 'pending'] as const).map((t) => {
-            const active = tab === t;
+          {(['movements', 'pending'] as const).map((tabId) => {
+            const active = tab === tabId;
             return (
-              <Pressable key={t} onPress={() => setTab(t)} style={{ paddingBottom: 12, borderBottomWidth: active ? 2 : 0, borderBottomColor: colors.primary }}>
+              <Pressable key={tabId} onPress={() => setTab(tabId)} style={{ paddingBottom: 12, borderBottomWidth: active ? 2 : 0, borderBottomColor: colors.primary }}>
                 <Text style={{ fontSize: 13, fontWeight: active ? '600' : '400', color: active ? colors.text : colors.textMuted }}>
-                  {t === 'movements' ? 'Mouvements' : 'Retraits'}
+                  {tabId === 'movements' ? t('wallet.tabMovements') : t('wallet.tabWithdrawals')}
                 </Text>
               </Pressable>
             );
@@ -139,11 +143,12 @@ export default function WalletRoute() {
               </View>
             ) : (myWithdrawals ?? []).length === 0 ? (
               <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', paddingVertical: 24 }}>
-                Aucun retrait pour le moment.
+                {t('wallet.noWithdrawals')}
               </Text>
             ) : (
               (myWithdrawals ?? []).map((w) => {
-                const st = WITHDRAWAL_STATUS[w.status];
+                const stMeta = WITHDRAWAL_STATUS_META[w.status];
+                const st = { ...stMeta, label: t(stMeta.labelKey) };
                 const chipColor =
                   st.tone === 'ok' ? colors.success
                   : st.tone === 'bad' ? colors.danger
@@ -175,7 +180,9 @@ export default function WalletRoute() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 13, fontWeight: '600' }}>
-                        {w.destination ? `Retrait vers ${w.destination}` : 'Retrait'}
+                        {w.destination
+                          ? t('wallet.withdrawalTo', { destination: w.destination })
+                          : t('wallet.withdrawal')}
                       </Text>
                       <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
                         {new Date(w.created_at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -210,7 +217,7 @@ export default function WalletRoute() {
           {/* Phase U.0 should-fix — new wallets used to see a blank area. */}
           {wallet.movements.length === 0 && (
             <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', paddingVertical: 24 }}>
-              Aucun mouvement pour le moment.
+              {t('wallet.noMovements')}
             </Text>
           )}
           {wallet.movements.map((m) => (
@@ -246,7 +253,9 @@ export default function WalletRoute() {
                 <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
                   {new Date(m.date).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   {' · '}
-                  <Text style={{ color: statusColor(m.status) }}>{STATUS_LABEL[m.status]}</Text>
+                  <Text style={{ color: statusColor(m.status) }}>
+                    {STATUS_LABEL_KEY[m.status] ? t(STATUS_LABEL_KEY[m.status]) : m.status}
+                  </Text>
                 </Text>
               </View>
               <Text

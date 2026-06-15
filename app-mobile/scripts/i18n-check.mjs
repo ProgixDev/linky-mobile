@@ -68,11 +68,49 @@ function dropAt(obj, path) {
 }
 
 const mirror = process.argv.includes('--mirror');
+// --en-coverage adds a second pass that flags every en.json value byte-
+// identical to its fr.json counterpart, EXCEPT for an allow-list of cells
+// that are legitimately the same in both languages (brand names, currency
+// codes, proper nouns, short alphanumeric tokens). Phase I.8 — guard against
+// EN cells silently leaking French copy.
+const enCoverage = process.argv.includes('--en-coverage');
 
 const fr = loadJson('fr.json');
 const en = loadJson('en.json');
 const pular = loadJson('pular.json');
 const sousou = loadJson('sousou.json');
+
+// Keys whose FR and EN values are EXPECTED to be byte-identical (no
+// translation needed). Add new entries here when they're a real cross-
+// language constant, not a missed translation.
+const EN_FR_IDENTICAL_ALLOWLIST = new Set([
+  'common.ok',
+  'currency.gnf',
+  'currency.eur',
+  'languages.fr',
+  'languages.en',
+  'languages.pular',
+  'languages.sousou',
+  'onboarding.phone.placeholder',
+  'onboarding.phone.badge',
+  'onboarding.email.badge',
+  // Pure interpolation template, no translatable words.
+  'cart.subtitle',
+  // Brand names (mobile money rails + card schemes + payment buttons).
+  'checkout.rails.orangeMoney',
+  'checkout.rails.mtnMoney',
+  'checkoutSub.cardHint',
+  'checkoutSub.applePay',
+  'checkoutSub.googlePay',
+  // Technical brand (Wi-Fi is the registered alliance trademark).
+  'create.amenityWifi',
+]);
+
+function looksLikeProperNoun(value) {
+  // Heuristic : single-token, capitalized, no whitespace = brand / proper
+  // noun (e.g. "Linky"). Allow through silently.
+  return typeof value === 'string' && /^[A-Z][A-Za-z0-9]+$/.test(value.trim());
+}
 
 const frKeys = keyPaths(fr);
 
@@ -137,3 +175,30 @@ console.log(`en.json: ${keyPaths(en).size} keys`);
 console.log(`pular.json: ${keyPaths(pular).size} keys`);
 console.log(`sousou.json: ${keyPaths(sousou).size} keys`);
 console.log('All four locale files are key-aligned.');
+
+// Phase I.8 — second assertion : every en.json value differs from its
+// fr.json counterpart, unless the key is in EN_FR_IDENTICAL_ALLOWLIST or
+// looks like a proper noun. Without this, an EN cell silently carrying the
+// French source string ships untranslated.
+if (enCoverage) {
+  console.log('\n=== EN coverage check ===');
+  const suspect = [];
+  for (const { path, value: frVal } of leaves(fr)) {
+    const enVal = valueAt(en, path);
+    if (typeof enVal !== 'string') continue;
+    if (enVal !== frVal) continue;
+    if (EN_FR_IDENTICAL_ALLOWLIST.has(path)) continue;
+    if (looksLikeProperNoun(frVal)) continue;
+    suspect.push({ path, value: frVal });
+  }
+  if (suspect.length === 0) {
+    console.log(`OK -- every en.json value differs from fr.json (or is allowlisted).`);
+  } else {
+    console.log(`${suspect.length} en.json value(s) identical to fr.json (likely missing translation):`);
+    for (const s of suspect.slice(0, 30)) {
+      console.log(`  - ${s.path}  =  ${JSON.stringify(s.value)}`);
+    }
+    if (suspect.length > 30) console.log(`  … (+${suspect.length - 30} more)`);
+    process.exit(1);
+  }
+}

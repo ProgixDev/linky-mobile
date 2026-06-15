@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { Text } from '../src/components/primitives/Text';
 import { Chip } from '../src/components/primitives/Chip';
@@ -27,6 +28,7 @@ const ICON_FOR: Record<string, IconKey> = {
 
 export default function NotificationsRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   // Phase U.5 — infinite pagination. The screen used to cap at the newest
   // 30 (the first page) and discarded the next_cursor.
   const notifQuery = useNotificationsInfinite();
@@ -72,7 +74,7 @@ export default function NotificationsRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar
-        title="Notifications"
+        title={t('notifications.title')}
         back
         /* Phase U.0d — the gear lied : /settings is the Language picker,
             no notification-prefs screen exists in V1. Removed rather
@@ -110,28 +112,28 @@ export default function NotificationsRoute() {
                 rendering interactive-but-useless above the error state. */}
             <View style={{ paddingBottom: 12 }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                <Chip label="Toutes" active={tab === 'all'} onPress={() => setTab('all')} />
-                <Chip label="Commandes" active={tab === 'order'} onPress={() => setTab('order')} />
-                <Chip label="Messages" active={tab === 'message'} onPress={() => setTab('message')} />
-                <Chip label="Visites" active={tab === 'visit'} onPress={() => setTab('visit')} />
-                <Chip label="Promos" active={tab === 'promo'} onPress={() => setTab('promo')} />
+                <Chip label={t('notifications.filterAll')} active={tab === 'all'} onPress={() => setTab('all')} />
+                <Chip label={t('notifications.filterOrder')} active={tab === 'order'} onPress={() => setTab('order')} />
+                <Chip label={t('notifications.filterMessage')} active={tab === 'message'} onPress={() => setTab('message')} />
+                <Chip label={t('notifications.filterVisit')} active={tab === 'visit'} onPress={() => setTab('visit')} />
+                <Chip label={t('notifications.filterPromo')} active={tab === 'promo'} onPress={() => setTab('promo')} />
               </ScrollView>
             </View>
             {filtered.length === 0 && (
               <EmptyState
                 icon="bell"
-                title={items.length === 0 ? 'Pas de notifications' : 'Rien dans ce filtre'}
+                title={items.length === 0 ? t('notifications.emptyTitle') : t('notifications.emptyInFilterTitle')}
                 description={
                   items.length === 0
-                    ? 'Tes alertes (commandes, messages, visites) apparaîtront ici.'
-                    : 'Bascule sur Toutes pour voir tes autres notifications.'
+                    ? t('notifications.emptySub')
+                    : t('notifications.emptyInFilterSub')
                 }
               />
             )}
             {grouped.today.length > 0 && (
               <>
                 <Text variant="micro" tone="muted" style={{ marginTop: 6, marginBottom: 8 }}>
-                  AUJOURD'HUI
+                  {t('notifications.today')}
                 </Text>
                 {grouped.today.map((n) => (
                   <NotificationRow key={n.id} item={n} />
@@ -141,7 +143,7 @@ export default function NotificationsRoute() {
             {grouped.week.length > 0 && (
               <>
                 <Text variant="micro" tone="muted" style={{ marginTop: 16, marginBottom: 8 }}>
-                  CETTE SEMAINE
+                  {t('notifications.thisWeek')}
                 </Text>
                 {grouped.week.map((n) => (
                   <NotificationRow key={n.id} item={n} />
@@ -156,7 +158,7 @@ export default function NotificationsRoute() {
                 <Button
                   variant="outline"
                   size="md"
-                  label="Charger plus"
+                  label={t('notifications.loadMore')}
                   loading={notifQuery.isFetchingNextPage}
                   disabled={notifQuery.isFetchingNextPage}
                   onPress={() => void notifQuery.fetchNextPage()}

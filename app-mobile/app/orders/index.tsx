@@ -26,20 +26,24 @@ import type { Order, OrderStatus } from '../../src/data/types';
 
 type Filter = 'all' | 'active' | 'completed';
 
-const STATUS_META: Record<OrderStatus, { label: string; Icon: LucideIcon; bg: string; fg: string }> = {
-  placed: { label: 'PASSÉE', Icon: Clock, bg: '#FCF1DC', fg: '#8B5A0A' },
-  paid: { label: 'PAYÉE', Icon: Clock, bg: '#FCF1DC', fg: '#8B5A0A' },
-  preparing: { label: 'EN COURS', Icon: Truck, bg: '#FCF1DC', fg: '#8B5A0A' },
-  delivered: { label: 'LIVRÉE', Icon: Package, bg: '#E0F0E8', fg: '#155F45' },
-  released: { label: 'TERMINÉE', Icon: CheckCircle2, bg: '#E8F2EE', fg: '#0A5240' },
-  disputed: { label: 'LITIGE', Icon: CircleAlert, bg: '#FBE7E5', fg: '#B53D2F' },
-  cancelled: { label: 'ANNULÉE', Icon: Ban, bg: '#EEEEEE', fg: '#606060' },
-  refunded: { label: 'REMBOURSÉE', Icon: RotateCcw, bg: '#E8EFF6', fg: '#1F4E7A' },
+// Phase I.8 — colors + icon are constants ; only the label is i18n-driven,
+// so the static map carries a translation KEY and the row resolves it with
+// t() at render time. This is the canonical fix for module-scope label
+// arrays that would otherwise freeze at the language i18next first resolved.
+const STATUS_META: Record<OrderStatus, { labelKey: string; Icon: LucideIcon; bg: string; fg: string }> = {
+  placed: { labelKey: 'orders.status.placed', Icon: Clock, bg: '#FCF1DC', fg: '#8B5A0A' },
+  paid: { labelKey: 'orders.status.paid', Icon: Clock, bg: '#FCF1DC', fg: '#8B5A0A' },
+  preparing: { labelKey: 'orders.status.preparing', Icon: Truck, bg: '#FCF1DC', fg: '#8B5A0A' },
+  delivered: { labelKey: 'orders.status.delivered', Icon: Package, bg: '#E0F0E8', fg: '#155F45' },
+  released: { labelKey: 'orders.status.released', Icon: CheckCircle2, bg: '#E8F2EE', fg: '#0A5240' },
+  disputed: { labelKey: 'orders.status.disputed', Icon: CircleAlert, bg: '#FBE7E5', fg: '#B53D2F' },
+  cancelled: { labelKey: 'orders.status.cancelled', Icon: Ban, bg: '#EEEEEE', fg: '#606060' },
+  refunded: { labelKey: 'orders.status.refunded', Icon: RotateCcw, bg: '#E8EFF6', fg: '#1F4E7A' },
 };
 
 // Defensive fallback for any future status the client hasn't been taught about
 // yet — surfaces the raw status code instead of crashing the row.
-const STATUS_FALLBACK = { label: '—', Icon: CircleAlert, bg: '#EEEEEE', fg: '#606060' } as const;
+const STATUS_FALLBACK = { labelKey: 'states.empty', Icon: CircleAlert, bg: '#EEEEEE', fg: '#606060' } as const;
 
 export default function OrdersIndex() {
   const { colors } = useTheme();
@@ -161,7 +165,12 @@ export default function OrdersIndex() {
 function OrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const meta = STATUS_META[order.status] ?? { ...STATUS_FALLBACK, label: order.status.toUpperCase() };
+  // Phase I.8 — resolve the labelKey at render time so the status pill flips
+  // language live. Unknown statuses fall through to the raw uppercase code.
+  const metaBase = STATUS_META[order.status];
+  const meta = metaBase
+    ? { ...metaBase, label: t(metaBase.labelKey) }
+    : { ...STATUS_FALLBACK, label: order.status.toUpperCase() };
   return (
     <Pressable
       onPress={onPress}
