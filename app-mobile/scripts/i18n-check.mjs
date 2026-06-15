@@ -97,6 +97,10 @@ const EN_FR_IDENTICAL_ALLOWLIST = new Set([
   // Pure interpolation template, no translatable words.
   'cart.subtitle',
   'pro.demandeWhenOther',
+  'checkout.confirmTerminalErrorPrefix',
+  // Brand / section header ("Mobile Money" stays as-is across FR/EN).
+  'checkout.sectionMobileMoney',
+  'checkout.cardSub',
   // Brand names (mobile money rails + card schemes + payment buttons +
   // local Guinea delivery partners).
   'checkout.rails.orangeMoney',

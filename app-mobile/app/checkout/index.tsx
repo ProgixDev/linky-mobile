@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
 import { useQueries } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Card } from '../../src/components/primitives/Card';
@@ -35,14 +36,29 @@ interface MethodOption {
 // the prod key swap would silently leave Google Pay in test mode.
 const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').startsWith('pk_test_');
 
-const METHODS: MethodOption[] = [
-  { id: 'orange-money', name: 'Orange Money', hint: 'Disponible très bientôt', badge: 'OM', badgeColor: '#FF7900', comingSoon: true },
-  { id: 'mtn-money', name: 'MTN Mobile Money', hint: 'Disponible très bientôt', badge: 'M', badgeColor: '#FFC500', comingSoon: true },
+// Phase I.8 / I.9 — name + hint come from i18n at render so they flip with
+// language. Brand colors + badge codes are stable.
+const METHOD_DEFS: { id: PaymentMethod; nameKey: string; hintKey: string; badge: string; badgeColor: string; comingSoon?: boolean }[] = [
+  { id: 'orange-money', nameKey: 'checkout.rails.orangeMoney', hintKey: 'checkout.rails.orangeMoneyHint', badge: 'OM', badgeColor: '#FF7900', comingSoon: true },
+  { id: 'mtn-money', nameKey: 'checkout.rails.mtnMoney', hintKey: 'checkout.rails.mtnMoneyHint', badge: 'M', badgeColor: '#FFC500', comingSoon: true },
 ];
 
 export default function CheckoutRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<PaymentMethod>('card');
+  const METHODS: MethodOption[] = useMemo(
+    () =>
+      METHOD_DEFS.map((m) => ({
+        id: m.id,
+        name: t(m.nameKey),
+        hint: t(m.hintKey),
+        badge: m.badge,
+        badgeColor: m.badgeColor,
+        comingSoon: m.comingSoon,
+      })),
+    [t],
+  );
   const lines = useCart((s) => s.lines);
   const placeOrder = usePlaceOrder();
   const { show } = useToast();
@@ -129,9 +145,9 @@ export default function CheckoutRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Moyen de paiement" back />
+      <TopBar title={t('checkout.title')} back />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
-        <MicroLabel label="Mobile Money" />
+        <MicroLabel label={t('checkout.sectionMobileMoney')} />
         <Card padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
           {METHODS.map((m, i) => {
             const sel = selected === m.id;
@@ -140,7 +156,7 @@ export default function CheckoutRoute() {
                 key={m.id}
                 onPress={() => {
                   if (m.comingSoon) {
-                    show('Bientôt disponible — paie par carte bancaire en attendant.', 'info');
+                    show(t('checkout.comingSoonToast'), 'info');
                     return;
                   }
                   setSelected(m.id);
@@ -175,7 +191,7 @@ export default function CheckoutRoute() {
                 </View>
                 {m.comingSoon ? (
                   <View style={{ paddingHorizontal: 10, height: 22, borderRadius: 999, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: colors.accentText }}>Bientôt</Text>
+                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: colors.accentText }}>{t('checkout.comingSoonBadge')}</Text>
                   </View>
                 ) : (
                   <View
@@ -199,10 +215,10 @@ export default function CheckoutRoute() {
         </Card>
 
         <Text variant="micro" tone="muted" style={{ marginTop: -8, marginBottom: 16, paddingHorizontal: 4, letterSpacing: 0, textTransform: 'none', lineHeight: 15 }}>
-          Orange Money et MTN Mobile Money seront activés très bientôt. En attendant, le paiement par carte bancaire fonctionne déjà.
+          {t('checkout.rails.mobileMoneyNote')}
         </Text>
 
-        <MicroLabel label="Autres options" />
+        <MicroLabel label={t('checkout.sectionOther')} />
         <Card padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
           <Pressable
             onPress={() => setSelected('wallet')}
@@ -221,9 +237,9 @@ export default function CheckoutRoute() {
               <I.wallet size={18} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600' }}>Wallet Linky</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.walletLinky')}</Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', fontVariant: ['tabular-nums'] }}>
-                Solde {walletReady ? formatGNF(wallet!.balanceGnf) : '—'}
+                {t('checkout.walletBalance', { amount: walletReady ? formatGNF(wallet!.balanceGnf) : '—' })}
               </Text>
             </View>
             <View
@@ -258,9 +274,9 @@ export default function CheckoutRoute() {
               <I.card size={18} color="#FFFFFF" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600' }}>Carte bancaire</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.card')}</Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', fontVariant: ['tabular-nums'] }}>
-                Visa, Mastercard, Google Pay
+                {t('checkout.cardSub')}
               </Text>
             </View>
             <View
@@ -284,13 +300,11 @@ export default function CheckoutRoute() {
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
             <I.info size={16} color={colors.primary} />
             <Text variant="micro" tone="muted" style={{ flex: 1, lineHeight: 16, letterSpacing: 0, textTransform: 'none' }}>
-              {selected === 'card' ? (
-                <>Tu confirmes le paiement dans une{' '}
-                <Text style={{ color: colors.text, fontWeight: '700' }}>fenêtre sécurisée</Text> — carte ou Google Pay.</>
-              ) : (
-                <>Tu recevras un{' '}
-                <Text style={{ color: colors.text, fontWeight: '700' }}>code SMS</Text> sur ton numéro {selected === 'mtn-money' ? 'MTN' : 'Orange Money'} pour confirmer le paiement.</>
-              )}
+              {selected === 'card'
+                ? t('checkout.infoCard')
+                : selected === 'mtn-money'
+                  ? t('checkout.infoMobileMtn')
+                  : t('checkout.infoMobileOrange')}
             </Text>
           </View>
         </Card>
@@ -302,7 +316,7 @@ export default function CheckoutRoute() {
           block
           loading={placeOrder.isPending || cardFlowBusy}
           disabled={placeOrder.isPending || cardFlowBusy || !allLoaded || lines.length === 0}
-          label={placeOrder.isPending || cardFlowBusy ? 'Paiement en cours…' : `Payer ${formatGNF(total)}`}
+          label={placeOrder.isPending || cardFlowBusy ? t('checkout.payingCta') : t('checkout.payCta', { amount: formatGNF(total) })}
           onPress={() => {
             const first = lines[0];
             if (!first) return;
@@ -327,12 +341,12 @@ export default function CheckoutRoute() {
                     // from the buyer side, so this is the actual moment of
                     // payment success → safe to clear.
                     useCart.getState().clear();
-                    show('Commande créée', 'success');
+                    show(t('checkout.orderCreated'), 'success');
                     router.replace(`/checkout/success?orderId=${order.id}`);
                   }
                 },
                 onError: (err: unknown) => {
-                  const msg = (err as { message?: string })?.message ?? 'Erreur paiement';
+                  const msg = (err as { message?: string })?.message ?? t('checkout.payErrorFallback');
                   show(msg, 'danger');
                 },
               },

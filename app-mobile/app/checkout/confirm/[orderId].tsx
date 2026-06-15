@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, View, Pressable, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Card } from '../../../src/components/primitives/Card';
@@ -28,11 +29,12 @@ const INVALID_PERSISTENCE_TIMEOUT_MS = 10_000;
 type StateClass = 'WAIT' | 'SUCCESS' | 'FAIL' | 'EXPIRED' | 'USER_CANCEL' | 'INVALID';
 type TerminalState = 'FAIL' | 'EXPIRED' | 'USER_CANCEL';
 
-// N1: hoisted to module scope to avoid recreating on every render.
-const TERMINAL_COPY: Record<TerminalState, { title: string; message: string }> = {
-  FAIL:        { title: 'Paiement échoué',       message: 'Une erreur est survenue lors du paiement.' },
-  EXPIRED:     { title: 'Paiement non confirmé', message: "On n'a pas reçu de confirmation dans les 15 minutes. Aucun débit n'a été effectué." },
-  USER_CANCEL: { title: 'Paiement annulé',       message: "Le paiement a été annulé. Aucun débit n'a été effectué." },
+// Phase I.9 — terminal-state copy keyed off i18n. Resolved at render via t()
+// so the FAIL / EXPIRED / USER_CANCEL strings flip with language.
+const TERMINAL_COPY_KEYS: Record<TerminalState, { titleKey: string; messageKey: string }> = {
+  FAIL:        { titleKey: 'checkout.confirmTerminalFailTitle',       messageKey: 'checkout.confirmTerminalFailMessage' },
+  EXPIRED:     { titleKey: 'checkout.confirmTerminalExpiredTitle',    messageKey: 'checkout.confirmTerminalExpiredMessage' },
+  USER_CANCEL: { titleKey: 'checkout.confirmTerminalUserCancelTitle', messageKey: 'checkout.confirmTerminalUserCancelMessage' },
 };
 
 function classify(orderStatus: string, intentStatus?: string): StateClass {
@@ -60,6 +62,7 @@ function formatLocalPhone(digits: string): string {
 export default function CheckoutConfirmRoute() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { show } = useToast();
   const { data, error, isLoading } = useOrderWithIntent(orderId);
   const cancel = useCancelPendingPayment();
@@ -130,16 +133,16 @@ export default function CheckoutConfirmRoute() {
   if (error) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Erreur" back />
+        <TopBar title={t('checkout.confirmErrorTitle')} back />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
-          <Text variant="dispL" center style={{ fontSize: 18 }}>Commande introuvable</Text>
+          <Text variant="dispL" center style={{ fontSize: 18 }}>{t('checkout.confirmNotFoundTitle')}</Text>
           <Text variant="bodyM" tone="muted" center style={{ marginTop: 8 }}>
-            Cette commande n'existe pas ou tu n'y as pas accès.
+            {t('checkout.confirmAccessTitle')}
           </Text>
           <Button
             variant="dark" size="lg" block
             style={{ marginTop: 24 }}
-            label="Retour à l'accueil"
+            label={t('checkout.confirmBackHome')}
             onPress={() => router.replace('/(tabs)')}
           />
         </View>
@@ -156,9 +159,9 @@ export default function CheckoutConfirmRoute() {
       (stateClass === 'INVALID' && !invalidExpired)) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Suivi du paiement" subtitle={order?.reference ? `#${order.reference}` : undefined} />
+        <TopBar title={t('checkout.confirmTrackingTitle')} subtitle={order?.reference ? `#${order.reference}` : undefined} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="bodyM" tone="muted">Synchronisation…</Text>
+          <Text variant="bodyM" tone="muted">{t('checkout.confirmSyncing')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -182,23 +185,23 @@ export default function CheckoutConfirmRoute() {
   async function handleCancel() {
     try {
       await cancel.mutateAsync({ orderId: order!.id });
-      show('Paiement annulé', 'info');
+      show(t('checkout.confirmCancelled'), 'info');
       router.replace('/(tabs)');
     } catch (e: unknown) {
       const err = e as { code?: string; message_fr?: string };
       if (err.code === 'PAYMENT_ALREADY_COMPLETED') {
         // The cancel raced the payment and the payment won — that's a success,
         // not an error. Stay here ; polling flips the screen to SUCCESS.
-        show(err.message_fr ?? "Le paiement vient d'aboutir — ta commande est confirmée.", 'info');
+        show(err.message_fr ?? t('checkout.confirmPaidJustNow'), 'info');
         return;
       }
-      show("Erreur lors de l'annulation", 'danger');
+      show(t('checkout.confirmCancelError'), 'danger');
     }
   }
 
   async function handleModifierConfirm() {
     if (!PHONE_RE.test(newPhoneDigits)) {
-      show('Numéro invalide (9 chiffres après +224)', 'danger');
+      show(t('checkout.confirmEditPhoneInvalid'), 'danger');
       return;
     }
     const newPhone = `+224${newPhoneDigits}`;
@@ -213,7 +216,7 @@ export default function CheckoutConfirmRoute() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
       router.replace(`/checkout/confirm/${result.order.id}` as any);
     } catch {
-      show("Erreur lors du changement de numéro", 'danger');
+      show(t('checkout.confirmEditPhoneError'), 'danger');
     }
   }
 
@@ -229,18 +232,18 @@ export default function CheckoutConfirmRoute() {
   if (stateClass === 'WAIT') {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title="Suivi du paiement" back subtitle={`#${order.reference}`} />
+        <TopBar title={t('checkout.confirmTrackingTitle')} back subtitle={`#${order.reference}`} />
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
           <Card padding={16} style={{ marginTop: 12 }}>
-            <Row label="Méthode" value={isCard ? 'Carte bancaire' : order.paymentMethod === 'orange-money' ? 'Orange Money' : 'MTN Mobile Money'} />
+            <Row label={t('checkout.confirmRowMethod')} value={isCard ? t('checkout.card') : order.paymentMethod === 'orange-money' ? t('checkout.rails.orangeMoney') : t('checkout.rails.mtnMoney')} />
             {!isCard && (
             <Row
-              label="Numéro"
+              label={t('checkout.confirmRowNumber')}
               value={editingPhone ? '' : (intent.payerPhone ? maskPhone(intent.payerPhone) : '—')}
               right={
                 !editingPhone ? (
                   <Pressable onPress={openModifier} hitSlop={6}>
-                    <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>Modifier</Text>
+                    <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>{t('checkout.confirmEditPhone')}</Text>
                   </Pressable>
                 ) : undefined
               }
@@ -255,7 +258,7 @@ export default function CheckoutConfirmRoute() {
                     maxLength={9}
                     value={newPhoneDigits}
                     onChangeText={(t) => setNewPhoneDigits(t.replace(/\D/g, '').slice(0, 9))}
-                    placeholder="6XX XX XX XX"
+                    placeholder={t('onboarding.phone.placeholder')}
                     placeholderTextColor={colors.textFaint}
                     style={{
                       flex: 1, fontSize: 14, fontVariant: ['tabular-nums'],
@@ -264,14 +267,14 @@ export default function CheckoutConfirmRoute() {
                   />
                 </View>
                 <Text variant="micro" tone="muted" style={{ marginTop: 4, textTransform: 'none', letterSpacing: 0 }}>
-                  Affiché : +224 {formatLocalPhone(newPhoneDigits)}
+                  {t('checkout.confirmEditPhoneDisplayed', { phone: formatLocalPhone(newPhoneDigits) })}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
                   <Pressable
                     onPress={() => setEditingPhone(false)}
                     style={{ flex: 1, height: 40, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Text style={{ fontSize: 13, color: colors.text }}>Annuler</Text>
+                    <Text style={{ fontSize: 13, color: colors.text }}>{t('checkout.confirmEditPhoneCancel')}</Text>
                   </Pressable>
                   <Pressable
                     onPress={handleModifierConfirm}
@@ -282,42 +285,38 @@ export default function CheckoutConfirmRoute() {
                       alignItems: 'center', justifyContent: 'center',
                     }}
                   >
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Confirmer</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>{t('checkout.confirmEditPhoneConfirm')}</Text>
                   </Pressable>
                 </View>
               </View>
             )}
-            <Row label="Montant" value={formatGNF(order.totalGnf)} />
+            <Row label={t('checkout.confirmRowAmount')} value={formatGNF(order.totalGnf)} />
           </Card>
 
           {isCard ? (
             <Card padding={16} style={{ marginTop: 16, alignItems: 'center' }}>
               <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
-                ⏳  Confirmation en cours…
+                {t('checkout.confirmCardConfirmingTitle')}
               </Text>
               <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
-                Ta banque confirme le paiement de{' '}
-                <Text style={{ color: colors.text, fontWeight: '700' }}>{formatGNF(order.totalGnf)}</Text>
-                {' '}— ça prend quelques secondes.
+                {t('checkout.confirmCardConfirmingBodyPlain', { amount: formatGNF(order.totalGnf) })}
               </Text>
               {cardSlow && (
                 <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 12, lineHeight: 19 }}>
-                  C'est plus long que prévu. Pas d'inquiétude : la commande se mettra à jour automatiquement dès que la confirmation arrive.
+                  {t('checkout.confirmTakingLonger')}
                 </Text>
               )}
             </Card>
           ) : (
           <Card padding={16} style={{ marginTop: 16, alignItems: 'center' }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
-              ⏳  Vérifie ton téléphone
+              {t('checkout.confirmCheckPhoneTitle')}
             </Text>
             <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
-              Suis les instructions sur ton téléphone — accepte le paiement de{' '}
-              <Text style={{ color: colors.text, fontWeight: '700' }}>{formatGNF(order.totalGnf)}</Text>
-              {' '}pour confirmer.
+              {t('checkout.confirmCheckPhoneBody', { amount: formatGNF(order.totalGnf) })}
             </Text>
             <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 16, fontVariant: ['tabular-nums'] }}>
-              ⏱  Temps restant : <Text style={{ color: colors.text, fontWeight: '700' }}>{mm}:{ss}</Text>
+              {t('checkout.confirmTimeRemaining', { time: `${mm}:${ss}` })}
             </Text>
           </Card>
           )}
@@ -327,7 +326,7 @@ export default function CheckoutConfirmRoute() {
             size="sm"
             block
             style={{ marginTop: 18 }}
-            label={cancel.isPending ? 'Annulation…' : 'Annuler le paiement'}
+            label={cancel.isPending ? t('checkout.confirmCancelling') : t('checkout.confirmCancelPayment')}
             onPress={handleCancel}
             disabled={cancel.isPending}
           />
@@ -339,16 +338,18 @@ export default function CheckoutConfirmRoute() {
   // ─────────────────────────────────────────────────────────────────────────
   // Terminal states (FAIL / EXPIRED / USER_CANCEL)
   // ─────────────────────────────────────────────────────────────────────────
-  const copy = TERMINAL_COPY[stateClass as TerminalState];
-  const failMessage = stateClass === 'FAIL' && intent.lastErrorMessage ? intent.lastErrorMessage : copy.message;
+  const copyKeys = TERMINAL_COPY_KEYS[stateClass as TerminalState];
+  const copyTitle = t(copyKeys.titleKey);
+  const copyMessage = t(copyKeys.messageKey);
+  const failMessage = stateClass === 'FAIL' && intent.lastErrorMessage ? intent.lastErrorMessage : copyMessage;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Suivi du paiement" back subtitle={`#${order.reference}`} />
+      <TopBar title={t('checkout.confirmTrackingTitle')} back subtitle={`#${order.reference}`} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
         <Card padding={20} style={{ marginTop: 18, backgroundColor: 'rgba(209,79,60,0.06)', borderColor: 'rgba(209,79,60,0.2)' }}>
           <Text style={{ fontSize: 17, fontWeight: '700', color: colors.danger }}>
-            ❌  {copy.title}
+            {t('checkout.confirmTerminalErrorPrefix', { title: copyTitle })}
           </Text>
           <Text variant="bodyM" tone="muted" style={{ marginTop: 8, lineHeight: 19 }}>
             {failMessage}
@@ -359,7 +360,7 @@ export default function CheckoutConfirmRoute() {
           size="lg"
           block
           style={{ marginTop: 18 }}
-          label="Recommencer"
+          label={t('checkout.confirmRetry')}
           onPress={() => router.replace('/checkout')}
         />
         <Button
@@ -367,7 +368,7 @@ export default function CheckoutConfirmRoute() {
           size="sm"
           block
           style={{ marginTop: 8 }}
-          label="Continuer mes achats"
+          label={t('checkout.confirmContinueShopping')}
           onPress={() => router.replace('/(tabs)')}
         />
       </ScrollView>

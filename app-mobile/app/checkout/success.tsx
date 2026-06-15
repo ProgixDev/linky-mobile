@@ -12,6 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Check, Package, Clock, ShieldCheck, Receipt } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { haptic } from '../../src/lib/haptics';
@@ -20,6 +21,7 @@ import { formatGNF } from '../../src/lib/format';
 
 export default function CheckoutSuccess() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { orderId } = useLocalSearchParams<{ orderId?: string }>();
   const { data: order } = useOrder(orderId);
 
@@ -106,7 +108,7 @@ export default function CheckoutSuccess() {
               lineHeight: 32,
             }}
           >
-            Commande passée !
+            {t('checkout.successTitle')}
           </Text>
           <Text
             style={{
@@ -119,7 +121,7 @@ export default function CheckoutSuccess() {
               letterSpacing: 0,
             }}
           >
-            On sécurise ton paiement en escrow. Le vendeur prépare ton article.
+            {t('checkout.successSub')}
           </Text>
 
           {/* Order summary card */}
@@ -150,7 +152,7 @@ export default function CheckoutSuccess() {
                   letterSpacing: 0.5,
                 }}
               >
-                NUMÉRO
+                {t('checkout.successNumberLabel')}
               </Text>
               <Text
                 style={{
@@ -167,19 +169,19 @@ export default function CheckoutSuccess() {
             <View style={{ height: 1, backgroundColor: colors.border }} />
             <SummaryLine
               Icon={Receipt}
-              label="Total payé"
+              label={t('checkout.successTotal')}
               value={formatGNF(order.totalGnf)}
               valueBold
             />
             <SummaryLine
               Icon={Package}
-              label="Préparation estimée"
-              value="24 à 48 h"
+              label={t('checkout.successPreparation')}
+              value={t('checkout.successPreparationValue')}
             />
             <SummaryLine
               Icon={Clock}
-              label="Libération auto"
-              value="J+5 si pas confirmé"
+              label={t('checkout.successAutoRelease')}
+              value={t('checkout.successAutoReleaseValue')}
             />
             <View
               style={{
@@ -202,7 +204,7 @@ export default function CheckoutSuccess() {
                   letterSpacing: 0,
                 }}
               >
-                Tu peux ouvrir un litige depuis la commande tant que tu n'as pas confirmé la réception.
+                {t('checkout.openDispute')}
               </Text>
             </View>
           </View>
@@ -232,7 +234,7 @@ export default function CheckoutSuccess() {
                 includeFontPadding: false,
               }}
             >
-              Suivre ma commande
+              {t('checkout.trackOrder')}
             </Text>
           </Pressable>
           <Pressable
@@ -253,7 +255,7 @@ export default function CheckoutSuccess() {
                 includeFontPadding: false,
               }}
             >
-              Continuer mes achats
+              {t('checkout.successContinueShopping')}
             </Text>
           </Pressable>
         </View>
