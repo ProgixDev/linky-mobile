@@ -643,6 +643,9 @@ verify_jwt = false
 [functions.wallet-balance]
 verify_jwt = false
 
+[functions.wallet-send]
+verify_jwt = false
+
 [functions.wallet-history]
 verify_jwt = false
 

@@ -283,6 +283,25 @@
       "successToast": "Retrait demandé — traitement sous 24h",
       "errorToast": "Retrait impossible"
     },
+    "envoyer": {
+      "topbar": "Envoyer",
+      "betaNote": "Envoi entre wallets en bêta — disponible pendant la phase de test. Confirme bien le numéro : un envoi ne peut pas être annulé.",
+      "balanceLabel": "Solde disponible",
+      "recipientLabel": "Destinataire",
+      "phoneInputLabel": "Numéro du destinataire",
+      "phonePlaceholder": "6XX XX XX XX",
+      "phoneInvalid": "Numéro guinéen invalide (9 chiffres, commence par 6).",
+      "phoneHint": "Le numéro Linky de la personne qui reçoit.",
+      "amountLabel": "Montant à envoyer",
+      "insufficient": "Solde insuffisant — disponible : {{balance}}",
+      "aboveCap": "Plafond bêta : {{cap}} par envoi.",
+      "cap": "Plafond bêta : {{cap}} par envoi.",
+      "irreversibleNote": "Un envoi est définitif. Vérifie le numéro avant de confirmer.",
+      "ctaWithAmount": "Envoyer {{amount}}",
+      "cta": "Envoyer",
+      "successToast": "Envoi effectué",
+      "errorToast": "Envoi impossible"
+    },
     "recharger": {
       "topbar": "Recharger",
       "balanceLabel": "Solde actuel",

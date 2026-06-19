@@ -110,6 +110,7 @@ export default function WalletRoute() {
             large
             onRecharger={() => router.push('/wallet/recharger')}
             onRetirer={() => router.push('/wallet/retirer')}
+            onEnvoyer={() => router.push('/wallet/envoyer' as never)}
           />
         </View>
 

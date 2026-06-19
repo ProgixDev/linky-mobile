@@ -11,11 +11,13 @@ export function WalletGlanceCard({
   balanceGnf,
   onRecharger,
   onRetirer,
+  onEnvoyer,
   large = false,
 }: {
   balanceGnf: number;
   onRecharger?: () => void;
   onRetirer?: () => void;
+  onEnvoyer?: () => void;
   large?: boolean;
 }) {
   const { radii } = useTheme();
@@ -91,6 +93,27 @@ export function WalletGlanceCard({
           <I.plus size={14} color="#FFFFFF" />
           <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Recharger</Text>
         </Pressable>
+        {onEnvoyer && (
+          <Pressable
+            onPress={() => {
+              haptic.light();
+              onEnvoyer();
+            }}
+            style={{
+              flex: 1,
+              height: large ? 40 : 36,
+              borderRadius: 999,
+              backgroundColor: 'rgba(255,255,255,0.18)',
+              flexDirection: 'row',
+              gap: 5,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <I.upload size={14} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Envoyer</Text>
+          </Pressable>
+        )}
         <Pressable
           onPress={() => {
             haptic.light();

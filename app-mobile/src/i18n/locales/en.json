@@ -283,6 +283,25 @@
       "successToast": "Withdrawal requested — processed within 24h",
       "errorToast": "Withdrawal failed"
     },
+    "envoyer": {
+      "topbar": "Send",
+      "betaNote": "Wallet-to-wallet send is in beta — available during the test phase. Double-check the number: a transfer can't be undone.",
+      "balanceLabel": "Available balance",
+      "recipientLabel": "Recipient",
+      "phoneInputLabel": "Recipient number",
+      "phonePlaceholder": "6XX XX XX XX",
+      "phoneInvalid": "Invalid Guinea number (9 digits, starts with 6).",
+      "phoneHint": "The Linky number of the person receiving.",
+      "amountLabel": "Amount to send",
+      "insufficient": "Insufficient balance — available: {{balance}}",
+      "aboveCap": "Beta cap: {{cap}} per transfer.",
+      "cap": "Beta cap: {{cap}} per transfer.",
+      "irreversibleNote": "A transfer is final. Verify the number before confirming.",
+      "ctaWithAmount": "Send {{amount}}",
+      "cta": "Send",
+      "successToast": "Transfer sent",
+      "errorToast": "Could not send"
+    },
     "recharger": {
       "topbar": "Top up",
       "balanceLabel": "Current balance",

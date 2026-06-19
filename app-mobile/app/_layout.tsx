@@ -93,6 +93,7 @@ export default function RootLayout() {
                       <Stack.Screen name="wallet/index" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="wallet/recharger" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="wallet/retirer" options={{ animation: 'slide_from_right' }} />
+                      <Stack.Screen name="wallet/envoyer" options={{ animation: 'slide_from_right' }} />
                       <Stack.Screen name="create/index" options={{ presentation: 'modal' }} />
                       {/* Phase T.2 fix — the create/product/* and
                           create/property/* per-step Stack.Screen entries
