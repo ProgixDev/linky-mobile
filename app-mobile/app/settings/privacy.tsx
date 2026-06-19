@@ -72,12 +72,18 @@ export default function PrivacyRoute() {
 
         <SectionLabel label={t('settings.privacy.sectionData')} />
         <Card>
+          {/* Pre-prod: every privacy toggle persists to MMKV but the downstream
+              gates (recommender, analytics, ad-tracking, profile visibility)
+              don't ship until V1.1. Badge each row so the user sees the
+              preference is stored for when the feature lands, not silently
+              ignored today. */}
           <ToggleRow
             Icon={Sparkles}
             label={t('settings.privacy.togglePersonalize')}
             sub={t('settings.privacy.togglePersonalizeSub')}
             value={personalize}
             onChange={setPersonalize}
+            comingSoon
           />
           <ToggleRow
             Icon={BarChart3}
@@ -85,6 +91,7 @@ export default function PrivacyRoute() {
             sub={t('settings.privacy.toggleAnalyticsSub')}
             value={analytics}
             onChange={setAnalytics}
+            comingSoon
           />
           <ToggleRow
             Icon={Eye}
@@ -92,6 +99,7 @@ export default function PrivacyRoute() {
             sub={t('settings.privacy.toggleAdsSub')}
             value={adTracking}
             onChange={setAdTracking}
+            comingSoon
             last
           />
         </Card>
@@ -104,6 +112,7 @@ export default function PrivacyRoute() {
             sub={t('settings.privacy.toggleProfilePublicSub')}
             value={profilePublic}
             onChange={setProfilePublic}
+            comingSoon
             last
           />
         </Card>
@@ -181,6 +190,7 @@ function ToggleRow({
   value,
   onChange,
   last,
+  comingSoon,
 }: {
   Icon: LucideIcon;
   label: string;
@@ -188,8 +198,10 @@ function ToggleRow({
   value: boolean;
   onChange: (v: boolean) => void;
   last?: boolean;
+  comingSoon?: boolean;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <View
       style={{
@@ -215,18 +227,41 @@ function ToggleRow({
         <Icon size={16} color={colors.text} strokeWidth={1.75} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            fontSize: 14.5,
-            fontWeight: '600',
-            color: colors.text,
-            letterSpacing: 0,
-            lineHeight: 18,
-            includeFontPadding: false,
-          }}
-        >
-          {label}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text
+            style={{
+              fontSize: 14.5,
+              fontWeight: '600',
+              color: colors.text,
+              letterSpacing: 0,
+              lineHeight: 18,
+              includeFontPadding: false,
+            }}
+          >
+            {label}
+          </Text>
+          {comingSoon && (
+            <View
+              style={{
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+                borderRadius: 999,
+                backgroundColor: colors.accentSoft,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 9.5,
+                  fontWeight: '700',
+                  color: colors.accentText,
+                  letterSpacing: 0.4,
+                }}
+              >
+                {t('settings.privacy.bientotBadge')}
+              </Text>
+            </View>
+          )}
+        </View>
         <Text
           style={{
             fontSize: 12,
