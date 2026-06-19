@@ -8,15 +8,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { Camera, ChevronLeft, User as UserIcon } from 'lucide-react-native';
+import { Camera, ChevronLeft, ChevronRight, Phone as PhoneIcon, User as UserIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { CityMapPicker } from '../../src/components/onboarding/CityMapPicker';
 import { useAuth } from '../../src/stores/auth';
 import { useUpdateProfile, useUploadAvatar } from '../../src/data/queries/auth';
+import { useMyPhones } from '../../src/data/queries';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
+import { useTranslation } from 'react-i18next';
 
 type AvatarMime = 'image/jpeg' | 'image/png' | 'image/webp';
 function resolveMime(asset: ImagePicker.ImagePickerAsset): AvatarMime {
@@ -30,11 +32,18 @@ function resolveMime(asset: ImagePicker.ImagePickerAsset): AvatarMime {
 
 export default function ProfilEditRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const currentUser = useAuth((s) => s.user);
   const signIn = useAuth((s) => s.signIn);
   const updateProfile = useUpdateProfile();
   const uploadAvatar = useUploadAvatar();
   const toast = useToast();
+  // Pre-prod: surface the primary phone read-only here so the user sees what
+  // mobile-money payouts default to. Edits live on /settings/phones (multi-
+  // phone CRUD with OTP verification) — putting the picker inline would
+  // double the surface area for the same flow.
+  const phonesQuery = useMyPhones();
+  const primaryPhone = phonesQuery.data?.find((p) => p.is_primary);
 
   const [name, setName] = useState(currentUser?.display_name ?? '');
   const [city, setCity] = useState(currentUser?.city ?? '');
@@ -238,6 +247,60 @@ export default function ProfilEditRoute() {
             }}
           />
         </View>
+
+        {/* Numéro principal — read-only here ; CRUD lives on /settings/phones */}
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: '700',
+            color: colors.textFaint,
+            letterSpacing: 0.6,
+            marginTop: 18,
+            marginBottom: 8,
+          }}
+        >
+          {t('profil.row.phones').toUpperCase()}
+        </Text>
+        <Pressable
+          onPress={() => router.push('/settings/phones')}
+          style={{
+            minHeight: 56,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.card,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <PhoneIcon size={18} color={colors.textMuted} strokeWidth={1.75} />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 15.5,
+                fontWeight: '500',
+                color: primaryPhone ? colors.text : colors.textFaint,
+                fontVariant: ['tabular-nums'],
+              }}
+            >
+              {primaryPhone ? primaryPhone.e164 : t('settings.phones.emptyTitle')}
+            </Text>
+            <Text
+              style={{
+                fontSize: 11.5,
+                color: colors.textMuted,
+                marginTop: 2,
+                letterSpacing: 0,
+              }}
+            >
+              {t('profil.edit.phoneManage')}
+            </Text>
+          </View>
+          <ChevronRight size={16} color={colors.textFaint} strokeWidth={2} />
+        </Pressable>
 
         {/* Ville */}
         <Text

@@ -502,6 +502,21 @@ verify_jwt = false
 [functions.list-my-orders]
 verify_jwt = false
 
+[functions.list-my-phones]
+verify_jwt = false
+
+[functions.phone-add-request]
+verify_jwt = false
+
+[functions.phone-add-confirm]
+verify_jwt = false
+
+[functions.phone-remove]
+verify_jwt = false
+
+[functions.phone-set-primary]
+verify_jwt = false
+
 [functions.list-my-withdrawals]
 verify_jwt = false
 

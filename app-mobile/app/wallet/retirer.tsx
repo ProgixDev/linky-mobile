@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -16,7 +16,7 @@ import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { I } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useToast } from '../../src/components/feedback/Toast';
-import { useWithdrawWallet, useWallet } from '../../src/data/queries';
+import { useWithdrawWallet, useWallet, useMyPhones } from '../../src/data/queries';
 import { toToastMessage } from '../../src/lib/api';
 import { haptic } from '../../src/lib/haptics';
 
@@ -117,10 +117,29 @@ export default function RetirerRoute() {
   const { show } = useToast();
   const withdraw = useWithdrawWallet();
   const walletQuery = useWallet();
+  // Pre-prod: default the mobile-money number to the caller's primary phone
+  // so they don't retype it for every withdrawal. We only prefill ONCE per
+  // screen mount — once the user edits it we keep their value, even if the
+  // primary phones query refetches.
+  const phonesQuery = useMyPhones();
+  const primaryPhone = phonesQuery.data?.find((p) => p.is_primary);
 
   const [amount, setAmount] = useState(0);
   const [operator, setOperator] = useState<Operator>('Orange Money');
   const [phone, setPhone] = useState('');
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (prefilledRef.current) return;
+    if (!primaryPhone?.e164) return;
+    // +224 6XXXXXXXX → keep the 9-digit national portion the input expects.
+    const national = primaryPhone.e164.startsWith('+224')
+      ? primaryPhone.e164.slice(4)
+      : primaryPhone.e164;
+    if (national.length === 9 && national.startsWith('6')) {
+      setPhone(national);
+      prefilledRef.current = true;
+    }
+  }, [primaryPhone?.e164]);
 
   const balance = walletQuery.data?.balanceGnf ?? 0;
   const phoneValid = phone.length === 9 && phone.startsWith('6');
