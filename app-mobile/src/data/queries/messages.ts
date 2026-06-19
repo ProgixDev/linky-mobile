@@ -305,8 +305,9 @@ export function useUnreadNotificationsCount() {
 }
 
 // Phase U.5 — infinite query for the notifications screen so the user can
-// load past the first page (30 newest). Mark-read still hits the same
-// ['notifications'] key so the bell dot + screen stay in sync.
+// load past the first page (30 newest). This uses its own ['notifications-infinite']
+// key (paginated), distinct from the ['notifications'] feed behind the bell dot,
+// so mark-read must invalidate BOTH (see useMarkNotificationsRead).
 //
 // Note : the unreadCount is sourced ONLY from the first page (the server
 // returns the global total in the same response). Subsequent pages don't
@@ -337,6 +338,13 @@ export function useMarkNotificationsRead() {
       });
       return r.marked_count;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+    onSuccess: () => {
+      // Both surfaces read notifications under different keys: the bell dot +
+      // home feed use ['notifications'], the notifications screen uses the
+      // paginated ['notifications-infinite']. Invalidate both so the unread
+      // state clears everywhere, not just behind the bell.
+      void qc.invalidateQueries({ queryKey: ['notifications'] });
+      void qc.invalidateQueries({ queryKey: ['notifications-infinite'] });
+    },
   });
 }
