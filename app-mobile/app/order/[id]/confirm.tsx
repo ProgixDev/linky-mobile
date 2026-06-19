@@ -109,7 +109,12 @@ export default function OrderConfirmRoute() {
     );
   }
 
-  const inHandoffWindow = order.status === 'paid' || order.status === 'delivered';
+  // 'preparing' = seller marked the package shipped (set-order-tracking). The
+  // backend confirm_order_receipt gate accepts paid|preparing|delivered, so the
+  // hold-confirm + dispute affordances must render through the shipped window
+  // too — otherwise escrow stays locked once an order is on its way.
+  const inHandoffWindow =
+    order.status === 'paid' || order.status === 'preparing' || order.status === 'delivered';
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
