@@ -65,15 +65,17 @@ export function DiscoverCard({
   );
   const toggleFav = useFavorites((s) => (isProduct ? s.toggleProduct : s.toggleProperty));
 
-  // image carousel auto-rotate when active
+  // image carousel auto-rotate when active. Pre-prod: data-saver also kills
+  // the silent every-4s photo refetch — each rotation pulls a fresh image
+  // off the network on 3G, which is exactly what the saver is meant to stop.
   const [photoIdx, setPhotoIdx] = useState(0);
   useEffect(() => {
-    if (!isActive || photos.length <= 1 || videoUrl) return;
+    if (!isActive || photos.length <= 1 || videoUrl || dataSaver) return;
     const t = setInterval(() => {
       setPhotoIdx((i) => (i + 1) % photos.length);
     }, 4000);
     return () => clearInterval(t);
-  }, [isActive, photos.length, videoUrl]);
+  }, [isActive, photos.length, videoUrl, dataSaver]);
 
   // Video — only autoplay if NOT data saver AND we have a video URL
   const enableVideo = !!videoUrl && !dataSaver;
@@ -128,8 +130,8 @@ export function DiscoverCard({
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
             contentFit="cover"
             recyclingKey={`disc-${id}-${photoIdx}`}
-            transition={300}
-            priority={isActive ? 'high' : 'low'}
+            transition={dataSaver ? 0 : 300}
+            priority={isActive ? (dataSaver ? 'normal' : 'high') : 'low'}
           />
         )}
         <LinearGradient

@@ -7,6 +7,7 @@ import { Text } from '../primitives/Text';
 import { Badge } from '../primitives/Badge';
 import { I } from '../../icons/Icon';
 import { formatGNF, formatDistance } from '../../lib/format';
+import { useDataSaverImageProps } from '../../lib/dataSaver';
 import type { Property } from '../../data/types';
 
 export function PropertyCard({
@@ -17,6 +18,7 @@ export function PropertyCard({
   distanceFromUserKm?: number;
 }) {
   const { colors, radii } = useTheme();
+  const imgProps = useDataSaverImageProps();
   return (
     <Pressable
       onPress={() => router.push(`/property/${property.id}`)}
@@ -31,7 +33,14 @@ export function PropertyCard({
       accessibilityLabel={`${property.title}, ${formatGNF(property.priceGnf)}${property.perMonth ? ' par mois' : ''}`}
     >
       <View style={{ aspectRatio: 16 / 9, backgroundColor: colors.bgSunken }}>
-        <Image source={property.photos[0]} contentFit="cover" style={{ flex: 1 }} recyclingKey={property.id} transition={120} />
+        <Image
+          source={property.photos[0]}
+          contentFit="cover"
+          style={{ flex: 1 }}
+          recyclingKey={property.id}
+          transition={imgProps.transition}
+          priority={imgProps.priority}
+        />
         {property.ownerId === 'u_mamadou' && (
           <View style={{ position: 'absolute', top: 10, left: 10 }}>
             <Badge tone="verified" />

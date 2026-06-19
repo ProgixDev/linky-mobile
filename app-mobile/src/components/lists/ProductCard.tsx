@@ -8,6 +8,7 @@ import { I } from '../../icons/Icon';
 import { formatGNF } from '../../lib/format';
 import { haptic } from '../../lib/haptics';
 import { useFavorites } from '../../stores/favorites';
+import { useDataSaverImageProps } from '../../lib/dataSaver';
 import type { Product } from '../../data/types';
 
 export function ProductCard({
@@ -21,6 +22,7 @@ export function ProductCard({
   const isFav = useFavorites((s) => s.productIds.has(product.id));
   const toggleFav = useFavorites((s) => s.toggleProduct);
   const sold = product.status === 'sold';
+  const imgProps = useDataSaverImageProps();
 
   return (
     <Pressable
@@ -30,7 +32,14 @@ export function ProductCard({
       accessibilityLabel={`${product.title}, ${formatGNF(product.priceGnf)}`}
     >
       <View style={{ position: 'relative', aspectRatio: 1, borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.bgSunken }}>
-        <Image source={product.photos[0]} contentFit="cover" style={{ flex: 1 }} transition={120} recyclingKey={product.id} />
+        <Image
+          source={product.photos[0]}
+          contentFit="cover"
+          style={{ flex: 1 }}
+          transition={imgProps.transition}
+          priority={imgProps.priority}
+          recyclingKey={product.id}
+        />
         <Pressable
           onPress={() => {
             haptic.light();
