@@ -19,6 +19,7 @@ import { router, useRootNavigationState } from 'expo-router';
 import { apiPost } from './api';
 import { storage, STORAGE_KEYS } from './storage';
 import { useAuth } from '../stores/auth';
+import { usePrefs } from '../stores/prefs';
 
 // Foreground display : show the banner even while the app is open. Sounds
 // off — in-app realtime (messages) already surfaces the event; the banner
@@ -99,9 +100,21 @@ export async function unregisterPushToken(): Promise<void> {
 
 export function usePushRegistration(): void {
   const authUserId = useAuth((s) => s.authUserId);
+  // Phase pre-prod — boot registration must respect the user's stated
+  // preference. Without this, the OS-level subscription drifts back to ON on
+  // every cold start, even after the user turned the toggle off.
+  const notifications = usePrefs((s) => s.notifications);
 
   useEffect(() => {
     if (!authUserId) return;
+    if (!notifications) {
+      // Pref is OFF — make sure no stale token lingers on the backend. The
+      // toggle's own onChange already runs unregister when the user flips it,
+      // but a clean cold-start path matters when the pref was disabled on a
+      // previous session and never reconciled (e.g. crash mid-flip).
+      void unregisterPushToken();
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -127,7 +140,7 @@ export function usePushRegistration(): void {
     return () => {
       cancelled = true;
     };
-  }, [authUserId]);
+  }, [authUserId, notifications]);
 }
 
 export function useNotificationTapRouting(): void {
