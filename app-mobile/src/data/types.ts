@@ -37,6 +37,10 @@ export interface Shop {
   productCount: number;
   responseTime: string;
   about: string;
+  // Present on get-shop responses for authed callers ; absent / false on
+  // list-shops and anonymous reads. Stays optional so existing mock data
+  // (which doesn't set it) keeps typechecking.
+  isFollowing?: boolean;
 }
 
 export interface Product {

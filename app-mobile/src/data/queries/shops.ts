@@ -67,3 +67,27 @@ export function useUpsertShop() {
     },
   });
 }
+
+// Pre-prod: follow / unfollow a boutique. Mirrors the product-favorite-toggle
+// pattern : one round-trip returns the new is-following state and the
+// denormalized follower_count so the storefront's stat column and CTA flip
+// together in optimistic UI without a re-fetch.
+export function useToggleShopFollow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ shopId }: { shopId: string }) => {
+      return apiPost<{ following: boolean; follower_count: number }>({
+        path: '/shop-follow-toggle',
+        body: { shop_id: shopId },
+      });
+    },
+    onSuccess: (res, { shopId }) => {
+      // Patch the cached shop in place so the storefront and any list card
+      // already on screen reflect the new follower count immediately.
+      qc.setQueryData<Shop | undefined>(['shop', shopId], (prev) =>
+        prev ? { ...prev, isFollowing: res.following, followerCount: res.follower_count } : prev,
+      );
+      qc.invalidateQueries({ queryKey: ['shops'] });
+    },
+  });
+}

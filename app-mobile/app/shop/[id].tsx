@@ -17,7 +17,8 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { ProductCard } from '../../src/components/lists/ProductCard';
-import { useShop, useProducts, useFindOrCreateConversation } from '../../src/data/queries';
+import { useShop, useProducts, useFindOrCreateConversation, useToggleShopFollow } from '../../src/data/queries';
+import { useAuth } from '../../src/stores/auth';
 import { haptic } from '../../src/lib/haptics';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
@@ -34,12 +35,34 @@ export default function ShopRoute() {
   const { data: shop, isLoading, isError, refetch } = useShop(id);
   const { data: products } = useProducts({ shopId: id });
   const [tab, setTab] = useState<Tab>('articles');
-  const [following, setFollowing] = useState(false);
+  // Pre-prod: follow state is server-truth (get-shop returns is_following for
+  // authed callers, follower_count is the denormalized cache). The toggle
+  // mutation patches both in cache so the CTA and stat column flip together.
+  const authUserId = useAuth((s) => s.authUserId);
+  const toggleFollow = useToggleShopFollow();
+  const isOwnShop = !!authUserId && !!shop?.ownerId && authUserId === shop.ownerId;
+  const following = !!shop?.isFollowing;
   // Phase X.2 — shop "Message" wires the same find-or-create-conversation
   // pattern as product/property detail. No pinned listing : the contact is
   // shop-level, not about a specific item.
   const findOrCreate = useFindOrCreateConversation();
   const toast = useToast();
+  const onToggleFollow = () => {
+    if (!shop) return;
+    if (!authUserId) {
+      toast.show(t('shop.followAuthRequired'), 'info');
+      return;
+    }
+    if (isOwnShop) return;
+    if (toggleFollow.isPending) return;
+    haptic.light();
+    toggleFollow.mutate(
+      { shopId: shop.id },
+      {
+        onError: (e) => toast.show(toToastMessage(e, t('shop.followError')), 'danger'),
+      },
+    );
+  };
   const onMessagePress = async () => {
     if (!shop?.ownerId || findOrCreate.isPending) return;
     try {
@@ -275,12 +298,17 @@ export default function ShopRoute() {
               <Button
                 variant={following ? 'outline' : 'dark'}
                 size="md"
-                label={following ? t('shop.following') : t('shop.follow')}
+                label={
+                  isOwnShop
+                    ? t('shop.ownShop')
+                    : following
+                      ? t('shop.following')
+                      : t('shop.follow')
+                }
                 style={{ flex: 2 }}
-                onPress={() => {
-                  haptic.light();
-                  setFollowing((f) => !f);
-                }}
+                loading={toggleFollow.isPending}
+                disabled={isOwnShop || toggleFollow.isPending}
+                onPress={onToggleFollow}
               />
               <Pressable
                 onPress={onMessagePress}
