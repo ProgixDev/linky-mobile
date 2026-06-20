@@ -6,6 +6,7 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapProduct, type ProductRow } from '@shared/catalog.ts';
 import { isValidCategory, isValidCondition } from '@shared/categories.ts';
+import { diditConfig } from '@shared/didit.ts';
 
 interface Body {
   shop_id?: string;
@@ -57,7 +58,12 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
   if (!roles.includes('seller')) {
     throwApi('ROLE_REQUIRED', 403, 'Active le rôle vendeur dans ton profil pour publier.');
   }
-  if (caller.kyc_status !== 'approved') {
+  // Soft-gate : KYC is only enforced when Didit is configured (creds live).
+  // While Didit is dark NO user can reach 'approved', so a hard gate would
+  // block every publish in V1. diditConfig() flips this on the moment
+  // LINKY_DIDIT_API_KEY + LINKY_DIDIT_WORKFLOW_ID land — no code change
+  // needed at cutover.
+  if (diditConfig() && caller.kyc_status !== 'approved') {
     throwApi('KYC_REQUIRED', 403, "Vérifie ton identité pour publier — c'est rapide.");
   }
 

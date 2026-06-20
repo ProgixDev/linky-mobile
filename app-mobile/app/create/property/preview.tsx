@@ -24,7 +24,7 @@ import { formatGNF } from '../../../src/lib/format';
 import { useCreateListing } from '../../../src/stores/createListing';
 import { useCreateProperty } from '../../../src/data/queries/properties';
 import { useToast } from '../../../src/components/feedback/Toast';
-import { toToastMessage } from '../../../src/lib/api';
+import { ApiError, toToastMessage } from '../../../src/lib/api';
 
 // Phase I.9 — id → i18n key. The state stores STABLE ids ; the preview
 // resolves the label via t() so the chip flips with the active language.
@@ -268,7 +268,14 @@ export default function PreviewRoute() {
               router.replace(`/property/${property.id}`);
             } catch (e: unknown) {
               console.error('[property-create] error:', e);
-              show(toToastMessage(e, t('create.publishFailed')), 'danger');
+              // KYC_REQUIRED arrives when the soft-gate flips on (Didit creds
+              // live + caller not yet approved). Route the user to /kyc/intro
+              // instead of a dead-end toast.
+              if (e instanceof ApiError && e.code === 'KYC_REQUIRED') {
+                router.push('/kyc/intro');
+              } else {
+                show(toToastMessage(e, t('create.publishFailed')), 'danger');
+              }
             }
           }}
           style={{

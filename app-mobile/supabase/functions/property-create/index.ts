@@ -8,6 +8,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapProperty, type PropertyRow } from '@shared/catalog.ts';
+import { diditConfig } from '@shared/didit.ts';
 
 interface PropertyPhotoBody {
   url: string;
@@ -98,7 +99,12 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
   if (!roles.includes('agent')) {
     throwApi('ROLE_REQUIRED', 403, 'Active le rôle agent dans ton profil pour publier.');
   }
-  if (caller.kyc_status !== 'approved') {
+  // Soft-gate : KYC is only enforced when Didit is configured (creds live).
+  // While Didit is dark NO user can reach 'approved', so a hard gate would
+  // block every publish in V1. diditConfig() flips this on the moment
+  // LINKY_DIDIT_API_KEY + LINKY_DIDIT_WORKFLOW_ID land — no code change
+  // needed at cutover.
+  if (diditConfig() && caller.kyc_status !== 'approved') {
     throwApi('KYC_REQUIRED', 403, "Vérifie ton identité pour publier — c'est rapide.");
   }
 

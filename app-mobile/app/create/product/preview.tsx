@@ -15,7 +15,7 @@ import { useCreateListing } from '../../../src/stores/createListing';
 import { formatGNF } from '../../../src/lib/format';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useCreateProduct } from '../../../src/data/queries/products';
-import { toToastMessage } from '../../../src/lib/api';
+import { ApiError, toToastMessage } from '../../../src/lib/api';
 
 export default function CreatePreviewRoute() {
   const { colors, radii } = useTheme();
@@ -92,7 +92,14 @@ export default function CreatePreviewRoute() {
               router.replace('/(tabs)/boutique');
             } catch (e: unknown) {
               console.error('[product-create] error:', e);
-              show(toToastMessage(e, t('create.publishError')), 'danger');
+              // KYC_REQUIRED arrives when the soft-gate flips on (Didit creds
+              // live + caller not yet approved). Route the user to /kyc/intro
+              // instead of a dead-end toast.
+              if (e instanceof ApiError && e.code === 'KYC_REQUIRED') {
+                router.push('/kyc/intro');
+              } else {
+                show(toToastMessage(e, t('create.publishError')), 'danger');
+              }
             }
           }}
         />
