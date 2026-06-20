@@ -60,6 +60,7 @@ export interface PhotoUploadUrl {
 
 export interface ProductFilters {
   category?: string;
+  city?: string;
   query?: string;
   shopId?: string;
   /** 'recent' (default) pages with the keyset cursor ; 'popular' is single-page
@@ -77,6 +78,7 @@ export function useProducts(filters: ProductFilters = {}) {
         authed: false,
         body: {
           category: filters.category && filters.category !== 'all' ? filters.category : undefined,
+          city: filters.city || undefined,
           query: filters.query || undefined,
           shop_id: filters.shopId || undefined,
         },
@@ -245,6 +247,7 @@ export function useProductsInfinite(filters: ProductFilters = {}) {
         authed: false,
         body: {
           category: filters.category && filters.category !== 'all' ? filters.category : undefined,
+          city: filters.city || undefined,
           query: filters.query || undefined,
           shop_id: filters.shopId || undefined,
           sort: filters.sort === 'popular' ? 'popular' : undefined,

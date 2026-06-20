@@ -6,6 +6,7 @@ interface Cursor { created_at: string; id: string }
 
 interface Body {
   category?: string;
+  city?: string;
   query?: string;
   shop_id?: string;
   sort?: 'recent' | 'popular';
@@ -28,6 +29,7 @@ function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
   const x = b as Record<string, unknown>;
   if (x.category !== undefined && typeof x.category !== 'string') return false;
+  if (x.city !== undefined && (typeof x.city !== 'string' || x.city.length > 80)) return false;
   if (x.query !== undefined && typeof x.query !== 'string') return false;
   if (x.shop_id !== undefined && (typeof x.shop_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.shop_id))) return false;
   if (x.sort !== undefined && x.sort !== 'recent' && x.sort !== 'popular') return false;
@@ -45,6 +47,7 @@ Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body }) => {
     .eq('status', 'active');
 
   if (body.category && body.category !== 'all') q = q.eq('category', body.category);
+  if (body.city && body.city.trim().length > 0) q = q.eq('city', body.city.trim());
   if (body.shop_id) q = q.eq('shop_id', body.shop_id);
   if (body.query) {
     // V1 text search: ILIKE on title + description. .or() with comma syntax. Escape % and , to

@@ -54,7 +54,15 @@ const DEFAULTS = {
 // the caller manages separately).
 export function hasActiveFilters(s: FiltersState, isArticles: boolean): boolean {
   if (isArticles) {
-    return s.productCategory !== DEFAULTS.productCategory || s.productSort !== DEFAULTS.productSort;
+    // Phase Finish #4 — city is shared with the immobilier filters but is
+    // now wired into list-products too, so a user filtering Articles by
+    // city should see the "Aucun résultat / Effacer les filtres" path
+    // instead of the empty-catalog copy.
+    return (
+      s.productCategory !== DEFAULTS.productCategory ||
+      s.productSort !== DEFAULTS.productSort ||
+      s.city !== DEFAULTS.city
+    );
   }
   return (
     s.propertyType !== DEFAULTS.propertyType ||

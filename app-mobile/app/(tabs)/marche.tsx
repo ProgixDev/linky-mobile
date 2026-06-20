@@ -140,6 +140,10 @@ export default function MarcheRoute() {
 
   const productsQuery = useProductsInfinite({
     category: filters.productCategory === 'all' ? undefined : filters.productCategory,
+    // The marché filter sheet exposes a city selector on both tabs (shared
+    // store key). Thread it into list-products so the selection actually
+    // narrows results instead of being a no-op control.
+    city: filters.city ?? undefined,
     query: debouncedSearch || undefined,
     sort: filters.productSort,
   });
