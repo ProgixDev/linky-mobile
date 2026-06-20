@@ -398,7 +398,7 @@ export default function ProductDetailRoute() {
                   lineHeight: 17,
                 }}
               >
-                Le vendeur n'est payé qu'après ta confirmation de réception.
+                {t('product.escrowProtect')}
               </Text>
             </View>
           </View>
@@ -540,7 +540,7 @@ export default function ProductDetailRoute() {
             <SpecRow
               Icon={ShieldCheck}
               label={t('product.specCondition')}
-              value={conditionLabel(product.condition)}
+              value={conditionLabel(product.condition, t)}
             />
             <SpecRow
               Icon={MapPin}
@@ -648,7 +648,7 @@ export default function ProductDetailRoute() {
             onPress={() => {
               haptic.light();
               addToCart(product.id);
-              show('Ajouté au panier', 'success');
+              show(t('product.addedToCart'), 'success');
             }}
             style={{
               flex: 1,
@@ -867,8 +867,11 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function conditionLabel(c: 'neuf' | 'occasion' | 'reconditionné'): string {
-  if (c === 'neuf') return 'Neuf, scellé';
-  if (c === 'occasion') return 'Occasion';
-  return 'Reconditionné';
+function conditionLabel(
+  c: 'neuf' | 'occasion' | 'reconditionné',
+  t: (key: string) => string,
+): string {
+  if (c === 'neuf') return t('product.conditionNeufSealed');
+  if (c === 'occasion') return t('product.conditionOccasion');
+  return t('product.conditionReconditionne');
 }

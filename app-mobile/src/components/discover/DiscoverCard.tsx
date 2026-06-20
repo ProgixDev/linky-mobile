@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dimensions, Pressable, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -41,6 +42,7 @@ export function DiscoverCard({
   height?: number;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dataSaver = usePrefs((s) => s.dataSaver);
   const roles = useAuth((s) => s.roles);
@@ -203,7 +205,7 @@ export function DiscoverCard({
                 letterSpacing: 0,
               }}
             >
-              Visite vidéo{dataSaver ? ' · en pause' : ''}
+              {dataSaver ? t('decouvrir.card.visiteVideoPaused') : t('decouvrir.card.visiteVideo')}
             </Text>
           </View>
         ) : photos.length > 1 ? (
@@ -252,7 +254,7 @@ export function DiscoverCard({
           }}
           onShare={() => {
             haptic.light();
-            void Share.share({ message: 'Découvre cette annonce sur Linky' }).catch(() => {});
+            void Share.share({ message: t('decouvrir.card.shareMessage') }).catch(() => {});
           }}
           onDetails={() => router.push(isProduct ? `/product/${id}` : `/property/${id}`)}
           likeCount={isProduct ? data.item.favCount.toString() : ''}
@@ -409,7 +411,7 @@ export function DiscoverCard({
                 letterSpacing: 0.1,
               }}
             >
-              Voir le détail
+              {t('decouvrir.card.seeDetail')}
             </Text>
           </Pressable>
         </View>
@@ -466,6 +468,7 @@ function DiscoverRail({
   bottomAnchor: number;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const items = [
     {
       key: 'like',
@@ -484,14 +487,14 @@ function DiscoverRail({
     {
       key: 'share',
       icon: <Share2 size={20} color="#FFFFFF" strokeWidth={2} />,
-      label: 'Partager',
+      label: t('decouvrir.card.share'),
       onPress: onShare,
       bg: 'rgba(0,0,0,0.4)',
     },
     {
       key: 'info',
       icon: <Info size={20} color="#FFFFFF" strokeWidth={2} />,
-      label: 'Détails',
+      label: t('decouvrir.card.details'),
       onPress: onDetails,
       bg: 'rgba(0,0,0,0.4)',
     },
@@ -547,6 +550,7 @@ function DiscoverRail({
 
 export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <View
       style={{
@@ -582,7 +586,7 @@ export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
           lineHeight: 30,
         }}
       >
-        Tu as tout vu pour aujourd'hui.
+        {t('decouvrir.card.endTitle')}
       </Text>
       <Text
         style={{
@@ -595,7 +599,7 @@ export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
           letterSpacing: 0,
         }}
       >
-        Reviens demain pour de nouveaux articles et logements à découvrir.
+        {t('decouvrir.card.endBody')}
       </Text>
       <Pressable
         onPress={onRefresh}
@@ -612,7 +616,7 @@ export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
         }}
       >
         <RotateCcw size={15} color="#0E1311" strokeWidth={2.25} />
-        <Text style={{ color: '#0E1311', fontWeight: '700', fontSize: 14 }}>Actualiser</Text>
+        <Text style={{ color: '#0E1311', fontWeight: '700', fontSize: 14 }}>{t('decouvrir.card.endCta')}</Text>
       </Pressable>
     </View>
   );

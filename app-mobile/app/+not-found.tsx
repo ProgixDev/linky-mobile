@@ -5,12 +5,14 @@ import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Compass } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { Text } from '../src/components/primitives/Text';
 import { Button } from '../src/components/primitives/Button';
 
 export default function NotFoundRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ flex: 1, paddingHorizontal: 32, alignItems: 'center', justifyContent: 'center' }}>
@@ -28,7 +30,7 @@ export default function NotFoundRoute() {
           <Compass size={42} color={colors.primary} strokeWidth={1.75} />
         </View>
         <Text variant="dispL" center style={{ fontSize: 22, lineHeight: 28 }}>
-          Cette page n'existe pas
+          {t('notFound.title')}
         </Text>
         <Text
           variant="bodyM"
@@ -36,15 +38,14 @@ export default function NotFoundRoute() {
           center
           style={{ marginTop: 10, maxWidth: 300, lineHeight: 21 }}
         >
-          Cette page n'existe pas ou n'est plus disponible. Reviens à l'accueil
-          pour continuer.
+          {t('notFound.body')}
         </Text>
         <View style={{ marginTop: 28, width: '100%', maxWidth: 280 }}>
           <Button
             variant="dark"
             size="lg"
             block
-            label="Retour à l'accueil"
+            label={t('notFound.cta')}
             onPress={() => router.replace('/(tabs)')}
           />
         </View>

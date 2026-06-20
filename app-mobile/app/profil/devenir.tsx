@@ -12,6 +12,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, ShieldCheck, BadgeCheck, Wallet as WalletIcon, Store, Building2 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -21,66 +22,40 @@ import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { useKycStatus } from '../../src/data/queries';
 
-const ROLE_COPY: Record<'seller' | 'agent', {
-  title: string;
-  subtitle: string;
-  primaryCta: string;
-  Icon: typeof Store;
-  benefits: { Icon: typeof ShieldCheck; title: string; desc: string }[];
-}> = {
-  seller: {
-    title: 'Vendre sur Linky',
-    subtitle: 'Mets en avant tes articles et reçois ton argent en toute sécurité.',
-    primaryCta: 'Devenir vendeur',
-    Icon: Store,
-    benefits: [
-      {
-        Icon: ShieldCheck,
-        title: 'Séquestre protège tes ventes',
-        desc: "L'acheteur paie d'abord, tu livres, on te crédite — pas de mauvaise surprise.",
-      },
-      {
-        Icon: BadgeCheck,
-        title: 'Badge vendeur vérifié',
-        desc: "Les acheteurs achètent plus volontiers à un vendeur dont l'identité est confirmée.",
-      },
-      {
-        Icon: WalletIcon,
-        title: 'Retraits Mobile Money',
-        desc: 'Vire ton solde vers Orange Money ou MTN MoMo en quelques clics.',
-      },
-    ],
-  },
-  agent: {
-    title: 'Devenir agent immobilier',
-    subtitle: 'Publie des biens à la vente ou à la location, gère les visites depuis ton tableau.',
-    primaryCta: 'Devenir agent',
-    Icon: Building2,
-    benefits: [
-      {
-        Icon: ShieldCheck,
-        title: 'Annonces protégées',
-        desc: 'Les demandes de visite passent par la plateforme, ton numéro reste privé.',
-      },
-      {
-        Icon: BadgeCheck,
-        title: 'Badge agent vérifié',
-        desc: 'Les locataires et acheteurs réservent les agents dont l\'identité est confirmée.',
-      },
-      {
-        Icon: WalletIcon,
-        title: 'Tableau dédié',
-        desc: 'Toutes tes visites, demandes et biens regroupés dans un seul espace.',
-      },
-    ],
-  },
-};
-
 export default function DevenirRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ role?: string }>();
   const targetRole: 'seller' | 'agent' = params.role === 'agent' ? 'agent' : 'seller';
-  const copy = ROLE_COPY[targetRole];
+
+  // Memo over t so a language switch re-renders the screen with translated
+  // copy. Keep icons + role keys outside the memo (stable across languages).
+  const copy = useMemo(
+    () => ({
+      title: t(`profilDevenir.${targetRole}.title`),
+      subtitle: t(`profilDevenir.${targetRole}.subtitle`),
+      primaryCta: t(`profilDevenir.${targetRole}.primaryCta`),
+      Icon: targetRole === 'seller' ? Store : Building2,
+      benefits: [
+        {
+          Icon: ShieldCheck,
+          title: t(`profilDevenir.${targetRole}.benefit1Title`),
+          desc: t(`profilDevenir.${targetRole}.benefit1Desc`),
+        },
+        {
+          Icon: BadgeCheck,
+          title: t(`profilDevenir.${targetRole}.benefit2Title`),
+          desc: t(`profilDevenir.${targetRole}.benefit2Desc`),
+        },
+        {
+          Icon: WalletIcon,
+          title: t(`profilDevenir.${targetRole}.benefit3Title`),
+          desc: t(`profilDevenir.${targetRole}.benefit3Desc`),
+        },
+      ],
+    }),
+    [t, targetRole],
+  );
 
   const currentRoles = useAuth((s) => s.roles);
   const setRoles = useAuth((s) => s.setRoles);
@@ -127,7 +102,7 @@ export default function DevenirRoute() {
         router.replace('/create');
       }
     } catch (e) {
-      toast.show(toToastMessage(e, "Impossible d'activer ce rôle pour le moment."), 'danger');
+      toast.show(toToastMessage(e, t('profilDevenir.activationError')), 'danger');
     } finally {
       setSubmitting(false);
     }
@@ -148,7 +123,7 @@ export default function DevenirRoute() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           hitSlop={12}
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('profilDevenir.back')}
           style={{
             width: 40,
             height: 40,
@@ -177,7 +152,7 @@ export default function DevenirRoute() {
           }}
         >
           <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primaryDeep, letterSpacing: 0.6 }}>
-            NOUVEAU RÔLE
+            {t('profilDevenir.newRoleLabel')}
           </Text>
         </View>
         <Text variant="dispL" style={{ fontSize: 28, lineHeight: 34 }}>
@@ -246,7 +221,7 @@ export default function DevenirRoute() {
               tone="muted"
               style={{ flex: 1, letterSpacing: 0, textTransform: 'none', lineHeight: 17 }}
             >
-              Tu devras vérifier ton identité avant de publier ta première annonce — c'est rapide.
+              {t('profilDevenir.kycHint')}
             </Text>
           </View>
         )}
@@ -257,7 +232,7 @@ export default function DevenirRoute() {
           variant="dark"
           size="lg"
           block
-          label={alreadyHas ? 'Continuer' : copy.primaryCta}
+          label={alreadyHas ? t('profilDevenir.continue') : copy.primaryCta}
           onPress={onActivate}
           loading={submitting}
         />
@@ -265,7 +240,7 @@ export default function DevenirRoute() {
           variant="ghost"
           size="sm"
           block
-          label="Plus tard"
+          label={t('profilDevenir.later')}
           onPress={() => router.replace('/(tabs)')}
         />
       </View>

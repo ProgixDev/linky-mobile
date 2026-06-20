@@ -3,6 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Heart } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { Text } from '../src/components/primitives/Text';
 import { ScreenHeader } from '../src/components/nav/ScreenHeader';
@@ -16,6 +17,7 @@ type Tab = 'products' | 'properties';
 
 export default function FavoritesRoute() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('products');
   const favProductIds = useFavorites((s) => s.productIds);
   const favPropertyIds = useFavorites((s) => s.propertyIds);
@@ -36,8 +38,8 @@ export default function FavoritesRoute() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         <ScreenHeader
-          title="Favoris"
-          subtitle="Tes coups de cœur, sauvegardés pour plus tard."
+          title={t('favoritesScreen.title')}
+          subtitle={t('favoritesScreen.subtitle')}
         />
 
         {/* Tab switcher */}
@@ -52,12 +54,12 @@ export default function FavoritesRoute() {
             }}
           >
             <TabPill
-              label={`Articles · ${favProducts.length}`}
+              label={t('favoritesScreen.tabArticles', { count: favProducts.length })}
               active={tab === 'products'}
               onPress={() => setTab('products')}
             />
             <TabPill
-              label={`Logements · ${favProperties.length}`}
+              label={t('favoritesScreen.tabProperties', { count: favProperties.length })}
               active={tab === 'properties'}
               onPress={() => setTab('properties')}
             />
@@ -67,9 +69,9 @@ export default function FavoritesRoute() {
         {tab === 'products' ? (
           favProducts.length === 0 ? (
             <EmptyState
-              title="Aucun favori"
-              sub="Appuie sur le ❤ d'un article pour le retrouver ici."
-              cta="Découvrir des articles"
+              title={t('favoritesScreen.emptyProductsTitle')}
+              sub={t('favoritesScreen.emptyProductsSub')}
+              cta={t('favoritesScreen.emptyProductsCta')}
               onPress={() => router.push('/(tabs)/marche')}
             />
           ) : (
@@ -90,9 +92,9 @@ export default function FavoritesRoute() {
           )
         ) : favProperties.length === 0 ? (
           <EmptyState
-            title="Aucun logement"
-            sub="Appuie sur le ❤ d'un bien pour le retrouver ici."
-            cta="Voir l'immobilier"
+            title={t('favoritesScreen.emptyPropertiesTitle')}
+            sub={t('favoritesScreen.emptyPropertiesSub')}
+            cta={t('favoritesScreen.emptyPropertiesCta')}
             onPress={() => router.push('/(tabs)/marche')}
           />
         ) : (

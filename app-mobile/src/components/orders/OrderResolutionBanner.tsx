@@ -22,12 +22,15 @@
 // so consumers can render <OrderResolutionBanner ... /> unconditionally.
 
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import type { Colors } from '../../theme/tokens';
 import { Text } from '../primitives/Text';
 import { formatGNF } from '../../lib/format';
 import type { Order } from '../../data/types';
+
+type TFunc = (key: string, options?: Record<string, unknown>) => string;
 
 type Variant = 'success' | 'neutral' | 'warning';
 type IconComponent = typeof ShieldCheck;
@@ -46,11 +49,12 @@ export interface OrderResolutionBannerProps {
 
 export function OrderResolutionBanner({ order, viewerRole }: OrderResolutionBannerProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   if (order.status !== 'refunded' && order.status !== 'released') return null;
 
   const resolvedAt = findDisputeResolvedAt(order.events) ?? order.events[order.events.length - 1]?.at;
   const dateLabel = resolvedAt ? formatResolutionDate(resolvedAt) : null;
-  const content = buildContent({ order, viewerRole, dateLabel });
+  const content = buildContent({ order, viewerRole, dateLabel, t });
   if (!content) return null;
 
   const styles = variantStyles(colors, content.variant);
@@ -111,28 +115,33 @@ function buildContent({
   order,
   viewerRole,
   dateLabel,
+  t,
 }: {
   order: Order;
   viewerRole: 'buyer' | 'seller';
   dateLabel: string | null;
+  t: TFunc;
 }): Content | null {
-  const dateSuffix = dateLabel ? ` le ${dateLabel}` : '';
+  const dateSuffix = dateLabel ? t('orderResolution.dateSuffix', { date: dateLabel }) : '';
 
   if (viewerRole === 'buyer') {
     if (order.status === 'refunded') {
       return {
         variant: 'success',
         icon: ShieldCheck,
-        title: 'Litige résolu',
-        body: `${formatGNF(order.totalGnf)} remboursés sur votre wallet${dateSuffix}.`,
+        title: t('orderResolution.buyer.refundedTitle'),
+        body: t('orderResolution.buyer.refundedBody', {
+          amount: formatGNF(order.totalGnf),
+          dateSuffix,
+        }),
       };
     }
     if (order.status === 'released') {
       return {
         variant: 'neutral',
         icon: CheckCircle2,
-        title: 'Litige clos',
-        body: `Commande libérée au vendeur${dateSuffix}.`,
+        title: t('orderResolution.buyer.releasedTitle'),
+        body: t('orderResolution.buyer.releasedBody', { dateSuffix }),
       };
     }
   }
@@ -142,16 +151,19 @@ function buildContent({
       return {
         variant: 'success',
         icon: ShieldCheck,
-        title: 'Litige résolu en votre faveur',
-        body: `${formatGNF(order.amountGnf)} libérés sur votre wallet${dateSuffix}.`,
+        title: t('orderResolution.seller.releasedTitle'),
+        body: t('orderResolution.seller.releasedBody', {
+          amount: formatGNF(order.amountGnf),
+          dateSuffix,
+        }),
       };
     }
     if (order.status === 'refunded') {
       return {
         variant: 'warning',
         icon: AlertCircle,
-        title: "Litige tranché en faveur de l'acheteur",
-        body: 'Aucun versement pour cette commande.',
+        title: t('orderResolution.seller.refundedTitle'),
+        body: t('orderResolution.seller.refundedBody'),
       };
     }
   }

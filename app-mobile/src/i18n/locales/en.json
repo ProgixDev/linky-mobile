@@ -118,7 +118,18 @@
     "errorTitle": "Couldn't load the feed",
     "errorSub": "Check your connection and try again.",
     "emptyTitle": "Nothing to discover yet",
-    "emptySub": "Come back in a few minutes — the feed updates continuously."
+    "emptySub": "Come back in a few minutes — the feed updates continuously.",
+    "card": {
+      "visiteVideo": "Video tour",
+      "visiteVideoPaused": "Video tour · paused",
+      "share": "Share",
+      "details": "Details",
+      "seeDetail": "See details",
+      "shareMessage": "Check out this listing on Linky",
+      "endTitle": "You've seen everything for today.",
+      "endBody": "Come back tomorrow for new items and homes to discover.",
+      "endCta": "Refresh"
+    }
   },
   "boutique": {
     "modeShop": "Shop",
@@ -139,6 +150,8 @@
     "scoutSubAgent": "Compare your listings with the rest of the market.",
     "tabArticles": "Items",
     "tabImmobilier": "Real estate",
+    "searchPlaceholderArticles": "Search for a product…",
+    "searchPlaceholderProperties": "District, type, area…",
     "searchA11y": "Search",
     "filtersA11y": "Filters",
     "catTout": "All",
@@ -924,8 +937,11 @@
     "conditionNeuf": "New",
     "conditionOccasion": "Used",
     "conditionReconditionne": "Refurbished",
+    "conditionNeufSealed": "New, sealed",
     "buyNow": "Buy",
     "addToCart": "Add to cart",
+    "addedToCart": "Added to cart",
+    "escrowProtect": "The seller is only paid after you confirm delivery.",
     "message": "Message",
     "saveFav": "Save",
     "savedFav": "Saved",
@@ -1472,5 +1488,67 @@
     "becomeSeller": "Become a {{role}}",
     "becomeAgent": "Become a {{role}}",
     "backHome": "Back to home"
+  },
+  "favoritesScreen": {
+    "title": "Favorites",
+    "subtitle": "Your saved picks for later.",
+    "tabArticles": "Items · {{count}}",
+    "tabProperties": "Homes · {{count}}",
+    "emptyProductsTitle": "No favorites yet",
+    "emptyProductsSub": "Tap the ❤ on an item to find it here.",
+    "emptyProductsCta": "Discover items",
+    "emptyPropertiesTitle": "No homes yet",
+    "emptyPropertiesSub": "Tap the ❤ on a home to find it here.",
+    "emptyPropertiesCta": "See real estate"
+  },
+  "orderResolution": {
+    "dateSuffix": " on {{date}}",
+    "buyer": {
+      "refundedTitle": "Dispute resolved",
+      "refundedBody": "{{amount}} refunded to your wallet{{dateSuffix}}.",
+      "releasedTitle": "Dispute closed",
+      "releasedBody": "Order released to the seller{{dateSuffix}}."
+    },
+    "seller": {
+      "releasedTitle": "Dispute resolved in your favor",
+      "releasedBody": "{{amount}} released to your wallet{{dateSuffix}}.",
+      "refundedTitle": "Dispute decided in the buyer's favor",
+      "refundedBody": "No payout for this order."
+    }
+  },
+  "notFound": {
+    "title": "This page doesn't exist",
+    "body": "This page doesn't exist or is no longer available. Head back home to continue.",
+    "cta": "Back to home"
+  },
+  "profilDevenir": {
+    "back": "Back",
+    "newRoleLabel": "NEW ROLE",
+    "kycHint": "You'll need to verify your identity before publishing your first listing — it's quick.",
+    "continue": "Continue",
+    "later": "Later",
+    "activationError": "Couldn't activate this role right now.",
+    "seller": {
+      "title": "Sell on Linky",
+      "subtitle": "Showcase your items and get paid securely.",
+      "primaryCta": "Become a seller",
+      "benefit1Title": "Escrow protects your sales",
+      "benefit1Desc": "Buyer pays first, you deliver, we credit you — no surprises.",
+      "benefit2Title": "Verified seller badge",
+      "benefit2Desc": "Buyers feel safer purchasing from a seller whose identity is confirmed.",
+      "benefit3Title": "Mobile Money withdrawals",
+      "benefit3Desc": "Transfer your balance to Orange Money or MTN MoMo in a few taps."
+    },
+    "agent": {
+      "title": "Become a real estate agent",
+      "subtitle": "Publish properties for sale or rent, manage visits from your dashboard.",
+      "primaryCta": "Become an agent",
+      "benefit1Title": "Protected listings",
+      "benefit1Desc": "Visit requests go through the platform, your number stays private.",
+      "benefit2Title": "Verified agent badge",
+      "benefit2Desc": "Renters and buyers book agents whose identity is confirmed.",
+      "benefit3Title": "Dedicated dashboard",
+      "benefit3Desc": "All your visits, requests and properties in one workspace."
+    }
   }
 }

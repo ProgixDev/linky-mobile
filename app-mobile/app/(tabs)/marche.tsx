@@ -164,7 +164,9 @@ export default function MarcheRoute() {
       ? 'articles'
       : filters.marcheTab;
   const isArticles = effectiveTab === 'articles';
-  const placeholder = isArticles ? 'Cherche un produit…' : 'Quartier, type, surface…';
+  const placeholder = isArticles
+    ? t('marche.searchPlaceholderArticles')
+    : t('marche.searchPlaceholderProperties');
   const isPurePro = isPureAgent || isPureSeller;
 
   // Near-bottom trigger for fetchNextPage. 600px buffer = pre-fetch before the user

@@ -118,7 +118,18 @@
     "errorTitle": "Impossible de charger le feed",
     "errorSub": "Vérifie ta connexion et réessaie.",
     "emptyTitle": "Rien à découvrir pour l'instant",
-    "emptySub": "Reviens dans quelques minutes — le feed est mis à jour en continu."
+    "emptySub": "Reviens dans quelques minutes — le feed est mis à jour en continu.",
+    "card": {
+      "visiteVideo": "Visite vidéo",
+      "visiteVideoPaused": "Visite vidéo · en pause",
+      "share": "Partager",
+      "details": "Détails",
+      "seeDetail": "Voir le détail",
+      "shareMessage": "Découvre cette annonce sur Linky",
+      "endTitle": "Tu as tout vu pour aujourd'hui.",
+      "endBody": "Reviens demain pour de nouveaux articles et logements à découvrir.",
+      "endCta": "Actualiser"
+    }
   },
   "boutique": {
     "modeShop": "Boutique",
@@ -139,6 +150,8 @@
     "scoutSubAgent": "Compare tes biens avec ceux du marché.",
     "tabArticles": "Articles",
     "tabImmobilier": "Immobilier",
+    "searchPlaceholderArticles": "Cherche un produit…",
+    "searchPlaceholderProperties": "Quartier, type, surface…",
     "searchA11y": "Recherche",
     "filtersA11y": "Filtres",
     "catTout": "Tout",
@@ -924,8 +937,11 @@
     "conditionNeuf": "Neuf",
     "conditionOccasion": "Occasion",
     "conditionReconditionne": "Reconditionné",
+    "conditionNeufSealed": "Neuf, scellé",
     "buyNow": "Acheter",
     "addToCart": "Ajouter au panier",
+    "addedToCart": "Ajouté au panier",
+    "escrowProtect": "Le vendeur n'est payé qu'après ta confirmation de réception.",
     "message": "Message",
     "saveFav": "Enregistrer",
     "savedFav": "Enregistré",
@@ -1472,5 +1488,67 @@
     "becomeSeller": "Devenir {{role}}",
     "becomeAgent": "Devenir {{role}}",
     "backHome": "Retour à l'accueil"
+  },
+  "favoritesScreen": {
+    "title": "Favoris",
+    "subtitle": "Tes coups de cœur, sauvegardés pour plus tard.",
+    "tabArticles": "Articles · {{count}}",
+    "tabProperties": "Logements · {{count}}",
+    "emptyProductsTitle": "Aucun favori",
+    "emptyProductsSub": "Appuie sur le ❤ d'un article pour le retrouver ici.",
+    "emptyProductsCta": "Découvrir des articles",
+    "emptyPropertiesTitle": "Aucun logement",
+    "emptyPropertiesSub": "Appuie sur le ❤ d'un bien pour le retrouver ici.",
+    "emptyPropertiesCta": "Voir l'immobilier"
+  },
+  "orderResolution": {
+    "dateSuffix": " le {{date}}",
+    "buyer": {
+      "refundedTitle": "Litige résolu",
+      "refundedBody": "{{amount}} remboursés sur votre wallet{{dateSuffix}}.",
+      "releasedTitle": "Litige clos",
+      "releasedBody": "Commande libérée au vendeur{{dateSuffix}}."
+    },
+    "seller": {
+      "releasedTitle": "Litige résolu en votre faveur",
+      "releasedBody": "{{amount}} libérés sur votre wallet{{dateSuffix}}.",
+      "refundedTitle": "Litige tranché en faveur de l'acheteur",
+      "refundedBody": "Aucun versement pour cette commande."
+    }
+  },
+  "notFound": {
+    "title": "Cette page n'existe pas",
+    "body": "Cette page n'existe pas ou n'est plus disponible. Reviens à l'accueil pour continuer.",
+    "cta": "Retour à l'accueil"
+  },
+  "profilDevenir": {
+    "back": "Retour",
+    "newRoleLabel": "NOUVEAU RÔLE",
+    "kycHint": "Tu devras vérifier ton identité avant de publier ta première annonce — c'est rapide.",
+    "continue": "Continuer",
+    "later": "Plus tard",
+    "activationError": "Impossible d'activer ce rôle pour le moment.",
+    "seller": {
+      "title": "Vendre sur Linky",
+      "subtitle": "Mets en avant tes articles et reçois ton argent en toute sécurité.",
+      "primaryCta": "Devenir vendeur",
+      "benefit1Title": "Séquestre protège tes ventes",
+      "benefit1Desc": "L'acheteur paie d'abord, tu livres, on te crédite — pas de mauvaise surprise.",
+      "benefit2Title": "Badge vendeur vérifié",
+      "benefit2Desc": "Les acheteurs achètent plus volontiers à un vendeur dont l'identité est confirmée.",
+      "benefit3Title": "Retraits Mobile Money",
+      "benefit3Desc": "Vire ton solde vers Orange Money ou MTN MoMo en quelques clics."
+    },
+    "agent": {
+      "title": "Devenir agent immobilier",
+      "subtitle": "Publie des biens à la vente ou à la location, gère les visites depuis ton tableau.",
+      "primaryCta": "Devenir agent",
+      "benefit1Title": "Annonces protégées",
+      "benefit1Desc": "Les demandes de visite passent par la plateforme, ton numéro reste privé.",
+      "benefit2Title": "Badge agent vérifié",
+      "benefit2Desc": "Les locataires et acheteurs réservent les agents dont l'identité est confirmée.",
+      "benefit3Title": "Tableau dédié",
+      "benefit3Desc": "Toutes tes visites, demandes et biens regroupés dans un seul espace."
+    }
   }
 }
