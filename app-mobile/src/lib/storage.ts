@@ -20,6 +20,8 @@ export const STORAGE_KEYS = {
   authUserJson: 'auth.userJson',
   roles: 'auth.roles',
   pushToken: 'push.expoToken',
+  favoriteProducts: 'favs.products',
+  favoriteProperties: 'favs.properties',
 } as const;
 
 export const SECURE_KEYS = {
