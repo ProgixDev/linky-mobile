@@ -113,28 +113,11 @@ export default function DisputeRoute() {
           />
         </View>
 
-        <View style={{ marginTop: 12 }}>
-          <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginBottom: 6 }}>
-            {t('dispute.photosOptional')}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 10,
-                backgroundColor: colors.bgElev,
-                borderWidth: 1.5,
-                borderStyle: 'dashed',
-                borderColor: colors.borderStrong,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <I.plus size={20} color={colors.textMuted} />
-            </View>
-          </View>
-        </View>
+        {/* Phase Finish #6 — the "Photos (optionnel)" label + add-photo box
+            never had an onPress / picker / upload : it was a dead control
+            promising an attachment that couldn't be sent. Removed for V1.
+            When the dispute photo flow lands (V1.1), it ships behind the
+            same photo-upload-url path the create wizards use. */}
       </ScrollView>
       <StickyBottom>
         <Button
