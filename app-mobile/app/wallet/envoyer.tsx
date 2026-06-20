@@ -24,6 +24,7 @@ import { useWallet } from '../../src/data/queries';
 import { apiPost, toToastMessage } from '../../src/lib/api';
 import { haptic } from '../../src/lib/haptics';
 import { useMutation } from '@tanstack/react-query';
+import { P2P_SEND_ENABLED } from '../../src/lib/flags';
 
 const QUICK_AMOUNTS = [10_000, 50_000, 100_000, 500_000];
 // Mirror the edge fn's MAX_SEND_MINOR so the input rejects out-of-band values
@@ -62,6 +63,17 @@ export default function EnvoyerRoute() {
   const walletQuery = useWallet();
   const send = useSendMoney();
   const balance = walletQuery.data?.balanceGnf ?? 0;
+
+  // P2P send is gated OFF for shipped builds — see
+  // WALLET_SEND_V1_1_BACKLOG.md. Redirect any deep-link / typed URL away
+  // before the screen paints. Effect runs once on mount ; replace (not
+  // push) so the back button doesn't bounce the user right back here.
+  useEffect(() => {
+    if (!P2P_SEND_ENABLED) {
+      router.replace('/wallet');
+    }
+  }, []);
+  if (!P2P_SEND_ENABLED) return null;
 
   const [phone, setPhone] = useState('');
   const [amount, setAmount] = useState(0);

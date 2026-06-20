@@ -75,7 +75,16 @@ const MAX_SEND_MINOR = 1_000_000;
 // dust transfers. Pairs with the GNF-has-no-decimals assumption.
 const MIN_SEND_MINOR = 1_000;
 
+// Server-side kill switch — defense in depth on top of the client-side
+// P2P_SEND_ENABLED flag. A direct API call (curl / leaked client) hits the
+// same wall as a tap in the UI. Flip to true ONLY when the items in
+// WALLET_SEND_V1_1_BACKLOG.md are closed.
+const P2P_ENABLED = false;
+
 Deno.serve(makePost<Body>('/v1/wallet/send', valid, async ({ sb, body, req }) => {
+  if (!P2P_ENABLED) {
+    throwApi('FEATURE_DISABLED', 403, 'Bientôt disponible.');
+  }
   const senderId = await requireUser(req);
 
   if (body.amount_minor < MIN_SEND_MINOR) {

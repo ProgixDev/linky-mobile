@@ -13,6 +13,7 @@ import { formatGNF } from '../../src/lib/format';
 import { useWallet, useMyWithdrawals, type WithdrawalRequestItem } from '../../src/data/queries';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
+import { P2P_SEND_ENABLED } from '../../src/lib/flags';
 
 // Phase I.8 — STATUS_LABEL carries i18n keys only ; the row resolves them
 // with t() at render so the chips flip language live.
@@ -110,7 +111,10 @@ export default function WalletRoute() {
             large
             onRecharger={() => router.push('/wallet/recharger')}
             onRetirer={() => router.push('/wallet/retirer')}
-            onEnvoyer={() => router.push('/wallet/envoyer' as never)}
+            // P2P send is gated OFF for shipped builds — see
+            // WALLET_SEND_V1_1_BACKLOG.md. When undefined, WalletGlanceCard
+            // skips rendering the Envoyer button entirely.
+            onEnvoyer={P2P_SEND_ENABLED ? () => router.push('/wallet/envoyer' as never) : undefined}
           />
         </View>
 
