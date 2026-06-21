@@ -604,6 +604,9 @@ verify_jwt = false
 [functions.property-create]
 verify_jwt = false
 
+[functions.property-favorite-toggle]
+verify_jwt = false
+
 [functions.property-delete]
 verify_jwt = false
 
