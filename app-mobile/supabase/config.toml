@@ -421,6 +421,18 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # manual deploy anyway; these sections make the default safe.
 # ============================================================================
 
+[functions.address-add]
+verify_jwt = false
+
+[functions.address-remove]
+verify_jwt = false
+
+[functions.address-set-default]
+verify_jwt = false
+
+[functions.address-update]
+verify_jwt = false
+
 [functions.admin-overview]
 verify_jwt = false
 
@@ -497,6 +509,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.list-listings-admin]
+verify_jwt = false
+
+[functions.list-my-addresses]
 verify_jwt = false
 
 [functions.list-my-orders]
