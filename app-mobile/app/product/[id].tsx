@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   Star,
   Sparkles,
+  Edit2,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -28,6 +29,7 @@ import { useProduct, useProducts, useToggleFavorite, useTrackView, useFindOrCrea
 import { useShop } from '../../src/data/queries/shops';
 import { useFavorites } from '../../src/stores/favorites';
 import { useCart } from '../../src/stores/cart';
+import { useAuth } from '../../src/stores/auth';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { formatGNF, formatEUR } from '../../src/lib/format';
@@ -61,6 +63,13 @@ export default function ProductDetailRoute() {
   const [photoIdx, setPhotoIdx] = useState(0);
   const { data: shop } = useShop(product?.shopId);
   const findOrCreate = useFindOrCreateConversation();
+  // Self-action guard : the shop's ownerId IS the seller user_id for this
+  // listing. When the viewer owns the listing, the buyer-side action bar
+  // (Contacter / Ajouter au panier / Acheter) is replaced with a manage CTA
+  // so we don't tee up a backend self-deal 403 (find-or-create-conversation
+  // and place-order both reject self-targets).
+  const authUserId = useAuth((s) => s.authUserId);
+  const isOwnProduct = !!authUserId && !!shop?.ownerId && authUserId === shop.ownerId;
 
   async function onChatPress() {
     if (!shop?.ownerId || !product?.id) return;
@@ -625,90 +634,129 @@ export default function ProductDetailRoute() {
             alignItems: 'center',
           }}
         >
-          <Pressable
-            onPress={onChatPress}
-            disabled={findOrCreate.isPending || !shop?.ownerId}
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 999,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.borderStrong,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: findOrCreate.isPending || !shop?.ownerId ? 0.5 : 1,
-            }}
-            accessibilityLabel="Contacter le vendeur"
-          >
-            <MessageCircle size={18} color={colors.text} strokeWidth={2} />
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              haptic.light();
-              addToCart(product.id);
-              show(t('product.addedToCart'), 'success');
-            }}
-            style={{
-              flex: 1,
-              height: 52,
-              borderRadius: 999,
-              backgroundColor: colors.primary,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            <ShoppingBag size={16} color="#FFFFFF" strokeWidth={2.25} />
-            <Text
-              style={{
-                fontSize: 14.5,
-                fontWeight: '700',
-                color: '#FFFFFF',
-                letterSpacing: 0,
-                lineHeight: 17,
-                includeFontPadding: false,
+          {isOwnProduct ? (
+            <Pressable
+              onPress={() => {
+                haptic.light();
+                router.push(`/product/edit/${product.id}`);
               }}
-              numberOfLines={1}
-            >
-              Ajouter au panier
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              haptic.medium();
-              addToCart(product.id);
-              router.push('/checkout');
-            }}
-            style={{
-              height: 52,
-              paddingHorizontal: 18,
-              borderRadius: 999,
-              backgroundColor: colors.accent,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-            }}
-            accessibilityLabel="Acheter maintenant"
-          >
-            <Zap size={15} color="#2A1A05" strokeWidth={2.5} fill="#2A1A05" />
-            <Text
               style={{
-                fontSize: 13.5,
-                fontWeight: '700',
-                color: '#2A1A05',
-                letterSpacing: 0,
-                lineHeight: 16,
-                includeFontPadding: false,
+                flex: 1,
+                height: 52,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: colors.borderStrong,
+                backgroundColor: colors.card,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
               }}
+              accessibilityLabel={t('product.manageListing')}
             >
-              Acheter
-            </Text>
-          </Pressable>
+              <Edit2 size={16} color={colors.text} strokeWidth={2} />
+              <Text
+                style={{
+                  fontSize: 14.5,
+                  fontWeight: '700',
+                  color: colors.text,
+                  letterSpacing: 0,
+                  lineHeight: 17,
+                  includeFontPadding: false,
+                }}
+                numberOfLines={1}
+              >
+                {t('product.manageListing')}
+              </Text>
+            </Pressable>
+          ) : (
+            <>
+              <Pressable
+                onPress={onChatPress}
+                disabled={findOrCreate.isPending || !shop?.ownerId}
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 999,
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.borderStrong,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: findOrCreate.isPending || !shop?.ownerId ? 0.5 : 1,
+                }}
+                accessibilityLabel="Contacter le vendeur"
+              >
+                <MessageCircle size={18} color={colors.text} strokeWidth={2} />
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  haptic.light();
+                  addToCart(product.id);
+                  show(t('product.addedToCart'), 'success');
+                }}
+                style={{
+                  flex: 1,
+                  height: 52,
+                  borderRadius: 999,
+                  backgroundColor: colors.primary,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <ShoppingBag size={16} color="#FFFFFF" strokeWidth={2.25} />
+                <Text
+                  style={{
+                    fontSize: 14.5,
+                    fontWeight: '700',
+                    color: '#FFFFFF',
+                    letterSpacing: 0,
+                    lineHeight: 17,
+                    includeFontPadding: false,
+                  }}
+                  numberOfLines={1}
+                >
+                  Ajouter au panier
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  haptic.medium();
+                  addToCart(product.id);
+                  router.push('/checkout');
+                }}
+                style={{
+                  height: 52,
+                  paddingHorizontal: 18,
+                  borderRadius: 999,
+                  backgroundColor: colors.accent,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+                accessibilityLabel="Acheter maintenant"
+              >
+                <Zap size={15} color="#2A1A05" strokeWidth={2.5} fill="#2A1A05" />
+                <Text
+                  style={{
+                    fontSize: 13.5,
+                    fontWeight: '700',
+                    color: '#2A1A05',
+                    letterSpacing: 0,
+                    lineHeight: 16,
+                    includeFontPadding: false,
+                  }}
+                >
+                  Acheter
+                </Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </SafeAreaView>
     </View>

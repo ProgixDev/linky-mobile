@@ -15,6 +15,7 @@ import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
 import { useFavorites } from '../../../src/stores/favorites';
+import { useAuth } from '../../../src/stores/auth';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
 import { useTranslation } from 'react-i18next';
 import { PropertyLocationMap } from '../../../src/components/property/PropertyLocationMap';
@@ -33,6 +34,12 @@ export default function PropertyDetailRoute() {
   const { show } = useToast();
   const isFav = useFavorites((s) => (id ? s.propertyIds.has(id) : false));
   const toggleFav = useFavorites((s) => s.toggleProperty);
+  // Self-action guard : the property's ownerId is the agent's user_id. When
+  // the viewer owns this listing, the counterparty actions (Contacter +
+  // Visiter) are replaced with a manage CTA — both backends 403 self-targets
+  // (find-or-create-conversation, request-visit) so offering them is misleading.
+  const authUserId = useAuth((s) => s.authUserId);
+  const isOwnProperty = !!authUserId && !!prop?.ownerId && authUserId === prop.ownerId;
 
   // Fire-and-forget view bump on mount / when id changes. Failures don't block render.
   useEffect(() => {
@@ -269,19 +276,28 @@ export default function PropertyDetailRoute() {
       {/* Phase U.0-B2 — offers have no V1 backend ; the «Faire une offre» /
           «Offre» CTAs were sending nothing and the target screen was 100 %
           mock. Removed until the offers backend lands. Buyers contact the
-          agent via Message (Contacter) and book a visit instead. */}
+          agent via Message (Contacter) and book a visit instead.
+          Self-action guard : when the viewer owns the property, replace
+          counterparty actions with a manage CTA — both find-or-create and
+          request-visit 403 self-targets, so offering them is misleading. */}
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
-        {isTerrain ? (
-          <>
-            <Button
-              variant="outline"
-              style={{ flex: 1 }}
-              label="Contacter"
-              leading={<I.msg size={16} color={colors.text} />}
-              onPress={onChatPress}
-              disabled={findOrCreate.isPending || !prop.ownerId}
-            />
-          </>
+        {isOwnProperty ? (
+          <Button
+            variant="outline"
+            style={{ flex: 1 }}
+            label={t('property.manageListing')}
+            leading={<I.edit size={16} color={colors.text} />}
+            onPress={() => router.push(`/property/edit/${prop.id}`)}
+          />
+        ) : isTerrain ? (
+          <Button
+            variant="outline"
+            style={{ flex: 1 }}
+            label="Contacter"
+            leading={<I.msg size={16} color={colors.text} />}
+            onPress={onChatPress}
+            disabled={findOrCreate.isPending || !prop.ownerId}
+          />
         ) : (
           <>
             <Button

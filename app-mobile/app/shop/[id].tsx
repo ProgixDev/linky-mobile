@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Star,
   MessageCircle,
+  Edit2,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -293,46 +294,56 @@ export default function ShopRoute() {
               )}
             </View>
 
-            {/* Actions */}
+            {/* Actions — own-shop owners get a single "manage" CTA instead of
+                the follow + message row meant for other users (the message
+                Pressable previously stayed tappable on your own shop and
+                surfaced the backend's self-deal 403 as an error toast). */}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
-              <Button
-                variant={following ? 'outline' : 'dark'}
-                size="md"
-                label={
-                  isOwnShop
-                    ? t('shop.ownShop')
-                    : following
-                      ? t('shop.following')
-                      : t('shop.follow')
-                }
-                style={{ flex: 2 }}
-                loading={toggleFollow.isPending}
-                disabled={isOwnShop || toggleFollow.isPending}
-                onPress={onToggleFollow}
-              />
-              <Pressable
-                onPress={onMessagePress}
-                disabled={findOrCreate.isPending || !shop?.ownerId}
-                style={{
-                  flex: 1,
-                  height: 44,
-                  borderRadius: 999,
-                  backgroundColor: colors.card,
-                  borderWidth: 1,
-                  borderColor: colors.borderStrong,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  opacity: findOrCreate.isPending || !shop?.ownerId ? 0.5 : 1,
-                }}
-                accessibilityLabel={t('shop.contactSeller')}
-              >
-                <MessageCircle size={15} color={colors.text} strokeWidth={2} />
-                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-                  {t('shop.message')}
-                </Text>
-              </Pressable>
+              {isOwnShop ? (
+                <Button
+                  variant="outline"
+                  size="md"
+                  label={t('shop.manageMyShop')}
+                  leading={<Edit2 size={15} color={colors.text} strokeWidth={2} />}
+                  style={{ flex: 1 }}
+                  onPress={() => router.push('/shop/edit')}
+                />
+              ) : (
+                <>
+                  <Button
+                    variant={following ? 'outline' : 'dark'}
+                    size="md"
+                    label={following ? t('shop.following') : t('shop.follow')}
+                    style={{ flex: 2 }}
+                    loading={toggleFollow.isPending}
+                    disabled={toggleFollow.isPending}
+                    onPress={onToggleFollow}
+                  />
+                  <Pressable
+                    onPress={onMessagePress}
+                    disabled={findOrCreate.isPending || !shop?.ownerId}
+                    style={{
+                      flex: 1,
+                      height: 44,
+                      borderRadius: 999,
+                      backgroundColor: colors.card,
+                      borderWidth: 1,
+                      borderColor: colors.borderStrong,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      opacity: findOrCreate.isPending || !shop?.ownerId ? 0.5 : 1,
+                    }}
+                    accessibilityLabel={t('shop.contactSeller')}
+                  >
+                    <MessageCircle size={15} color={colors.text} strokeWidth={2} />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                      {t('shop.message')}
+                    </Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           </View>
         </View>
