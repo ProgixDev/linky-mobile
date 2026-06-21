@@ -124,7 +124,7 @@ export default function ShopRoute() {
             }}
           >
             <CircleButton onPress={() => router.back()} accessibilityLabel="Retour">
-              <ArrowLeft size={18} color={colors.text} strokeWidth={2} />
+              <ArrowLeft size={18} color="#1F2421" strokeWidth={2} />
             </CircleButton>
             {/* Phase X.7 — Share wired to native Share API (message-only ;
                 a linky:// URL would dead-end for recipients without the
@@ -138,7 +138,7 @@ export default function ShopRoute() {
               }}
               accessibilityLabel="Partager"
             >
-              <Share2 size={16} color={colors.text} strokeWidth={2} />
+              <Share2 size={16} color="#1F2421" strokeWidth={2} />
             </CircleButton>
           </View>
         </View>

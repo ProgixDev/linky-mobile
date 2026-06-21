@@ -62,7 +62,9 @@ export function ProductCard({
           {isFav ? (
             <I.heartFill size={15} color={colors.danger} />
           ) : (
-            <I.heart size={15} color={colors.text} />
+            // Fixed dark, NOT colors.text — the circle is always white
+            // (rgba 255,255,255,.92), so colors.text would be invisible in dark mode.
+            <I.heart size={15} color="#2E2E2E" />
           )}
         </Pressable>
         {product.boosted && (
