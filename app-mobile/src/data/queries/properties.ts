@@ -136,6 +136,27 @@ export function useProperties(filters: PropertyFilters = {}) {
   return { ...query, data };
 }
 
+// Atomic toggle: the server returns the new state + count, so we update without
+// refetch. Mirrors useToggleFavorite for products (see queries/products.ts).
+// Requires auth (the user is the favoriter) ; apiPost refreshes the token on
+// 401 once.
+export function useTogglePropertyFavorite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (propertyId: string) => {
+      const r = await apiPost<{ favorited: boolean; fav_count: number }>({
+        path: '/property-favorite-toggle',
+        body: { property_id: propertyId },
+      });
+      return { propertyId, ...r };
+    },
+    onSuccess: ({ propertyId }) => {
+      qc.invalidateQueries({ queryKey: ['property', propertyId] });
+      qc.invalidateQueries({ queryKey: ['properties'] });
+    },
+  });
+}
+
 export function useProperty(id: string | undefined) {
   return useQuery({
     queryKey: ['property', id],

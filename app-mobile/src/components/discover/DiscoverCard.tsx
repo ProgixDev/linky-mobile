@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, Pressable, Share, View } from 'react-native';
+import { Dimensions, FlatList, Pressable, Share, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -10,7 +10,6 @@ import { router } from 'expo-router';
 import {
   Heart,
   Share2,
-  Info,
   Sparkles as SparklesIcon,
   RotateCcw,
   Video as VideoIcon,
@@ -25,6 +24,8 @@ import { haptic } from '../../lib/haptics';
 import { useFavorites } from '../../stores/favorites';
 import { usePrefs } from '../../stores/prefs';
 import { useAuth } from '../../stores/auth';
+import { useToggleFavorite } from '../../data/queries/products';
+import { useTogglePropertyFavorite } from '../../data/queries/properties';
 import type { DiscoverItem } from '../../data/types';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -65,19 +66,63 @@ export function DiscoverCard({
   const isFav = useFavorites((s) =>
     isProduct ? s.productIds.has(id) : s.propertyIds.has(id),
   );
-  const toggleFav = useFavorites((s) => (isProduct ? s.toggleProduct : s.toggleProperty));
+  const toggleFavLocal = useFavorites((s) => (isProduct ? s.toggleProduct : s.toggleProperty));
+  // Server-truth like persistence. Both endpoints return the new fav_count ;
+  // we keep the displayed count optimistic so the heart-tap feels instant
+  // and reconcile with the server response on success. Failure reverts both
+  // the local heart flag and the optimistic count.
+  const toggleProductFav = useToggleFavorite();
+  const togglePropertyFav = useTogglePropertyFavorite();
+  const serverFavCount = data.item.favCount ?? 0;
+  const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
+  // Reset optimistic state when the underlying server count changes (refetch).
+  useEffect(() => { setOptimisticCount(null); }, [serverFavCount]);
+  const displayCount = optimisticCount ?? serverFavCount;
 
-  // image carousel auto-rotate when active. Pre-prod: data-saver also kills
-  // the silent every-4s photo refetch — each rotation pulls a fresh image
-  // off the network on 3G, which is exactly what the saver is meant to stop.
+  const onLike = () => {
+    haptic.light();
+    const willFavorite = !isFav;
+    // Optimistic UI : flip local heart + count immediately.
+    toggleFavLocal(id);
+    setOptimisticCount(displayCount + (willFavorite ? 1 : -1));
+    const onErr = () => {
+      // Roll back both : flip the heart back, drop the optimistic delta.
+      toggleFavLocal(id);
+      setOptimisticCount(null);
+    };
+    const onOk = (res: { fav_count: number }) => {
+      setOptimisticCount(res.fav_count);
+    };
+    if (isProduct) {
+      toggleProductFav.mutate(id, { onSuccess: onOk, onError: onErr });
+    } else {
+      togglePropertyFav.mutate(id, { onSuccess: onOk, onError: onErr });
+    }
+  };
+
+  // Manual photo swipe — horizontal pager inside each reel item. The outer
+  // vertical reel pager keeps working ; React Native's nested-scroll handling
+  // routes the dominant axis to the matching scroller.
+  // photoIdx is updated from onMomentumScrollEnd so the dot indicator stays
+  // in lockstep with the active photo, regardless of who triggered the swipe.
   const [photoIdx, setPhotoIdx] = useState(0);
+  const photoListRef = useRef<FlatList<string>>(null);
+  // When the reel scrolls off-screen and back, jump the pager to photo 0 so a
+  // returning user always sees the cover, not whatever they last swiped to.
   useEffect(() => {
-    if (!isActive || photos.length <= 1 || videoUrl || dataSaver) return;
-    const t = setInterval(() => {
-      setPhotoIdx((i) => (i + 1) % photos.length);
-    }, 4000);
-    return () => clearInterval(t);
-  }, [isActive, photos.length, videoUrl, dataSaver]);
+    if (!isActive) {
+      setPhotoIdx(0);
+      photoListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }
+  }, [isActive]);
+  const onPhotoScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const next = Math.round(x / SW);
+    if (next !== photoIdx && next >= 0 && next < photos.length) setPhotoIdx(next);
+  };
+  // FlatList only needs to know how to size each item ; keys = stable per
+  // photo url (deduped — duplicate photo URLs are rare but would break keys).
+  const photoKeys = useMemo(() => photos.map((p, i) => `${i}:${p}`), [photos]);
 
   // Video — only autoplay if NOT data saver AND we have a video URL
   const enableVideo = !!videoUrl && !dataSaver;
@@ -101,7 +146,10 @@ export function DiscoverCard({
   const handleTap = () => {
     const now = Date.now();
     if (now - lastTap.current < 280) {
-      if (!isFav) toggleFav(id);
+      // Double-tap : same as tapping the heart — fires the server toggle so
+      // the count persists. Only acts on the favorite path (no unfavorite via
+      // double-tap, matching IG/TikTok pattern : double-tap loves, doesn't toggle).
+      if (!isFav) onLike();
       haptic.medium();
       heartScale.value = withSpring(1.4, { damping: 8 }, () => {
         heartScale.value = withSpring(0, { damping: 12 });
@@ -126,12 +174,38 @@ export function DiscoverCard({
             contentFit="cover"
             nativeControls={false}
           />
+        ) : photos.length > 1 ? (
+          <FlatList
+            ref={photoListRef}
+            data={photos}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(_, i) => photoKeys[i] ?? String(i)}
+            onMomentumScrollEnd={onPhotoScroll}
+            scrollEventThrottle={16}
+            removeClippedSubviews
+            initialNumToRender={2}
+            windowSize={3}
+            getItemLayout={(_, i) => ({ length: SW, offset: SW * i, index: i })}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            renderItem={({ item: photo, index }) => (
+              <Image
+                source={photo}
+                style={{ width: SW, height: '100%' }}
+                contentFit="cover"
+                recyclingKey={`disc-${id}-${index}`}
+                transition={dataSaver ? 0 : 200}
+                priority={isActive && index === photoIdx ? (dataSaver ? 'normal' : 'high') : 'low'}
+              />
+            )}
+          />
         ) : (
           <Image
-            source={photos[photoIdx]}
+            source={photos[0]}
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
             contentFit="cover"
-            recyclingKey={`disc-${id}-${photoIdx}`}
+            recyclingKey={`disc-${id}-0`}
             transition={dataSaver ? 0 : 300}
             priority={isActive ? (dataSaver ? 'normal' : 'high') : 'low'}
           />
@@ -248,16 +322,12 @@ export function DiscoverCard({
         {/* ===== Right-rail actions ===== */}
         <DiscoverRail
           isFav={isFav}
-          onLike={() => {
-            haptic.light();
-            toggleFav(id);
-          }}
+          onLike={onLike}
           onShare={() => {
             haptic.light();
             void Share.share({ message: t('decouvrir.card.shareMessage') }).catch(() => {});
           }}
-          onDetails={() => router.push(isProduct ? `/product/${id}` : `/property/${id}`)}
-          likeCount={isProduct ? data.item.favCount.toString() : ''}
+          likeCount={String(displayCount)}
           bottomAnchor={bottomCardOffset + 60} // sits just above the bottom card
         />
 
@@ -389,21 +459,21 @@ export function DiscoverCard({
             )}
           </View>
 
-          {/* CTA */}
+          {/* CTA — brand green + white bold, replaces the white/faint pill. */}
           <Pressable
             onPress={() => router.push(isProduct ? `/product/${id}` : `/property/${id}`)}
             style={{
               width: '100%',
               height: 50,
               borderRadius: 999,
-              backgroundColor: '#FFFFFF',
+              backgroundColor: colors.primary,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
             <Text
               style={{
-                color: colors.text,
+                color: '#FFFFFF',
                 fontWeight: '700',
                 fontSize: 15,
                 lineHeight: 18,
@@ -420,55 +490,25 @@ export function DiscoverCard({
   );
 }
 
-// =================================================================
-
-function FeedPill({ label, active }: { label: string; active?: boolean }) {
-  return (
-    <View
-      style={{
-        height: 32,
-        paddingHorizontal: 14,
-        borderRadius: 999,
-        backgroundColor: active ? '#FFFFFF' : 'rgba(0,0,0,0.4)',
-        borderWidth: active ? 0 : 1,
-        borderColor: 'rgba(255,255,255,0.14)',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 12.5,
-          fontWeight: '700',
-          color: active ? '#0E1311' : '#FFFFFF',
-          lineHeight: 15,
-          includeFontPadding: false,
-          letterSpacing: 0,
-        }}
-      >
-        {label}
-      </Text>
-    </View>
-  );
-}
 
 function DiscoverRail({
   isFav,
   onLike,
   onShare,
-  onDetails,
   likeCount,
   bottomAnchor,
 }: {
   isFav: boolean;
   onLike: () => void;
   onShare: () => void;
-  onDetails: () => void;
   likeCount: string;
   bottomAnchor: number;
 }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  // The old "info" item was a tiny redundant tap target for the same nav as
+  // the full-width "See details" CTA below the card. Removed so the rail
+  // stays focused on the actions only available here (like + share).
   const items = [
     {
       key: 'like',
@@ -489,13 +529,6 @@ function DiscoverRail({
       icon: <Share2 size={20} color="#FFFFFF" strokeWidth={2} />,
       label: t('decouvrir.card.share'),
       onPress: onShare,
-      bg: 'rgba(0,0,0,0.4)',
-    },
-    {
-      key: 'info',
-      icon: <Info size={20} color="#FFFFFF" strokeWidth={2} />,
-      label: t('decouvrir.card.details'),
-      onPress: onDetails,
       bg: 'rgba(0,0,0,0.4)',
     },
   ];
