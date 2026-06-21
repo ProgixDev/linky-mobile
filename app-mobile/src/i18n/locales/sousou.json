@@ -1233,7 +1233,8 @@
       "verify": "Vérifier",
       "verifying": "Vérification…",
       "errorSessionMissing": "Session OTP introuvable — recommence",
-      "errorInvalid": "Code invalide"
+      "errorInvalid": "Code invalide",
+      "welcomeBack": "Bon retour 👋"
     },
     "profile": {
       "stepBadge": "ÉTAPE {{current}} / {{total}} · {{label}}",

@@ -137,7 +137,7 @@ export default function OtpRoute() {
     firedRef.current = true;
     (async () => {
       try {
-        const { access_token, refresh_token, user } = await verifyOtp.mutateAsync({
+        const { access_token, refresh_token, user, was_created } = await verifyOtp.mutateAsync({
           otp_id: pendingOtpId,
           code,
         });
@@ -145,7 +145,17 @@ export default function OtpRoute() {
         setPendingOtpId(null);
         signIn(user);
         haptic.success();
-        router.push('/(onboarding)/profile-setup');
+        // Pre-prod cutover: returning users (was_created=false) skip
+        // profile-setup entirely so update-profile doesn't overwrite their
+        // existing display_name + roles. New users still hit profile-setup
+        // as before. was_created omitted from the response means "unknown" —
+        // treat as new for safety (existing email-signup path doesn't set it).
+        if (was_created === false) {
+          toast.show(t('onboarding.otp.welcomeBack'), 'success');
+          router.replace('/(tabs)');
+        } else {
+          router.push('/(onboarding)/profile-setup');
+        }
       } catch (e: unknown) {
         console.error('[otp-verify] error:', e);
         toast.show(toToastMessage(e, t('onboarding.otp.errorInvalid')), 'danger');

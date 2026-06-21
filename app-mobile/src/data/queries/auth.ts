@@ -30,6 +30,11 @@ export interface TokenBundle {
 
 export interface AuthBundle extends TokenBundle {
   user: AuthUser;
+  // otp-verify returns this so the client can tell login from signup —
+  // returning users (was_created=false) must skip profile-setup, which
+  // would otherwise overwrite their display_name + roles via update-profile.
+  // Optional because email-signup/email-signin don't carry it.
+  was_created?: boolean;
 }
 
 export function useRequestOtp() {

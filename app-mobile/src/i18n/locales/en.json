@@ -1233,7 +1233,8 @@
       "verify": "Verify",
       "verifying": "Verifying…",
       "errorSessionMissing": "OTP session missing — start over",
-      "errorInvalid": "Invalid code"
+      "errorInvalid": "Invalid code",
+      "welcomeBack": "Welcome back 👋"
     },
     "profile": {
       "stepBadge": "STEP {{current}} / {{total}} · {{label}}",

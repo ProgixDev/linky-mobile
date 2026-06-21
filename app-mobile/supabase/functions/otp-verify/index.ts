@@ -53,8 +53,12 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
   if (!consumed) throwApi('OTP_ALREADY_USED', 410, 'Code déjà utilisé');
 
   // 2C: transactional find-or-create via RPC. Wraps user + identity insert in a single PG tx,
-  // so a unique-violation race rolls back the orphan user row.
+  // so a unique-violation race rolls back the orphan user row. The RPC returns
+  // (id, was_created) — was_created lets the client tell login from signup so
+  // a returning user skips profile-setup (which would overwrite their
+  // display_name/role) and routes straight into their existing account.
   let userId: string;
+  let wasCreated: boolean;
   if (otp.channel === 'phone') {
     const { data: rows, error: eRpc } = await sb.rpc('find_or_create_user_with_phone', {
       p_e164: otp.target,
@@ -64,7 +68,8 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
       console.error('[otp-verify] find_or_create_user_with_phone failed:', eRpc);
       throwApi('INTERNAL_ERROR', 500, 'Erreur création utilisateur');
     }
-    userId = (rows[0] as { id: string }).id;
+    userId = (rows[0] as { id: string; was_created: boolean }).id;
+    wasCreated = (rows[0] as { id: string; was_created: boolean }).was_created;
   } else {
     const { data: rows, error: eRpc } = await sb.rpc('find_or_create_user_with_email', {
       p_address: otp.target,
@@ -73,7 +78,8 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
       console.error('[otp-verify] find_or_create_user_with_email failed:', eRpc);
       throwApi('INTERNAL_ERROR', 500, 'Erreur création utilisateur');
     }
-    userId = (rows[0] as { id: string }).id;
+    userId = (rows[0] as { id: string; was_created: boolean }).id;
+    wasCreated = (rows[0] as { id: string; was_created: boolean }).was_created;
   }
 
   // Backfill user_id on the (already-consumed) OTP row for audit traceability.
@@ -114,5 +120,5 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
 
-  return { body: { access_token, refresh_token, user } };
+  return { body: { access_token, refresh_token, user, was_created: wasCreated } };
 }, stripTokens));
