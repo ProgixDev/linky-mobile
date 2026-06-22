@@ -1,0 +1,26 @@
+{
+  "name": "example-feature",
+  "summary": "One-line description of what this pack adds.",
+  "status": "ready",
+  "installTo": "src/features/example",
+  "devKeysNeeded": false,
+  "deps": {
+    "some-js-dep": "^1.0.0"
+  },
+  "expoInstall": ["expo-some-native-module"],
+  "env": [
+    {
+      "name": "EXPO_PUBLIC_EXAMPLE_KEY",
+      "where": "client",
+      "required": false,
+      "note": "Only needed to ship; dev works without it."
+    }
+  ],
+  "migrations": ["supabase/0010_example.sql"],
+  "routes": [{ "path": "src/app/example.tsx", "renders": "ExampleScreen" }],
+  "postInstall": [
+    "Run the migration: supabase db reset (or apply 0010_example.sql)",
+    "Add a tab/route entry if the feature needs one",
+    "Replace the placeholder UI after the Claude Design pass"
+  ]
+}

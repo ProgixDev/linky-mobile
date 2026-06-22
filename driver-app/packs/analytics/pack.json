@@ -1,0 +1,32 @@
+{
+  "name": "analytics",
+  "summary": "PostHog product analytics with a typed event layer — no ATT prompt, no-op without a key in dev.",
+  "status": "ready",
+  "installTo": "src/features/analytics",
+  "devKeysNeeded": false,
+  "deps": { "posthog-react-native": "^3.3.0" },
+  "expoInstall": ["expo-file-system", "expo-application", "expo-device", "expo-localization"],
+  "env": [
+    {
+      "name": "EXPO_PUBLIC_POSTHOG_KEY",
+      "where": "client",
+      "required": false,
+      "note": "Project API key (publishable, not a secret). Absent in dev = analytics no-ops."
+    },
+    {
+      "name": "EXPO_PUBLIC_POSTHOG_HOST",
+      "where": "client",
+      "required": false,
+      "note": "e.g. https://eu.i.posthog.com. Defaults to US cloud."
+    }
+  ],
+  "migrations": [],
+  "routes": [],
+  "postInstall": [
+    "npx expo install posthog-react-native expo-file-system expo-application expo-device expo-localization",
+    "Wrap the app in <AnalyticsProvider> (src/app/_layout.tsx)",
+    "PostHog is ATT-free: do NOT enable IDFA/advertising id. No App Tracking Transparency prompt needed.",
+    "Add EXPO_PUBLIC_POSTHOG_KEY only when you want events; without it the layer no-ops cleanly.",
+    "Never log PII/secrets as event properties — the typed events keep the surface controlled."
+  ]
+}

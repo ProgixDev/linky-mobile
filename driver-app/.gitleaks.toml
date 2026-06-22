@@ -1,0 +1,31 @@
+# gitleaks config — deep secret scanning for the repo.
+# Optional binary (brew install gitleaks). Runs on pre-commit if installed, and
+# via `npm run secrets:scan`. The always-on guard is `scripts/check-secrets.mjs`
+# (no install needed), wired into `npm run verify`.
+title = "expo-skeleton gitleaks"
+
+[extend]
+# Start from gitleaks' maintained default ruleset, then add project rules below.
+useDefault = true
+
+[[rules]]
+id = "supabase-service-role-or-secret-key"
+description = "Supabase service_role / secret key"
+regex = '''(sb_secret_[A-Za-z0-9_-]{8,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{6,})'''
+keywords = ["sb_secret_", "service_role", "eyJ"]
+
+[[rules]]
+id = "stripe-secret-key"
+description = "Stripe secret key"
+regex = '''sk_(live|test)_[A-Za-z0-9]{8,}'''
+keywords = ["sk_live_", "sk_test_"]
+
+[allowlist]
+description = "Detectors, docs, and tests legitimately contain example patterns."
+paths = [
+  '''scripts/check-secrets\.mjs''',
+  '''src/shared/lib/logger\.ts''',
+  '''\.gitleaks\.toml''',
+  '''docs/.*''',
+  '''.*\.test\.(ts|tsx)''',
+]

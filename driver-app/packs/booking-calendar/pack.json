@@ -1,0 +1,19 @@
+{
+  "name": "booking-calendar",
+  "summary": "Appointment booking: resources + availability + bookings tables, RLS, DB-enforced no-double-book, open-slot query, book/cancel, hook + stub.",
+  "status": "ready",
+  "installTo": "src/features/booking",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_bookings.sql"],
+  "routes": [{ "path": "src/app/booking.tsx", "renders": "BookingScreen" }],
+  "postInstall": [
+    "Apply supabase/0010_bookings.sql (resources/availability public-read; bookings own; unique slot prevents double-book)",
+    "supabase db reset && supabase test db",
+    "Seed a resource + availability rows, then use useBooking(resourceId) to list open slots and book one.",
+    "Pairs with payments (charge on booking) and activity-inbox (confirm/remind).",
+    "Replace src/features/booking/ui/booking-screen.tsx after the Claude Design pass"
+  ]
+}

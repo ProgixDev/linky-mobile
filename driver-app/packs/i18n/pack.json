@@ -1,0 +1,18 @@
+{
+  "name": "i18n",
+  "summary": "Lean localization: device-locale detection, typed string catalogs, t() with interpolation, RTL handling, persisted override — no heavy i18n library.",
+  "status": "ready",
+  "installTo": "src/features/i18n",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["expo-localization"],
+  "env": [],
+  "migrations": [],
+  "routes": [],
+  "postInstall": [
+    "npx expo install expo-localization",
+    "Wrap the app in <I18nProvider>, then use const { t } = useTranslation().",
+    "Add languages by extending src/features/i18n/catalogs.ts — keys are type-checked against 'en'.",
+    "For RTL languages, applyDirectionForLocale() flips the layout (needs a reload to fully apply)."
+  ]
+}

@@ -1,0 +1,12 @@
+# Smoke test: app boots and renders its cold-start screen.
+# Run locally: npm run e2e:ios (requires `maestro` CLI + a booted simulator
+# with the app installed). CI runs this on every PR via e2e-ios.yml.
+#
+# A fresh, unauthenticated launch is routed by the auth guard to the sign-in
+# screen — that is the honest cold-start state for the driver app.
+appId: com.linky.driver.dev
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'auth-email'

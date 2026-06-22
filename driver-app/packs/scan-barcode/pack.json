@@ -1,0 +1,18 @@
+{
+  "name": "scan-barcode",
+  "summary": "Barcode/QR scanner with OpenFoodFacts product lookup — fully key-free (LIBOU-style food scan).",
+  "status": "ready",
+  "installTo": "src/features/scan",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["expo-camera"],
+  "env": [],
+  "migrations": [],
+  "routes": [{ "path": "src/app/scan.tsx", "renders": "ScanScreen" }],
+  "postInstall": [
+    "npx expo install expo-camera  (needs a dev build for the camera; permission prompt works on device)",
+    "Add the camera usage string to app.config.ts ios.infoPlist.NSCameraUsageDescription (tailored, not generic) — store-readiness requires it",
+    "OpenFoodFacts needs NO key. To use a different product DB later, swap src/features/scan/data/openfoodfacts.ts",
+    "Replace src/features/scan/ui/scan-screen.tsx after the Claude Design pass"
+  ]
+}

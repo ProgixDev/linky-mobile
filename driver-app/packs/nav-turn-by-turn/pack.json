@@ -1,0 +1,18 @@
+{
+  "name": "nav-turn-by-turn",
+  "summary": "Turn-by-turn navigation: live location + OSRM routing + an instruction engine. Key-free (free OSRM).",
+  "status": "ready",
+  "installTo": "src/features/navigation",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["expo-location", "react-native-maps"],
+  "env": [],
+  "migrations": [],
+  "routes": [],
+  "postInstall": [
+    "npx expo install expo-location  (required). react-native-maps is OPTIONAL — only for drawing the map; the engine + instructions work without it.",
+    "Add a tailored location usage string to app.config.ts ios.infoPlist.NSLocationWhenInUseUsageDescription (store-readiness requires it).",
+    "Routing uses the FREE public OSRM demo server (rate-limited, dev only). For production self-host OSRM or swap src/features/navigation/data/osrm.ts for Mapbox/Google Directions.",
+    "Render with <NavScreen destination={{ lat, lng }} />; draw route.geometry on react-native-maps after the design pass."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "forms",
+  "summary": "Typed form machinery: react-hook-form + Zod resolver + a Controller-bound field that renders @/shared/ui TextField with inline errors.",
+  "status": "ready",
+  "installTo": "src/features/forms",
+  "devKeysNeeded": false,
+  "deps": { "react-hook-form": "^7.54.0", "@hookform/resolvers": "^3.10.0" },
+  "expoInstall": [],
+  "env": [],
+  "migrations": [],
+  "routes": [],
+  "postInstall": [
+    "npm install react-hook-form @hookform/resolvers",
+    "Use useAppForm(schema, defaults) + <ControlledField> in any screen with inputs.",
+    "This is a primitive, not a screen — it has no route. Import it from other features."
+  ]
+}

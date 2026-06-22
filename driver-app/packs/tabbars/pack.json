@@ -1,0 +1,19 @@
+{
+  "name": "tabbars",
+  "summary": "Swappable bottom tab bars (5 variants) on the modern headless expo-router/ui Tabs. Token-driven, key-free.",
+  "status": "ready",
+  "installTo": "src/features/navigation-tabs",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": [],
+  "routes": [],
+  "postInstall": [
+    "Copy src/features/navigation-tabs/layout-example.tsx to src/app/(tabs)/_layout.tsx, then create a route file per tab (index.tsx, feed.tsx, account.tsx).",
+    "Switch styles with the `variant` prop: minimal | labeled | pill | floating | indicator.",
+    "Icons are app-provided: set item.icon = (focused) => <YourIcon … /> (the skeleton ships no icon set on purpose).",
+    "Uses expo-router/ui (SDK 54+ headless Tabs) — already in the skeleton; no react-navigation.",
+    "Refine styling after the Claude Design pass."
+  ]
+}

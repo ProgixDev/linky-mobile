@@ -1,0 +1,18 @@
+{
+  "name": "feature-flags",
+  "summary": "Supabase-driven remote flags + percentage rollout, cached locally, with a useFlag hook. Flip features without an app update. Key-free.",
+  "status": "ready",
+  "installTo": "src/features/flags",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_feature_flags.sql"],
+  "routes": [],
+  "postInstall": [
+    "Apply supabase/0010_feature_flags.sql (public-read feature_flags; edit rows from the dashboard)",
+    "Wrap the app in <FlagsProvider>, then const on = useFlag('new_checkout').",
+    "Rollout is deterministic per user (stable hash of uid+key), so a user's bucket doesn't flicker.",
+    "Primitive — no route."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "media-upload",
+  "summary": "Pick/capture an image and upload to a private Supabase Storage bucket with per-user folders + signed URLs.",
+  "status": "ready",
+  "installTo": "src/features/media",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["expo-image-picker"],
+  "env": [],
+  "migrations": ["supabase/0010_media.sql"],
+  "routes": [{ "path": "src/app/media.tsx", "renders": "MediaUploadScreen" }],
+  "postInstall": [
+    "npx expo install expo-image-picker",
+    "Apply supabase/0010_media.sql (creates the private 'user-media' bucket + per-user folder RLS)",
+    "Add the photo-library usage string to app.config.ts ios.infoPlist.NSPhotoLibraryUsageDescription (tailored) — store-readiness requires it",
+    "Files are private: read them back with short-lived signed URLs (createSignedUrl), never public URLs",
+    "Replace src/features/media/ui/media-upload-screen.tsx after the Claude Design pass"
+  ]
+}

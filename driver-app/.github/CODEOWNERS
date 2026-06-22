@@ -1,0 +1,12 @@
+# Ownership maps 1:1 to the architecture — folders, not files.
+# Solo owner for now; split into teams as the project grows.
+
+* @achrafbenamrane
+
+/src/features/tasks/ @achrafbenamrane
+/src/shared/ @achrafbenamrane
+/docs/product/ @achrafbenamrane
+/docs/personas/ @achrafbenamrane
+/.github/ @achrafbenamrane
+/.maestro/ @achrafbenamrane
+/docs/quality/ @achrafbenamrane

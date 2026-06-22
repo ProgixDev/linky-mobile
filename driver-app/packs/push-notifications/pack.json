@@ -1,0 +1,19 @@
+{
+  "name": "push-notifications",
+  "summary": "Expo push notifications: permission + token registration, server-stored device tokens (RLS), tap-to-route handling.",
+  "status": "ready",
+  "installTo": "src/features/notifications",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["expo-notifications", "expo-device"],
+  "env": [],
+  "migrations": ["supabase/0010_push.sql"],
+  "routes": [{ "path": "src/app/notifications.tsx", "renders": "NotificationsScreen" }],
+  "postInstall": [
+    "npx expo install expo-notifications expo-device  (push needs a dev/standalone build, not Expo Go on Android)",
+    "Apply supabase/0010_push.sql (device_tokens table, owner-scoped RLS)",
+    "iOS: enable Push Notifications capability in the build; Android FCM is handled by EAS credentials",
+    "Send pushes from your server using the stored Expo tokens via Expo's push API (no key in the app)",
+    "Replace src/features/notifications/ui/notifications-screen.tsx after the Claude Design pass"
+  ]
+}

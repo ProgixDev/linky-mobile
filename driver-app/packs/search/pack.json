@@ -1,0 +1,19 @@
+{
+  "name": "search",
+  "summary": "Real full-text search via Postgres tsvector + a ranked RPC, fed by a search_documents index. Debounced search hook + stub. Key-free.",
+  "status": "ready",
+  "installTo": "src/features/search",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_search.sql"],
+  "routes": [{ "path": "src/app/search.tsx", "renders": "SearchScreen" }],
+  "postInstall": [
+    "Apply supabase/0010_search.sql (search_documents with generated tsvector + GIN index + search_documents() RPC)",
+    "supabase db reset && supabase test db",
+    "Populate search_documents from your real tables (triggers shown in the SQL comments) so search stays in sync.",
+    "Use useSearch() for a debounced ranked search bar.",
+    "Replace src/features/search/ui/search-screen.tsx after the Claude Design pass"
+  ]
+}

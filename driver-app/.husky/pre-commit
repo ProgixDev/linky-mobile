@@ -1,0 +1,9 @@
+npx lint-staged
+
+# Secret guard (always-on, no install needed).
+node scripts/check-secrets.mjs
+
+# Deep secret scan on staged changes if gitleaks is installed (optional).
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --no-banner --redact
+fi

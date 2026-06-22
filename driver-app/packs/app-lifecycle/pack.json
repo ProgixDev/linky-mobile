@@ -1,0 +1,19 @@
+{
+  "name": "app-lifecycle",
+  "summary": "Force-update / min-version gate, maintenance mode, and a well-timed in-app review prompt — all driven by a public Supabase config row.",
+  "status": "ready",
+  "installTo": "src/features/lifecycle",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["expo-application", "expo-store-review", "expo-linking"],
+  "env": [],
+  "migrations": ["supabase/0010_app_config.sql"],
+  "routes": [],
+  "postInstall": [
+    "npx expo install expo-application expo-store-review expo-linking",
+    "Apply supabase/0010_app_config.sql (public-read app_config; you edit it from the dashboard)",
+    "Set storeUrls (App Store / Play) in the config row so the update gate can deep-link to the store.",
+    "Wrap routes in <LifecycleGate> to block on update-required / maintenance.",
+    "Call maybeAskForReview() after a positive moment (a completed task), never on launch."
+  ]
+}

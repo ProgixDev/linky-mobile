@@ -1,0 +1,18 @@
+{
+  "name": "offline-sync",
+  "summary": "Network-state awareness + a persisted optimistic mutation queue that replays writes when connectivity returns.",
+  "status": "ready",
+  "installTo": "src/features/offline",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["@react-native-community/netinfo"],
+  "env": [],
+  "migrations": [],
+  "routes": [],
+  "postInstall": [
+    "npx expo install @react-native-community/netinfo",
+    "Register each replayable write once: registerMutation('like.toggle', async (payload) => { ... }).",
+    "Mount useOfflineQueue() near the root so the queue drains automatically on reconnect.",
+    "Primitive — no route. Import it from other features."
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "ai-assistant",
+  "summary": "Streaming LLM chat. The model key lives in a Supabase Edge Function (never in the app); message history is RLS-scoped. Key-free dev via a mock stream.",
+  "status": "ready",
+  "installTo": "src/features/assistant",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_assistant.sql"],
+  "edgeFunctions": ["supabase/functions/ai-chat/index.ts"],
+  "routes": [{ "path": "src/app/assistant.tsx", "renders": "AssistantScreen" }],
+  "postInstall": [
+    "Apply supabase/0010_assistant.sql (ai_conversations + ai_messages, owner-scoped RLS)",
+    "Deploy the Edge Function: supabase functions deploy ai-chat",
+    "Set the model key as a SERVER secret (never EXPO_PUBLIC): supabase secrets set OPENAI_API_KEY=sk-...",
+    "Without OPENAI_API_KEY the function streams a canned mock reply, so dev works key-free.",
+    "Streaming uses fetch from 'expo/fetch' (Expo SDK 52+). No extra dep.",
+    "Replace src/features/assistant/ui/assistant-screen.tsx after the Claude Design pass"
+  ]
+}

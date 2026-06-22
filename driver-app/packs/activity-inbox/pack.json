@@ -1,0 +1,19 @@
+{
+  "name": "activity-inbox",
+  "summary": "In-app notification feed: notifications table + RLS, unread badge, mark-read, realtime arrival, list hook + screen stub.",
+  "status": "ready",
+  "installTo": "src/features/inbox",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_notifications.sql"],
+  "routes": [{ "path": "src/app/inbox.tsx", "renders": "InboxScreen" }],
+  "postInstall": [
+    "Apply supabase/0010_notifications.sql (owner-scoped read; actor-stamped insert; realtime)",
+    "supabase db reset && supabase test db",
+    "Create a notification with notify(targetUserId, type, body, entity?) when something happens (a like, a follow).",
+    "Pairs with push-notifications: push DELIVERS the buzz, this SHOWS the history.",
+    "Replace src/features/inbox/ui/inbox-screen.tsx after the Claude Design pass"
+  ]
+}

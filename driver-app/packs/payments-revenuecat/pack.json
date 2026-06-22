@@ -1,0 +1,31 @@
+{
+  "name": "payments-revenuecat",
+  "summary": "RevenueCat in-app purchases / subscriptions — client side. Server entitlement (subscriptions table + webhook) already ships in the skeleton.",
+  "status": "ready",
+  "installTo": "src/features/payments",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["react-native-purchases"],
+  "env": [
+    {
+      "name": "EXPO_PUBLIC_REVENUECAT_IOS_KEY",
+      "where": "client",
+      "required": false,
+      "note": "RevenueCat PUBLIC SDK key (appl_…). Safe on device. Omit in dev → SDK runs in Preview/sandbox and mocks offerings, so you can build the flow with no key."
+    },
+    {
+      "name": "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY",
+      "where": "client",
+      "required": false,
+      "note": "RevenueCat PUBLIC SDK key (goog_…). Same as above for Android."
+    }
+  ],
+  "migrations": [],
+  "routes": [{ "path": "src/app/paywall.tsx", "renders": "PaywallScreen" }],
+  "postInstall": [
+    "npx expo install react-native-purchases  (needs a dev build — not Expo Go for real purchases)",
+    "Call configureRevenueCat() once at app start (e.g. in src/app/_layout.tsx), after sign-in pass the Supabase user id as appUserID",
+    "Server side already exists: supabase/functions/revenuecat-webhook + the subscriptions table (RLS read-only). Set the webhook secret to keep entitlement server-owned.",
+    "Replace src/features/payments/ui/paywall.tsx after the Claude Design pass"
+  ]
+}
