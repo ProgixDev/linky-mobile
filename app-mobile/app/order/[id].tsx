@@ -63,12 +63,11 @@ export default function OrderRoute() {
   // most. confirm_order_receipt + dispute_order accept 'preparing' too post-X9.
   const inHandoffWindow =
     order.status === 'paid' || order.status === 'preparing' || order.status === 'delivered';
-  // QR payload includes the scan_token secret as a query param. Only the seller
-  // receives scanToken in the get-order response (PII gate, server-side), so
-  // this branch only renders when the seller is viewing their own order.
-  // Buyer-side will never have access to scanToken — the QR is therefore only
-  // visible to the seller, and the scan is the only way for the buyer to learn
-  // the token. That's what makes the QR an actual lock, not a navigation hint.
+  // QR payload includes the scan_token secret as a query param. Phase LIVREUR
+  // widened the get-order PII gate so BOTH buyer and seller receive scanToken
+  // — the buyer renders the QR on-screen for the LIVREUR to scan at handoff
+  // (the inverted flow), the seller still gets it for the legacy printed-QR
+  // path. Non-participants never reach this screen (FORBIDDEN server-side).
   const qrPayload = order.scanToken
     ? `linky://order/${order.id}/confirm?token=${order.scanToken}`
     : null;
@@ -168,29 +167,65 @@ export default function OrderRoute() {
           </Card>
         </View>
 
-        {isBuyer && inHandoffWindow && (
+        {isBuyer && inHandoffWindow && qrPayload && (
           <>
             <View style={{ marginTop: 18 }}>
-              <MicroLabel label={t('order.qrLabel')} />
+              <MicroLabel label={t('order.buyerQrLabel')} />
               <Card padding={20}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                   <I.qr size={16} color={colors.text} />
                   <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-                    {t('order.qrInstructionTitle')}
+                    {t('order.buyerQrTitle')}
                   </Text>
                 </View>
-                <Text style={{ fontSize: 12.5, color: colors.textMuted, lineHeight: 18 }}>
-                  {t('order.qrInstruction')}
+                {/* Phase LIVREUR — primary handoff path : the buyer's on-screen
+                    QR is what the livreur scans with the Linky Driver app to
+                    confirm delivery + release escrow. Same QRCode component
+                    the seller uses on the legacy printed-QR side, just with
+                    the buyer's now-permitted scanToken. */}
+                <View
+                  style={{
+                    alignSelf: 'center',
+                    padding: 14,
+                    borderRadius: 14,
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <QRCode value={qrPayload} size={180} backgroundColor="#FFFFFF" color="#0E1311" />
+                </View>
+                <Text
+                  variant="micro"
+                  tone="muted"
+                  style={{ alignSelf: 'center', marginTop: 10, letterSpacing: 0, textTransform: 'none' }}
+                >
+                  #{order.reference}
+                </Text>
+                <Text
+                  style={{
+                    marginTop: 14,
+                    fontSize: 12.5,
+                    color: colors.textMuted,
+                    lineHeight: 18,
+                    textAlign: 'center',
+                  }}
+                >
+                  {t('order.buyerQrBody')}
                 </Text>
               </Card>
             </View>
 
+            {/* Secondary fallback : hand-carry / no-livreur orders still
+                use the buyer-self-scan path (seller prints QR on package,
+                buyer scans here). Both confirms are mutually exclusive
+                via the order status gate — whichever fires first wins. */}
             <View style={{ marginTop: 14 }}>
               <Button
-                variant="primary"
+                variant="outline"
                 block
-                label={t('order.scanQrCta')}
-                leading={<I.qr size={16} color="#FFFFFF" />}
+                label={t('order.scanPackageQrCta')}
+                leading={<I.qr size={16} color={colors.text} />}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /scan typedRoute regenerates next start
                 onPress={() => router.push('/scan' as any)}
               />
