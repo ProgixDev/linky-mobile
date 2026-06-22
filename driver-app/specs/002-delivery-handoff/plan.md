@@ -2,7 +2,14 @@
 
 - **Spec:** [spec.md](spec.md) (all open questions resolved: yes — phone dropped, manual entry descoped, QR/escrow/idempotency confirmed)
 - **Author:** Claude (agent) · **Date:** 2026-06-23
-- **Size:** **L** — new native capability (camera, [ADR-0009](../../docs/architecture/decisions/0009-expo-camera-qr-scanning.md)) + new dependency (`expo-camera`) + two new edge functions + an **irreversible money action** (escrow release). Builds on the 001 `deliveries` slice.
+- **Size:** **L** — new native capability (camera, [ADR-0009](../../docs/architecture/decisions/0009-expo-camera-qr-scanning.md)) + new dependency (`expo-camera`) + an **irreversible money action** (escrow release). Builds on the 001 `deliveries` slice.
+
+> **⚠ Backend reality (2026-06-23, post-consolidation):** `livreur-confirm-handoff`
+> ALREADY exists in the canonical backend (POST `{ order_id, scan_token }` → wraps the
+> RPC, immediate escrow release, returns `{ delivery, order_status }`; error codes
+> NOT_ASSIGNED_LIVREUR / INVALID_SCAN_TOKEN / INVALID_STATUS / …). So T1 is NOT "build
+> two functions" — only **`get-delivery` must be built** (in the canonical backend).
+> Every POST needs an `Idempotency-Key` header. The driver app is a pure client.
 
 ## Approach
 
