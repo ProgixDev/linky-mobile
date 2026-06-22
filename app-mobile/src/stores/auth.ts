@@ -4,12 +4,13 @@ import { useCart } from './cart';
 import type { AuthUser } from '../data/queries/auth';
 
 type AuthChannel = 'phone' | 'email';
-export type UserRole = 'buyer' | 'seller' | 'agent';
+export type UserRole = 'buyer' | 'seller' | 'agent' | 'livreur';
 // UI ids used in profile-setup step 3 → canonical UserRole.
-export const ROLE_FROM_UI: Record<'buy' | 'sell' | 'agent', UserRole> = {
+export const ROLE_FROM_UI: Record<'buy' | 'sell' | 'agent' | 'livreur', UserRole> = {
   buy: 'buyer',
   sell: 'seller',
   agent: 'agent',
+  livreur: 'livreur',
 };
 
 interface AuthState {

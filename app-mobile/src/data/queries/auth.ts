@@ -16,7 +16,7 @@ export interface AuthUser {
   // Phase T.1: returned by otp-verify / email-signin / email-signup /
   // update-profile so the auth store rehydrates roles from the server (the
   // single source of truth ; MMKV is the offline cache).
-  roles?: ('buyer' | 'seller' | 'agent')[];
+  roles?: ('buyer' | 'seller' | 'agent' | 'livreur')[];
   // Phase K.4: returned by email-signin so the Next.js admin shell can gate
   // on it without a separate get-me round-trip. Mobile users always see
   // is_admin = false; the mobile UI never reads it.
@@ -101,7 +101,7 @@ export async function refreshSession(refreshToken: string): Promise<TokenBundle>
 export interface UpdateProfileInput {
   display_name?: string;
   city?: string;
-  roles?: ('buyer' | 'seller' | 'agent')[];
+  roles?: ('buyer' | 'seller' | 'agent' | 'livreur')[];
   // Public URL of an avatar already uploaded to the avatars bucket (see
   // useUploadAvatar). Empty string clears it.
   avatar_url?: string;

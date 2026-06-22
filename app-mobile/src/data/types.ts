@@ -20,7 +20,7 @@ export interface User {
   phone?: string;
   email?: string;
   rating: number;
-  roles: Array<'buyer' | 'seller' | 'agent'>;
+  roles: Array<'buyer' | 'seller' | 'agent' | 'livreur'>;
 }
 
 export interface Shop {
