@@ -1,0 +1,18 @@
+{
+  "name": "social-graph",
+  "summary": "Follow / followers: follows table + RLS, optimistic follow/unfollow, counts and isFollowing, hook + FollowButton stub.",
+  "status": "ready",
+  "installTo": "src/features/social",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_follows.sql"],
+  "routes": [],
+  "postInstall": [
+    "Apply supabase/0010_follows.sql (public-read follows; you can only create/remove your own follow)",
+    "supabase db reset && supabase test db",
+    "Use useFollow(targetUserId) for an optimistic follow button + live counts.",
+    "Replace src/features/social/ui/follow-button.tsx after the Claude Design pass"
+  ]
+}

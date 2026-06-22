@@ -1,0 +1,19 @@
+{
+  "name": "auth-screens",
+  "summary": "Extra auth flows: passwordless OTP (email + SMS), password reset, onboarding. Extends the skeleton's auth.",
+  "status": "ready",
+  "installTo": "src/features/auth-extras",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": [],
+  "routes": [],
+  "postInstall": [
+    "Extends the existing src/features/auth from Phase 2 (sign in/up already there).",
+    "Email OTP + password reset work on the Supabase free tier with NO extra keys.",
+    "SMS/phone OTP needs an SMS provider configured in the Supabase dashboard (Twilio/MessageBird) — a dashboard setting, not an app key.",
+    "Password reset: set the redirect URL in Supabase Auth settings (deep link) so the reset link returns to the app.",
+    "Wire screens to routes: <OtpScreen channel=\"phone\" />, <ForgotPasswordScreen />, <OnboardingScreen />. Replace the UI after the Claude Design pass."
+  ]
+}

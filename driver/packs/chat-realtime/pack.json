@@ -1,0 +1,19 @@
+{
+  "name": "chat-realtime",
+  "summary": "1:1 + group chat over Supabase Realtime — tables, RLS, realtime, send/read. Key-free (uses the skeleton's Supabase).",
+  "status": "ready",
+  "installTo": "src/features/chat",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_chat.sql"],
+  "routes": [],
+  "postInstall": [
+    "Requires the Supabase auth from Phase 2 (sign-in) — chat is per authenticated user.",
+    "Apply the migration: copy supabase/0010_chat.sql into supabase/migrations/ (next number) then `supabase db reset && supabase test db`.",
+    "Realtime works on the Supabase free tier — no extra keys/services.",
+    "Render a thread with <MessageThread conversationId={id} />; list with listConversations(); start a DM with createDirectConversation(otherUserId).",
+    "Replace src/features/chat/ui/message-thread.tsx after the Claude Design pass (build the conversation list + bubbles there)."
+  ]
+}

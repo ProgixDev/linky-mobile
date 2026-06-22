@@ -1,0 +1,19 @@
+{
+  "name": "feed-reels",
+  "summary": "TikTok-style vertical video feed: paginated query, autoplay-on-visible player, likes. Key-free (Supabase).",
+  "status": "ready",
+  "installTo": "src/features/feed",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["expo-video"],
+  "env": [],
+  "migrations": ["supabase/0010_feed.sql"],
+  "routes": [{ "path": "src/app/feed.tsx", "renders": "FeedScreen" }],
+  "postInstall": [
+    "Requires the Supabase auth from Phase 2.",
+    "Apply supabase/0010_feed.sql (posts + post_likes + RLS) → `supabase db reset && supabase test db`.",
+    "npx expo install expo-video.",
+    "Videos: store the file in a Supabase Storage bucket (or any https URL) and pass the URL to createPost(). For uploads, add a private bucket + signed URLs (see docs/research/03-supabase-security.md).",
+    "Replace src/features/feed/ui/feed-screen.tsx after the Claude Design pass; the design adds comments/share/profile overlays onto useFeed."
+  ]
+}

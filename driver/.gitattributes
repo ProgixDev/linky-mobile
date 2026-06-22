@@ -1,0 +1,9 @@
+# Normalize line endings so diffs are identical across macOS/Linux/Windows
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+*.ttf binary
+*.otf binary
+# Lockfile: always take both sides and re-run npm install on conflict
+package-lock.json -diff merge=ours linguist-generated

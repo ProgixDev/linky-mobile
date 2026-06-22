@@ -1,0 +1,33 @@
+# CUJ-001: capture a task (docs/quality/critical-user-journeys.md)
+# Deterministic E2E gate — the agentic QA (Argent) covers the exploratory rest.
+#
+# The tasks demo now lives at /tasks (home is the driver deliveries list, spec 001).
+# Cold start is auth-gated, so this signs in first with a seeded account.
+appId: com.linky.driver.dev
+env:
+  DRIVER_EMAIL: driver@example.com
+  DRIVER_PASSWORD: changeme
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'auth-email'
+- tapOn:
+    id: 'auth-email'
+- inputText: ${DRIVER_EMAIL}
+- tapOn:
+    id: 'auth-password'
+- inputText: ${DRIVER_PASSWORD}
+- tapOn:
+    id: 'auth-submit'
+- assertVisible:
+    id: 'deliveries-screen'
+# Navigate to the relocated tasks demo via deep link.
+- openLink: linkydriver://tasks
+- tapOn:
+    id: 'tasks-input'
+- inputText: 'Buy oat milk'
+- tapOn:
+    id: 'tasks-add-button'
+- assertVisible: 'Buy oat milk'
+- assertVisible: '1 pending'

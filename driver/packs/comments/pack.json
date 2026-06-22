@@ -1,0 +1,18 @@
+{
+  "name": "comments",
+  "summary": "Reusable threaded comments on any entity: comments table + RLS, paginated list, optimistic add, one-level replies, hook + stub.",
+  "status": "ready",
+  "installTo": "src/features/comments",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_comments.sql"],
+  "routes": [],
+  "postInstall": [
+    "Apply supabase/0010_comments.sql (public-read; write/delete your own; entity_type + entity_id)",
+    "supabase db reset && supabase test db",
+    "Use useComments('post', postId) for a paginated thread with optimistic add.",
+    "Replace src/features/comments/ui/comments-screen.tsx after the Claude Design pass"
+  ]
+}

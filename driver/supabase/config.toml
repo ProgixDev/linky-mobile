@@ -1,0 +1,18 @@
+# Supabase CLI config (template). Run `supabase init` to regenerate the full
+# file for your environment; the security-relevant override is below.
+project_id = "expo-skeleton"
+
+[functions.revenuecat-webhook]
+# The webhook carries no Supabase JWT — it authenticates with a shared secret
+# header that the function verifies itself. Do NOT enable verify_jwt here.
+verify_jwt = false
+
+[functions.delete-account]
+# Called by a signed-in user — require a valid Supabase JWT (the default).
+verify_jwt = true
+
+[functions.list-livreur-deliveries]
+# Called by a signed-in driver — require a valid Supabase JWT at the gateway
+# (defense-in-depth on top of the in-function getUser() check). The livreur id is
+# derived from this verified token, never from the request body (spec 001 AC-9).
+verify_jwt = true

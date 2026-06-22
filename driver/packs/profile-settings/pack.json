@@ -1,0 +1,22 @@
+{
+  "name": "profile-settings",
+  "summary": "Profile (view/edit, wired to the profiles table) + a local settings store + screens. Key-free.",
+  "status": "ready",
+  "installTo": "src/features/profile",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_profile_extras.sql"],
+  "routes": [
+    { "path": "src/app/profile.tsx", "renders": "ProfileScreen" },
+    { "path": "src/app/settings.tsx", "renders": "SettingsScreen" }
+  ],
+  "postInstall": [
+    "Requires the Supabase auth + profiles table from Phase 2.",
+    "Apply supabase/0010_profile_extras.sql (adds avatar_url + bio) → `supabase db reset`.",
+    "Pair with the skeleton's existing /account screen (sign out + delete account).",
+    "Avatars: add a private Supabase Storage bucket + signed URLs, store the URL in profiles.avatar_url.",
+    "Replace the screens in src/features/profile/ui/ after the Claude Design pass."
+  ]
+}

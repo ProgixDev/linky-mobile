@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / discussion
+    url: https://github.com/yourorg/your-repo/discussions
+    about: TODO(company) — point at your discussions or Slack channel

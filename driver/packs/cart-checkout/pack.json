@@ -1,0 +1,19 @@
+{
+  "name": "cart-checkout",
+  "summary": "Ecommerce core: persisted cart store + products/orders/order_items tables + a place_order RPC that prices server-side (never trusts the client). Ties into payments.",
+  "status": "ready",
+  "installTo": "src/features/cart",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_orders.sql"],
+  "routes": [{ "path": "src/app/cart.tsx", "renders": "CartScreen" }],
+  "postInstall": [
+    "Apply supabase/0010_orders.sql (products public-read; orders own; place_order() prices from the DB)",
+    "supabase db reset && supabase test db",
+    "Seed products, add to cart with useCart(), then placeOrder() — the server computes the total.",
+    "After place_order returns an order id, start payment (Stripe web / RevenueCat) and mark paid via your webhook.",
+    "Replace src/features/cart/ui/cart-screen.tsx after the Claude Design pass"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "ratings-reviews",
+  "summary": "Star ratings + reviews on any entity: reviews table + RLS (one per user/target), average+count summary RPC, submit/list hook + stub.",
+  "status": "ready",
+  "installTo": "src/features/reviews",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": [],
+  "env": [],
+  "migrations": ["supabase/0010_reviews.sql"],
+  "routes": [{ "path": "src/app/reviews.tsx", "renders": "ReviewsScreen" }],
+  "postInstall": [
+    "Apply supabase/0010_reviews.sql (public-read; one review per user/entity; review_summary() RPC)",
+    "supabase db reset && supabase test db",
+    "Use useReviews('product', productId) for the average, the list, and submit (upsert).",
+    "Replace src/features/reviews/ui/reviews-screen.tsx after the Claude Design pass"
+  ]
+}

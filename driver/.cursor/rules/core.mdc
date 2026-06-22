@@ -1,0 +1,20 @@
+---
+description: Repository operating rules (canonical source AGENTS.md)
+globs:
+alwaysApply: true
+---
+
+This repository's canonical agent manual is AGENTS.md at the repo root —
+read it before any work, follow its operating model (ground → plan →
+implement → verify → encode feedback) and its hard rules:
+
+- Layering app → features → shared is lint-enforced; features expose only
+  index.ts; never import @react-navigation/* (expo-router forked it).
+- Zod-validate every edge; Zustand stores with selectors; process.env only in
+  src/shared/lib/env.ts.
+- NativeWind className only (cn() for conditionals); shared/ui primitives;
+  testID on every interactive element; tests in __tests__/, never src/app/.
+- Conventional Commits; npm run verify must pass; update stale docs in the
+  same change; docs map lives in AGENTS.md.
+
+When a rule here disagrees with AGENTS.md, AGENTS.md wins.

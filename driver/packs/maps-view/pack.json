@@ -1,0 +1,19 @@
+{
+  "name": "maps-view",
+  "summary": "Map screen with markers + a key-free 'nearby' query (bounding-box + haversine sort) over any table with lat/lng columns.",
+  "status": "ready",
+  "installTo": "src/features/map",
+  "devKeysNeeded": false,
+  "deps": {},
+  "expoInstall": ["react-native-maps"],
+  "env": [],
+  "migrations": [],
+  "routes": [{ "path": "src/app/map.tsx", "renders": "MapScreen" }],
+  "postInstall": [
+    "npx expo install react-native-maps  (needs a dev build; Apple Maps on iOS / Google Maps on Android by default)",
+    "No API key on iOS (Apple Maps). Android uses Google Maps — add a Maps SDK key in app.config.ts only when you ship a standalone Android build.",
+    "Point fetchNearby() at your own table that has numeric lat/lng columns (no PostGIS needed).",
+    "Pairs with places-search (pick a place) and nav-turn-by-turn (route to it).",
+    "Replace src/features/map/ui/map-screen.tsx after the Claude Design pass"
+  ]
+}

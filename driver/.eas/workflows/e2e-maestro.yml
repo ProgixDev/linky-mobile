@@ -1,0 +1,25 @@
+# EAS Workflows alternative for E2E — runs entirely on Expo's
+# infrastructure (faster mobile-tuned runners, build artifacts kept on
+# expo.dev). Trigger: npx eas workflow:run e2e-maestro.yml
+# Docs: https://docs.expo.dev/eas/workflows/examples/e2e-tests/
+name: e2e-maestro
+
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  build_ios_simulator:
+    name: Build iOS simulator app
+    type: build
+    params:
+      platform: ios
+      profile: development-simulator
+
+  maestro:
+    name: Run Maestro flows
+    needs: [build_ios_simulator]
+    type: maestro
+    params:
+      build_id: ${{ needs.build_ios_simulator.outputs.build_id }}
+      flow_path: ['.maestro/flows/smoke.yaml', '.maestro/flows/tasks-cuj.yaml']

@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose product work (graduates into a PRD before implementation)
+labels: [feature, triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem (who hurts, evidence)
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired user-visible outcome
+    validations:
+      required: true
+  - type: input
+    id: metric
+    attributes:
+      label: How we'd measure success
+  - type: markdown
+    attributes:
+      value: |
+        Next step: if accepted at planning, copy docs/product/prds/_template.md
+        into a numbered PRD and link it here. Implementation starts from the
+        PRD, not from this issue.

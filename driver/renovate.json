@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", ":prHourlyLimit2"],
+  "schedule": ["before 7am on monday"],
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Expo SDK packages move together — never auto-bump; upgrade via `npx expo install expo@^NN --fix` per release runbook",
+      "matchPackageNames": [
+        "expo",
+        "expo-*",
+        "@expo/*",
+        "react",
+        "react-dom",
+        "react-native",
+        "react-native-*",
+        "jest-expo",
+        "@types/react"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Group safe tooling updates",
+      "matchDepTypes": ["devDependencies"],
+      "groupName": "dev tooling",
+      "automerge": false
+    }
+  ]
+}

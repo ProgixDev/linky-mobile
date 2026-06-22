@@ -1,0 +1,35 @@
+# CUJ-002: driver views assigned deliveries (docs/quality/critical-user-journeys.md)
+# Deterministic E2E gate; Argent covers the exploratory rest.
+#
+# PREREQUISITES (why this is deferred in environments without them):
+#   - a booted iOS simulator with the dev build installed (macOS only), and
+#   - a SEEDED livreur account on the shared Supabase backend (set the env below).
+appId: com.linky.driver.dev
+env:
+  DRIVER_EMAIL: driver@example.com
+  DRIVER_PASSWORD: changeme
+---
+- launchApp:
+    clearState: true
+# Cold start is unauthenticated → the auth guard shows the sign-in screen.
+- assertVisible:
+    id: 'auth-email'
+- tapOn:
+    id: 'auth-email'
+- inputText: ${DRIVER_EMAIL}
+- tapOn:
+    id: 'auth-password'
+- inputText: ${DRIVER_PASSWORD}
+- tapOn:
+    id: 'auth-submit'
+# Lands on the driver's home: the deliveries worklist. List OR empty state is valid.
+- assertVisible:
+    id: 'deliveries-screen'
+- assertVisible:
+    id: 'deliveries-count'
+# Pull to refresh.
+- swipe:
+    start: 50%, 35%
+    end: 50%, 80%
+- assertVisible:
+    id: 'deliveries-screen'

@@ -1,0 +1,30 @@
+name: Bug report
+description: Something broke
+labels: [bug, triage]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened vs what you expected
+      placeholder: Observed… Expected…
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      placeholder: '1. Open… 2. Tap… (device/OS, app variant, build/update id from the dev menu)'
+    validations:
+      required: true
+  - type: dropdown
+    id: cuj
+    attributes:
+      label: Does this break a Critical User Journey?
+      options: ['No', 'Yes — name it in the description']
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      placeholder: Screenshots, recording, logs, Argent session notes
