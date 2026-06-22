@@ -445,6 +445,15 @@ verify_jwt = false
 [functions.cron-poll-intents]
 verify_jwt = false
 
+[functions.delivery-assign]
+verify_jwt = false
+
+[functions.livreur-confirm-handoff]
+verify_jwt = false
+
+[functions.list-livreur-deliveries]
+verify_jwt = false
+
 [functions.didit-webhook]
 verify_jwt = false
 

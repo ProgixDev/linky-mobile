@@ -49,9 +49,13 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
   if (r.buyer_id !== userId && r.seller_id !== userId) {
     throwApi('FORBIDDEN', 403, 'Action refusée.');
   }
-  // PII gate: only the seller may see the scan_token (it's the QR secret
-  // they print on the package; buyer learns it ONLY by scanning the QR).
-  const isSeller = r.seller_id === userId;
+  // PII gate (Phase LIVREUR) : seller AND buyer may both receive scan_token.
+  // OLD path : seller printed the QR on the package, buyer self-scanned.
+  // NEW path : buyer renders the QR on-screen for a livreur to scan at
+  // handoff. Both paths coexist (hand-carry still uses the seller-prints
+  // route), so both audiences are legitimate. The token is still hidden
+  // from any other caller (admin uses a separate admin endpoint).
+  const isParticipant = r.buyer_id === userId || r.seller_id === userId;
 
   // Latest payment_intent for this order. Currently attempt_index stays at 1
   // (V1 retry creates a NEW order, not a new attempt on the same one).
@@ -74,10 +78,11 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
 
   return {
     body: {
-      // PII opt-in: includeScanToken is true only when the caller is the seller
-      // of this order. Buyer/agent callers get scanToken=undefined in the
-      // mapped payload, preventing the QR-bypass deep-link path.
-      order:  mapOrder(r, { includeScanToken: isSeller }),
+      // PII opt-in (Phase LIVREUR) : both buyer and seller receive scan_token.
+      // Buyer needs it to render their own on-screen QR for livreur handoff ;
+      // seller still gets it for the legacy printed-QR path. Non-participants
+      // never reach this branch (FORBIDDEN above).
+      order:  mapOrder(r, { includeScanToken: isParticipant }),
       intent: intentRow ? mapPaymentIntent(intentRow as PaymentIntentRow) : null,
     },
   };

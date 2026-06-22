@@ -22,7 +22,7 @@ interface Body {
   avatar_url?: string;
 }
 
-const V1_ROLES = new Set(['buyer', 'seller', 'agent']);
+const V1_ROLES = new Set(['buyer', 'seller', 'agent', 'livreur']);
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -44,7 +44,7 @@ function valid(b: unknown): b is Body {
   }
   if (x.roles !== undefined) {
     if (!Array.isArray(x.roles)) return false;
-    if (x.roles.length < 1 || x.roles.length > 3) return false;
+    if (x.roles.length < 1 || x.roles.length > 4) return false;
     for (const r of x.roles) {
       if (typeof r !== 'string' || !V1_ROLES.has(r)) return false;
     }
