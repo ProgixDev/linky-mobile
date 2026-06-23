@@ -22,6 +22,8 @@ type DeliveriesState = {
   refresh: () => Promise<void>;
   /** Drop in-memory + persisted cache — wired on sign-out so a driver never sees another's deliveries. */
   clearCache: () => void;
+  /** Drop one delivery from the list after a confirmed handoff (spec 002 AC-4). */
+  removeDelivery: (id: string) => void;
 };
 
 export const useDeliveriesStore = create<DeliveriesState>()(
@@ -64,6 +66,8 @@ export const useDeliveriesStore = create<DeliveriesState>()(
       },
 
       clearCache: () => set({ items: [], status: 'idle', error: null, lastFetchedAt: null }),
+
+      removeDelivery: (id) => set({ items: get().items.filter((d) => d.id !== id) }),
     }),
     {
       name: 'deliveries-store-v1',
