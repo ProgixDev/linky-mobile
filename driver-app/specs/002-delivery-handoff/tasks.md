@@ -4,7 +4,7 @@ Ordered, executable, checkboxed. Work top-to-bottom, tick on commit. `[P]` = par
 
 ## Phase 0 — setup
 
-- [ ] **T0** Accept [ADR-0009](../../docs/architecture/decisions/0009-expo-camera-qr-scanning.md) (human). Branch `feat/002-delivery-handoff` off `main`. `npx expo install expo-camera`; add tailored `ios.infoPlist.NSCameraUsageDescription` + the `expo-camera` plugin (Android `CAMERA`) in `app.config.ts`. · done: typecheck green; config valid.
+- [x] **T0** Accept [ADR-0009](../../docs/architecture/decisions/0009-expo-camera-qr-scanning.md) (human — accepted 2026-06-23). Branch `feat/002-delivery-handoff` cut off **`feat/driver-app`** (NOT `main` — spec 001 + Linky-auth/backend realignment are unmerged and live only there). `npx expo install expo-camera` → `~56.0.8`; added tailored `ios.infoPlist.NSCameraUsageDescription` + the `expo-camera` plugin in `app.config.ts` (mic + Android `RECORD_AUDIO` disabled — QR only). · done: typecheck green; `expo config` resolves the plugin + usage string.
 - [ ] **T1** Backend edge functions (Deno, service-role, JWT→`getUser()`): `supabase/functions/get-delivery/index.ts` (return one delivery's full address + order + buyer `display_name` for the assigned livreur) and `supabase/functions/livreur-confirm-handoff/index.ts` (call `livreur_confirm_handoff(order_id, getUser().id, scan_token)`; map RPC errors → JSON codes). Add `[functions.*] verify_jwt = true` to `config.toml`. · done: modeled on `list-livreur-deliveries`; `deno check` + deploy **deferred** (no Supabase access here).
 
 ## Phase 1 — core behavior

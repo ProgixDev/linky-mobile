@@ -1,8 +1,8 @@
 # ADR-0009 — expo-camera for in-app QR scanning
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-06-23
-- **Deciders:** Achraf Benamrane (founder) — pending acceptance
+- **Deciders:** Achraf Benamrane (founder) — accepted 2026-06-23
 
 ## Context
 
