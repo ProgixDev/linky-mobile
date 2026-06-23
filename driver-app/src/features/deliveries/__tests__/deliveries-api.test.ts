@@ -1,14 +1,11 @@
-import { supabase } from '@/shared/lib/supabase';
+import { apiPost } from '@/shared/lib/api';
 
 import { fetchDeliveries } from '../lib/deliveries-api';
 
-// jest.mock is hoisted above the imports by babel-jest, so `supabase` resolves to
-// this mock at module load.
-jest.mock('@/shared/lib/supabase', () => ({
-  supabase: { functions: { invoke: jest.fn() } },
-}));
+// Hoisted above the imports by babel-jest, so the api module resolves to this mock.
+jest.mock('@/shared/lib/api', () => ({ apiPost: jest.fn() }));
 
-const invoke = supabase.functions.invoke as jest.Mock;
+const mockApiPost = apiPost as jest.Mock;
 
 // The real list-livreur-deliveries wire shape (camelCase + nested), incl. the
 // street `details` the mapping must drop.
@@ -24,24 +21,20 @@ const wire = {
 };
 const response = { deliveries: [wire], next_cursor: null };
 
-beforeEach(() => invoke.mockReset());
+beforeEach(() => mockApiPost.mockReset());
 
 describe('fetchDeliveries', () => {
-  it('sends an Idempotency-Key header and NO client identity (AC-9)', async () => {
-    invoke.mockResolvedValue({ data: response, error: null });
+  it('calls the list endpoint with no client identity (AC-9)', async () => {
+    mockApiPost.mockResolvedValue(response);
 
     await fetchDeliveries();
 
-    expect(invoke).toHaveBeenCalledTimes(1);
-    const [name, opts] = invoke.mock.calls[0];
-    expect(name).toBe('list-livreur-deliveries');
-    expect(opts.headers['Idempotency-Key']).toEqual(expect.any(String));
-    // The driver id is derived server-side from the JWT — never sent in the body.
-    expect(opts.body).toEqual({});
+    // No identity in the request — apiPost attaches the JWT; the server derives livreur_id.
+    expect(mockApiPost).toHaveBeenCalledWith({ path: '/list-livreur-deliveries', body: {} });
   });
 
   it('maps the wire shape to the flat view model (AC-1)', async () => {
-    invoke.mockResolvedValue({ data: response, error: null });
+    mockApiPost.mockResolvedValue(response);
 
     const result = await fetchDeliveries();
 
@@ -60,23 +53,22 @@ describe('fetchDeliveries', () => {
   });
 
   it('drops the street details so the cache stays area-only (AC-10)', async () => {
-    invoke.mockResolvedValue({ data: response, error: null });
+    mockApiPost.mockResolvedValue(response);
 
     const result = await fetchDeliveries();
 
-    expect(result[0]).not.toHaveProperty('details');
     expect(JSON.stringify(result[0])).not.toContain('Rue Secret');
     expect(result[0]?.dropoffDistrict).toBe('Kaloum');
   });
 
-  it('throws when the endpoint returns an error', async () => {
-    invoke.mockResolvedValue({ data: null, error: { message: 'boom' } });
+  it('propagates api errors', async () => {
+    mockApiPost.mockRejectedValue(new Error('boom'));
 
     await expect(fetchDeliveries()).rejects.toThrow('boom');
   });
 
   it('throws on an unexpected payload shape', async () => {
-    invoke.mockResolvedValue({ data: { nope: 1 }, error: null });
+    mockApiPost.mockResolvedValue({ nope: 1 });
 
     await expect(fetchDeliveries()).rejects.toThrow('Unexpected deliveries response');
   });

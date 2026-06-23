@@ -1,5 +1,4 @@
-import { makeId } from '@/shared/lib/id';
-import { supabase } from '@/shared/lib/supabase';
+import { apiPost } from '@/shared/lib/api';
 
 import {
   DeliveriesResponseSchema,
@@ -17,24 +16,17 @@ function toStatus(raw: string): DeliveryStatus {
 }
 
 /**
- * Fetch the signed-in driver's deliveries from the canonical edge function.
+ * Fetch the signed-in driver's deliveries from the canonical edge function via
+ * the Linky API client (`apiPost` attaches apikey + Bearer Linky-token +
+ * Idempotency-Key and refreshes on 401). Identity is derived server-side from
+ * the JWT — never sent by the client (spec 001 AC-9).
  *
- * - Identity is NEVER sent by the client — `functions.invoke` attaches the session
- *   JWT and the function derives `livreur_id` from it (spec 001 AC-9).
- * - The backend wrapper requires an `Idempotency-Key` header on every POST.
- * - The wire response (`{ deliveries, next_cursor }`, camelCase + nested) is parsed
- *   and mapped to the flat view model; the street `details` is dropped here so it
- *   never reaches the cache (AC-10). Active filtering/sorting happens in the store.
+ * The wire response (`{ deliveries, next_cursor }`, camelCase + nested) is parsed
+ * and mapped to the flat view model; the street `details` is dropped here so it
+ * never reaches the cache (AC-10). Active filtering/sorting happens in the store.
  */
 export async function fetchDeliveries(): Promise<Delivery[]> {
-  const { data, error } = await supabase.functions.invoke('list-livreur-deliveries', {
-    body: {},
-    headers: { 'Idempotency-Key': makeId() },
-  });
-
-  if (error) {
-    throw new Error(error.message ?? 'Could not load deliveries');
-  }
+  const data = await apiPost<unknown>({ path: '/list-livreur-deliveries', body: {} });
 
   const parsed = DeliveriesResponseSchema.safeParse(data);
   if (!parsed.success) {
