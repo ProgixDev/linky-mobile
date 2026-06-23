@@ -6,8 +6,10 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * Environment-specific values come from EAS environment variables or
  * `.env` files (EXPO_PUBLIC_*). See docs/conventions/environments.md.
  *
- * TODO(company): set the EAS projectId + updates.url placeholders below after
- * `eas init` (the only identity values still pending before first build).
+ * EAS project id: after `eas init`, either set the `EAS_PROJECT_ID` env var or
+ * paste the id as the `easProjectId` fallback below. `updates.url` is derived from
+ * it. NOTE: for EAS *cloud* builds the env var isn't present on the build server,
+ * so paste the literal id (or add EAS_PROJECT_ID as an EAS environment variable).
  */
 
 const IS_DEV = process.env.APP_VARIANT === 'development';
@@ -19,6 +21,11 @@ const bundleId = IS_DEV
   : IS_PREVIEW
     ? 'com.linky.driver.preview'
     : 'com.linky.driver';
+
+// Set by `eas init`. Provide via EAS_PROJECT_ID or paste the literal after `??`.
+// Left empty until then so EAS prints a clear "run eas init" error rather than
+// shipping a bogus id; `updates`/`extra.eas` are omitted while it's empty.
+const easProjectId = process.env.EAS_PROJECT_ID ?? '';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -114,14 +121,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   runtimeVersion: {
     policy: 'fingerprint',
   },
-  updates: {
-    // TODO(company): set after `eas init` + `eas update:configure`
-    // url: 'https://u.expo.dev/<EAS_PROJECT_ID>',
-  },
+  // Derived from the EAS project id — no second place to keep in sync.
+  updates: easProjectId ? { url: `https://u.expo.dev/${easProjectId}` } : {},
   extra: {
-    eas: {
-      // TODO(company): set after `eas init`
-      // projectId: '<EAS_PROJECT_ID>',
-    },
+    eas: easProjectId ? { projectId: easProjectId } : {},
   },
 });
