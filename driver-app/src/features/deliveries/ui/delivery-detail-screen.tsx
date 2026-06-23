@@ -1,8 +1,9 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { makeId } from '@/shared/lib/id';
 import { colors } from '@/shared/theme/colors';
 import { AppText, Button, Card, EmptyState, Screen, Skeleton } from '@/shared/ui';
 
@@ -33,24 +34,24 @@ type Phase =
   | { kind: 'load_error' }
   | { kind: 'detail' }
   | { kind: 'scanning' }
-  | { kind: 'review'; scanToken: string }
-  | { kind: 'confirming'; scanToken: string }
+  | { kind: 'review'; scanToken: string; idemKey: string }
+  | { kind: 'confirming'; scanToken: string; idemKey: string }
   | { kind: 'success'; orderStatus: string }
   | { kind: 'mismatch' }
   | { kind: 'already_done' }
-  | { kind: 'offline'; scanToken: string }
+  | { kind: 'offline'; scanToken: string; idemKey: string }
   | { kind: 'error'; message: string };
 
 type Action =
   | { type: 'load_error' }
   | { type: 'show_detail' }
   | { type: 'scan' }
-  | { type: 'review'; scanToken: string }
-  | { type: 'confirming'; scanToken: string }
+  | { type: 'review'; scanToken: string; idemKey: string }
+  | { type: 'confirming'; scanToken: string; idemKey: string }
   | { type: 'success'; orderStatus: string }
   | { type: 'mismatch' }
   | { type: 'already_done' }
-  | { type: 'offline'; scanToken: string }
+  | { type: 'offline'; scanToken: string; idemKey: string }
   | { type: 'error'; message: string };
 
 function reducer(_state: Phase, action: Action): Phase {
@@ -62,9 +63,9 @@ function reducer(_state: Phase, action: Action): Phase {
     case 'scan':
       return { kind: 'scanning' };
     case 'review':
-      return { kind: 'review', scanToken: action.scanToken };
+      return { kind: 'review', scanToken: action.scanToken, idemKey: action.idemKey };
     case 'confirming':
-      return { kind: 'confirming', scanToken: action.scanToken };
+      return { kind: 'confirming', scanToken: action.scanToken, idemKey: action.idemKey };
     case 'success':
       return { kind: 'success', orderStatus: action.orderStatus };
     case 'mismatch':
@@ -72,7 +73,7 @@ function reducer(_state: Phase, action: Action): Phase {
     case 'already_done':
       return { kind: 'already_done' };
     case 'offline':
-      return { kind: 'offline', scanToken: action.scanToken };
+      return { kind: 'offline', scanToken: action.scanToken, idemKey: action.idemKey };
     case 'error':
       return { kind: 'error', message: action.message };
   }
@@ -82,6 +83,9 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
   const [phase, dispatch] = useReducer(reducer, { kind: 'loading' });
   const [detail, setDetail] = useState<DeliveryDetail | null>(null);
   const removeDelivery = useDeliveriesStore((s) => s.removeDelivery);
+  // Synchronous single-flight guard: a money action must fire exactly once even if a
+  // double-tap lands before the 'confirming' re-render disables the button (review P1).
+  const submitting = useRef(false);
 
   const loadDetail = useCallback(async () => {
     try {
@@ -107,16 +111,24 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
         dispatch({ type: 'mismatch' });
         return;
       }
-      dispatch({ type: 'review', scanToken: parsed.scanToken });
+      // Mint the idempotency key ONCE per handoff (at scan time) so an offline retry
+      // replays the same money action instead of minting a new key each attempt (review P2).
+      dispatch({ type: 'review', scanToken: parsed.scanToken, idemKey: makeId() });
     },
     [detail],
   );
 
   const onConfirm = useCallback(
-    async (scanToken: string) => {
-      if (!detail) return;
-      dispatch({ type: 'confirming', scanToken });
-      const outcome = await confirmHandoff({ orderId: detail.orderId, scanToken });
+    async (scanToken: string, idemKey: string) => {
+      if (!detail || submitting.current) return;
+      submitting.current = true;
+      dispatch({ type: 'confirming', scanToken, idemKey });
+      const outcome = await confirmHandoff({
+        orderId: detail.orderId,
+        scanToken,
+        idempotencyKey: idemKey,
+      });
+      submitting.current = false;
       switch (outcome.kind) {
         case 'success':
           removeDelivery(detail.id); // delivered → leaves the active list (AC-4)
@@ -129,7 +141,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
           dispatch({ type: 'already_done' });
           break;
         case 'offline':
-          dispatch({ type: 'offline', scanToken });
+          dispatch({ type: 'offline', scanToken, idemKey });
           break;
         case 'error':
           dispatch({ type: 'error', message: outcome.message });
@@ -206,6 +218,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
             }}
             contentFit="cover"
             transition={150}
+            accessibilityLabel={detail.itemTitle || 'Delivery item'}
             accessibilityIgnoresInvertColors
           />
           <View className="flex-1 gap-0.5">
@@ -264,11 +277,16 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
         ) : null}
 
         {phase.kind === 'already_done' ? (
-          <Card className="gap-2 bg-surface-muted" testID="delivery-detail-already-done">
+          <Card className="gap-3 bg-surface-muted" testID="delivery-detail-already-done">
             <AppText variant="body">
               This delivery is already completed — its payment was released. Nothing was released
               again.
             </AppText>
+            <Button
+              testID="delivery-detail-already-done-back"
+              label="Back to deliveries"
+              onPress={() => router.back()}
+            />
           </Card>
         ) : null}
 
@@ -292,8 +310,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
             <Button
               testID="delivery-detail-offline-retry"
               label="Try again"
-              loading={false}
-              onPress={() => void onConfirm(phase.scanToken)}
+              onPress={() => void onConfirm(phase.scanToken, phase.idemKey)}
             />
           </Card>
         ) : null}
@@ -308,7 +325,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
             <Button
               testID="delivery-detail-confirm-button"
               label="Confirm delivery"
-              onPress={() => void onConfirm(phase.scanToken)}
+              onPress={() => void onConfirm(phase.scanToken, phase.idemKey)}
             />
             <Button
               testID="delivery-detail-rescan"
@@ -325,13 +342,13 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
             disabled
             onPress={() => {}}
           />
-        ) : (
+        ) : phase.kind === 'detail' ? (
           <Button
             testID="delivery-detail-scan-button"
             label="Scan to confirm delivery"
             onPress={() => dispatch({ type: 'scan' })}
           />
-        )}
+        ) : null}
       </ScrollView>
     </Screen>
   );

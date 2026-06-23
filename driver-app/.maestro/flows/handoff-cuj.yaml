@@ -29,8 +29,12 @@ env:
 # Lands on the worklist, then open the first assigned delivery.
 - assertVisible:
     id: 'deliveries-screen'
+# Fail loudly with a clear message if no delivery was seeded, rather than a
+# downstream detail-screen miss.
+- assertVisible:
+    id: 'deliveries-row-' # regex/substring → at least one row
 - tapOn:
-    id: 'deliveries-row-' # regex/substring → first row
+    id: 'deliveries-row-' # first row
 # Detail loads: ref, item, full address, buyer, status, and the scan affordance (AC-1/AC-2).
 - assertVisible:
     id: 'delivery-detail-screen'

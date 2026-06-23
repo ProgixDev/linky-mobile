@@ -26,7 +26,7 @@ Ordered, executable, checkboxed. Work top-to-bottom, tick on commit. `[P]` = par
 
 ## Phase 3 — review & ship
 
-- [ ] **T13** `/review`; fix P0/P1. Register **CUJ-003** in `docs/quality/critical-user-journeys.md` here (like 001).
+- [x] **T13** `/review` (multi-persona, code-reviewer agent) → verdict REQUEST-CHANGES, **both P1s fixed**: (1) UX — failure phases (offline/mismatch/already_done/error) leaked the "Scan to confirm" primary via a ternary fall-through; bottom action now renders only in `detail` (each failure card owns its action; already_done gained a no-dead-end "Back"); (2) QA/correctness — the plan-claimed Confirm debounce didn't exist: added a synchronous `submitting` ref guard + a double-tap regression test (releases once). Cheap P2s also fixed: stable per-handoff idempotency key threaded to `confirmHandoff` (AC-7 retry replays vs. races the status gate), item-image `accessibilityLabel`, Maestro asserts a row exists before tapping. Server-authority path confirmed sound (no client identity, scan never releases, no scan_token leak from get-delivery). **CUJ-003** registered (in T10). · done: `npm run verify` green (84 tests).
 - [ ] **T14** `/security-review` — money action (single-release, server-enforced), camera permission, JWT-derived identity, QR trust boundary (SEC-INPUT-001).
 - [ ] **T15** `/feature-report` → `docs/reports/002-delivery-handoff.md`.
 - [ ] **T16** Open PR (needs the dedicated `linky-driver` repo; after 001 merges).

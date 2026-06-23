@@ -139,8 +139,35 @@ describe('<DeliveryDetailScreen />', () => {
     fireEvent.press(screen.getByTestId('delivery-detail-confirm-button'));
 
     expect(await screen.findByTestId('delivery-detail-success')).toBeOnTheScreen();
-    expect(mockConfirm).toHaveBeenCalledWith({ orderId: ORDER_UUID, scanToken: TOKEN_UUID });
+    expect(mockConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: ORDER_UUID, scanToken: TOKEN_UUID }),
+    );
+    // A stable idempotency key is minted once at scan time and threaded to confirm.
+    expect((mockConfirm.mock.calls[0]?.[0] as { idempotencyKey?: string })?.idempotencyKey).toEqual(
+      expect.any(String),
+    );
     expect(useDeliveriesStore.getState().items.find((d) => d.id === 'd1')).toBeUndefined();
+  });
+
+  it('ignores a double-tap on Confirm — releases exactly once (debounce, P1)', async () => {
+    mockGet.mockResolvedValue(DETAIL);
+    let resolveConfirm: (v: unknown) => void = () => {};
+    mockConfirm.mockReturnValue(
+      new Promise((r) => {
+        resolveConfirm = r;
+      }),
+    );
+
+    render(<DeliveryDetailScreen id="d1" />);
+    await reachReview();
+    // First tap → confirming; the button swaps to a disabled no-op. A second tap must
+    // not fire a second release (server is idempotent, but the client guards too).
+    fireEvent.press(screen.getByTestId('delivery-detail-confirm-button'));
+    fireEvent.press(screen.getByTestId('delivery-detail-confirm-button'));
+    expect(mockConfirm).toHaveBeenCalledTimes(1);
+
+    resolveConfirm({ kind: 'success', orderStatus: 'released' });
+    expect(await screen.findByTestId('delivery-detail-success')).toBeOnTheScreen();
   });
 
   it('a QR for another order is rejected and releases nothing (AC-5)', async () => {

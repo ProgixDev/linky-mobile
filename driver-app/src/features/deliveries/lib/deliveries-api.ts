@@ -89,18 +89,26 @@ export async function getDelivery(deliveryId: string): Promise<DeliveryDetail> {
  * detail state machine surfaces every failure honestly: wrong/forged token or
  * not-the-assigned-driver → `mismatch` (nothing released, AC-5); a non-releasable
  * status → `already_done` (AC-8); a transport failure → `offline` (online-only, AC-7).
+ *
+ * `idempotencyKey` should be STABLE across retries of the same handoff (the caller
+ * mints it once at scan time): a retry then replays the server's cached result via
+ * the reserve-first idempotency layer rather than racing the RPC status gate. When
+ * omitted, `apiPost` falls back to a fresh per-call key.
  */
 export async function confirmHandoff({
   orderId,
   scanToken,
+  idempotencyKey,
 }: {
   orderId: string;
   scanToken: string;
+  idempotencyKey?: string;
 }): Promise<HandoffOutcome> {
   try {
     const data = await apiPost<unknown>({
       path: '/livreur-confirm-handoff',
       body: { order_id: orderId, scan_token: scanToken },
+      idempotencyKey,
     });
     const parsed = HandoffResultSchema.safeParse(data);
     if (!parsed.success) {
