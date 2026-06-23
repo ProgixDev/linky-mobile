@@ -47,8 +47,9 @@ describe('parseOrderQr', () => {
     expect(parseOrderQr(`${VALID}&evil=1`)).toBeNull();
   });
 
-  it('rejects a non-string input', () => {
-    // @ts-expect-error — guarding the runtime trust boundary, not just the type.
+  it('rejects non-string input at the runtime trust boundary', () => {
     expect(parseOrderQr(null)).toBeNull();
+    expect(parseOrderQr(42)).toBeNull();
+    expect(parseOrderQr(undefined)).toBeNull();
   });
 });

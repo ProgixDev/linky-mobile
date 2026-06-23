@@ -23,8 +23,9 @@ export interface ParsedOrderQr {
 export function parseOrderQr(raw: unknown): ParsedOrderQr | null {
   if (typeof raw !== 'string') return null;
   const match = QR_RE.exec(raw.trim());
-  if (!match) return null;
-  const [, orderId, scanToken] = match;
+  const orderId = match?.[1];
+  const scanToken = match?.[2];
+  if (!orderId || !scanToken) return null;
   if (!UUID_RE.test(orderId) || !UUID_RE.test(scanToken)) return null;
   return { orderId, scanToken };
 }
