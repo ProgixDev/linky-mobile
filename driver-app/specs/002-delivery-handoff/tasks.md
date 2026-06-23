@@ -20,9 +20,9 @@ Ordered, executable, checkboxed. Work top-to-bottom, tick on commit. `[P]` = par
 
 ## Phase 2 — verification
 
-- [ ] **T10** Maestro `.maestro/flows/handoff-cuj.yaml` — covers navigation + permission-denied + offline-confirm block (NOT live scan). · done: written; `e2e:ios` **deferred** (no macOS).
+- [x] **T10** Maestro `.maestro/flows/handoff-cuj.yaml` — sign-in → open delivery → assert detail + scan affordance (AC-1/2) → deny OS camera prompt → assert in-app permission explainer + cancel (AC-6, no dead end) → back. Live scan/confirm/offline noted as Argent-only (T11). Registered **CUJ-003** in `critical-user-journeys.md` (also satisfies T13's CUJ item; docs:lint CUJ↔Maestro sync green). · done: written; `e2e:ios` **deferred** (no macOS sim + seeded livreur here).
 - [ ] **T11** `/verify-ui` on a device — scan a real/dev QR, walk **CUJ-003**, screenshot detail/scan/review/success/mismatch/offline. **DEFERRED — needs a dev build (camera) + device + Supabase.** Must run before merge.
-- [ ] **T12** `npm run verify` green; conventional commits.
+- [x] **T12** `npm run verify` green — format:check + lint + animations:check + typecheck + **test (83 pass / 15 suites)** + docs:lint (CUJ↔Maestro sync OK) + functions:check (driver-app has no `supabase/functions`; `get-delivery` lives in `app-mobile`, outside this gate per T1) + secrets:check. Conventional commits throughout.
 
 ## Phase 3 — review & ship
 

@@ -116,7 +116,10 @@ describe('getDelivery', () => {
 
     await getDelivery('d1');
 
-    expect(mockApiPost).toHaveBeenCalledWith({ path: '/get-delivery', body: { delivery_id: 'd1' } });
+    expect(mockApiPost).toHaveBeenCalledWith({
+      path: '/get-delivery',
+      body: { delivery_id: 'd1' },
+    });
   });
 
   it('maps the wire to the flat detail incl. full street address + buyer name (AC-1)', async () => {

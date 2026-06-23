@@ -182,11 +182,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
           title="Delivered — payment released"
           description={`Order ${detail.orderRef} is confirmed delivered and the seller’s payment has been released.`}
           action={
-            <Button
-              testID="delivery-detail-done"
-              label="Done"
-              onPress={() => router.back()}
-            />
+            <Button testID="delivery-detail-done" label="Done" onPress={() => router.back()} />
           }
         />
       </Screen>
@@ -202,7 +198,12 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
         <Card className="flex-row gap-3" testID="delivery-detail">
           <Image
             source={detail.itemPhoto ? { uri: detail.itemPhoto } : undefined}
-            style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: colors.surfaceMuted }}
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 12,
+              backgroundColor: colors.surfaceMuted,
+            }}
             contentFit="cover"
             transition={150}
             accessibilityIgnoresInvertColors
