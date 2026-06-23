@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Banknote,
   Truck,
+  PackageCheck,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ const NAV: { section: string; items: Item[] }[] = [
       { href: '/orders', label: 'Commandes & litiges', Icon: ShoppingBag },
       { href: '/kyc', label: 'KYC en attente', Icon: ShieldCheck },
       { href: '/candidatures', label: 'Candidatures livreurs', Icon: Truck },
+      { href: '/livraisons', label: 'Livraisons', Icon: PackageCheck },
       { href: '/withdrawals', label: 'Retraits', Icon: Banknote },
     ],
   },
