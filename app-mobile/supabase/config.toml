@@ -451,6 +451,9 @@ verify_jwt = false
 [functions.livreur-confirm-handoff]
 verify_jwt = false
 
+[functions.get-delivery]
+verify_jwt = false
+
 [functions.list-livreur-deliveries]
 verify_jwt = false
 
