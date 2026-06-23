@@ -15,7 +15,6 @@ const make = (over: Partial<Delivery> = {}): Delivery => ({
   orderRef: 'LK-9',
   itemTitle: 'Blue mug',
   itemPhoto: '',
-  shopName: 'Mugs Co',
   dropoffCity: 'Conakry',
   dropoffDistrict: 'Ratoma',
   status: 'assigned',
@@ -42,7 +41,6 @@ describe('<DeliveriesScreen />', () => {
 
     expect(await screen.findByText('Blue mug')).toBeOnTheScreen();
     expect(screen.getByText('LK-9')).toBeOnTheScreen();
-    expect(screen.getByText('Mugs Co')).toBeOnTheScreen();
     // Dropoff is AREA only (city · district) — never a street address (AC-10).
     expect(screen.getByText('Conakry · Ratoma')).toBeOnTheScreen();
     expect(screen.getByText('Assigned')).toBeOnTheScreen();

@@ -10,7 +10,7 @@
 > is a pure client. Its real contract differs from what this plan/client assumed:
 > response is `{ deliveries, next_cursor }` (not a bare array), camelCase + nested
 > (`order.reference`, `order.productSnapshot.{title,photo}`, `deliveryAddress.{city,
-> district,details}`), `createdAt` is an ISO string, there is **no `shopName`**, and
+district,details}`), `createdAt` is an ISO string, there is **no `shopName`**, and
 > every POST needs an `Idempotency-Key` header. **The spec-001 client
 > (`deliveries-api.ts`/`schema.ts`/row/screen/tests) must be realigned to this
 > contract before it works against prod** (a follow-up; drops the shopName field →

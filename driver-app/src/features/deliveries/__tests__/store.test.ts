@@ -12,7 +12,6 @@ const make = (over: Partial<Delivery> = {}): Delivery => ({
   orderRef: 'LK-1',
   itemTitle: 'Item',
   itemPhoto: '',
-  shopName: 'Shop',
   dropoffCity: 'Conakry',
   dropoffDistrict: 'Kaloum',
   status: 'assigned',

@@ -23,7 +23,6 @@ need to triage the job:
 
 - the order reference (so it can be matched at handoff),
 - what is being delivered (the item's title and photo),
-- where it is coming from (the shop / seller it belongs to),
 - where it is going, as an **area** (city / district) — not the full street address,
 - the delivery's current status, and a time reference (how recently it came in).
 
@@ -40,8 +39,8 @@ deliveries; the full street address is revealed later, at the handoff step.
 
 - **AC-1:** Given a signed-in driver with one or more active deliveries, when the
   screen loads, then each delivery appears as a row showing the order reference, the
-  item title and photo, the shop/seller it is from, the dropoff area (city/district),
-  the current status, and a time reference.
+  item title and photo, the dropoff area (city/district), the current status, and a
+  time reference. (No shop name — the backend list endpoint does not return one.)
 - **AC-2:** Only deliveries belonging to the signed-in driver with status `assigned`
   or `in_transit` are shown; `unassigned`, `delivered`, `failed`, and `cancelled`
   deliveries do not appear.
