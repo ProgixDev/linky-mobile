@@ -10,7 +10,11 @@
       "channel": "development",
       "environment": "development",
       "env": {
-        "APP_VARIANT": "development"
+        "APP_VARIANT": "development",
+        "EXPO_PUBLIC_APP_ENV": "development",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
+        "EXPO_PUBLIC_API_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_po_kl-ezVok6uIgkaq67gQ_AmX_SLPm"
       }
     },
     "development-simulator": {
@@ -24,7 +28,11 @@
       "channel": "preview",
       "environment": "preview",
       "env": {
-        "APP_VARIANT": "preview"
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
+        "EXPO_PUBLIC_API_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_po_kl-ezVok6uIgkaq67gQ_AmX_SLPm"
       }
     },
     "production": {
