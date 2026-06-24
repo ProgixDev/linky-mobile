@@ -8,3 +8,7 @@ actually built, which future agents mine for context.
 Workflow: copy [\_template.md](_template.md) to
 `YYYY-MM-DD-<slug>.md`, fill in phases, keep checkboxes current, link the PR.
 The `/plan-feature` Claude command generates these automatically from a PRD.
+
+## Plans
+
+- [2026-06-24 — Driver UI/UX overhaul](2026-06-24-driver-ui-overhaul.md)
