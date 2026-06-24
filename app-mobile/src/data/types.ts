@@ -8,6 +8,8 @@ export type ListingStatus = 'active' | 'reserved' | 'sold' | 'paused' | 'pending
 export type PropertyType = 'location' | 'vente' | 'terrain';
 export type OrderStatus = 'placed' | 'paid' | 'preparing' | 'delivered' | 'released' | 'disputed' | 'cancelled' | 'refunded';
 export type PaymentMethod = 'orange-money' | 'mtn-money' | 'card' | 'wallet';
+export type DeliveryStatus = 'unassigned' | 'assigned' | 'in_transit' | 'delivered' | 'failed' | 'cancelled';
+export type VehicleType = 'moto' | 'voiture' | 'velo' | 'a_pied';
 
 export interface User {
   id: ID;
@@ -117,6 +119,27 @@ export interface Order {
   createdAt: string;
   events: Array<{ at: string; label: string }>;
   releaseAt?: string;
+  /** Delivery summary — present on get-order responses for order participants.
+   *  Name only (no livreur phone/PII). Drives the seller's pick/change UI. */
+  delivery?: OrderDelivery | null;
+}
+
+export interface OrderDelivery {
+  status: DeliveryStatus;
+  /** Snapshotted delivery city (from the order's address snapshot), or null. */
+  city: string | null;
+  livreurId: ID | null;
+  livreurName: string | null;
+}
+
+/** A row in the seller's livreur picker (list-available-livreurs). No contact
+ *  info by design — the seller picks by name/city/load, contact stays in-app. */
+export interface AvailableLivreur {
+  id: ID;
+  name: string | null;
+  city: string | null;
+  vehicleType: VehicleType | null;
+  activeDeliveries: number;
 }
 
 export type PaymentIntentStatus = 'pending' | 'completed' | 'failed' | 'expired' | 'cancelled';
