@@ -149,6 +149,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'Linky Driver utilise ta position pour afficher la carte de tes livraisons et te guider vers les clients.',
       },
     ],
+    [
+      // Face photo (selfie / gallery) for the application + Profil. The CAMERA
+      // permission is already provided by the expo-camera plugin above (QR scan) —
+      // set cameraPermission:false here to reuse it and avoid overriding that string;
+      // we only add the photo-library (gallery) permission.
+      'expo-image-picker',
+      {
+        photosPermission:
+          'Linky Driver accède à tes photos pour choisir ta photo de profil / de candidature.',
+        cameraPermission: false,
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
