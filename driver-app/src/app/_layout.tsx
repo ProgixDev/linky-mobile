@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore, useProtectedRoute } from '@/features/auth';
 import { useDeliveriesStore } from '@/features/deliveries';
 import { useLivreurGate, useOnboardingStore } from '@/features/onboarding';
+import { useWelcomeGate, useWelcomeStore } from '@/features/welcome';
 import '@/shared/lib/env'; // fail fast on invalid environment
 
 SplashScreen.preventAutoHideAsync();
@@ -34,6 +35,8 @@ export default function RootLayout() {
   // Auth auto-refresh, because this app uses the Linky self-rolled JWT.
   useEffect(() => {
     void useAuthStore.getState().init();
+    // Load the first-run welcome flag so the pre-auth welcome gate can decide.
+    void useWelcomeStore.getState().hydrate();
     const unsubAuth = useAuthStore.subscribe((state, prev) => {
       if (state.status === 'unauthenticated' && prev.status !== 'unauthenticated') {
         // On sign-out, drop cached deliveries (spec 001 AC-9) + the gate state so the
@@ -63,14 +66,18 @@ export default function RootLayout() {
   // the onboarding feature stays free of a cross-feature import.
   const authStatus = useAuthStore((s) => s.status);
   const roles = useAuthStore((s) => s.user?.roles);
-  useProtectedRoute();
+  const welcomeSeen = useWelcomeStore((s) => s.seen);
+  useProtectedRoute({ welcomeSeen });
+  useWelcomeGate({ authStatus, welcomeSeen });
   useLivreurGate({ authStatus, roles });
 
+  // Hold the native splash until fonts + session + the welcome flag have resolved,
+  // so the route guards settle before the first frame (no home/sign-in flash).
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if ((fontsLoaded || fontError) && welcomeSeen !== null && authStatus !== 'loading') {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, welcomeSeen, authStatus]);
 
   if (!fontsLoaded && !fontError) {
     return null;

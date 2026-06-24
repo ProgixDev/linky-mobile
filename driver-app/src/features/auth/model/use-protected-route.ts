@@ -16,18 +16,25 @@ const SIGN_IN = '/sign-in' as Href;
  * mutually exclusive conditions (unauthenticated vs authenticated) so they never fight.
  * Waits for the session to resolve (`loading`) so the app never flashes sign-in on cold
  * start. Call once in the root layout.
+ *
+ * Pre-auth welcome: on a fresh install the animated welcome → get-started runs BEFORE
+ * sign-in. While `welcomeSeen` is null (loading) or false (not yet seen), the welcome
+ * gate (useWelcomeGate) owns unauth routing, so this guard stands down. Once seen
+ * (true) this guard resumes ownership of the unauth → /sign-in redirect. `welcomeSeen`
+ * is injected from the root layout to keep the auth feature free of a welcome import.
  */
-export function useProtectedRoute(): void {
+export function useProtectedRoute({ welcomeSeen }: { welcomeSeen: boolean | null }): void {
   const status = useAuthStore((s) => s.status);
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (status === 'loading') return;
+    if (welcomeSeen !== true) return; // welcome gate owns routing until the welcome is seen
     const onSignIn = segments[0] === 'sign-in';
 
     if (status === 'unauthenticated' && !onSignIn) {
       router.replace(SIGN_IN);
     }
-  }, [status, segments, router]);
+  }, [status, welcomeSeen, segments, router]);
 }
