@@ -16,6 +16,7 @@ import {
   TextField,
 } from '@/shared/ui';
 import { KeyboardAwareScroll } from '@/shared/ui/keyboard-aware-scroll';
+import { PhotoPicker } from '@/shared/ui/photo-picker';
 
 import { VEHICLE_LABELS, VehicleTypeSchema, type VehicleType } from '../model/schema';
 import { useProfileStore } from '../model/store';
@@ -28,7 +29,17 @@ const VEHICLES = VehicleTypeSchema.options;
  * endpoint ships (the note is honest about it). Shows the Approuvé badge and
  * sign-out. Auth logout is injected (onSignOut) to keep the boundary clean.
  */
-export function ProfileScreen({ onSignOut }: { onSignOut: () => void }) {
+export function ProfileScreen({
+  onSignOut,
+  avatarUrl,
+  onChangeAvatar,
+}: {
+  onSignOut: () => void;
+  /** The courier's profile photo (users.avatar_url) — preferred over the apply-time photo. */
+  avatarUrl: string | null;
+  /** Persist a newly-captured photo (already uploaded → public URL) to the profile. */
+  onChangeAvatar: (url: string) => void | Promise<void>;
+}) {
   const view = useProfileStore((s) => s.view);
   const status = useProfileStore((s) => s.status);
   const saving = useProfileStore((s) => s.saving);
@@ -41,6 +52,9 @@ export function ProfileScreen({ onSignOut }: { onSignOut: () => void }) {
   const [fullName, setFullName] = useState('');
   const [city, setCity] = useState('');
   const [vehicle, setVehicle] = useState<VehicleType | null>(null);
+
+  // Prefer the editable profile avatar; fall back to the apply-time application photo.
+  const photo = avatarUrl ?? view?.idPhotoUrl ?? null;
 
   useEffect(() => {
     void load();
@@ -75,9 +89,9 @@ export function ProfileScreen({ onSignOut }: { onSignOut: () => void }) {
     <Screen testID="profile-screen">
       <KeyboardAwareScroll contentClassName="gap-5 pb-10 pt-4">
         <View className="items-center gap-3 pt-2">
-          {view?.idPhotoUrl ? (
+          {photo ? (
             <Image
-              source={{ uri: view.idPhotoUrl }}
+              source={{ uri: photo }}
               style={{
                 width: 88,
                 height: 88,
@@ -131,6 +145,17 @@ export function ProfileScreen({ onSignOut }: { onSignOut: () => void }) {
           </>
         ) : (
           <View className="gap-4" testID="profile-form">
+            <View className="items-center gap-1.5">
+              <PhotoPicker
+                testID="profile-photo"
+                value={photo}
+                onChange={(url) => void onChangeAvatar(url)}
+                disabled={saving}
+              />
+              <AppText variant="caption" className="text-ink-muted">
+                Ta photo de profil
+              </AppText>
+            </View>
             <Field label="Nom complet">
               <TextField
                 testID="profile-fullname"

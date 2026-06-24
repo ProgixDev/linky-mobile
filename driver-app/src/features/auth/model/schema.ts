@@ -28,13 +28,14 @@ export type OtpRequestResponse = z.infer<typeof OtpRequestResponseSchema>;
 
 /**
  * The signed-in user as returned by `otp-verify` / `session-refresh` rehydration.
- * Extra fields (avatar_url, locale, kyc_status…) are ignored; we keep the lean
- * subset the driver app needs. `roles` must include `'livreur'` for a courier —
- * the deliveries list is empty otherwise (a backend concern).
+ * Lean subset the driver app needs (locale, kyc_status… are ignored). `avatar_url`
+ * is the courier's profile photo (editable in Profil via `update-profile`). `roles`
+ * must include `'livreur'` for a courier — the deliveries list is empty otherwise.
  */
 export const AuthUserSchema = z.object({
   id: z.string().min(1),
   display_name: z.string().nullable().optional(),
+  avatar_url: z.string().nullable().optional(),
   roles: z.array(z.string()).optional(),
   city: z.string().nullable().optional(),
 });

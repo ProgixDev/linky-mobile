@@ -4,7 +4,13 @@ import { ApiError, apiPost } from '@/shared/lib/api';
 import { session } from '@/shared/lib/session';
 import { appStorage } from '@/shared/lib/storage';
 
-import { refreshSession, requestOtp, verifyOtp } from '../lib/auth-api';
+import {
+  refreshSession,
+  requestOtp,
+  updateProfile as apiUpdateProfile,
+  verifyOtp,
+  type ProfilePatch,
+} from '../lib/auth-api';
 import { AuthUserSchema, EmailSchema, OtpCodeSchema, type AuthUser } from './schema';
 
 type Status = 'loading' | 'authenticated' | 'unauthenticated';
@@ -54,6 +60,8 @@ type AuthState = {
   signOut: () => Promise<void>;
   /** In-app account deletion (store-compliance). Hits the backend `delete-account`. */
   deleteAccount: () => Promise<Result>;
+  /** Update the courier's profile (e.g. avatar_url) via `update-profile`; re-caches the user. */
+  updateProfile: (patch: ProfilePatch) => Promise<Result>;
 };
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
@@ -168,6 +176,19 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     await cacheUser(null);
     set({ user: null, status: 'unauthenticated', error: null });
     return { ok: true };
+  },
+
+  updateProfile: async (patch) => {
+    try {
+      const user = await apiUpdateProfile(patch);
+      await cacheUser(user);
+      set({ user, error: null });
+      return { ok: true };
+    } catch (e) {
+      const error = e instanceof ApiError ? e.message_fr : 'Mise à jour impossible.';
+      set({ error });
+      return { ok: false, error };
+    }
   },
 }));
 

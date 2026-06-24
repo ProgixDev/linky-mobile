@@ -1,10 +1,14 @@
+import { z } from 'zod';
+
 import { ApiError, apiPost } from '@/shared/lib/api';
 
 import {
   AuthBundleSchema,
+  AuthUserSchema,
   OtpRequestResponseSchema,
   TokenBundleSchema,
   type AuthBundle,
+  type AuthUser,
   type OtpErrorKind,
   type TokenBundle,
 } from '../model/schema';
@@ -120,4 +124,23 @@ export async function refreshSession(refreshToken: string): Promise<TokenBundle>
     body: { refresh_token: refreshToken },
   });
   return TokenBundleSchema.parse(data);
+}
+
+export type ProfilePatch = {
+  display_name?: string;
+  city?: string;
+  avatar_url?: string;
+  roles?: string[];
+};
+
+/**
+ * Update the signed-in courier's profile (display_name / city / avatar_url) via the
+ * shared `update-profile` endpoint. AUTHED. Throws ApiError on failure (the store maps
+ * it). Returns the fresh user; the response is Zod-validated at this trust boundary.
+ */
+export async function updateProfile(patch: ProfilePatch): Promise<AuthUser> {
+  const data = await apiPost<unknown>({ path: '/update-profile', body: patch });
+  const parsed = z.object({ user: AuthUserSchema }).safeParse(data);
+  if (!parsed.success) throw new Error('Réponse de profil invalide.');
+  return parsed.data.user;
 }
