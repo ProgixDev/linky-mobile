@@ -30,7 +30,15 @@ const validInput: ApplicationInput = {
   id_photo_url: null,
   answers: {
     zones: 'Kaloum, Ratoma',
-    availability: 'Lun–Sam, 8h–18h',
+    availability: 'Lun–Sam · 08:00–18:00',
+    age: 28,
+    screening: {
+      reliability: 'finish',
+      honesty: 'return_now',
+      customer: 'calm',
+      resourceful: 'call_wait',
+      safety: 'safe',
+    },
     has_license_insurance: true,
     accepts_qr_process: true,
     accepts_linky_terms: true,
@@ -81,7 +89,15 @@ describe('submitApplication', () => {
         vehicle_type: 'moto',
         answers: {
           zones: 'Kaloum, Ratoma',
-          availability: 'Lun–Sam, 8h–18h',
+          availability: 'Lun–Sam · 08:00–18:00',
+          age: 28,
+          screening: {
+            reliability: 'finish',
+            honesty: 'return_now',
+            customer: 'calm',
+            resourceful: 'call_wait',
+            safety: 'safe',
+          },
           has_license_insurance: true,
           accepts_qr_process: true,
           accepts_linky_terms: true,

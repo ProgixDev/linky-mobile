@@ -19,37 +19,66 @@ beforeEach(() => {
 
 function completeStep1() {
   fireEvent.changeText(screen.getByTestId('onboarding-fullname'), 'Mamadou Diallo');
+  fireEvent.changeText(screen.getByTestId('onboarding-age'), '28');
   fireEvent.changeText(screen.getByTestId('onboarding-city'), 'Conakry');
   fireEvent.press(screen.getByTestId('onboarding-vehicle-moto'));
   fireEvent.press(screen.getByTestId('onboarding-next'));
 }
 
+function completeStep2() {
+  fireEvent.changeText(screen.getByTestId('onboarding-zones'), 'Kaloum, Ratoma');
+  fireEvent.press(screen.getByTestId('onboarding-day-lun')); // sets availability (default 08:00–18:00)
+  fireEvent.press(screen.getByTestId('onboarding-license-oui'));
+  fireEvent.press(screen.getByTestId('onboarding-next-2'));
+}
+
+function answerScreening() {
+  fireEvent.press(screen.getByTestId('screening-reliability-finish'));
+  fireEvent.press(screen.getByTestId('screening-honesty-return_now'));
+  fireEvent.press(screen.getByTestId('screening-customer-calm'));
+  fireEvent.press(screen.getByTestId('screening-resourceful-call_wait'));
+  fireEvent.press(screen.getByTestId('screening-safety-safe'));
+}
+
 describe('ApplicationFormScreen', () => {
-  it('advances from infos (step 1) to the questionnaire (step 2)', async () => {
+  it('walks the 3 steps: infos → livraison → personnalité', async () => {
     render(<ApplicationFormScreen />);
-    expect(screen.getByTestId('onboarding-fullname')).toBeTruthy();
+    expect(screen.getByTestId('onboarding-age')).toBeTruthy();
     expect(screen.queryByTestId('onboarding-zones')).toBeNull();
 
     completeStep1();
-
     await waitFor(() => expect(screen.getByTestId('onboarding-zones')).toBeTruthy());
+
+    completeStep2();
+    await waitFor(() => expect(screen.getByTestId('onboarding-screening')).toBeTruthy());
   });
 
-  it('keeps submit disabled until both « acceptes-tu » are oui, then posts the application', async () => {
+  it('blocks step 1 until âge ≥ 18 (shows an inline error)', () => {
+    render(<ApplicationFormScreen />);
+    fireEvent.changeText(screen.getByTestId('onboarding-fullname'), 'Mamadou');
+    fireEvent.changeText(screen.getByTestId('onboarding-age'), '16');
+    fireEvent.changeText(screen.getByTestId('onboarding-city'), 'Conakry');
+    fireEvent.press(screen.getByTestId('onboarding-vehicle-moto'));
+
+    expect(screen.getByTestId('onboarding-age-error')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+    expect(screen.queryByTestId('onboarding-zones')).toBeNull(); // stayed on step 1
+  });
+
+  it('submits the full application once everything is answered', async () => {
     mockSubmit.mockResolvedValue({ ok: true, application: { id: 'a1' } });
     render(<ApplicationFormScreen />);
     completeStep1();
     await waitFor(() => expect(screen.getByTestId('onboarding-zones')).toBeTruthy());
+    completeStep2();
+    await waitFor(() => expect(screen.getByTestId('onboarding-screening')).toBeTruthy());
 
-    fireEvent.changeText(screen.getByTestId('onboarding-zones'), 'Kaloum, Ratoma');
-    fireEvent.changeText(screen.getByTestId('onboarding-availability'), 'Lun–Sam, 8h–18h');
-    fireEvent.press(screen.getByTestId('onboarding-license-oui'));
+    answerScreening();
     fireEvent.press(screen.getByTestId('onboarding-qr-oui'));
-    // terms still unanswered → submit is disabled (press is a no-op).
+    // terms still unanswered → submit disabled (press is a no-op).
     fireEvent.press(screen.getByTestId('onboarding-submit'));
     expect(mockSubmit).not.toHaveBeenCalled();
 
-    // accept the terms → submit enabled.
     fireEvent.press(screen.getByTestId('onboarding-terms-oui'));
     fireEvent.press(screen.getByTestId('onboarding-submit'));
 
@@ -61,7 +90,16 @@ describe('ApplicationFormScreen', () => {
       id_photo_url: null,
       answers: {
         zones: 'Kaloum, Ratoma',
-        availability: 'Lun–Sam, 8h–18h',
+        availability: 'Lun · 08:00–18:00',
+        availability_data: { days: ['lun'], start: '08:00', end: '18:00' },
+        age: 28,
+        screening: {
+          reliability: 'finish',
+          honesty: 'return_now',
+          customer: 'calm',
+          resourceful: 'call_wait',
+          safety: 'safe',
+        },
         has_license_insurance: true,
         accepts_qr_process: true,
         accepts_linky_terms: true,
@@ -70,17 +108,16 @@ describe('ApplicationFormScreen', () => {
     expect(useOnboardingStore.getState().appStatus).toBe('pending');
   });
 
-  it('does not submit when the QR process is refused (accepts must be oui)', async () => {
+  it('does not submit when the QR process is refused', async () => {
     render(<ApplicationFormScreen />);
     completeStep1();
     await waitFor(() => expect(screen.getByTestId('onboarding-zones')).toBeTruthy());
+    completeStep2();
+    await waitFor(() => expect(screen.getByTestId('onboarding-screening')).toBeTruthy());
 
-    fireEvent.changeText(screen.getByTestId('onboarding-zones'), 'Kaloum');
-    fireEvent.changeText(screen.getByTestId('onboarding-availability'), 'Lun–Sam');
-    fireEvent.press(screen.getByTestId('onboarding-license-oui'));
-    fireEvent.press(screen.getByTestId('onboarding-qr-non')); // refuses QR
+    answerScreening();
+    fireEvent.press(screen.getByTestId('onboarding-qr-non'));
     fireEvent.press(screen.getByTestId('onboarding-terms-oui'));
-
     fireEvent.press(screen.getByTestId('onboarding-submit'));
 
     expect(mockSubmit).not.toHaveBeenCalled();

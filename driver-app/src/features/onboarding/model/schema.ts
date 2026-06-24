@@ -15,10 +15,43 @@ export type VehicleType = z.infer<typeof VehicleTypeSchema>;
 export const ApplicationStatusSchema = z.enum(['none', 'pending', 'approved', 'rejected']);
 export type ApplicationStatus = z.infer<typeof ApplicationStatusSchema>;
 
-/** The questionnaire answers (livraison / règles Guinée). */
+/**
+ * Structured availability kept alongside the human `availability` string (the
+ * backend stores the string; this extra key rides in the answers jsonb for future
+ * use). Days are the kebab keys from features/onboarding/lib/availability.
+ */
+export const AvailabilityDataSchema = z.object({
+  days: z.array(z.string()),
+  start: z.string(),
+  end: z.string(),
+});
+export type AvailabilityData = z.infer<typeof AvailabilityDataSchema>;
+
+/**
+ * Character / « psychique » screening — one selected option value per question,
+ * surfaced to the admin in the « Candidatures livreurs » review. Keys MUST match
+ * features/onboarding/lib/screening SCREENING_QUESTIONS ids.
+ */
+export const ScreeningSchema = z.object({
+  reliability: z.string().min(1),
+  honesty: z.string().min(1),
+  customer: z.string().min(1),
+  resourceful: z.string().min(1),
+  safety: z.string().min(1),
+});
+export type Screening = z.infer<typeof ScreeningSchema>;
+
+/** The questionnaire answers (livraison / règles Guinée + âge + screening). */
 export const ApplicationAnswersSchema = z.object({
   zones: z.string(),
   availability: z.string(),
+  availability_data: AvailabilityDataSchema.optional(),
+  age: z
+    .number()
+    .int('Âge invalide.')
+    .min(18, 'Tu dois avoir au moins 18 ans.')
+    .max(99, 'Âge invalide.'),
+  screening: ScreeningSchema,
   has_license_insurance: z.boolean(),
   accepts_qr_process: z.boolean(),
   accepts_linky_terms: z.boolean(),
