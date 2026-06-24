@@ -118,6 +118,12 @@
           "zod"
         ]
       }
+    },
+    "install": {
+      "exclude": [
+        "eslint-config-expo",
+        "jest-expo"
+      ]
     }
   }
 }
