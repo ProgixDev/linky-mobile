@@ -18,3 +18,4 @@ changes, anything you'd otherwise explain twice.
 - [ADR-0007 — Supabase as the backend, RLS-first](0007-supabase-backend.md)
 - [ADR-0008 — Repo-only operating model (drop cloud CI/CD + Notion/Slack)](0008-repo-only-operating-model.md)
 - [ADR-0009 — expo-camera for in-app QR scanning](0009-expo-camera-qr-scanning.md) _(proposed)_
+- [ADR-0010 — Mapbox (@rnmapbox/maps) for the live delivery map](0010-mapbox-for-live-map.md) _(proposed)_
