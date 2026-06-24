@@ -1,24 +1,13 @@
 import { useLocalSearchParams } from 'expo-router';
-import { View } from 'react-native';
 
-import { AppText, Screen } from '@/shared/ui';
+import { DeliveryDetailScreen } from '@/features/deliveries';
 
 /**
- * Placeholder for the delivery detail / QR-handoff screen (a separate spec).
- * Exists so a tapped row from the deliveries list has a destination; the
- * handoff spec replaces this.
+ * Routes stay THIN — wire the URL param to the feature screen; the detail +
+ * QR-handoff flow lives in src/features/deliveries (spec 002).
+ * See docs/architecture/module-boundaries.md
  */
 export default function DeliveryDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return (
-    <Screen testID="delivery-detail-screen">
-      <View className="gap-2 pt-4">
-        <AppText variant="display">Delivery</AppText>
-        <AppText variant="caption">Detail & handoff coming soon.</AppText>
-        <AppText variant="caption" testID="delivery-detail-id">
-          {id}
-        </AppText>
-      </View>
-    </Screen>
-  );
+  return <DeliveryDetailScreen id={id} />;
 }

@@ -74,6 +74,20 @@ describe('deliveries store', () => {
     expect(s.items).toHaveLength(0);
     expect(s.status).toBe('idle');
   });
+
+  it('removeDelivery drops the confirmed delivery from the active list (002 AC-4)', async () => {
+    mockFetch.mockResolvedValue([
+      make({ id: 'a' }),
+      make({ id: 'b', status: 'in_transit', createdAt: 2000 }),
+    ]);
+    await useDeliveriesStore.getState().load();
+
+    useDeliveriesStore.getState().removeDelivery('b');
+
+    const items = useDeliveriesStore.getState().items;
+    expect(items.map((d) => d.id)).toEqual(['a']);
+    expect(selectActiveDeliveries(items).map((d) => d.id)).toEqual(['a']);
+  });
 });
 
 describe('selectActiveDeliveries', () => {

@@ -33,6 +33,28 @@ enforces).
 - **Performance budget:** with a warm cache, the list is visible < 1s after auth on
   a mid-range Android (cache renders immediately; refresh happens in the background).
 
+## CUJ-003 — Driver completes a handoff
+
+- **Owner:** founder (driver app)
+- **Flow:** `.maestro/flows/handoff-cuj.yaml` · Smoke: `.maestro/flows/smoke.yaml`
+- **Journey:** open an assigned delivery → see full detail (order ref, item, **full
+  street address**, buyer name, status) → tap “Scan to confirm delivery” → grant
+  camera → scan the buyer’s on-screen order QR → review the matched order → tap the
+  explicit “Confirm delivery” → success (“delivered — payment released”), and the
+  delivery leaves the active list.
+- **Edge cases agents must try:** a scan alone never releases (Confirm is a separate
+  explicit tap); a QR for another order/driver or a forged token (rejected, nothing
+  released); an already-delivered/released order (told it’s already done, no second
+  release); camera permission denied (explainer + enable/Settings + cancel — never a
+  dead end); offline at confirm (reconnect state + retry, nothing released while
+  offline).
+- **Performance budget:** detail visible < 1s after the row tap on a mid-range
+  Android; the confirm round-trip resolves to success or an honest error within ~3s.
+- **Note:** the live camera scan + escrow release are verified via Argent
+  (`/verify-ui`), not Maestro — a simulator can’t scan a real QR and the post-scan
+  review state isn’t deterministic; the Maestro flow covers navigation + the
+  permission-denied path.
+
 ## Template for new CUJs
 
 ```

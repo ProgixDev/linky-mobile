@@ -451,6 +451,9 @@ verify_jwt = false
 [functions.livreur-confirm-handoff]
 verify_jwt = false
 
+[functions.get-delivery]
+verify_jwt = false
+
 [functions.list-livreur-deliveries]
 verify_jwt = false
 
@@ -683,4 +686,25 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.wallet-withdraw-request]
+verify_jwt = false
+
+[functions.livreur-apply]
+verify_jwt = false
+
+[functions.livreur-application-status]
+verify_jwt = false
+
+[functions.admin-list-livreur-applications]
+verify_jwt = false
+
+[functions.admin-decide-livreur-application]
+verify_jwt = false
+
+[functions.admin-list-deliveries]
+verify_jwt = false
+
+[functions.admin-list-livreurs]
+verify_jwt = false
+
+[functions.admin-assign-delivery]
 verify_jwt = false

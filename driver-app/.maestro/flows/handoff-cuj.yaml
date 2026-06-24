@@ -1,0 +1,61 @@
+# CUJ-003: driver completes a handoff — detail → scan → review → confirm
+# (docs/quality/critical-user-journeys.md). Deterministic E2E gate for the parts
+# Maestro CAN drive; the live camera scan + escrow release + offline-confirm block
+# are verified via Argent (/verify-ui, spec 002 T11) because a simulator can't scan
+# a real QR and Maestro can't deterministically reach the post-scan review state.
+#
+# PREREQUISITES (why this is deferred where they're absent):
+#   - a booted iOS simulator with the dev build installed (macOS only; camera is a
+#     native capability — not available in Expo Go), and
+#   - a SEEDED livreur account WITH at least one active delivery on the backend.
+appId: com.linky.driver.dev
+env:
+  DRIVER_EMAIL: driver@example.com
+  DRIVER_PASSWORD: changeme
+---
+- launchApp:
+    clearState: true
+# Cold start is unauthenticated → sign in.
+- assertVisible:
+    id: 'auth-email'
+- tapOn:
+    id: 'auth-email'
+- inputText: ${DRIVER_EMAIL}
+- tapOn:
+    id: 'auth-password'
+- inputText: ${DRIVER_PASSWORD}
+- tapOn:
+    id: 'auth-submit'
+# Lands on the worklist, then open the first assigned delivery.
+- assertVisible:
+    id: 'deliveries-screen'
+# Fail loudly with a clear message if no delivery was seeded, rather than a
+# downstream detail-screen miss.
+- assertVisible:
+    id: 'deliveries-row-' # regex/substring → at least one row
+- tapOn:
+    id: 'deliveries-row-' # first row
+# Detail loads: ref, item, full address, buyer, status, and the scan affordance (AC-1/AC-2).
+- assertVisible:
+    id: 'delivery-detail-screen'
+- assertVisible:
+    id: 'delivery-detail-scan-button'
+- tapOn:
+    id: 'delivery-detail-scan-button'
+# AC-6 — permission is never a dead end. Deny the OS camera prompt, then the app
+# must explain + offer enable/Settings + a cancel (not a blank camera).
+- tapOn:
+    text: "Don.t Allow|Don't Allow|Deny"
+    optional: true
+- assertVisible:
+    id: 'deliveries-scanner-permission'
+- assertVisible:
+    id: 'deliveries-scanner-cancel'
+- tapOn:
+    id: 'deliveries-scanner-cancel'
+# Back on the detail screen — no dead end.
+- assertVisible:
+    id: 'delivery-detail-scan-button'
+# NOTE: the live scan → review → Confirm → "payment released" success path and the
+# offline-confirm block are NOT scriptable here (no QR on a sim, non-deterministic
+# post-scan state). They are covered by /verify-ui (Argent) per spec 002 T11.

@@ -71,7 +71,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     // Add tailored NSxxxUsageDescription strings here ONLY for permissions you
     // actually use (a generic string gets rejected; an unused permission also does).
-    // infoPlist: { NSCameraUsageDescription: 'Explain exactly why.' },
+    // The expo-camera plugin (below) also sets this; we keep an explicit, tailored
+    // string here as the single source of truth for the store-review copy.
+    infoPlist: {
+      NSCameraUsageDescription:
+        'Linky Driver uses the camera to scan the customer’s order QR code at handoff to confirm delivery.',
+    },
   },
   android: {
     package: bundleId,
@@ -102,6 +107,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-font',
+    [
+      // QR-handoff scanner (spec 002, ADR-0009). Sets the iOS camera usage
+      // string and adds Android CAMERA. We scan QR only — no audio/video — so
+      // microphone + RECORD_AUDIO are disabled to keep the permission set minimal.
+      'expo-camera',
+      {
+        cameraPermission:
+          'Linky Driver uses the camera to scan the customer’s order QR code at handoff to confirm delivery.',
+        microphonePermission: false,
+        recordAudioAndroid: false,
+      },
+    ],
     [
       // Google Play requires targeting a recent API level (35+ since 2025-08-31;
       // expect 36 ~2026-08). Store-readiness: STORE-GP-TARGETAPI.
