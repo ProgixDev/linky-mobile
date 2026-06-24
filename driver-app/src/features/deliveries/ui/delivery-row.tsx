@@ -8,10 +8,14 @@ import { colors } from '@/shared/theme/colors';
 import { AppText, Card } from '@/shared/ui';
 
 import type { Delivery } from '../model/schema';
+import { DeliveryCountdown } from './delivery-countdown';
 
 const STATUS_LABEL: Record<string, string> = {
   assigned: 'Assignée',
   in_transit: 'En cours',
+  delivered: 'Livrée',
+  failed: 'Échouée',
+  cancelled: 'Annulée',
 };
 
 function timeAgo(ts: number): string {
@@ -69,9 +73,17 @@ export function DeliveryRow({ delivery, index }: Props) {
               >
                 {delivery.orderRef}
               </AppText>
-              <AppText variant="caption" className="text-ink-faint">
-                {timeAgo(delivery.createdAt)}
-              </AppText>
+              {/* Active deliveries show a live deadline countdown; others, when assigned. */}
+              {inTransit || delivery.status === 'assigned' ? (
+                <DeliveryCountdown
+                  createdAt={delivery.createdAt}
+                  testID={`deliveries-countdown-${delivery.id}`}
+                />
+              ) : (
+                <AppText variant="caption" className="text-ink-faint">
+                  {timeAgo(delivery.createdAt)}
+                </AppText>
+              )}
             </View>
             <AppText variant="label" numberOfLines={1}>
               {delivery.itemTitle || 'Article'}

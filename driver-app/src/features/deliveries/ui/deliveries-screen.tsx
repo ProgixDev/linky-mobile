@@ -1,10 +1,46 @@
-import { useEffect, useMemo } from 'react';
-import { AppState, FlatList, RefreshControl, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AppState, FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
-import { AppText, Button, Card, EmptyState, Screen, Skeleton } from '@/shared/ui';
+import { cn } from '@/shared/lib/cn';
+import { AppText, Button, Card, EmptyState, Screen, Skeleton, TextField } from '@/shared/ui';
 
-import { selectActiveDeliveries, useDeliveriesStore } from '../model/store';
+import { getDeadline, isSameDay, isUrgent } from '../lib/deadline';
+import type { Delivery } from '../model/schema';
+import { useDeliveriesStore } from '../model/store';
 import { DeliveryRow } from './delivery-row';
+
+type FilterKey = 'a_recuperer' | 'en_cours' | 'urgent' | 'aujourdhui' | 'terminees';
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: 'a_recuperer', label: 'À récupérer' },
+  { key: 'en_cours', label: 'En cours' },
+  { key: 'urgent', label: 'Urgent' },
+  { key: 'aujourdhui', label: 'Aujourd’hui' },
+  { key: 'terminees', label: 'Terminées' },
+];
+
+const isActive = (d: Delivery) => d.status === 'assigned' || d.status === 'in_transit';
+
+function applyFilter(items: Delivery[], key: FilterKey, now: number): Delivery[] {
+  switch (key) {
+    case 'a_recuperer':
+      return items.filter((d) => d.status === 'assigned');
+    case 'en_cours':
+      return items.filter((d) => d.status === 'in_transit');
+    case 'urgent':
+      return items.filter((d) => isActive(d) && isUrgent(getDeadline(d), now));
+    case 'aujourdhui':
+      return items.filter((d) => isActive(d) && isSameDay(getDeadline(d), now));
+    case 'terminees':
+      return items.filter((d) => d.status === 'delivered');
+  }
+}
+
+function matchesQuery(d: Delivery, q: string): boolean {
+  return `${d.orderRef} ${d.itemTitle} ${d.dropoffCity} ${d.dropoffDistrict} ${d.shopName}`
+    .toLowerCase()
+    .includes(q);
+}
 
 function LoadingList() {
   return (
@@ -24,9 +60,11 @@ function LoadingList() {
 }
 
 /**
- * The driver's home: their active assigned deliveries, newest first. Renders an
- * honest state for every case — loading, empty, error, and (on a failed refresh
- * with cache) the last-saved list flagged as possibly stale. See spec 001.
+ * The driver's home (Accueil): the worklist with intelligent quick-filters
+ * (À récupérer / En cours / Urgent / Aujourd'hui / Terminées) + search, premium
+ * cards, and a live deadline countdown per active delivery. Honest state for every
+ * case — loading, empty, error, and (on a failed refresh with cache) the cached
+ * list flagged as possibly stale. See spec 001.
  */
 export function DeliveriesScreen() {
   const items = useDeliveriesStore((s) => s.items);
@@ -34,7 +72,8 @@ export function DeliveriesScreen() {
   const load = useDeliveriesStore((s) => s.load);
   const refresh = useDeliveriesStore((s) => s.refresh);
 
-  const active = useMemo(() => selectActiveDeliveries(items), [items]);
+  const [filter, setFilter] = useState<FilterKey>('a_recuperer');
+  const [query, setQuery] = useState('');
 
   // Initial load on mount — but only AFTER the persisted cache has rehydrated, so
   // an offline cold start shows the cached list (+ stale banner) instead of a full
@@ -54,17 +93,69 @@ export function DeliveriesScreen() {
     return () => sub.remove();
   }, [refresh]);
 
-  const showInitialLoading = status === 'loading' || (status === 'idle' && active.length === 0);
-  const showError = status === 'error' && active.length === 0;
-  const showStale = status === 'error' && active.length > 0;
+  const visible = useMemo(() => {
+    const now = Date.now();
+    const q = query.trim().toLowerCase();
+    let list = applyFilter(items, filter, now);
+    if (q) list = list.filter((d) => matchesQuery(d, q));
+    return [...list].sort((a, b) => b.createdAt - a.createdAt);
+  }, [items, filter, query]);
+
+  const showInitialLoading = status === 'loading' || (status === 'idle' && items.length === 0);
+  const showError = status === 'error' && items.length === 0;
+  const showStale = status === 'error' && items.length > 0;
 
   return (
     <Screen testID="deliveries-screen">
-      <View className="gap-1 pb-4 pt-4">
+      <View className="gap-1 pb-3 pt-4">
         <AppText variant="display">Mes livraisons</AppText>
         <AppText variant="caption" testID="deliveries-count">
-          {active.length === 0 ? 'Aucune livraison active' : `${active.length} en cours`}
+          {visible.length === 0
+            ? 'Aucune livraison'
+            : `${visible.length} livraison${visible.length > 1 ? 's' : ''}`}
         </AppText>
+      </View>
+
+      <TextField
+        testID="deliveries-search"
+        className="mb-3 flex-none"
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Rechercher une livraison (réf, ville…)"
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+
+      <View className="mb-3">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerClassName="gap-2 pr-4"
+        >
+          {FILTERS.map((f) => {
+            const on = filter === f.key;
+            return (
+              <Pressable
+                key={f.key}
+                testID={`deliveries-filter-${f.key}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                onPress={() => setFilter(f.key)}
+                className={cn(
+                  'rounded-full px-3.5 py-1.5',
+                  on ? 'bg-brand-600' : 'bg-surface-muted',
+                )}
+              >
+                <AppText
+                  variant="caption"
+                  className={cn('font-sans-medium', on ? 'text-ink-inverse' : 'text-ink-muted')}
+                >
+                  {f.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {showStale ? (
@@ -91,7 +182,7 @@ export function DeliveriesScreen() {
         />
       ) : (
         <FlatList
-          data={active}
+          data={visible}
           keyExtractor={(d) => d.id}
           renderItem={({ item, index }) => <DeliveryRow delivery={item} index={index} />}
           refreshControl={
@@ -100,8 +191,8 @@ export function DeliveriesScreen() {
           ListEmptyComponent={
             <EmptyState
               testID="deliveries-empty"
-              title="Aucune livraison assignée pour l’instant"
-              description="Les nouvelles courses apparaîtront ici dès qu’elles te seront assignées."
+              title="Aucune livraison dans ce filtre"
+              description="Change de filtre, ou les nouvelles courses apparaîtront ici dès qu’elles te seront assignées."
             />
           }
           contentContainerClassName="grow pb-8"
