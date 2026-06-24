@@ -18,6 +18,7 @@ import { useAuthStore, useProtectedRoute } from '@/features/auth';
 import { useDeliveriesStore } from '@/features/deliveries';
 import { useLivreurGate, useOnboardingStore } from '@/features/onboarding';
 import { useWelcomeGate, useWelcomeStore } from '@/features/welcome';
+import { ErrorBoundary } from '@/shared/ui';
 import '@/shared/lib/env'; // fail fast on invalid environment
 
 SplashScreen.preventAutoHideAsync();
@@ -85,7 +86,9 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView className="flex-1">
-      <Stack screenOptions={{ headerShown: false }} />
+      <ErrorBoundary>
+        <Stack screenOptions={{ headerShown: false }} />
+      </ErrorBoundary>
       <StatusBar style="auto" />
     </GestureHandlerRootView>
   );
