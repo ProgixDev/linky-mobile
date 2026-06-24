@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Linky Driver — brand mark (SVG master / source of truth).
+  The green delivery sibling of the global Linky icon: a white isometric parcel
+  box with a saffron "tape" down the centre and a saffron "24h/7" badge (round-
+  the-clock delivery). Emerald gradient tile (vs the global app's blue).
+  Rendered in-app by src/shared/ui/linky-mark.tsx and exported to the app-icon
+  densities under assets/images/ (see exec-plan 2026-06-24-driver-ui-overhaul, S7).
+-->
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#15A06F"/>
+      <stop offset="1" stop-color="#0A5240"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" rx="120" fill="url(#tile)"/>
+  <g stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M132 196 L248 134 L364 196 L364 312 L248 374 L132 312 Z"/>
+    <path d="M132 196 L248 258 L364 196"/>
+  </g>
+  <path d="M248 134 L248 258 L248 374" stroke="#E8A53D" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="386" cy="372" r="84" fill="#E8A53D"/>
+  <circle cx="386" cy="372" r="84" fill="none" stroke="#0A5240" stroke-width="10"/>
+  <text x="386" y="366" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="44" fill="#0A5240" text-anchor="middle">24h/</text>
+  <text x="386" y="412" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="44" fill="#0A5240" text-anchor="middle">7</text>
+</svg>

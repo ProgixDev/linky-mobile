@@ -103,10 +103,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#0F172A',
+        // Linky emerald — the splash shows the green brand mark on brand green.
+        backgroundColor: '#0A5240',
+        image: './assets/images/splash-icon.png',
+        imageWidth: 180,
         android: {
           image: './assets/images/splash-icon.png',
-          imageWidth: 76,
+          imageWidth: 180,
         },
       },
     ],
