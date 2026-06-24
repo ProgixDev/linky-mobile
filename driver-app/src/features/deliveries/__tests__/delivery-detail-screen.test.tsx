@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@/shared/testing/render';
+import { act, fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
 import { confirmHandoff, fetchDeliveries, getDelivery } from '../lib/deliveries-api';
 import type { Delivery, DeliveryDetail } from '../model/schema';
@@ -21,6 +21,7 @@ const mockCamera = {
   permission: { granted: true, canAskAgain: true } as {
     granted: boolean;
     canAskAgain: boolean;
+    status?: string;
   } | null,
   requestPermission: jest.fn(),
   onBarcodeScanned: undefined as ((e: { data: string }) => void) | undefined,
@@ -221,6 +222,20 @@ describe('<DeliveryDetailScreen />', () => {
     fireEvent.press(await screen.findByTestId('delivery-detail-scan-button'));
 
     expect(await screen.findByTestId('deliveries-scanner-settings')).toBeOnTheScreen();
+  });
+
+  it('asks the OS first on an undetermined permission — no gate shown first (Fix 2)', async () => {
+    mockGet.mockResolvedValue(DETAIL);
+    mockCamera.permission = { granted: false, canAskAgain: true, status: 'undetermined' };
+
+    render(<DeliveryDetailScreen id="d1" />);
+    fireEvent.press(await screen.findByTestId('delivery-detail-scan-button'));
+
+    // Happy path: request the OS permission immediately + show loading — never the
+    // « Accès caméra requis » fallback first.
+    await waitFor(() => expect(mockCamera.requestPermission).toHaveBeenCalled());
+    expect(screen.queryByTestId('deliveries-scanner-permission')).toBeNull();
+    expect(screen.getByTestId('deliveries-scanner-loading')).toBeOnTheScreen();
   });
 
   it('blocks confirm when offline and retries on reconnect (AC-7)', async () => {
