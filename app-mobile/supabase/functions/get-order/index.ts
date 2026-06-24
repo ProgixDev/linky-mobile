@@ -57,6 +57,47 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
   // from any other caller (admin uses a separate admin endpoint).
   const isParticipant = r.buyer_id === userId || r.seller_id === userId;
 
+  // Delivery summary (Phase LIVREUR — seller assign). Surfaced to participants
+  // so the seller order screen can render the assignment state (pick / change /
+  // who's delivering) without a second round-trip. Name only — no livreur phone
+  // or PII (contact stays on-platform ; the assigned livreur reaches the buyer
+  // through the app, not the seller forwarding a number). One row per order
+  // (deliveries.order_id is unique), so maybeSingle is safe.
+  const { data: deliveryRow, error: deliveryErr } = await sb
+    .from('deliveries')
+    .select('id, status, livreur_id, delivery_address')
+    .eq('order_id', body.id)
+    .maybeSingle();
+  if (deliveryErr) {
+    console.error('[get-order] delivery query error:', deliveryErr);
+    // Non-fatal : the order is primary. delivery stays null → the seller UI
+    // just won't show the picker this cycle (it reappears on next refetch).
+  }
+  let delivery: {
+    status: string;
+    city: string | null;
+    livreurId: string | null;
+    livreurName: string | null;
+  } | null = null;
+  if (deliveryRow) {
+    const d = deliveryRow as { id: string; status: string; livreur_id: string | null; delivery_address: Record<string, unknown> | null };
+    let livreurName: string | null = null;
+    if (d.livreur_id) {
+      const { data: livreur } = await sb
+        .from('users')
+        .select('display_name')
+        .eq('id', d.livreur_id)
+        .maybeSingle();
+      livreurName = (livreur?.display_name as string | null) ?? null;
+    }
+    delivery = {
+      status: d.status,
+      city: (d.delivery_address?.city as string | null) ?? null,
+      livreurId: d.livreur_id,
+      livreurName,
+    };
+  }
+
   // Latest payment_intent for this order. Currently attempt_index stays at 1
   // (V1 retry creates a NEW order, not a new attempt on the same one).
   // Ordering defensively by attempt_index + created_at descending so a future
@@ -82,7 +123,7 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
       // Buyer needs it to render their own on-screen QR for livreur handoff ;
       // seller still gets it for the legacy printed-QR path. Non-participants
       // never reach this branch (FORBIDDEN above).
-      order:  mapOrder(r, { includeScanToken: isParticipant }),
+      order:  { ...mapOrder(r, { includeScanToken: isParticipant }), delivery },
       intent: intentRow ? mapPaymentIntent(intentRow as PaymentIntentRow) : null,
     },
   };
