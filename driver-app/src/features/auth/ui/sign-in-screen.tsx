@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { AppText, Button, Screen, TextField } from '@/shared/ui';
+import { AppText, Button, LinkyMark, Screen, TextField } from '@/shared/ui';
 
 import { useAuthStore } from '../model/store';
 
@@ -9,10 +9,12 @@ const RESEND_COOLDOWN_SEC = 60; // backend allows 3 requests/min — 60s keeps u
 
 /**
  * Livreur sign-in — Linky email OTP (self-rolled JWT, no password). Two steps,
- * driven by the store's `otpId`: enter email → “Send code”, then enter the
- * 6-digit code → “Verify”. Real loading/disabled/error states, a resend that
- * respects the rate limit, and — in stub/dev mode — the echoed `devCode` so QA
- * can proceed without an inbox. Never a dead end. Feature-prefixed testIDs.
+ * driven by the store's `otpId`: enter email → « Recevoir le code », then enter
+ * the 6-digit code → « Se connecter ». Branded Linky Driver header, French « tu »
+ * copy, green CTA. Real loading/disabled/error states, a resend that respects the
+ * rate limit, and — in stub/dev mode — the echoed `devCode` so QA can proceed
+ * without an inbox. The OTP request/verify LOGIC is untouched; only the look +
+ * copy changed. Feature-prefixed testIDs.
  */
 export function SignInScreen() {
   const status = useAuthStore((s) => s.status);
@@ -81,96 +83,110 @@ export function SignInScreen() {
 
   return (
     <Screen testID="auth-sign-in-screen">
-      <View className="flex-1 justify-center gap-4">
-        <View className="gap-1">
-          <AppText variant="display">{step === 'email' ? 'Sign in' : 'Enter your code'}</AppText>
-          <AppText variant="caption" className="text-ink-muted">
-            {step === 'email'
-              ? 'We’ll email you a 6-digit code to sign in.'
-              : `Code sent to ${pendingEmail ?? 'your email'}.`}
-          </AppText>
+      <View className="flex-1 justify-center gap-9">
+        {/* Brand header */}
+        <View className="items-center gap-3">
+          <LinkyMark size={76} />
+          <View className="items-center gap-1">
+            <AppText variant="display" className="text-2xl">
+              Linky Driver
+            </AppText>
+            <AppText variant="caption">L’app des livreurs Linky</AppText>
+          </View>
         </View>
 
-        {step === 'email' ? (
-          <>
-            <TextField
-              testID="auth-email"
-              className="flex-none"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Email"
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              editable={!submitting}
-              onSubmitEditing={() => void onSendCode()}
-            />
-            <Button
-              testID="auth-request-code"
-              label="Send code"
-              loading={submitting}
-              disabled={email.trim().length === 0}
-              onPress={() => void onSendCode()}
-            />
-          </>
-        ) : (
-          <>
-            <TextField
-              testID="auth-code"
-              className="flex-none tracking-[8px]"
-              value={code}
-              onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
-              placeholder="------"
-              keyboardType="number-pad"
-              textContentType="oneTimeCode"
-              autoComplete="sms-otp"
-              maxLength={6}
-              editable={!submitting}
-              onSubmitEditing={() => void onVerify()}
-            />
+        {/* Form */}
+        <View className="gap-4">
+          <View className="gap-1">
+            <AppText variant="title">{step === 'email' ? 'Connexion' : 'Vérification'}</AppText>
+            <AppText variant="caption">
+              {step === 'email'
+                ? 'On t’envoie un code à 6 chiffres par e-mail pour te connecter.'
+                : `Code envoyé à ${pendingEmail ?? 'ton e-mail'}.`}
+            </AppText>
+          </View>
 
-            {devCode ? (
-              <AppText testID="auth-dev-code" variant="caption" className="text-ink-muted">
-                Dev code: {devCode}
-              </AppText>
-            ) : null}
+          {step === 'email' ? (
+            <>
+              <TextField
+                testID="auth-email"
+                className="flex-none"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="ton@email.com"
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                editable={!submitting}
+                onSubmitEditing={() => void onSendCode()}
+              />
+              <Button
+                testID="auth-request-code"
+                label="Recevoir le code"
+                loading={submitting}
+                disabled={email.trim().length === 0}
+                onPress={() => void onSendCode()}
+              />
+            </>
+          ) : (
+            <>
+              <TextField
+                testID="auth-code"
+                className="flex-none tracking-[8px]"
+                value={code}
+                onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
+                placeholder="------"
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                autoComplete="sms-otp"
+                maxLength={6}
+                editable={!submitting}
+                onSubmitEditing={() => void onVerify()}
+              />
 
-            <Button
-              testID="auth-verify"
-              label="Verify"
-              loading={submitting}
-              disabled={code.length !== 6}
-              onPress={() => void onVerify()}
-            />
-            <Button
-              testID="auth-resend"
-              variant="ghost"
-              label={resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
-              disabled={resendIn > 0 || submitting}
-              onPress={() => void onResend()}
-            />
-            <Button
-              testID="auth-change-email"
-              variant="ghost"
-              label="Use a different email"
-              disabled={submitting}
-              onPress={onChangeEmail}
-            />
-          </>
-        )}
+              {devCode ? (
+                <AppText testID="auth-dev-code" variant="caption" className="text-ink-muted">
+                  Code (dev) : {devCode}
+                </AppText>
+              ) : null}
 
-        {error ? (
-          <AppText testID="auth-error" variant="caption" className="text-danger">
-            {error}
-          </AppText>
-        ) : null}
+              <Button
+                testID="auth-verify"
+                label="Se connecter"
+                loading={submitting}
+                disabled={code.length !== 6}
+                onPress={() => void onVerify()}
+              />
+              <Button
+                testID="auth-resend"
+                variant="ghost"
+                label={resendIn > 0 ? `Renvoyer dans ${resendIn}s` : 'Renvoyer le code'}
+                disabled={resendIn > 0 || submitting}
+                onPress={() => void onResend()}
+              />
+              <Button
+                testID="auth-change-email"
+                variant="ghost"
+                label="Changer d’e-mail"
+                disabled={submitting}
+                onPress={onChangeEmail}
+              />
+            </>
+          )}
 
-        {status === 'loading' ? (
-          <AppText testID="auth-status-loading" variant="caption" className="text-ink-faint">
-            Checking your session…
-          </AppText>
-        ) : null}
+          {error ? (
+            <AppText testID="auth-error" variant="caption" className="text-danger">
+              {error}
+            </AppText>
+          ) : null}
+
+          {status === 'loading' ? (
+            <AppText testID="auth-status-loading" variant="caption" className="text-ink-faint">
+              Vérification de ta session…
+            </AppText>
+          ) : null}
+        </View>
       </View>
     </Screen>
   );

@@ -56,9 +56,9 @@ describe('SignInScreen — OTP flow', () => {
 
     await waitFor(() => expect(screen.getByTestId('auth-code')).toBeTruthy());
     expect(mockRequestOtp).toHaveBeenCalledWith({ email: 'driver@example.com' });
-    expect(screen.getByTestId('auth-dev-code')).toHaveTextContent('Dev code: 123456');
+    expect(screen.getByTestId('auth-dev-code')).toHaveTextContent('Code (dev) : 123456');
     // Resend is gated by the cooldown right after a send.
-    expect(screen.getByTestId('auth-resend')).toHaveTextContent(/Resend code in \d+s/);
+    expect(screen.getByTestId('auth-resend')).toHaveTextContent(/Renvoyer dans \d+s/);
   });
 
   it('valid code → verify → authenticated', async () => {
