@@ -37,7 +37,10 @@ type TriggerProps = TabTriggerSlotProps & { item: DriverTab };
 
 /**
  * Visual for a single tab — rendered via `<TabTrigger asChild>` so it receives
- * `isFocused` + press props. The prominent raised center tab is the live map.
+ * `isFocused` + press props. ONE column shape for all three (flex-1, icon-area on
+ * top, label baseline-aligned at the bottom via justify-end) so the three tabs are
+ * evenly spaced (each 1/3) with every icon over ITS OWN label. The center (Carte) is
+ * the prominent raised round green button; its label still sits on the shared baseline.
  */
 export const DriverTabTrigger = forwardRef<View, TriggerProps>(function DriverTabTrigger(
   { isFocused, item, ...props },
@@ -46,35 +49,7 @@ export const DriverTabTrigger = forwardRef<View, TriggerProps>(function DriverTa
   const active = !!isFocused;
   const { Icon } = item;
   const testID = `nav-tab-${item.label.toLowerCase()}`;
-
-  if (item.center) {
-    return (
-      <Pressable
-        ref={ref}
-        {...props}
-        testID={testID}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: active }}
-        accessibilityLabel={item.label}
-        className="flex-1 items-center justify-center"
-      >
-        <View
-          className={cn(
-            '-mt-7 h-14 w-14 items-center justify-center rounded-full border-4 border-surface shadow-sm',
-            active ? 'bg-brand-600' : 'bg-brand-500',
-          )}
-        >
-          <Icon size={24} color={colors.inkInverse} strokeWidth={2.25} />
-        </View>
-        <AppText
-          variant="caption"
-          className={cn('mt-1', active ? 'text-brand-600' : 'text-ink-faint')}
-        >
-          {item.label}
-        </AppText>
-      </Pressable>
-    );
-  }
+  const tint = active ? colors.brand600 : colors.inkFaint;
 
   return (
     <Pressable
@@ -84,10 +59,26 @@ export const DriverTabTrigger = forwardRef<View, TriggerProps>(function DriverTa
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       accessibilityLabel={item.label}
-      className="flex-1 items-center justify-center gap-1 py-2"
+      className="flex-1 items-center justify-end gap-1 pb-1 pt-2"
     >
-      <Icon size={22} color={active ? colors.brand600 : colors.inkFaint} strokeWidth={2.25} />
-      <AppText variant="caption" className={active ? 'text-brand-600' : 'text-ink-faint'}>
+      {item.center ? (
+        <View
+          className={cn(
+            // Raised circle floats above the bar; the label below stays on the baseline.
+            '-mt-9 h-14 w-14 items-center justify-center rounded-full border-4 border-surface shadow-md',
+            active ? 'bg-brand-600' : 'bg-brand-500',
+          )}
+        >
+          <Icon size={26} color={colors.inkInverse} strokeWidth={2.5} />
+        </View>
+      ) : (
+        <Icon size={24} color={tint} strokeWidth={2.25} />
+      )}
+      <AppText
+        variant="caption"
+        numberOfLines={1}
+        className={cn('text-[11px]', active ? 'text-brand-600' : 'text-ink-faint')}
+      >
         {item.label}
       </AppText>
     </Pressable>
