@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Button, Screen, TextField } from '@/shared/ui';
+import { KeyboardAwareScroll } from '@/shared/ui/keyboard-aware-scroll';
 import { PhotoPicker } from '@/shared/ui/photo-picker';
 
 import { isValidAvailability, serializeAvailability, type Availability } from '../lib/availability';
@@ -105,11 +106,7 @@ export function ApplicationFormScreen() {
 
   return (
     <Screen testID="onboarding-form">
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerClassName="gap-4 pb-10 pt-4"
-        keyboardShouldPersistTaps="handled"
-      >
+      <KeyboardAwareScroll contentClassName="gap-4 pb-10 pt-4">
         <View className="gap-2">
           <AppText variant="display">Deviens livreur</AppText>
           <AppText variant="caption" className="text-ink-muted">
@@ -297,7 +294,7 @@ export function ApplicationFormScreen() {
             />
           </>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScroll>
     </Screen>
   );
 }

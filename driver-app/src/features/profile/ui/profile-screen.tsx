@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { BadgeCheck } from 'lucide-react-native';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { colors } from '@/shared/theme/colors';
@@ -15,6 +15,7 @@ import {
   Skeleton,
   TextField,
 } from '@/shared/ui';
+import { KeyboardAwareScroll } from '@/shared/ui/keyboard-aware-scroll';
 
 import { VEHICLE_LABELS, VehicleTypeSchema, type VehicleType } from '../model/schema';
 import { useProfileStore } from '../model/store';
@@ -72,7 +73,7 @@ export function ProfileScreen({ onSignOut }: { onSignOut: () => void }) {
 
   return (
     <Screen testID="profile-screen">
-      <ScrollView contentContainerClassName="gap-5 pb-10 pt-4" showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScroll contentClassName="gap-5 pb-10 pt-4">
         <View className="items-center gap-3 pt-2">
           {view?.idPhotoUrl ? (
             <Image
@@ -213,7 +214,7 @@ export function ProfileScreen({ onSignOut }: { onSignOut: () => void }) {
             onPress={onSignOut}
           />
         </View>
-      </ScrollView>
+      </KeyboardAwareScroll>
     </Screen>
   );
 }

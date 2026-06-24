@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { useAuthStore, useProtectedRoute } from '@/features/auth';
 import { useDeliveriesStore } from '@/features/deliveries';
@@ -86,10 +87,12 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView className="flex-1">
-      <ErrorBoundary>
-        <Stack screenOptions={{ headerShown: false }} />
-      </ErrorBoundary>
-      <StatusBar style="auto" />
+      <KeyboardProvider>
+        <ErrorBoundary>
+          <Stack screenOptions={{ headerShown: false }} />
+        </ErrorBoundary>
+        <StatusBar style="auto" />
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

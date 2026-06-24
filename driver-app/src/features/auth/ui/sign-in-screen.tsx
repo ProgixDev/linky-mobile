@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { AppText, Button, LinkyMark, Screen, TextField } from '@/shared/ui';
+import { KeyboardAwareScroll } from '@/shared/ui/keyboard-aware-scroll';
 
 import { useAuthStore } from '../model/store';
 
@@ -83,7 +84,7 @@ export function SignInScreen() {
 
   return (
     <Screen testID="auth-sign-in-screen">
-      <View className="flex-1 justify-center gap-9">
+      <KeyboardAwareScroll contentClassName="grow justify-center gap-9">
         {/* Brand header */}
         <View className="items-center gap-3">
           <LinkyMark size={76} />
@@ -187,7 +188,7 @@ export function SignInScreen() {
             </AppText>
           ) : null}
         </View>
-      </View>
+      </KeyboardAwareScroll>
     </Screen>
   );
 }

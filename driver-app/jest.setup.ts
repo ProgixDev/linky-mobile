@@ -12,3 +12,8 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 // Reanimated ships an official Jest integration (v3.6+ / v4).
 require('react-native-reanimated').setUpTests();
+
+// react-native-keyboard-controller ships an official Jest mock.
+jest.mock('react-native-keyboard-controller', () =>
+  require('react-native-keyboard-controller/jest'),
+);
