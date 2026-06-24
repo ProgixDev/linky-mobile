@@ -9,6 +9,23 @@ jest.mock('../lib/onboarding-api', () => ({
   fetchApplicationStatus: jest.fn(),
 }));
 
+// PhotoPicker's native deps — plain mocks so the real picker renders + the camera
+// path resolves to a URL (face photo is required to leave step 1).
+jest.mock('expo-image', () => ({ Image: 'Image' }));
+jest.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
+  launchCameraAsync: jest.fn(() =>
+    Promise.resolve({ canceled: false, assets: [{ uri: 'file://selfie.jpg' }] }),
+  ),
+  launchImageLibraryAsync: jest.fn(() => Promise.resolve({ canceled: true })),
+  CameraType: { front: 'front', back: 'back' },
+}));
+jest.mock('@/shared/lib/photo-upload', () => ({
+  uploadAvatar: jest.fn(() =>
+    Promise.resolve({ ok: true, url: 'https://cdn.linky.gn/avatars/x.jpg' }),
+  ),
+}));
+
 const mockSubmit = submitApplication as jest.Mock;
 
 beforeEach(() => {
@@ -17,7 +34,13 @@ beforeEach(() => {
   useOnboardingStore.setState({ phase: 'ready', appStatus: 'none' });
 });
 
-function completeStep1() {
+async function setPhoto() {
+  fireEvent.press(screen.getByTestId('onboarding-photo-camera'));
+  await screen.findByText('Reprendre'); // photo uploaded → label flips
+}
+
+async function completeStep1() {
+  await setPhoto();
   fireEvent.changeText(screen.getByTestId('onboarding-fullname'), 'Mamadou Diallo');
   fireEvent.changeText(screen.getByTestId('onboarding-age'), '28');
   fireEvent.changeText(screen.getByTestId('onboarding-city'), 'Conakry');
@@ -46,7 +69,7 @@ describe('ApplicationFormScreen', () => {
     expect(screen.getByTestId('onboarding-age')).toBeTruthy();
     expect(screen.queryByTestId('onboarding-zones')).toBeNull();
 
-    completeStep1();
+    await completeStep1();
     await waitFor(() => expect(screen.getByTestId('onboarding-zones')).toBeTruthy());
 
     completeStep2();
@@ -68,7 +91,7 @@ describe('ApplicationFormScreen', () => {
   it('submits the full application once everything is answered', async () => {
     mockSubmit.mockResolvedValue({ ok: true, application: { id: 'a1' } });
     render(<ApplicationFormScreen />);
-    completeStep1();
+    await completeStep1();
     await waitFor(() => expect(screen.getByTestId('onboarding-zones')).toBeTruthy());
     completeStep2();
     await waitFor(() => expect(screen.getByTestId('onboarding-screening')).toBeTruthy());
@@ -87,7 +110,7 @@ describe('ApplicationFormScreen', () => {
       full_name: 'Mamadou Diallo',
       city: 'Conakry',
       vehicle_type: 'moto',
-      id_photo_url: null,
+      id_photo_url: 'https://cdn.linky.gn/avatars/x.jpg',
       answers: {
         zones: 'Kaloum, Ratoma',
         availability: 'Lun · 08:00–18:00',
@@ -110,7 +133,7 @@ describe('ApplicationFormScreen', () => {
 
   it('does not submit when the QR process is refused', async () => {
     render(<ApplicationFormScreen />);
-    completeStep1();
+    await completeStep1();
     await waitFor(() => expect(screen.getByTestId('onboarding-zones')).toBeTruthy());
     completeStep2();
     await waitFor(() => expect(screen.getByTestId('onboarding-screening')).toBeTruthy());

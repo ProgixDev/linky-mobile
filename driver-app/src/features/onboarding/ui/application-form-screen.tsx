@@ -3,6 +3,7 @@ import { ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Button, Screen, TextField } from '@/shared/ui';
+import { PhotoPicker } from '@/shared/ui/photo-picker';
 
 import { isValidAvailability, serializeAvailability, type Availability } from '../lib/availability';
 import { SCREENING_QUESTIONS, type ScreeningKey } from '../lib/screening';
@@ -46,6 +47,7 @@ export function ApplicationFormScreen() {
   const [step, setStep] = useState<Step>(1);
 
   // Step 1 — infos personnelles
+  const [photo, setPhoto] = useState<string | null>(null);
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
@@ -69,7 +71,11 @@ export function ApplicationFormScreen() {
   const screeningComplete = SCREENING_QUESTIONS.every((q) => !!screening[q.id]);
 
   const step1Valid =
-    fullName.trim().length > 0 && ageValid && city.trim().length > 0 && vehicle !== null;
+    photo !== null &&
+    fullName.trim().length > 0 &&
+    ageValid &&
+    city.trim().length > 0 &&
+    vehicle !== null;
   const step2Valid = zones.trim().length > 0 && isValidAvailability(availability) && license !== '';
   const step3Valid = screeningComplete && qr === 'oui' && terms === 'oui';
 
@@ -79,7 +85,7 @@ export function ApplicationFormScreen() {
       full_name: fullName.trim(),
       city: city.trim(),
       vehicle_type: vehicle,
-      id_photo_url: null,
+      id_photo_url: photo,
       answers: {
         zones: zones.trim(),
         availability: serializeAvailability(availability),
@@ -124,6 +130,18 @@ export function ApplicationFormScreen() {
 
         {step === 1 ? (
           <>
+            <View className="items-center gap-1.5">
+              <PhotoPicker
+                testID="onboarding-photo"
+                value={photo}
+                onChange={setPhoto}
+                disabled={submitting}
+              />
+              <AppText variant="caption" className="text-ink-muted">
+                Prends une photo de ton visage (obligatoire).
+              </AppText>
+            </View>
+
             <View className="gap-1">
               <AppText variant="label">Nom complet</AppText>
               <TextField
