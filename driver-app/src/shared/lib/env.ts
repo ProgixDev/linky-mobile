@@ -44,4 +44,16 @@ export function parseEnv(raw: Record<string, string | undefined>): Env {
   return result.data;
 }
 
-export const env: Env = parseEnv(process.env as Record<string, string | undefined>);
+// IMPORTANT: each EXPO_PUBLIC_* MUST be referenced as a DIRECT
+// `process.env.EXPO_PUBLIC_X` member expression. babel-preset-expo inlines those
+// member expressions into string literals at bundle time — but it does NOT follow
+// aliases: passing the whole `process.env` object (or `const raw = process.env`)
+// inlines nothing, so in a release/standalone bundle every value fell back to the
+// localhost/example placeholders → « connexion impossible » on device. Listing them
+// explicitly is the only form Metro/Hermes actually bakes the live values into.
+export const env: Env = parseEnv({
+  EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+  EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV,
+  EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+});
