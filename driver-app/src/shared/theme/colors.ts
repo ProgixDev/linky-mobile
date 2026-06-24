@@ -7,8 +7,14 @@
  * docs/conventions/design-system.md documents the sync rule.
  */
 export const colors = {
-  brand500: '#6366F1',
-  brand600: '#4F46E5',
+  // Linky brand — emerald green (rebranded from the skeleton's placeholder indigo;
+  // see tailwind.config.js + docs/conventions/design-system.md).
+  brand500: '#0E6E55',
+  brand600: '#0A5240',
+  brand700: '#083B2D',
+  // Saffron accent — the second Linky pillar (value/highlight).
+  accent: '#E8A53D',
+  accentSoft: '#FCF1DC',
   surface: '#FFFFFF',
   surfaceMuted: '#F8FAFC',
   surfaceInverse: '#0F172A',
@@ -16,6 +22,6 @@ export const colors = {
   inkMuted: '#64748B',
   inkFaint: '#94A3B8',
   inkInverse: '#F8FAFC',
-  danger: '#DC2626',
-  success: '#16A34A',
+  danger: '#D14F3C',
+  success: '#1FA971',
 } as const;

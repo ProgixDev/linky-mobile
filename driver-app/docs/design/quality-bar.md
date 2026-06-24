@@ -11,9 +11,11 @@ named system applied with restraint and consistency.** "Vibe-coded" UI fails bec
 ad-hoc decisions and reaches for tool defaults — the statistical average of all training data.
 Premium = **intentional deviation from defaults, inside a disciplined system.**
 
-> **The skeleton's own brand palette (`#6366F1`/indigo in `tailwind.config.js`) is a placeholder
-> default — and default indigo/purple is the single most recognizable AI tell.** Rebrand it per
-> app (see "Rebrand checklist" below) before you ship. The default Inter font is the same trap.
+> **The skeleton ships a placeholder indigo (`#6366F1`) brand ramp — and default indigo/purple is
+> the single most recognizable AI tell, so each app MUST rebrand it** (see "Rebrand checklist"
+> below) before shipping. This app (Linky Driver) has done so: `tailwind.config.js` is rebranded to
+> the Linky **emerald `#0E6E55` + saffron `#E8A53D`** palette. The default Inter font remains the
+> same trap — still on the design-pass list.
 
 ## Premium-UI checklist (a brief must demand it; a review must verify it)
 

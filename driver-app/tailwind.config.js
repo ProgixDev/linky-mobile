@@ -15,12 +15,22 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Linky brand — emerald green (« vert émeraude », confiance). The driver app
+        // shares the Linky marketplace identity; this REBRANDS the skeleton's
+        // placeholder indigo per docs/conventions/design-system.md. Ramp anchored on
+        // the canonical primary #0E6E55 / primary-deep #0A5240 / primary-soft #E8F2EE.
         brand: {
-          50: '#EEF2FF',
-          100: '#E0E7FF',
-          500: '#6366F1',
-          600: '#4F46E5',
-          700: '#4338CA',
+          50: '#E8F2EE',
+          100: '#CFE5DD',
+          500: '#0E6E55',
+          600: '#0A5240',
+          700: '#083B2D',
+        },
+        // Saffron accent (« safran », valeur) — the second Linky pillar, for value/
+        // highlight emphasis (use sparingly; never as a primary action color).
+        accent: {
+          DEFAULT: '#E8A53D',
+          soft: '#FCF1DC',
         },
         surface: {
           DEFAULT: '#FFFFFF',
@@ -33,8 +43,8 @@ module.exports = {
           faint: '#94A3B8',
           inverse: '#F8FAFC',
         },
-        danger: '#DC2626',
-        success: '#16A34A',
+        danger: '#D14F3C',
+        success: '#1FA971',
       },
       fontFamily: {
         sans: ['Inter_400Regular'],

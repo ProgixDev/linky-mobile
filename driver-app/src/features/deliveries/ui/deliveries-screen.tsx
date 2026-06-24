@@ -61,9 +61,9 @@ export function DeliveriesScreen() {
   return (
     <Screen testID="deliveries-screen">
       <View className="gap-1 pb-4 pt-4">
-        <AppText variant="display">Deliveries</AppText>
+        <AppText variant="display">Mes livraisons</AppText>
         <AppText variant="caption" testID="deliveries-count">
-          {active.length === 0 ? 'No active deliveries' : `${active.length} active`}
+          {active.length === 0 ? 'Aucune livraison active' : `${active.length} en cours`}
         </AppText>
       </View>
 
@@ -72,7 +72,9 @@ export function DeliveriesScreen() {
           className="mb-3 rounded-control bg-surface-muted px-3 py-2"
           testID="deliveries-stale-banner"
         >
-          <AppText variant="caption">Showing your saved list — couldn’t refresh.</AppText>
+          <AppText variant="caption">
+            Liste enregistrée affichée — actualisation impossible.
+          </AppText>
         </View>
       ) : null}
 
@@ -81,10 +83,10 @@ export function DeliveriesScreen() {
       ) : showError ? (
         <EmptyState
           testID="deliveries-error"
-          title="Couldn’t load your deliveries"
-          description="Check your connection and try again."
+          title="Impossible de charger tes livraisons"
+          description="Vérifie ta connexion et réessaie."
           action={
-            <Button testID="deliveries-retry" label="Try again" onPress={() => void load()} />
+            <Button testID="deliveries-retry" label="Réessayer" onPress={() => void load()} />
           }
         />
       ) : (
@@ -98,8 +100,8 @@ export function DeliveriesScreen() {
           ListEmptyComponent={
             <EmptyState
               testID="deliveries-empty"
-              title="No deliveries assigned right now"
-              description="New jobs will appear here as they’re assigned to you."
+              title="Aucune livraison assignée pour l’instant"
+              description="Les nouvelles courses apparaîtront ici dès qu’elles te seront assignées."
             />
           }
           contentContainerClassName="grow pb-8"

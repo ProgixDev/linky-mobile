@@ -6,26 +6,29 @@
 #
 # PREREQUISITES (why this is deferred where they're absent):
 #   - a booted iOS simulator with the dev build installed (macOS only; camera is a
-#     native capability — not available in Expo Go), and
-#   - a SEEDED livreur account WITH at least one active delivery on the backend.
+#     native capability — not available in Expo Go),
+#   - a SEEDED livreur account WITH at least one active delivery on the backend, and
+#   - otp-request in STUB mode (echoes a dev_code) so the OTP sign-in is deterministic —
+#     the screen auto-fills the dev code. With real email, drive sign-in via Argent.
 appId: com.linky.driver.dev
 env:
   DRIVER_EMAIL: driver@example.com
-  DRIVER_PASSWORD: changeme
 ---
 - launchApp:
     clearState: true
-# Cold start is unauthenticated → sign in.
+# Cold start is unauthenticated → sign in (email OTP).
 - assertVisible:
     id: 'auth-email'
 - tapOn:
     id: 'auth-email'
 - inputText: ${DRIVER_EMAIL}
 - tapOn:
-    id: 'auth-password'
-- inputText: ${DRIVER_PASSWORD}
+    id: 'auth-request-code'
+# Stub mode: the dev code auto-fills the code step; verify to authenticate.
+- assertVisible:
+    id: 'auth-code'
 - tapOn:
-    id: 'auth-submit'
+    id: 'auth-verify'
 # Lands on the worklist, then open the first assigned delivery.
 - assertVisible:
     id: 'deliveries-screen'

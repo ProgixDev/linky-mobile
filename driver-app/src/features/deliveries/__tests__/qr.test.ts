@@ -15,6 +15,12 @@ describe('parseOrderQr', () => {
     expect(parseOrderQr(`  ${VALID}\n`)).toEqual({ orderId: ORDER, scanToken: TOKEN });
   });
 
+  it('tolerates an optional trailing slash (matches the canonical brief regex)', () => {
+    // The Linky consumer app may render `…/confirm?token=<uuid>/`; the brief's regex
+    // ends `\/?$`, so a trailing slash must NOT reject a legitimate handoff QR (AC-5).
+    expect(parseOrderQr(`${VALID}/`)).toEqual({ orderId: ORDER, scanToken: TOKEN });
+  });
+
   it('rejects junk / non-URL text', () => {
     expect(parseOrderQr('hello world')).toBeNull();
     expect(parseOrderQr('')).toBeNull();

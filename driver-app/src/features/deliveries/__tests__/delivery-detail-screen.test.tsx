@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@/shared/testing/render';
 
-import { confirmHandoff, getDelivery } from '../lib/deliveries-api';
+import { confirmHandoff, fetchDeliveries, getDelivery } from '../lib/deliveries-api';
 import type { Delivery, DeliveryDetail } from '../model/schema';
 import { useDeliveriesStore } from '../model/store';
 import { DeliveryDetailScreen } from '../ui/delivery-detail-screen';
@@ -8,12 +8,14 @@ import { DeliveryDetailScreen } from '../ui/delivery-detail-screen';
 jest.mock('../lib/deliveries-api', () => ({
   getDelivery: jest.fn(),
   confirmHandoff: jest.fn(),
+  // The detail screen reconciles the worklist with a background refresh on success.
+  fetchDeliveries: jest.fn(),
 }));
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), push: jest.fn() } }));
 
-// Controllable expo-camera mock. `mock`-prefixed so jest allows the factory to
-// close over it; tests flip the permission and fire a scan through the captured
+// Controllable expo-camera mock. `mock`-prefixed so jest allows the factory to close
+// over it; tests flip the permission and fire a scan through the captured
 // onBarcodeScanned handler.
 const mockCamera = {
   permission: { granted: true, canAskAgain: true } as {
@@ -64,6 +66,7 @@ const listItem = (over: Partial<Delivery> = {}): Delivery => ({
   orderRef: 'LK-2026-00042',
   itemTitle: 'Blue mug',
   itemPhoto: '',
+  shopName: 'TechShop',
   dropoffCity: 'Conakry',
   dropoffDistrict: 'Kaloum',
   status: 'assigned',
@@ -76,6 +79,7 @@ const initial = useDeliveriesStore.getState();
 beforeEach(() => {
   mockGet.mockReset();
   mockConfirm.mockReset();
+  (fetchDeliveries as jest.Mock).mockReset().mockResolvedValue([]);
   mockCamera.permission = { granted: true, canAskAgain: true };
   mockCamera.requestPermission.mockReset();
   mockCamera.onBarcodeScanned = undefined;
@@ -106,7 +110,7 @@ describe('<DeliveryDetailScreen />', () => {
     expect(screen.getByText('Mariama')).toBeOnTheScreen();
     // Detail reveals the FULL street address (unlike the list's area-only view).
     expect(screen.getByTestId('delivery-detail-address')).toHaveTextContent(/12 Rue de la Paix/);
-    expect(screen.getByTestId('delivery-detail-status')).toHaveTextContent('Assigned');
+    expect(screen.getByTestId('delivery-detail-status')).toHaveTextContent('Assignée');
     expect(mockGet).toHaveBeenCalledWith('d1');
   });
 
@@ -249,6 +253,28 @@ describe('<DeliveryDetailScreen />', () => {
 
     expect(await screen.findByTestId('delivery-detail-already-done')).toBeOnTheScreen();
     expect(useDeliveriesStore.getState().items.find((d) => d.id === 'd1')).toBeDefined();
+  });
+
+  it('a lost-response retry after the release already happened lands on already-done, never a second release (AC-8)', async () => {
+    mockGet.mockResolvedValue(DETAIL);
+    // The first confirm actually releases server-side but the response is dropped → offline.
+    mockConfirm.mockResolvedValueOnce({ kind: 'offline' });
+
+    render(<DeliveryDetailScreen id="d1" />);
+    await reachReview();
+    fireEvent.press(screen.getByTestId('delivery-detail-confirm-button'));
+    expect(await screen.findByTestId('delivery-detail-offline')).toBeOnTheScreen();
+
+    // Reconnect → the retry hits the idempotent server, which reports the order is already
+    // released (INVALID_STATUS → already_done). It must NOT show success or remove the item
+    // a second time — the money action stays released-once.
+    mockConfirm.mockResolvedValueOnce({ kind: 'already_done' });
+    fireEvent.press(screen.getByTestId('delivery-detail-offline-retry'));
+
+    expect(await screen.findByTestId('delivery-detail-already-done')).toBeOnTheScreen();
+    expect(screen.queryByTestId('delivery-detail-success')).toBeNull();
+    expect(useDeliveriesStore.getState().items.find((d) => d.id === 'd1')).toBeDefined();
+    expect(mockConfirm).toHaveBeenCalledTimes(2);
   });
 
   it('shows a load error with retry when the detail fetch fails', async () => {

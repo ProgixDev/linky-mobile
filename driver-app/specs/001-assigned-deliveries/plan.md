@@ -4,18 +4,6 @@
 - **Author:** Claude (agent) · **Date:** 2026-06-22
 - **Size:** **M** — one new feature slice (`deliveries`) + one small Deno edge function + thin route rewire, ≤ ~2 days. It instantiates the already-documented network-fetch pattern (architecture-overview "network (future) → api client in feature lib/ → zod-parsed DTOs → store"), so no new architecture; no new dependency; no ADR.
 
-> **⚠ Backend reality (2026-06-23, post-monorepo-consolidation):** the canonical
-> Linky backend (`app-mobile/supabase/functions/list-livreur-deliveries`) ALREADY
-> exists — the "build the edge function (T0)" task below is obsolete; the driver app
-> is a pure client. Its real contract differs from what this plan/client assumed:
-> response is `{ deliveries, next_cursor }` (not a bare array), camelCase + nested
-> (`order.reference`, `order.productSnapshot.{title,photo}`, `deliveryAddress.{city,
-district,details}`), `createdAt` is an ISO string, there is **no `shopName`**, and
-> every POST needs an `Idempotency-Key` header. **The spec-001 client
-> (`deliveries-api.ts`/`schema.ts`/row/screen/tests) must be realigned to this
-> contract before it works against prod** (a follow-up; drops the shopName field →
-> revisit AC-1). Real contract recorded in the backend-contract memory.
-
 ## Approach
 
 Add a `deliveries` slice that fetches the signed-in driver's active deliveries from a new Supabase edge function, caches the result, and renders a stateful list. The driver identity is **never sent by the client** — `supabase.functions.invoke` attaches the session JWT and the function derives `livreur_id` from it (this is what makes AC-9 real). The store persists the last good list via `appStorage` (Zod-validated on rehydrate, like `tasks`); on a refresh failure it keeps showing the cached rows with a "may be out of date" banner, and shows a retry state only when there is nothing cached. Key trade-off: **v1 does not distinguish true offline from a server error** (no connectivity library) — both map to honest "couldn't refresh / check connection" copy; real `online/offline` detection is a deliberate later enhancement. The list becomes the driver's home (`/`); the kept `tasks` demo moves to `/tasks`.

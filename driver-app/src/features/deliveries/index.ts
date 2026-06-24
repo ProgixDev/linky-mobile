@@ -4,4 +4,4 @@
 export { DeliveriesScreen } from './ui/deliveries-screen';
 export { DeliveryDetailScreen } from './ui/delivery-detail-screen';
 export { useDeliveriesStore } from './model/store';
-export type { Delivery } from './model/schema';
+export type { Delivery, DeliveryDetail } from './model/schema';

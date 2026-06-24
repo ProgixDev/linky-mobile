@@ -12,6 +12,7 @@ const make = (over: Partial<Delivery> = {}): Delivery => ({
   orderRef: 'LK-1',
   itemTitle: 'Item',
   itemPhoto: '',
+  shopName: 'Shop',
   dropoffCity: 'Conakry',
   dropoffDistrict: 'Kaloum',
   status: 'assigned',
@@ -75,18 +76,26 @@ describe('deliveries store', () => {
     expect(s.status).toBe('idle');
   });
 
-  it('removeDelivery drops the confirmed delivery from the active list (002 AC-4)', async () => {
-    mockFetch.mockResolvedValue([
-      make({ id: 'a' }),
-      make({ id: 'b', status: 'in_transit', createdAt: 2000 }),
-    ]);
+  it('removeDelivery drops a confirmed delivery from the active list (spec 002 AC-4)', async () => {
+    mockFetch.mockResolvedValue([make({ id: 'a' }), make({ id: 'b' })]);
     await useDeliveriesStore.getState().load();
+    expect(useDeliveriesStore.getState().items.map((d) => d.id)).toEqual(['a', 'b']);
 
-    useDeliveriesStore.getState().removeDelivery('b');
+    useDeliveriesStore.getState().removeDelivery('a');
 
     const items = useDeliveriesStore.getState().items;
-    expect(items.map((d) => d.id)).toEqual(['a']);
-    expect(selectActiveDeliveries(items).map((d) => d.id)).toEqual(['a']);
+    expect(items.map((d) => d.id)).toEqual(['b']);
+    // It also leaves the derived active list (the worklist the driver sees).
+    expect(selectActiveDeliveries(items).find((d) => d.id === 'a')).toBeUndefined();
+  });
+
+  it('removeDelivery is a no-op for an unknown id', async () => {
+    mockFetch.mockResolvedValue([make({ id: 'a' })]);
+    await useDeliveriesStore.getState().load();
+
+    useDeliveriesStore.getState().removeDelivery('does-not-exist');
+
+    expect(useDeliveriesStore.getState().items.map((d) => d.id)).toEqual(['a']);
   });
 });
 

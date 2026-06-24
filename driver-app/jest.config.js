@@ -12,7 +12,10 @@ module.exports = {
   // of the app suite (they run once a pack is installed into src/).
   testPathIgnorePatterns: ['/node_modules/', '/packs/'],
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?(-[a-z-]+)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-native-css-interop|nativewind|@react-native-async-storage/.*|react-native-.*|zustand)/)',
+    // expo-router 56.2.11 pulls in `standard-navigation`, which ships untranspiled
+    // ESM (`import * as React`) — Metro transforms it, but Jest skips node_modules
+    // by default, so it must be allowlisted here or the suite fails to parse.
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?(-[a-z-]+)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-native-css-interop|nativewind|@react-native-async-storage/.*|react-native-.*|standard-navigation|zustand)/)',
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

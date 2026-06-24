@@ -1,13 +1,17 @@
 import { secureStorage } from './storage';
 
 /**
- * Linky session tokens. The driver app authenticates with the Linky backend's
- * custom JWT (NOT Supabase Auth): a short access token + a refresh token, both
- * held in the hardware-backed Keychain/Keystore via `secureStorage`.
+ * Linky session tokens. This app authenticates with the Linky backend's
+ * SELF-ROLLED JWT (NOT Supabase Auth): a short-lived access token + a long-lived
+ * refresh token, both held in the hardware-backed Keychain/Keystore via
+ * `secureStorage` (never `appStorage`/AsyncStorage — those are plaintext).
  *
- * `deviceOnly` keeps them off iCloud backup restore (a stolen backup shouldn't
- * carry a live session). Always `clear()` on sign-out — the Keychain survives
- * uninstall. See docs/security/checklist.md (SEC-STORE-001/003).
+ * `deviceOnly` keeps them off iCloud backup restore (a stolen backup must not
+ * carry a live session). Always `clear()` on sign-out — the iOS Keychain
+ * survives uninstall. See docs/security/checklist.md (SEC-STORE-001/003).
+ *
+ * The token format mirrors the Linky backend: the access token is an HS256 JWT
+ * (`sub` = user id) and the refresh token is `"<session_id>.<secret>"`.
  */
 const ACCESS_KEY = 'auth.token';
 const REFRESH_KEY = 'auth.refreshToken';
@@ -27,3 +31,5 @@ export const session = {
     await secureStorage.remove(REFRESH_KEY);
   },
 } as const;
+
+export type Session = typeof session;

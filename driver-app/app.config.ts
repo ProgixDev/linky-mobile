@@ -6,10 +6,8 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * Environment-specific values come from EAS environment variables or
  * `.env` files (EXPO_PUBLIC_*). See docs/conventions/environments.md.
  *
- * EAS project id: after `eas init`, either set the `EAS_PROJECT_ID` env var or
- * paste the id as the `easProjectId` fallback below. `updates.url` is derived from
- * it. NOTE: for EAS *cloud* builds the env var isn't present on the build server,
- * so paste the literal id (or add EAS_PROJECT_ID as an EAS environment variable).
+ * TODO(company): set the EAS projectId + updates.url placeholders below after
+ * `eas init` (the only identity values still pending before first build).
  */
 
 const IS_DEV = process.env.APP_VARIANT === 'development';
@@ -21,11 +19,6 @@ const bundleId = IS_DEV
   : IS_PREVIEW
     ? 'com.linky.driver.preview'
     : 'com.linky.driver';
-
-// Set by `eas init`. Provide via EAS_PROJECT_ID or paste the literal after `??`.
-// Left empty until then so EAS prints a clear "run eas init" error rather than
-// shipping a bogus id; `updates`/`extra.eas` are omitted while it's empty.
-const easProjectId = process.env.EAS_PROJECT_ID ?? '';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -71,11 +64,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     // Add tailored NSxxxUsageDescription strings here ONLY for permissions you
     // actually use (a generic string gets rejected; an unused permission also does).
-    // The expo-camera plugin (below) also sets this; we keep an explicit, tailored
-    // string here as the single source of truth for the store-review copy.
+    // Camera is used for the delivery QR-handoff (spec 002, ADR-0009) only.
     infoPlist: {
       NSCameraUsageDescription:
-        'Linky Driver uses the camera to scan the customer’s order QR code at handoff to confirm delivery.',
+        'Linky Driver uses the camera to scan the customer’s order QR code at handoff, to confirm the delivery and release the seller’s payment.',
     },
   },
   android: {
@@ -97,6 +89,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     [
+      // Camera for the delivery QR-handoff (spec 002, ADR-0009). QR-only: we never
+      // record audio, so the iOS mic string is omitted and the Android RECORD_AUDIO
+      // permission is disabled (request the minimum — store-readiness STORE-* ). The
+      // CNG config plugin owns the native bits — never hand-edit ios/ or android/.
+      'expo-camera',
+      {
+        cameraPermission:
+          'Linky Driver uses the camera to scan the customer’s order QR code at handoff, to confirm the delivery and release the seller’s payment.',
+        recordAudioAndroid: false,
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         backgroundColor: '#0F172A',
@@ -107,25 +111,21 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-font',
+    // expo-image and expo-secure-store ship config plugins in SDK 56; `expo install
+    // --fix` recommends registering them. secure-store's plugin also excludes its
+    // keystore entries from Android auto-backup (a security-checklist default).
+    'expo-image',
+    'expo-secure-store',
     [
-      // QR-handoff scanner (spec 002, ADR-0009). Sets the iOS camera usage
-      // string and adds Android CAMERA. We scan QR only — no audio/video — so
-      // microphone + RECORD_AUDIO are disabled to keep the permission set minimal.
-      'expo-camera',
-      {
-        cameraPermission:
-          'Linky Driver uses the camera to scan the customer’s order QR code at handoff to confirm delivery.',
-        microphonePermission: false,
-        recordAudioAndroid: false,
-      },
-    ],
-    [
-      // Google Play requires targeting a recent API level (35+ since 2025-08-31;
-      // expect 36 ~2026-08). Store-readiness: STORE-GP-TARGETAPI.
+      // compileSdk 36 is REQUIRED by expo-camera's androidx.camera:*:1.6.0 (+ androidx.core
+      // 1.18 / browser 1.9) AAR metadata — a dev build fails `checkDebugAarMetadata` on 35.
+      // targetSdk (runtime behavior opt-in) is kept at 35 — still valid for Google Play
+      // (36 becomes required ~2026-08); bump it with on-device testing before that release.
+      // Store-readiness: STORE-GP-TARGETAPI.
       'expo-build-properties',
       {
         android: {
-          compileSdkVersion: 35,
+          compileSdkVersion: 36,
           targetSdkVersion: 35,
         },
       },
@@ -138,9 +138,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   runtimeVersion: {
     policy: 'fingerprint',
   },
-  // Derived from the EAS project id — no second place to keep in sync.
-  updates: easProjectId ? { url: `https://u.expo.dev/${easProjectId}` } : {},
+  updates: {
+    // TODO(company): set after `eas init` + `eas update:configure`
+    // url: 'https://u.expo.dev/<EAS_PROJECT_ID>',
+  },
   extra: {
-    eas: easProjectId ? { projectId: easProjectId } : {},
+    eas: {
+      projectId: 'd9cc8a52-149a-4041-9de0-b9d5333f8a5f',
+    },
   },
 });

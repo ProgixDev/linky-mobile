@@ -14,13 +14,13 @@ import { useDeliveriesStore } from '../model/store';
 import { QrScanner } from './qr-scanner';
 
 const STATUS_LABEL: Record<string, string> = {
-  assigned: 'Assigned',
-  in_transit: 'In transit',
-  delivered: 'Delivered',
+  assigned: 'Assignée',
+  in_transit: 'En cours',
+  delivered: 'Livrée',
 };
 
 function formatGnf(amount: number): string {
-  return `${amount.toLocaleString('en-US')} GNF`;
+  return `${amount.toLocaleString('fr-FR')} GNF`;
 }
 
 // The handoff flow as an explicit state machine: view detail → scan → review →
@@ -83,6 +83,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
   const [phase, dispatch] = useReducer(reducer, { kind: 'loading' });
   const [detail, setDetail] = useState<DeliveryDetail | null>(null);
   const removeDelivery = useDeliveriesStore((s) => s.removeDelivery);
+  const refreshList = useDeliveriesStore((s) => s.refresh);
   // Synchronous single-flight guard: a money action must fire exactly once even if a
   // double-tap lands before the 'confirming' re-render disables the button (review P1).
   const submitting = useRef(false);
@@ -131,7 +132,10 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
       submitting.current = false;
       switch (outcome.kind) {
         case 'success':
-          removeDelivery(detail.id); // delivered → leaves the active list (AC-4)
+          // Delivered → drop it from the active list immediately, then reconcile with a
+          // background refresh of the worklist (AC-4).
+          removeDelivery(detail.id);
+          void refreshList();
           dispatch({ type: 'success', orderStatus: outcome.orderStatus });
           break;
         case 'mismatch':
@@ -148,7 +152,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
           break;
       }
     },
-    [detail, removeDelivery],
+    [detail, removeDelivery, refreshList],
   );
 
   if (phase.kind === 'loading') {
@@ -168,12 +172,12 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
       <Screen testID="delivery-detail-screen">
         <EmptyState
           testID="delivery-detail-load-error"
-          title="Couldn’t load this delivery"
-          description="Check your connection and try again."
+          title="Impossible de charger cette livraison"
+          description="Vérifie ta connexion et réessaie."
           action={
             <Button
               testID="delivery-detail-load-retry"
-              label="Try again"
+              label="Réessayer"
               onPress={() => void loadDetail()}
             />
           }
@@ -191,10 +195,10 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
       <Screen testID="delivery-detail-screen">
         <EmptyState
           testID="delivery-detail-success"
-          title="Delivered — payment released"
-          description={`Order ${detail.orderRef} is confirmed delivered and the seller’s payment has been released.`}
+          title="Livraison confirmée ✅"
+          description={`La commande ${detail.orderRef} est confirmée livrée et le paiement du vendeur a été libéré.`}
           action={
-            <Button testID="delivery-detail-done" label="Done" onPress={() => router.back()} />
+            <Button testID="delivery-detail-done" label="Terminé" onPress={() => router.back()} />
           }
         />
       </Screen>
@@ -202,7 +206,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
   }
 
   const area =
-    [detail.addressCity, detail.addressDistrict].filter(Boolean).join(' · ') || 'Area unavailable';
+    [detail.addressCity, detail.addressDistrict].filter(Boolean).join(' · ') || 'Zone indisponible';
 
   return (
     <Screen testID="delivery-detail-screen">
@@ -218,7 +222,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
             }}
             contentFit="cover"
             transition={150}
-            accessibilityLabel={detail.itemTitle || 'Delivery item'}
+            accessibilityLabel={detail.itemTitle || 'Article à livrer'}
             accessibilityIgnoresInvertColors
           />
           <View className="flex-1 gap-0.5">
@@ -226,7 +230,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
               {detail.orderRef}
             </AppText>
             <AppText variant="label" numberOfLines={2} testID="delivery-detail-item">
-              {detail.itemTitle || 'Item'}
+              {detail.itemTitle || 'Article'}
             </AppText>
             <AppText variant="caption" testID="delivery-detail-amount">
               {formatGnf(detail.amountGnf)}
@@ -236,7 +240,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
 
         <View className="gap-1">
           <AppText variant="caption" className="text-ink-muted">
-            Customer
+            Client
           </AppText>
           <AppText variant="body" testID="delivery-detail-buyer">
             {detail.buyerName}
@@ -245,7 +249,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
 
         <View className="gap-1">
           <AppText variant="caption" className="text-ink-muted">
-            Drop-off address
+            Adresse de livraison
           </AppText>
           {/* Detail reveals the FULL street address, unlike the list (spec 001 AC-10). */}
           <AppText variant="body" testID="delivery-detail-address">
@@ -255,7 +259,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
 
         <View className="flex-row items-center gap-2">
           <AppText variant="caption" className="text-ink-muted">
-            Status
+            Statut
           </AppText>
           <AppText variant="caption" testID="delivery-detail-status">
             {STATUS_LABEL[detail.status] ?? detail.status}
@@ -265,12 +269,12 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
         {phase.kind === 'mismatch' ? (
           <Card className="gap-3 bg-surface-muted" testID="delivery-detail-mismatch">
             <AppText variant="body">
-              That QR code doesn’t match this delivery. Nothing was released — scan the customer’s
-              order QR again.
+              Ce QR code ne correspond pas à cette livraison. Rien n’a été libéré — scanne à nouveau
+              le QR de la commande du client.
             </AppText>
             <Button
               testID="delivery-detail-mismatch-rescan"
-              label="Scan again"
+              label="Scanner à nouveau"
               onPress={() => dispatch({ type: 'scan' })}
             />
           </Card>
@@ -279,12 +283,12 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
         {phase.kind === 'already_done' ? (
           <Card className="gap-3 bg-surface-muted" testID="delivery-detail-already-done">
             <AppText variant="body">
-              This delivery is already completed — its payment was released. Nothing was released
-              again.
+              Cette livraison est déjà terminée — son paiement a été libéré. Rien n’a été libéré à
+              nouveau.
             </AppText>
             <Button
               testID="delivery-detail-already-done-back"
-              label="Back to deliveries"
+              label="Retour aux livraisons"
               onPress={() => router.back()}
             />
           </Card>
@@ -292,10 +296,10 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
 
         {phase.kind === 'error' ? (
           <Card className="gap-3 bg-surface-muted" testID="delivery-detail-error">
-            <AppText variant="body">{phase.message || 'Something went wrong.'}</AppText>
+            <AppText variant="body">{phase.message || 'Une erreur est survenue.'}</AppText>
             <Button
               testID="delivery-detail-error-rescan"
-              label="Scan again"
+              label="Scanner à nouveau"
               onPress={() => dispatch({ type: 'scan' })}
             />
           </Card>
@@ -304,12 +308,12 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
         {phase.kind === 'offline' ? (
           <Card className="gap-3 bg-surface-muted" testID="delivery-detail-offline">
             <AppText variant="body">
-              You’re offline. Confirming releases payment, so it needs a connection — reconnect and
-              try again.
+              Tu es hors ligne. Confirmer libère le paiement, une connexion est donc requise —
+              reconnecte-toi et réessaie.
             </AppText>
             <Button
               testID="delivery-detail-offline-retry"
-              label="Try again"
+              label="Réessayer"
               onPress={() => void onConfirm(phase.scanToken, phase.idemKey)}
             />
           </Card>
@@ -317,35 +321,44 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
 
         {phase.kind === 'review' ? (
           <Card className="gap-3" testID="delivery-detail-review">
-            <AppText variant="title">Confirm this handoff?</AppText>
+            <AppText variant="title">Confirmer cette remise ?</AppText>
             <AppText variant="body">
-              Confirming marks order {detail.orderRef} delivered and releases the seller’s payment.
-              This can’t be undone.
+              Confirmer marque la commande {detail.orderRef} comme livrée et libère le paiement du
+              vendeur. C’est irréversible.
             </AppText>
             <Button
               testID="delivery-detail-confirm-button"
-              label="Confirm delivery"
+              label="Confirmer la livraison"
               onPress={() => void onConfirm(phase.scanToken, phase.idemKey)}
             />
             <Button
               testID="delivery-detail-rescan"
               variant="ghost"
-              label="Rescan"
+              label="Rescanner"
               onPress={() => dispatch({ type: 'scan' })}
             />
           </Card>
         ) : phase.kind === 'confirming' ? (
-          <Button
-            testID="delivery-detail-confirm-button"
-            label="Confirming…"
-            loading
-            disabled
-            onPress={() => {}}
-          />
+          // Same Card chrome as `review` so the highest-stakes transition (the money tap)
+          // doesn't shift the layout; the Confirm button just swaps to a disabled loader.
+          <Card className="gap-3" testID="delivery-detail-confirming">
+            <AppText variant="title">Confirmer cette remise ?</AppText>
+            <AppText variant="body">
+              Confirmer marque la commande {detail.orderRef} comme livrée et libère le paiement du
+              vendeur. C’est irréversible.
+            </AppText>
+            <Button
+              testID="delivery-detail-confirm-button"
+              label="Confirmation…"
+              loading
+              disabled
+              onPress={() => {}}
+            />
+          </Card>
         ) : phase.kind === 'detail' ? (
           <Button
             testID="delivery-detail-scan-button"
-            label="Scan to confirm delivery"
+            label="Scanner la livraison"
             onPress={() => dispatch({ type: 'scan' })}
           />
         ) : null}

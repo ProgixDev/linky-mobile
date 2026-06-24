@@ -6,11 +6,12 @@ file's token values; engineers own its structure. The imperative mirror
 touch both (reviewer + persona checklist item). The quality the design + build passes must clear
 is [`docs/design/quality-bar.md`](../design/quality-bar.md).
 
-> **The default `brand-*` ramp is placeholder indigo (`#6366F1`) and the default font is Inter —
-> the two most recognizable "vibe-coded" AI tells. Rebrand both per app** (keep the role structure;
-> see the quality-bar "Rebrand checklist"). Tokens are roles (semantic) backed by hex (primitive);
-> components reference roles, never raw hex — that semantic layer is what makes rebrand + dark-mode
-> possible.
+> **The skeleton ships a placeholder indigo (`#6366F1`) `brand-*` ramp and Inter — the two most
+> recognizable "vibe-coded" AI tells, so each app rebrands both** (keep the role structure; see the
+> quality-bar "Rebrand checklist"). **This app (Linky Driver) is rebranded to the Linky palette —
+> `brand-*` is emerald (`#0E6E55`) and `accent` is saffron (`#E8A53D`)**; the font is still on the
+> design-pass list. Tokens are roles (semantic) backed by hex (primitive); components reference
+> roles, never raw hex — that semantic layer is what makes rebrand + dark-mode possible.
 
 ## Dark mode
 
@@ -20,9 +21,10 @@ expressed as tonal surface lightening — never inverted light-mode hex.
 
 ## Tokens
 
-- **Color roles, not hues:** `brand-*` (action), `surface[-muted|-inverse]`
-  (backgrounds), `ink[-muted|-faint|-inverse]` (text), `danger`, `success`.
-  Components never reference hexes.
+- **Color roles, not hues:** `brand-*` (action — Linky emerald), `accent[-soft]`
+  (value/highlight — Linky saffron; never a primary action color),
+  `surface[-muted|-inverse]` (backgrounds), `ink[-muted|-faint|-inverse]` (text),
+  `danger`, `success`. Components never reference hexes.
 - **Type scale via `AppText` variants:** `display` (32/bold) · `title`
   (20/semibold) · `body` (16/regular) · `label` (14/medium) · `caption`
   (14/regular muted). Need a new size? Propose a variant, don't inline it.

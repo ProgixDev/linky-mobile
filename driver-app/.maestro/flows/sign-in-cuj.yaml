@@ -1,0 +1,38 @@
+# CUJ-004: livreur signs in with an email OTP (docs/quality/critical-user-journeys.md).
+# Deterministic gate for the parts Maestro can drive; Argent (/verify-ui) covers
+# real-email delivery + the authenticated round-trip against a seeded livreur.
+#
+# PREREQUISITES (why this is deferred where they're absent):
+#   - a booted iOS simulator with the dev build installed (macOS only), and
+#   - the deployed otp-request in STUB mode (echoes a dev_code) so the code step is
+#     deterministic — the screen auto-fills the dev code. With real-email delivery the
+#     code is dynamic; drive the verify step via Argent instead.
+appId: com.linky.driver.dev
+env:
+  DRIVER_EMAIL: driver@example.com
+---
+- launchApp:
+    clearState: true
+# Cold start is unauthenticated → the sign-in (email) step.
+- assertVisible:
+    id: 'auth-sign-in-screen'
+- assertVisible:
+    id: 'auth-email'
+- tapOn:
+    id: 'auth-email'
+- inputText: ${DRIVER_EMAIL}
+- tapOn:
+    id: 'auth-request-code'
+# Code step reached (deterministic up to here): the code field + a gated resend appear.
+- assertVisible:
+    id: 'auth-code'
+- assertVisible:
+    id: 'auth-resend'
+# Stub mode: the dev code is shown and auto-filled → verify → land on the deliveries home.
+- assertVisible:
+    id: 'auth-dev-code'
+- tapOn:
+    id: 'auth-verify'
+- assertVisible:
+    id: 'deliveries-screen'
+# NOTE: real-email delivery (no dev_code) and the full round-trip are verified via Argent.

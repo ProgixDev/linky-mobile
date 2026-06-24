@@ -2,26 +2,29 @@
 # Deterministic E2E gate; Argent covers the exploratory rest.
 #
 # PREREQUISITES (why this is deferred in environments without them):
-#   - a booted iOS simulator with the dev build installed (macOS only), and
-#   - a SEEDED livreur account on the shared Supabase backend (set the env below).
+#   - a booted iOS simulator with the dev build installed (macOS only),
+#   - a SEEDED livreur account on the shared Supabase backend (set the env below), and
+#   - otp-request in STUB mode (echoes a dev_code) so the OTP sign-in is deterministic —
+#     the screen auto-fills the dev code. With real email, drive sign-in via Argent.
 appId: com.linky.driver.dev
 env:
   DRIVER_EMAIL: driver@example.com
-  DRIVER_PASSWORD: changeme
 ---
 - launchApp:
     clearState: true
-# Cold start is unauthenticated → the auth guard shows the sign-in screen.
+# Cold start is unauthenticated → the auth guard shows the sign-in (email OTP) screen.
 - assertVisible:
     id: 'auth-email'
 - tapOn:
     id: 'auth-email'
 - inputText: ${DRIVER_EMAIL}
 - tapOn:
-    id: 'auth-password'
-- inputText: ${DRIVER_PASSWORD}
+    id: 'auth-request-code'
+# Stub mode: the dev code auto-fills the code step; verify to authenticate.
+- assertVisible:
+    id: 'auth-code'
 - tapOn:
-    id: 'auth-submit'
+    id: 'auth-verify'
 # Lands on the driver's home: the deliveries worklist. List OR empty state is valid.
 - assertVisible:
     id: 'deliveries-screen'

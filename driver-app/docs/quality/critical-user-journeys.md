@@ -37,23 +37,46 @@ enforces).
 
 - **Owner:** founder (driver app)
 - **Flow:** `.maestro/flows/handoff-cuj.yaml` · Smoke: `.maestro/flows/smoke.yaml`
-- **Journey:** open an assigned delivery → see full detail (order ref, item, **full
-  street address**, buyer name, status) → tap “Scan to confirm delivery” → grant
-  camera → scan the buyer’s on-screen order QR → review the matched order → tap the
-  explicit “Confirm delivery” → success (“delivered — payment released”), and the
-  delivery leaves the active list.
-- **Edge cases agents must try:** a scan alone never releases (Confirm is a separate
-  explicit tap); a QR for another order/driver or a forged token (rejected, nothing
-  released); an already-delivered/released order (told it’s already done, no second
-  release); camera permission denied (explainer + enable/Settings + cancel — never a
-  dead end); offline at confirm (reconnect state + retry, nothing released while
-  offline).
-- **Performance budget:** detail visible < 1s after the row tap on a mid-range
-  Android; the confirm round-trip resolves to success or an honest error within ~3s.
-- **Note:** the live camera scan + escrow release are verified via Argent
-  (`/verify-ui`), not Maestro — a simulator can’t scan a real QR and the post-scan
-  review state isn’t deterministic; the Maestro flow covers navigation + the
-  permission-denied path.
+- **Journey:** open an assigned delivery → see its full detail (order ref, item, full
+  street address, buyer name, status) → tap « Scanner la livraison » → scan the
+  buyer’s on-screen order QR → review the matched order → tap « Confirmer la livraison » →
+  success (« Livraison confirmée ✅ », escrow released); the job leaves the active list.
+- **Edge cases agents must try:** a QR for another order/driver (mismatch, nothing
+  released); a forged/expired token (server rejects → mismatch); an already-delivered
+  order (idempotent — told it’s already done, no second release); camera permission
+  denied (explain + enable/Settings + cancel — never a dead end); offline at confirm
+  (blocked with a reconnect/retry state — a money action stays online); a scan alone
+  never releases (the explicit Confirm tap is required); double-tap Confirm (releases
+  exactly once).
+- **Performance budget:** the camera scanner opens < 500ms after the scan tap on a
+  mid-range Android; confirm round-trip shows a result < 2s on 3G.
+- **Coverage note:** live camera scanning can’t be driven deterministically in Maestro
+  on a simulator, so the scan → review → confirm → release path and the offline block
+  are verified via `/verify-ui` (Argent) + a dev-only scan hook (spec 002 T11). The
+  Maestro flow covers navigation, the detail/scan affordances, and the permission-denied
+  path.
+
+## CUJ-004 — Livreur signs in (email OTP)
+
+- **Owner:** founder (driver app)
+- **Flow:** `.maestro/flows/sign-in-cuj.yaml` · Smoke: `.maestro/flows/smoke.yaml`
+- **Journey:** launch (cold, unauthenticated) → enter email → “Send code” → receive the
+  6-digit code by email (Linky SMTP) → enter it → land authenticated on the deliveries
+  home; the tokens persist in secure storage so a relaunch skips sign-in.
+- **Edge cases agents must try:** invalid email (inline error, no request fired); wrong
+  code (clear error, stay on the code step, no session stored); expired/already-used code
+  (told to request a new one); rate-limited resend (backend allows 3/min — the resend
+  button shows a 60s cooldown); offline at request or verify (clear “connexion impossible”,
+  nothing released/stored); “use a different email” returns to step 1; a stale stored
+  refresh token on boot → silently back to sign-in (never a hung spinner); after sign-out
+  the next user on the device must re-authenticate (no leaked session).
+- **Performance budget:** the code step appears < 1s after “Send code” on 3G; verify →
+  deliveries home < 2s.
+- **Coverage note:** the OTP code is dynamic, so Maestro deterministically covers email
+  entry → request → the code step, and — in stub mode (otp-request echoes a `dev_code`) —
+  the screen auto-fills that code so the flow can complete to the deliveries home. Real
+  email delivery and the full authenticated round-trip are verified via `/verify-ui`
+  (Argent) against a seeded livreur.
 
 ## Template for new CUJs
 
