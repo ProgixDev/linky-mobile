@@ -23,11 +23,19 @@ export default function TabsLayout() {
         className="flex-row items-end border-t border-ink-faint/15 bg-surface px-2 pt-1.5"
         style={{ paddingBottom: Math.max(insets.bottom, 8) }}
       >
-        {DRIVER_TABS.map((item) => (
-          <TabTrigger key={item.name} name={item.name} href={item.href} asChild>
-            <DriverTabTrigger item={item} />
-          </TabTrigger>
-        ))}
+        {/* LITERAL/STATIC triggers — expo-router/ui's child parser must discover
+            <TabTrigger>s statically; a .map() array registers ZERO screens and
+            crashes with "Couldn't find any screens for the navigator".
+            DRIVER_TABS still supplies each trigger's visual (icon/label). */}
+        <TabTrigger name="index" href={DRIVER_TABS[0].href} asChild>
+          <DriverTabTrigger item={DRIVER_TABS[0]} />
+        </TabTrigger>
+        <TabTrigger name="carte" href={DRIVER_TABS[1].href} asChild>
+          <DriverTabTrigger item={DRIVER_TABS[1]} />
+        </TabTrigger>
+        <TabTrigger name="profil" href={DRIVER_TABS[2].href} asChild>
+          <DriverTabTrigger item={DRIVER_TABS[2]} />
+        </TabTrigger>
       </TabList>
     </Tabs>
   );

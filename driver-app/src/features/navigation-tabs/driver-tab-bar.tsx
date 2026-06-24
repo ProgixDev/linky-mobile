@@ -24,7 +24,10 @@ export type DriverTab = {
 // descends into Fragments + <TabList>, never a wrapping function component
 // (Tabs.js parseTriggersFromChildren). So the layout composes these directly;
 // this file only provides the data + the trigger's VISUAL.
-export const DRIVER_TABS: DriverTab[] = [
+// A fixed 3-tuple (not DriverTab[]) so the layout can index DRIVER_TABS[0..2]
+// without `| undefined` under noUncheckedIndexedAccess — the triggers are declared
+// literally there (the parser needs static <TabTrigger> elements).
+export const DRIVER_TABS: readonly [DriverTab, DriverTab, DriverTab] = [
   { name: 'index', href: '/' as Href, label: 'Accueil', Icon: Package },
   { name: 'carte', href: '/carte' as Href, label: 'Carte', Icon: MapIcon, center: true },
   { name: 'profil', href: '/profil' as Href, label: 'Profil', Icon: User },
