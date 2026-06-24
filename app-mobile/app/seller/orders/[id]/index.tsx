@@ -7,23 +7,19 @@ import {
   ShieldCheck,
   PackageX,
   User,
-  UserPlus,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../../src/theme/ThemeProvider';
 import { Text } from '../../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../../src/lib/haptics';
-import { useOrder, useAssignDelivery } from '../../../../src/data/queries';
+import { useOrder } from '../../../../src/data/queries';
 import { formatGNF } from '../../../../src/lib/format';
 import { OrderResolutionBanner } from '../../../../src/components/orders/OrderResolutionBanner';
-import { LivreurPickerSheet } from '../../../../src/components/orders/LivreurPickerSheet';
 import { DetailStateScreen } from '../../../../src/components/feedback/DetailState';
 import { useAuth } from '../../../../src/stores/auth';
 import { useToast } from '../../../../src/components/feedback/Toast';
-import { toToastMessage } from '../../../../src/lib/api';
-import type { AvailableLivreur } from '../../../../src/data/types';
 
 export default function SellerOrderDetailRoute() {
   const { colors } = useTheme();
@@ -32,8 +28,6 @@ export default function SellerOrderDetailRoute() {
   const { data: order, isLoading, isError, refetch } = useOrder(id);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
   const toast = useToast();
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const assignMutation = useAssignDelivery();
 
   // Phase T.2 — owner check. confirm.tsx already guards buyer-side ; this
   // mirror covers the seller side. Wrong owner → bounce to home with a
@@ -80,34 +74,16 @@ export default function SellerOrderDetailRoute() {
   // CTA there they'd fill the whole form for a 400.
   const needsShip = order.status === 'paid';
 
-  // Phase LIVREUR (seller assign) — delivery state drives the picker UI.
-  // assign_delivery accepts paid/preparing orders ; the delivery row (from
-  // get-order) carries who's assigned + how far along it is. order.delivery is
-  // null only in the brief window before get-order's delivery readback lands.
+  // Phase LIVREUR — delivery is READ-ONLY for the seller. The ADMIN assigns the
+  // courier (central dispatch « Livraisons »). order.delivery (from get-order)
+  // carries who's assigned + how far along it is, for display only. It's null
+  // only in the brief window before get-order's delivery readback lands.
   const delivery = order.delivery ?? null;
   const deliveryAssignable = order.status === 'paid' || order.status === 'preparing';
   const livreurActive =
     !!delivery &&
     (delivery.status === 'assigned' || delivery.status === 'in_transit' || delivery.status === 'delivered');
   const showDeliverySection = !!delivery && (deliveryAssignable || livreurActive);
-
-  async function handleConfirmLivreur(livreur: AvailableLivreur) {
-    if (!order || assignMutation.isPending) return;
-    const wasReassign = livreurActive;
-    try {
-      await assignMutation.mutateAsync({ orderId: order.id, livreurId: livreur.id });
-      setPickerOpen(false);
-      toast.show(
-        t(wasReassign ? 'seller.deliveryReassignSuccess' : 'seller.deliveryAssignSuccess'),
-        'success',
-      );
-    } catch (e) {
-      // Keep the sheet open so the seller can retry / pick another. The RPC maps
-      // its seller + state guards to French envelopes (FORBIDDEN, INVALID_STATUS,
-      // NOT_A_LIVREUR, DELIVERY_ALREADY_COMPLETED…).
-      toast.show(toToastMessage(e, t('seller.deliveryAssignError')), 'danger');
-    }
-  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -215,7 +191,7 @@ export default function SellerOrderDetailRoute() {
           </View>
         </Section>
 
-        {/* Delivery — seller picks / changes the livreur (Phase LIVREUR) */}
+        {/* Delivery — READ-ONLY for the seller; the admin assigns the courier (Phase LIVREUR) */}
         {showDeliverySection && delivery && (
           <Section title={t('seller.orderDetailSectionDelivery')}>
             <View
@@ -257,26 +233,6 @@ export default function SellerOrderDetailRoute() {
                     </View>
                   </View>
 
-                  {delivery.status === 'assigned' && deliveryAssignable && (
-                    <Pressable
-                      onPress={() => {
-                        haptic.medium();
-                        setPickerOpen(true);
-                      }}
-                      style={{
-                        height: 44,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-                        {t('seller.deliveryChangeLivreur')}
-                      </Text>
-                    </Pressable>
-                  )}
                   {delivery.status === 'in_transit' && (
                     <Text style={{ fontSize: 12.5, color: colors.textMuted, letterSpacing: 0 }}>
                       {t('seller.deliveryInTransitNote')}
@@ -289,33 +245,9 @@ export default function SellerOrderDetailRoute() {
                   )}
                 </>
               ) : (
-                <>
-                  <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 18, letterSpacing: 0 }}>
-                    {t('seller.deliveryUnassignedHint')}
-                  </Text>
-                  {deliveryAssignable && (
-                    <Pressable
-                      onPress={() => {
-                        haptic.medium();
-                        setPickerOpen(true);
-                      }}
-                      style={{
-                        height: 48,
-                        borderRadius: 14,
-                        backgroundColor: colors.text,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                      }}
-                    >
-                      <UserPlus size={16} color={colors.bg} strokeWidth={2.25} />
-                      <Text style={{ fontSize: 14.5, fontWeight: '700', color: colors.bg }}>
-                        {t('seller.deliveryChooseLivreur')}
-                      </Text>
-                    </Pressable>
-                  )}
-                </>
+                <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 18, letterSpacing: 0 }}>
+                  {t('seller.deliveryAdminAssignNote')}
+                </Text>
               )}
             </View>
           </Section>
@@ -449,14 +381,6 @@ export default function SellerOrderDetailRoute() {
         )}
       </SafeAreaView>
       )}
-
-      <LivreurPickerSheet
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        city={delivery?.city ?? null}
-        assigning={assignMutation.isPending}
-        onConfirm={handleConfirmLivreur}
-      />
     </SafeAreaView>
   );
 }

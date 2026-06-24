@@ -6,7 +6,6 @@ export * from './properties';
 export * from './shops';
 export * from './discover';
 export * from './orders';
-export * from './deliveries';
 export * from './payments';
 export * from './wallet';
 export * from './messages';
