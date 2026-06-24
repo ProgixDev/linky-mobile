@@ -133,6 +133,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
       },
     ],
+    [
+      // Live delivery map (ADR-0010). The secret DOWNLOAD token (sk.) is build-time
+      // only — it comes from the EAS env (secret) / local .env, never committed.
+      '@rnmapbox/maps',
+      {
+        RNMapboxMapsDownloadToken: process.env.RNMAPBOX_MAPS_DOWNLOAD_TOKEN ?? '',
+      },
+    ],
+    [
+      // Foreground location for the driver's live position on the map.
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          'Linky Driver utilise ta position pour afficher la carte de tes livraisons et te guider vers les clients.',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

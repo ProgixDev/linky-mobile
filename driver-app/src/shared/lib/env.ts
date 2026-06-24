@@ -21,6 +21,10 @@ const EnvSchema = z.object({
       error:
         'That looks like a SERVICE ROLE / secret key — never ship it in the app. Use the anon/publishable key; the service key bypasses RLS.',
     }),
+  // Mapbox PUBLIC access token (pk.) for runtime map tiles — public by design.
+  // The secret download token (sk.) is build-time only and lives in the EAS env,
+  // never here. Optional ('' when unset) so the app boots without a map config.
+  EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -32,6 +36,7 @@ export function parseEnv(raw: Record<string, string | undefined>): Env {
     EXPO_PUBLIC_SUPABASE_URL: raw.EXPO_PUBLIC_SUPABASE_URL ?? 'https://localhost.supabase.co',
     EXPO_PUBLIC_SUPABASE_ANON_KEY:
       raw.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? 'public-anon-key-placeholder',
+    EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN: raw.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '',
   });
 
   if (!result.success) {
@@ -56,4 +61,5 @@ export const env: Env = parseEnv({
   EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV,
   EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
   EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
 });

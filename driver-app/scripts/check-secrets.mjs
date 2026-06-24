@@ -23,6 +23,14 @@ const problems = [];
 const SECRET_ENV_NAME =
   /EXPO_PUBLIC_[A-Z0-9_]*(SECRET|PRIVATE|SERVICE_ROLE|TOKEN|PASSWORD|PASSWD|CREDENTIAL)[A-Z0-9_]*/g;
 
+// EXPO_PUBLIC_* names that are PUBLIC BY DESIGN and legitimately ship in the bundle,
+// so the "looks-like-a-secret" name heuristic is a false positive. Keep this list
+// tiny + justified. A Mapbox ACCESS token is a `pk.` key (URL/scope-restricted,
+// required client-side for map tiles — the global Linky app ships the same one);
+// the SECRET download token is `RNMAPBOX_MAPS_DOWNLOAD_TOKEN` (not EXPO_PUBLIC_, sk.,
+// build-time only) and is NOT allowlisted.
+const PUBLIC_ENV_ALLOWLIST = new Set(['EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN']);
+
 const SECRET_VALUE = [
   { re: /\bsk_(live|test)_[A-Za-z0-9]{8,}\b/g, what: 'Stripe secret key' },
   { re: /\bsb_secret_[A-Za-z0-9_-]{8,}\b/g, what: 'Supabase secret key' },
@@ -64,6 +72,7 @@ function scanEnvNames(files) {
       // Skip comments in .env / config.
       if (/^\s*(#|\/\/|\*)/.test(line)) return;
       for (const m of line.matchAll(SECRET_ENV_NAME)) {
+        if (PUBLIC_ENV_ALLOWLIST.has(m[0])) continue; // public-by-design (see allowlist)
         problems.push(
           `${file}:${i + 1}  secret-looking public env var "${m[0]}" — EXPO_PUBLIC_* is plaintext in the bundle. Move it server-side (EAS secret / Edge Function).`,
         );

@@ -1,4 +1,4 @@
 /**
  * PUBLIC API of the map feature.
  */
-export { MapScreen } from './ui/map-screen';
+export { MapScreen, type MapDelivery } from './ui/map-screen';
