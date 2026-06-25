@@ -20,6 +20,9 @@ import type { SupabaseClient } from '@shared/db.ts';
 
 export type NotifyCategory = 'order' | 'message' | 'visit' | 'promo' | 'system';
 
+/** Which app's device tokens a push targets. Mirrors push_tokens.app. */
+export type NotifyApp = 'marketplace' | 'driver';
+
 export interface NotifyInput {
   userIds: string[];
   category: NotifyCategory;
@@ -31,6 +34,14 @@ export interface NotifyInput {
   deeplink?: string;
   refType?: 'order' | 'conversation' | 'visit_request';
   refId?: string;
+  /**
+   * Restrict the Expo push to tokens registered by THIS app (push_tokens.app).
+   * A user who is both a marketplace user and a livreur has tokens for both apps
+   * under one user_id; a livreur-only push must set `app: 'driver'` so it never
+   * reaches the marketplace app. UNSET = all apps (backward-compatible — the
+   * durable notifications row is always written for every recipient regardless).
+   */
+  app?: NotifyApp;
 }
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
@@ -60,10 +71,12 @@ export async function notify(sb: SupabaseClient, input: NotifyInput): Promise<vo
     );
     if (insErr) console.error('[push] notifications insert failed:', insErr);
 
-    const { data: tokens, error: tokErr } = await sb
-      .from('push_tokens')
-      .select('token')
-      .in('user_id', userIds);
+    // The in-app notifications rows above are written for EVERY recipient
+    // regardless of `app` (the in-app inbox is per-user, app-agnostic). Only the
+    // Expo device push is scoped to one app's tokens when `app` is set.
+    let tokenQuery = sb.from('push_tokens').select('token').in('user_id', userIds);
+    if (input.app) tokenQuery = tokenQuery.eq('app', input.app);
+    const { data: tokens, error: tokErr } = await tokenQuery;
     if (tokErr) {
       console.error('[push] token fetch failed:', tokErr);
       return;

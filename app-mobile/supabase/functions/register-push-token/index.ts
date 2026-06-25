@@ -1,6 +1,7 @@
 // Phase O.2 — register the calling user's Expo push token.
 //
-// Body : { token: string, platform: 'ios' | 'android', device_label?: string }
+// Body : { token: string, platform: 'ios' | 'android', device_label?: string,
+//          app?: 'marketplace' | 'driver' }
 // Response : { registered: true }
 //
 // Auth : requireUser.
@@ -10,14 +11,21 @@
 // new user — otherwise the previous owner would keep receiving the new
 // owner's pushes. Called on every app start while signed in, so updated_at
 // doubles as a liveness marker.
+//
+// `app` (push_tokens.app) records which Linky app the device belongs to so
+// notify() can target one app. Defaults to 'marketplace' when omitted (the
+// marketplace app does not send it). The driver app sends app:'driver'.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+
+type AppKind = 'marketplace' | 'driver';
 
 interface Body {
   token: string;
   platform: 'ios' | 'android';
   device_label?: string;
+  app?: AppKind;
 }
 
 const EXPO_TOKEN_RE = /^Expo(nent)?PushToken\[.+\]$/;
@@ -28,6 +36,7 @@ function valid(b: unknown): b is Body {
   if (typeof x.token !== 'string' || x.token.length > 200 || !EXPO_TOKEN_RE.test(x.token)) return false;
   if (x.platform !== 'ios' && x.platform !== 'android') return false;
   if (x.device_label !== undefined && (typeof x.device_label !== 'string' || x.device_label.length > 80)) return false;
+  if (x.app !== undefined && x.app !== 'marketplace' && x.app !== 'driver') return false;
   return true;
 }
 
@@ -40,6 +49,7 @@ Deno.serve(makePost<Body>('/v1/push/register-token', valid, async ({ sb, body, r
       token: body.token,
       platform: body.platform,
       device_label: body.device_label ?? null,
+      app: body.app ?? 'marketplace',
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'token' },

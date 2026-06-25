@@ -81,6 +81,11 @@ Deno.serve(makePost<Body>('/v1/admin/deliveries/assign', valid, async ({ sb, bod
   const reference = (order as { reference?: string } | null)?.reference ?? null;
 
   // Notify the (new) livreur — best-effort, never fails the assignment.
+  // app:'driver' scopes the Expo push to the DRIVER app's device tokens only:
+  // a livreur who is also a marketplace user must not get this in that app. The
+  // deeplink is the DRIVER delivery-detail route so the tap opens the right
+  // screen. (The durable in-app notifications row is still written for the user
+  // regardless of app — see _shared/push.ts.)
   if (d.livreur_id) {
     notifyDetached(sb, {
       userIds: [d.livreur_id],
@@ -91,6 +96,7 @@ Deno.serve(makePost<Body>('/v1/admin/deliveries/assign', valid, async ({ sb, bod
       deeplink: `/delivery/${d.id}`,
       refType: 'order',
       refId: d.order_id,
+      app: 'driver',
     });
   }
 
