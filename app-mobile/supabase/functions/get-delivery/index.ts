@@ -34,12 +34,15 @@ interface DeliveryRow {
   delivered_at: string | null;
   created_at: string;
   updated_at: string;
+  gps_lat: number | string | null;
+  gps_lng: number | string | null;
 }
 
 interface OrderRow {
   id: string;
   reference: string;
   buyer_id: string;
+  shop_id: string | null;
   product_snapshot: { title: string; photo: string; priceGnf: number } | null;
   amount_minor: number | string;
   total_minor: number | string;
@@ -55,7 +58,7 @@ Deno.serve(
     const { data: deliveryData, error: dErr } = await sb
       .from('deliveries')
       .select(
-        'id, order_id, livreur_id, status, delivery_address, assigned_at, pickup_at, delivered_at, created_at, updated_at',
+        'id, order_id, livreur_id, status, delivery_address, assigned_at, pickup_at, delivered_at, created_at, updated_at, gps_lat, gps_lng',
       )
       .eq('id', body.delivery_id)
       .eq('livreur_id', userId)
@@ -70,7 +73,7 @@ Deno.serve(
     // 2. The order — reference, amount, product snapshot, status.
     const { data: orderData, error: oErr } = await sb
       .from('orders')
-      .select('id, reference, buyer_id, product_snapshot, amount_minor, total_minor, status')
+      .select('id, reference, buyer_id, shop_id, product_snapshot, amount_minor, total_minor, status')
       .eq('id', delivery.order_id)
       .single();
     if (oErr || !orderData) {
@@ -86,6 +89,15 @@ Deno.serve(
       .select('display_name')
       .eq('id', order.buyer_id)
       .maybeSingle();
+
+    // 4. Seller / boutique pickup point (name + coords) so the driver's route map can
+    //    draw courier -> boutique -> client. Coords are quartier/ville-level (geo_centroids).
+    const shopRes = order.shop_id
+      ? await sb.from('shops').select('name, city, lat, lng').eq('id', order.shop_id).maybeSingle()
+      : { data: null };
+    const shopRow = (shopRes.data ?? null) as
+      | { name: string | null; city: string | null; lat: number | string | null; lng: number | string | null }
+      | null;
 
     const addr = (delivery.delivery_address ?? {}) as Record<string, unknown>;
 
@@ -111,6 +123,19 @@ Deno.serve(
           status: order.status,
         },
         buyer: { displayName: (buyer?.display_name as string | null) ?? null },
+        // Route-map coords (quartier/ville level): client drop-off + boutique pickup.
+        clientLocation:
+          delivery.gps_lat != null && delivery.gps_lng != null
+            ? { lat: Number(delivery.gps_lat), lng: Number(delivery.gps_lng) }
+            : null,
+        pickup: shopRow
+          ? {
+              name: shopRow.name,
+              city: shopRow.city,
+              lat: shopRow.lat != null ? Number(shopRow.lat) : null,
+              lng: shopRow.lng != null ? Number(shopRow.lng) : null,
+            }
+          : null,
       },
     };
   }),
