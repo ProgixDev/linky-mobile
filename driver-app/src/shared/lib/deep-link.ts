@@ -13,8 +13,17 @@
  * in `src/app/+native-intent.tsx`. See docs/research/01-mobile-security.md §6.
  */
 
-/** Routes a deep link is allowed to resolve to. Keep in sync with `src/app/`. */
-const ALLOWED_ROUTES = ['/', '/sign-in', '/account', '/not-found'] as const;
+/** Static routes a deep link is allowed to resolve to. Keep in sync with `src/app/`. */
+const ALLOWED_ROUTES = ['/', '/sign-in', '/account', '/notifications', '/not-found'] as const;
+
+/**
+ * Dynamic route `/delivery/<id>` (the new-delivery push deeplink). The id is a
+ * UUID or short slug — strictly [A-Za-z0-9-] so a hostile param can never carry a
+ * path separator, `..`, `%`-encoding or a scheme (defeats path traversal / an
+ * open-redirect through the dynamic segment). The id is NOT trusted for
+ * authorization — `get-delivery` scopes every read to the signed-in livreur.
+ */
+const DELIVERY_PATH_RE = /^\/delivery\/([A-Za-z0-9-]{1,64})$/;
 
 /** Where unknown / malformed / hostile links land. Must be an allowed route. */
 export const SAFE_FALLBACK_ROUTE = '/not-found';
@@ -42,9 +51,13 @@ export function resolveDeepLinkPath(path: string | null | undefined): string {
     const normalized =
       pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
 
-    return (ALLOWED_ROUTES as readonly string[]).includes(normalized)
-      ? normalized
-      : SAFE_FALLBACK_ROUTE;
+    if ((ALLOWED_ROUTES as readonly string[]).includes(normalized)) return normalized;
+
+    // `/delivery/<id>` — preserve the id when it matches the safe shape.
+    const delivery = normalized.match(DELIVERY_PATH_RE);
+    if (delivery) return `/delivery/${delivery[1]}`;
+
+    return SAFE_FALLBACK_ROUTE;
   } catch {
     // A parsing failure must degrade safely, never throw into the router.
     return SAFE_FALLBACK_ROUTE;

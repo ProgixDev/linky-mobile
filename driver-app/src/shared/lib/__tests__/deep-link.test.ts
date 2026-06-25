@@ -21,6 +21,27 @@ describe('resolveDeepLinkPath', () => {
     expect(resolveDeepLinkPath('/admin/secret')).toBe(SAFE_FALLBACK_ROUTE);
   });
 
+  it('allows the notifications inbox', () => {
+    expect(resolveDeepLinkPath('/notifications')).toBe('/notifications');
+    expect(resolveDeepLinkPath('linkydriver:///notifications')).toBe('/notifications');
+  });
+
+  it('allows /delivery/<id> and preserves the id (push deeplink)', () => {
+    expect(resolveDeepLinkPath('/delivery/01890a5d-ac96-774b-bcce-b302099a8057')).toBe(
+      '/delivery/01890a5d-ac96-774b-bcce-b302099a8057',
+    );
+    expect(resolveDeepLinkPath('linkydriver:///delivery/abc123?from=push')).toBe(
+      '/delivery/abc123',
+    );
+  });
+
+  it('rejects a hostile /delivery id (traversal / separators / encoding)', () => {
+    expect(resolveDeepLinkPath('/delivery/../admin')).toBe(SAFE_FALLBACK_ROUTE);
+    expect(resolveDeepLinkPath('/delivery/a/b')).toBe(SAFE_FALLBACK_ROUTE);
+    expect(resolveDeepLinkPath('/delivery/%2e%2e')).toBe(SAFE_FALLBACK_ROUTE);
+    expect(resolveDeepLinkPath('/delivery/')).toBe(SAFE_FALLBACK_ROUTE);
+  });
+
   it('degrades safely on null / empty / malformed input', () => {
     expect(resolveDeepLinkPath(null)).toBe(SAFE_FALLBACK_ROUTE);
     expect(resolveDeepLinkPath('')).toBe(SAFE_FALLBACK_ROUTE);

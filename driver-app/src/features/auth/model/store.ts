@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { ApiError, apiPost } from '@/shared/lib/api';
+import { unregisterPushToken } from '@/shared/lib/push';
 import { session } from '@/shared/lib/session';
 import { appStorage } from '@/shared/lib/storage';
 
@@ -152,6 +153,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   resetOtp: () => set({ otpId: null, pendingEmail: null, devCode: null, error: null }),
 
   signOut: async () => {
+    // Stop pushes to this device FIRST — the unregister call is authed, so it must
+    // run while the session is still live. Best-effort; never blocks sign-out.
+    await unregisterPushToken();
     await session.clear();
     await cacheUser(null);
     set({
@@ -172,6 +176,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ error });
       return { ok: false, error };
     }
+    // Drop this device's push token before tearing the session down (authed call).
+    await unregisterPushToken();
     await session.clear();
     await cacheUser(null);
     set({ user: null, status: 'unauthenticated', error: null });

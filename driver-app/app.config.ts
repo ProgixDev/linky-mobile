@@ -79,8 +79,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
-    // Request the minimum. Strip library-added permissions you don't need, e.g.:
-    // blockedPermissions: ['android.permission.RECORD_AUDIO'],
+    // POST_NOTIFICATIONS is the Android 13+ runtime permission for the new-delivery
+    // push — declared explicitly so it is guaranteed present in the merged manifest
+    // (aapt check), not only inferred from expo-notifications. CAMERA / location come
+    // from expo-camera + expo-image-picker + expo-location.
+    permissions: ['android.permission.POST_NOTIFICATIONS'],
   },
   web: {
     output: 'static',
@@ -162,6 +165,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'Linky Driver accède à tes photos pour choisir ta photo de profil / de candidature.',
         cameraPermission:
           'Linky Driver utilise la caméra pour scanner le QR de la livraison et prendre ta photo.',
+      },
+    ],
+    [
+      // New-delivery push. `icon` is the white-on-transparent small-icon (reuses the
+      // monochrome adaptive icon) tinted Linky-green; the high-importance "deliveries"
+      // channel is created at runtime (registerForDeliveryPush). iOS APNS key is the
+      // owner blocker for standalone delivery (FCM google-services.json on Android).
+      'expo-notifications',
+      {
+        icon: './assets/images/android-icon-monochrome.png',
+        color: '#0E6E55',
+        defaultChannel: 'deliveries',
+        enableBackgroundRemoteNotifications: false,
       },
     ],
   ],

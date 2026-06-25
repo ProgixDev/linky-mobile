@@ -10,19 +10,23 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { useAuthStore, useProtectedRoute } from '@/features/auth';
 import { useDeliveriesStore } from '@/features/deliveries';
+import { useNotificationObservers, useNotificationsStore } from '@/features/notifications';
 import { useLivreurGate, useOnboardingStore } from '@/features/onboarding';
 import { useWelcomeGate, useWelcomeStore } from '@/features/welcome';
 import { ErrorBoundary } from '@/shared/ui';
 import '@/shared/lib/env'; // fail fast on invalid environment
+import { configureForegroundHandler } from '@/shared/lib/push';
 
 SplashScreen.preventAutoHideAsync();
+// How a push is shown while the app is foregrounded (banner + sound + badge).
+configureForegroundHandler();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -41,10 +45,12 @@ export default function RootLayout() {
     void useWelcomeStore.getState().hydrate();
     const unsubAuth = useAuthStore.subscribe((state, prev) => {
       if (state.status === 'unauthenticated' && prev.status !== 'unauthenticated') {
-        // On sign-out, drop cached deliveries (spec 001 AC-9) + the gate state so the
-        // next courier on this device starts clean.
+        // On sign-out, drop cached deliveries (spec 001 AC-9) + the gate state + the
+        // notifications inbox so the next courier on this device starts clean. (The
+        // device push token is unregistered inside auth's signOut, before this fires.)
         useDeliveriesStore.getState().clearCache();
         useOnboardingStore.getState().reset();
+        useNotificationsStore.getState().reset();
       }
       if (state.status === 'authenticated' && prev.status !== 'authenticated') {
         // Just signed in → check the livreur approval gate.
@@ -69,9 +75,22 @@ export default function RootLayout() {
   const authStatus = useAuthStore((s) => s.status);
   const roles = useAuthStore((s) => s.user?.roles);
   const welcomeSeen = useWelcomeStore((s) => s.seen);
+  const onboardingStatus = useOnboardingStore((s) => s.appStatus);
   useProtectedRoute({ welcomeSeen });
   useWelcomeGate({ authStatus, welcomeSeen });
   useLivreurGate({ authStatus, roles });
+
+  // Push is enabled only for an authenticated + APPROVED livreur — that gates the
+  // permission prompt to a contextual moment (never the cold first launch). A foreground
+  // delivery push refreshes the worklist; wiring deliveries↔notifications here keeps both
+  // features free of a cross-feature import (module boundaries).
+  const pushEnabled =
+    authStatus === 'authenticated' &&
+    ((roles?.includes('livreur') ?? false) || onboardingStatus === 'approved');
+  const refreshDeliveries = useCallback(() => {
+    void useDeliveriesStore.getState().refresh();
+  }, []);
+  useNotificationObservers({ enabled: pushEnabled, onForegroundDelivery: refreshDeliveries });
 
   // Hold the native splash until fonts + session + the welcome flag have resolved,
   // so the route guards settle before the first frame (no home/sign-in flash).

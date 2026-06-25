@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppState, FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -66,7 +66,7 @@ function LoadingList() {
  * case — loading, empty, error, and (on a failed refresh with cache) the cached
  * list flagged as possibly stale. See spec 001.
  */
-export function DeliveriesScreen() {
+export function DeliveriesScreen({ headerRight }: { headerRight?: ReactNode } = {}) {
   const items = useDeliveriesStore((s) => s.items);
   const status = useDeliveriesStore((s) => s.status);
   const load = useDeliveriesStore((s) => s.load);
@@ -107,13 +107,16 @@ export function DeliveriesScreen() {
 
   return (
     <Screen testID="deliveries-screen">
-      <View className="gap-1 pb-3 pt-4">
-        <AppText variant="display">Mes livraisons</AppText>
-        <AppText variant="caption" testID="deliveries-count">
-          {visible.length === 0
-            ? 'Aucune livraison'
-            : `${visible.length} livraison${visible.length > 1 ? 's' : ''}`}
-        </AppText>
+      <View className="flex-row items-start justify-between pb-3 pt-4">
+        <View className="flex-1 gap-1">
+          <AppText variant="display">Mes livraisons</AppText>
+          <AppText variant="caption" testID="deliveries-count">
+            {visible.length === 0
+              ? 'Aucune livraison'
+              : `${visible.length} livraison${visible.length > 1 ? 's' : ''}`}
+          </AppText>
+        </View>
+        {headerRight ? <View className="pl-2">{headerRight}</View> : null}
       </View>
 
       <TextField
