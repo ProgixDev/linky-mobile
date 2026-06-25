@@ -59,7 +59,10 @@ export const DriverTabTrigger = forwardRef<View, TriggerProps>(function DriverTa
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       accessibilityLabel={item.label}
-      className="flex-1 items-center justify-end gap-1 pb-1 pt-2"
+      // flex-col is REQUIRED: expo-router/ui's TabTrigger slot injects
+      // flexDirection:'row' + justifyContent:'space-between'; without overriding it the
+      // icon sits BESIDE the label (jumbled) and labels truncate. Column wins per-prop.
+      className="flex-1 flex-col items-center justify-end gap-1 pb-1 pt-2"
     >
       {item.center ? (
         <View
