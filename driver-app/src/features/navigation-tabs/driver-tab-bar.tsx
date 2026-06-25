@@ -2,7 +2,7 @@ import { type Href } from 'expo-router';
 import { type TabTriggerSlotProps } from 'expo-router/ui';
 import { Map as MapIcon, Package, User, type LucideIcon } from 'lucide-react-native';
 import { forwardRef } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewStyle } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { colors } from '@/shared/theme/colors';
@@ -35,55 +35,68 @@ export const DRIVER_TABS: readonly [DriverTab, DriverTab, DriverTab] = [
 
 type TriggerProps = TabTriggerSlotProps & { item: DriverTab };
 
-/**
- * Visual for a single tab — rendered via `<TabTrigger asChild>` so it receives
- * `isFocused` + press props. ONE column shape for all three (flex-1, icon-area on
- * top, label baseline-aligned at the bottom via justify-end) so the three tabs are
- * evenly spaced (each 1/3) with every icon over ITS OWN label. The center (Carte) is
- * the prominent raised round green button; its label still sits on the shared baseline.
- */
-export const DriverTabTrigger = forwardRef<View, TriggerProps>(function DriverTabTrigger(
-  { isFocused, item, ...props },
-  ref,
-) {
-  const active = !!isFocused;
-  const { Icon } = item;
-  const testID = `nav-tab-${item.label.toLowerCase()}`;
-  const tint = active ? colors.brand600 : colors.inkFaint;
+// why: expo-router/ui's TabTrigger slot injects an INLINE style ({ flexDirection:'row',
+// justifyContent:'space-between' }) via the slot props, and an explicit style prop beats
+// NativeWind's className — that's why a className-only "flex-col" never took (icon stayed
+// BESIDE the label, tabs spaced unevenly, « Profil » truncated). We set the layout via an
+// explicit `style` object so it actually wins: each tab is an even 1/3 COLUMN (icon on
+// top, label below, bottom-aligned). This is the one place inline style is required.
+const TAB_STYLE: ViewStyle = {
+  flex: 1,
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  gap: 4,
+  paddingTop: 8,
+  paddingBottom: 6,
+};
 
-  return (
-    <Pressable
-      ref={ref}
-      {...props}
-      testID={testID}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={item.label}
-      // flex-col is REQUIRED: expo-router/ui's TabTrigger slot injects
-      // flexDirection:'row' + justifyContent:'space-between'; without overriding it the
-      // icon sits BESIDE the label (jumbled) and labels truncate. Column wins per-prop.
-      className="flex-1 flex-col items-center justify-end gap-1 pb-1 pt-2"
-    >
-      {item.center ? (
-        <View
-          className={cn(
-            // Raised circle floats above the bar; the label below stays on the baseline.
-            '-mt-9 h-14 w-14 items-center justify-center rounded-full border-4 border-surface shadow-md',
-            active ? 'bg-brand-600' : 'bg-brand-500',
-          )}
-        >
-          <Icon size={26} color={colors.inkInverse} strokeWidth={2.5} />
-        </View>
-      ) : (
-        <Icon size={24} color={tint} strokeWidth={2.25} />
-      )}
-      <AppText
-        variant="caption"
-        numberOfLines={1}
-        className={cn('text-[11px]', active ? 'text-brand-600' : 'text-ink-faint')}
+/**
+ * Visual for a single tab — rendered via `<TabTrigger asChild>`. Three even 1/3 columns,
+ * icon on top + label below (layout via TAB_STYLE — see the note above for why it's
+ * inline). The center (Carte) is the prominent raised round green button; its label still
+ * sits on the shared bottom baseline with the others.
+ */
+export const DriverTabTrigger = forwardRef<View, TriggerProps>(
+  function DriverTabTrigger(props, ref) {
+    const { isFocused, item, ...rest } = props;
+    const active = !!isFocused;
+    const { Icon } = item;
+    const testID = `nav-tab-${item.label.toLowerCase()}`;
+    const tint = active ? colors.brand600 : colors.inkFaint;
+
+    return (
+      <Pressable
+        ref={ref}
+        {...rest}
+        // Override the slot's injected row style with the column layout (TAB_STYLE).
+        style={TAB_STYLE}
+        testID={testID}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: active }}
+        accessibilityLabel={item.label}
       >
-        {item.label}
-      </AppText>
-    </Pressable>
-  );
-});
+        {item.center ? (
+          <View
+            className={cn(
+              // Raised circle floats above the bar; the label below stays on the baseline.
+              '-mt-9 h-14 w-14 items-center justify-center rounded-full border-4 border-surface shadow-md',
+              active ? 'bg-brand-600' : 'bg-brand-500',
+            )}
+          >
+            <Icon size={26} color={colors.inkInverse} strokeWidth={2.5} />
+          </View>
+        ) : (
+          <Icon size={24} color={tint} strokeWidth={2.25} />
+        )}
+        <AppText
+          variant="caption"
+          numberOfLines={1}
+          className={cn('text-[11px] leading-tight', active ? 'text-brand-600' : 'text-ink-faint')}
+        >
+          {item.label}
+        </AppText>
+      </Pressable>
+    );
+  },
+);

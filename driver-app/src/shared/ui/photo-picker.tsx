@@ -76,7 +76,14 @@ export function PhotoPicker({ value, onChange, disabled, testID = 'photo-picker'
         {busy ? (
           <ActivityIndicator testID={`${testID}-busy`} color={colors.brand500} />
         ) : value ? (
-          <Image source={{ uri: value }} contentFit="cover" className="h-full w-full" />
+          // expo-image is NOT NativeWind-interop'd here (same as CameraView), so the
+          // fill MUST be an inline style — className h-full/w-full is ignored → 0-sized
+          // → the circle looked empty even with a photo set.
+          <Image
+            source={{ uri: value }}
+            contentFit="cover"
+            style={{ width: '100%', height: '100%' }}
+          />
         ) : (
           <Camera size={30} color={colors.brand500} strokeWidth={1.75} />
         )}

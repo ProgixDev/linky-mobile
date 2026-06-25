@@ -91,7 +91,9 @@ export default function RootLayout() {
         <ErrorBoundary>
           <Stack screenOptions={{ headerShown: false }} />
         </ErrorBoundary>
-        <StatusBar style="auto" />
+        {/* Light (white) status-bar content — it sits on the green top band the Screen
+            renders, so the time / wifi / battery stay legible (a white top hid them). */}
+        <StatusBar style="light" />
       </KeyboardProvider>
     </GestureHandlerRootView>
   );

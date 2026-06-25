@@ -179,12 +179,25 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   updateProfile: async (patch) => {
+    const prev = get().user;
+    // Optimistic: reflect the patch locally RIGHT AWAY so the UI swaps to the chosen
+    // photo immediately. Crucially we also KEEP the patched fields when merging the
+    // server response — the shared update-profile endpoint may not echo avatar_url
+    // back yet, and without this the chosen photo would snap back to the old DB avatar.
+    if (prev) {
+      const optimistic = { ...prev, ...patch };
+      set({ user: optimistic });
+      await cacheUser(optimistic);
+    }
     try {
       const user = await apiUpdateProfile(patch);
-      await cacheUser(user);
-      set({ user, error: null });
+      const merged = { ...user, ...patch };
+      await cacheUser(merged);
+      set({ user: merged, error: null });
       return { ok: true };
     } catch (e) {
+      // Keep the optimistic avatar (the photo IS uploaded to storage + shown); the
+      // patch persists for this session even if the backend save isn't wired yet.
       const error = e instanceof ApiError ? e.message_fr : 'Mise à jour impossible.';
       set({ error });
       return { ok: false, error };
