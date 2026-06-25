@@ -150,15 +150,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
-      // Face photo (selfie / gallery) for the application + Profil. The CAMERA
-      // permission is already provided by the expo-camera plugin above (QR scan) —
-      // set cameraPermission:false here to reuse it and avoid overriding that string;
-      // we only add the photo-library (gallery) permission.
+      // Face photo (selfie / gallery) for the application + Profil.
+      // cameraPermission MUST be a STRING, never `false`: with `false` the plugin
+      // BLOCKS android.permission.CAMERA (withBlockedPermissions), and because it runs
+      // AFTER expo-camera it STRIPPED the CAMERA permission expo-camera added → the OS
+      // permission popup never appeared (Android instantly denies an undeclared
+      // permission) → the scanner + selfie jumped straight to the settings fallback.
       'expo-image-picker',
       {
         photosPermission:
           'Linky Driver accède à tes photos pour choisir ta photo de profil / de candidature.',
-        cameraPermission: false,
+        cameraPermission:
+          'Linky Driver utilise la caméra pour scanner le QR de la livraison et prendre ta photo.',
       },
     ],
   ],
