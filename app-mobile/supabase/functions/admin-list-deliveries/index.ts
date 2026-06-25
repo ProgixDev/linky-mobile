@@ -54,6 +54,7 @@ interface DeliveryRow {
     product_snapshot: { title: string; photo: string; priceGnf: number } | null;
     amount_minor: number | string;
     buyer_id: string;
+    status: string;
   } | null;
 }
 
@@ -66,8 +67,18 @@ Deno.serve(makePost<Body>('/v1/admin/deliveries/list', valid, async ({ sb, body,
 
   let q = sb
     .from('deliveries')
-    .select('id, order_id, livreur_id, status, delivery_address, created_at, order:orders!inner(reference, product_snapshot, amount_minor, buyer_id)')
+    .select('id, order_id, livreur_id, status, delivery_address, created_at, order:orders!inner(reference, product_snapshot, amount_minor, buyer_id, status)')
     .eq('status', status);
+
+  // The "À assigner" queue must only surface deliveries the admin can ACTUALLY
+  // assign: assign_delivery gates on the order being paid/preparing (the escrow
+  // invariant), so cancelled / released / disputed / refunded orders would reject
+  // with "état ne permettant pas l'assignation". Filter them out of the unassigned
+  // view so the admin never picks a non-assignable order. (assigned/in_transit/…
+  // views are already-dispatched deliveries, shown for tracking as-is.)
+  if (status === 'unassigned') {
+    q = q.in('order.status', ['paid', 'preparing']);
+  }
 
   if (body.cursor) {
     const { created_at, id } = body.cursor;
