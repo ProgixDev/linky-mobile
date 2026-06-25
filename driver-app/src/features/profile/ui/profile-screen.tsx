@@ -89,21 +89,24 @@ export function ProfileScreen({
     <Screen testID="profile-screen">
       <KeyboardAwareScroll contentClassName="gap-5 pb-10 pt-4">
         <View className="items-center gap-3 pt-2">
-          {photo ? (
-            <Image
-              source={{ uri: photo }}
-              style={{
-                width: 88,
-                height: 88,
-                borderRadius: 999,
-                backgroundColor: colors.surfaceMuted,
-              }}
-              contentFit="cover"
-              accessibilityIgnoresInvertColors
-            />
-          ) : (
-            <LinkyMark size={84} />
-          )}
+          {/* Header avatar only OUTSIDE edit mode — while editing, the PhotoPicker below
+              is the single (editable) photo, so the image isn't shown twice. */}
+          {!editing &&
+            (photo ? (
+              <Image
+                source={{ uri: photo }}
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: 999,
+                  backgroundColor: colors.surfaceMuted,
+                }}
+                contentFit="cover"
+                accessibilityIgnoresInvertColors
+              />
+            ) : (
+              <LinkyMark size={84} />
+            ))}
           <View className="items-center gap-1.5">
             <AppText variant="title">{view?.fullName || 'Livreur Linky'}</AppText>
             {view?.approved ? (
