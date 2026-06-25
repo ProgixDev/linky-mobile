@@ -23,21 +23,22 @@ import { useWelcomeStore } from '../model/welcome-store';
 import { MapBackdrop } from './map-backdrop';
 import { SwipeToStart } from './swipe-to-start';
 
+// Driver-motivational value props (NOT client-facing): earn, freedom, get paid.
 const SLIDES = [
   {
-    id: 'recois',
-    title: 'Reçois tes livraisons',
-    subtitle: 'Tes courses arrivent, prêtes à livrer.',
+    id: 'gagne',
+    title: 'Gagne plus à chaque course',
+    subtitle: 'Reçois des livraisons et fais grimper tes revenus, à ton rythme.',
   },
   {
-    id: 'carte',
-    title: 'Trouve le client sur la carte',
-    subtitle: 'Localisation exacte, en temps réel.',
+    id: 'liberte',
+    title: 'Tu choisis quand tu livres',
+    subtitle: 'Tes horaires, tes zones — c’est toi qui décides.',
   },
   {
-    id: 'scanne',
-    title: 'Scanne & sois payé',
-    subtitle: 'Un scan du QR, la livraison est validée.',
+    id: 'paye',
+    title: 'Livre, scanne, encaisse',
+    subtitle: 'Un scan du QR du client et ton paiement est validé.',
   },
 ];
 

@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 
 import { makeId } from '@/shared/lib/id';
 import { colors } from '@/shared/theme/colors';
@@ -21,6 +21,14 @@ const STATUS_LABEL: Record<string, string> = {
 
 function formatGnf(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} GNF`;
+}
+
+// Open the delivery address in the phone's maps app so the courier can navigate there.
+function openRoute(address: string): void {
+  if (!address) return;
+  void Linking.openURL(
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
+  );
 }
 
 // The handoff flow as an explicit state machine: view detail → scan → review →
@@ -238,24 +246,33 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
           </View>
         </Card>
 
-        <View className="gap-1">
-          <AppText variant="caption" className="text-ink-muted">
-            Client
-          </AppText>
-          <AppText variant="body" testID="delivery-detail-buyer">
-            {detail.buyerName}
-          </AppText>
-        </View>
-
-        <View className="gap-1">
-          <AppText variant="caption" className="text-ink-muted">
-            Adresse de livraison
-          </AppText>
-          {/* Detail reveals the FULL street address, unlike the list (spec 001 AC-10). */}
-          <AppText variant="body" testID="delivery-detail-address">
-            {[detail.addressDetails, area].filter(Boolean).join('\n')}
-          </AppText>
-        </View>
+        {/* Where to deliver — the courier's destination, made prominent (with navigation). */}
+        <Card className="gap-2" testID="delivery-detail-destination">
+          <AppText variant="label">📍 Lieu de livraison</AppText>
+          <View className="gap-0.5">
+            <AppText variant="caption" className="text-ink-muted">
+              Client
+            </AppText>
+            <AppText variant="body" testID="delivery-detail-buyer">
+              {detail.buyerName}
+            </AppText>
+          </View>
+          <View className="gap-0.5">
+            <AppText variant="caption" className="text-ink-muted">
+              Adresse de livraison
+            </AppText>
+            {/* Detail reveals the FULL street address, unlike the list (spec 001 AC-10). */}
+            <AppText variant="body" className="text-ink-muted" testID="delivery-detail-address">
+              {[detail.addressDetails, area].filter(Boolean).join('\n')}
+            </AppText>
+          </View>
+          <Button
+            testID="delivery-detail-route"
+            variant="secondary"
+            label="Voir l’itinéraire"
+            onPress={() => openRoute([detail.addressDetails, area].filter(Boolean).join(', '))}
+          />
+        </Card>
 
         <View className="flex-row items-center gap-2">
           <AppText variant="caption" className="text-ink-muted">
