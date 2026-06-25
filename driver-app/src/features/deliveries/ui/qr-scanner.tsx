@@ -1,5 +1,5 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { Linking, View } from 'react-native';
 
 import { AppText, Button, Screen } from '@/shared/ui';
@@ -16,25 +16,16 @@ interface QrScannerProps {
  * the permission gate; it hands the raw string up and the detail state machine
  * parses/compares it.
  *
- * Happy path = ASK → camera: on open, an `undetermined` permission triggers the OS
- * prompt directly (never a settings screen first). granted → camera + QR scan-frame.
- * Only AFTER the courier refuses do we show the « Accès caméra requis » fallback
- * (re-ask if still askable, else Open Settings) + a cancel path (AC-6, never a dead
- * end). A `lock` ref debounces so `onScanned` fires once, not dozens of times/sec.
+ * Happy path: the courier taps « Autoriser la caméra » → the OS prompt fires →
+ * granted → camera + QR scan-frame. This mirrors the PROVEN global Linky scanner
+ * (app-mobile/app/scan), which requests the permission on a user tap rather than
+ * auto-on-mount — the more reliable path for the native Android camera prompt. If
+ * the permission is permanently denied, the fallback offers Open Settings (never a
+ * dead end, AC-6). A `lock` ref debounces so `onScanned` fires once, not dozens/sec.
  */
 export function QrScanner({ onScanned, onCancel }: QrScannerProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const lock = useRef(false);
-  const asked = useRef(false);
-
-  // As soon as we know the permission is undetermined, ask the OS directly so the
-  // NATIVE prompt is the first thing shown. Guarded so it fires exactly once.
-  useEffect(() => {
-    if (permission?.status === 'undetermined' && !asked.current) {
-      asked.current = true;
-      void requestPermission();
-    }
-  }, [permission, requestPermission]);
 
   const handleBarcode = useCallback(
     ({ data }: { data: string }) => {
@@ -45,12 +36,14 @@ export function QrScanner({ onScanned, onCancel }: QrScannerProps) {
     [onScanned],
   );
 
-  // Still resolving, or the OS prompt is in flight → loading (never flash the gate).
-  if (!permission || permission.status === 'undetermined') {
+  // Only the very first permission resolve is blank; once we know the status, an
+  // undetermined OR denied permission shows the « Autoriser » screen (tap → OS popup).
+  if (!permission) {
     return <Screen testID="deliveries-scanner-loading" />;
   }
 
-  // Refused → THEN the fallback: re-ask if still possible, otherwise Open Settings.
+  // Undetermined or refused → the permission screen: tap « Autoriser la caméra » to
+  // fire the OS popup; if permanently denied, Open Settings.
   if (!permission.granted) {
     return (
       <Screen testID="deliveries-scanner-permission">
