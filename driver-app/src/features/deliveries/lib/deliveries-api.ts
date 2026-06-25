@@ -83,6 +83,18 @@ export async function getDelivery(deliveryId: string): Promise<DeliveryDetail> {
     addressDetails: w.deliveryAddress?.details ?? '',
     buyerName: buyerName ? buyerName : 'Customer',
     status: statusOrUnassigned.parse(w.status),
+    // Route-map coords come straight from get-delivery (no client-side geocoding).
+    clientLocation: w.clientLocation
+      ? { lat: w.clientLocation.lat, lng: w.clientLocation.lng }
+      : null,
+    pickup: w.pickup
+      ? {
+          name: w.pickup.name ?? '',
+          city: w.pickup.city ?? '',
+          lat: w.pickup.lat ?? null,
+          lng: w.pickup.lng ?? null,
+        }
+      : null,
   };
 }
 

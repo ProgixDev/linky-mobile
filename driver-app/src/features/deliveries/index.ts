@@ -3,5 +3,6 @@
  */
 export { DeliveriesScreen } from './ui/deliveries-screen';
 export { DeliveryDetailScreen } from './ui/delivery-detail-screen';
+export { RouteMapScreen } from './ui/route-map-screen';
 export { useDeliveriesStore } from './model/store';
 export type { Delivery, DeliveryDetail } from './model/schema';

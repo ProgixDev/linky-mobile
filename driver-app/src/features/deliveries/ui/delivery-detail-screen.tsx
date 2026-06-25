@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { Linking, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { makeId } from '@/shared/lib/id';
 import { colors } from '@/shared/theme/colors';
@@ -21,14 +21,6 @@ const STATUS_LABEL: Record<string, string> = {
 
 function formatGnf(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} GNF`;
-}
-
-// Open the delivery address in the phone's maps app so the courier can navigate there.
-function openRoute(address: string): void {
-  if (!address) return;
-  void Linking.openURL(
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
-  );
 }
 
 // The handoff flow as an explicit state machine: view detail → scan → review →
@@ -270,7 +262,7 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
             testID="delivery-detail-route"
             variant="secondary"
             label="Voir l’itinéraire"
-            onPress={() => openRoute([detail.addressDetails, area].filter(Boolean).join(', '))}
+            onPress={() => router.push(`/delivery/${detail.id}/itineraire` as Href)}
           />
         </Card>
 

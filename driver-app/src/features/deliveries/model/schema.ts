@@ -102,9 +102,25 @@ const DeliveryDetailWireSchema = z.object({
     })
     .nullish(),
   buyer: z.object({ displayName: z.string().nullish() }).nullish(),
+  // Route-map coords (quartier/ville level), added by get-delivery. Both nullable —
+  // a delivery can predate geocoding, or a shop may have no coords yet.
+  clientLocation: z.object({ lat: z.number(), lng: z.number() }).nullish(),
+  pickup: z
+    .object({
+      name: z.string().nullish(),
+      city: z.string().nullish(),
+      lat: z.number().nullish(),
+      lng: z.number().nullish(),
+    })
+    .nullish(),
 });
 export type DeliveryDetailWire = z.infer<typeof DeliveryDetailWireSchema>;
 export const DeliveryDetailResponseSchema = DeliveryDetailWireSchema;
+
+/** A map coordinate (WGS84). */
+export type LatLng = { lat: number; lng: number };
+/** Boutique pickup point for the route map. */
+export type PickupPoint = { name: string; city: string; lat: number | null; lng: number | null };
 
 // --- View model (detail screen) ---
 // Carries the full street address + buyer name (only ever fetched for the driver's OWN
@@ -122,6 +138,17 @@ export const DeliveryDetailSchema = z.object({
   addressDetails: z.string(), // full street — revealed here, unlike the list (AC-10)
   buyerName: z.string(),
   status: DeliveryStatusSchema,
+  // Route-map coords (null when the backend has none). The driver's own live GPS is
+  // read on-device (expo-location) — never from the server.
+  clientLocation: z.object({ lat: z.number(), lng: z.number() }).nullable(),
+  pickup: z
+    .object({
+      name: z.string(),
+      city: z.string(),
+      lat: z.number().nullable(),
+      lng: z.number().nullable(),
+    })
+    .nullable(),
 });
 export type DeliveryDetail = z.infer<typeof DeliveryDetailSchema>;
 

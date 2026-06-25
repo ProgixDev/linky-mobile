@@ -60,6 +60,8 @@ const DETAIL: DeliveryDetail = {
   addressDetails: '12 Rue de la Paix',
   buyerName: 'Mariama',
   status: 'assigned',
+  clientLocation: null,
+  pickup: null,
 };
 
 const listItem = (over: Partial<Delivery> = {}): Delivery => ({
