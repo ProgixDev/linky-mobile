@@ -10,6 +10,7 @@ import { Switch } from '../../src/components/primitives/Switch';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { CitySelectField } from '../../src/components/forms/CitySelectField';
+import { LocationMapPicker } from '../../src/components/location/LocationMapPicker';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import {
   useMyAddresses,
@@ -380,6 +381,9 @@ function AddressSheet({
   // is_default — that's gated to the dedicated set-default path so the
   // partial-unique index can't race a label edit). Hidden in edit mode.
   const [isDefault, setIsDefault] = useState(false);
+  // Exact delivery point — pre-filled from the saved address, overridable on the map.
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
 
   // Reset state every time the sheet opens — otherwise a previous edit leaks
   // into the next add attempt.
@@ -389,6 +393,8 @@ function AddressSheet({
       setCity(editing?.city ?? '');
       setDistrict(editing?.district ?? '');
       setDetails(editing?.details ?? '');
+      setLat(editing?.lat ?? null);
+      setLng(editing?.lng ?? null);
       // Default add UX: first-ever address gets auto-defaulted server-side
       // anyway, but pre-checking the toggle when there's nothing else makes
       // that visible to the user.
@@ -420,6 +426,8 @@ function AddressSheet({
           city: city.trim(),
           district: district.trim() || null,
           details: details.trim() || null,
+          lat,
+          lng,
         },
         {
           onSuccess: () => {
@@ -436,6 +444,8 @@ function AddressSheet({
           city: city.trim(),
           district: district.trim() || null,
           details: details.trim() || null,
+          lat,
+          lng,
           is_default: isDefault,
         },
         {
@@ -510,6 +520,17 @@ function AddressSheet({
             />
 
             <CitySelectField label={t('settings.addresses.cityLabel')} value={city} onChange={setCity} />
+
+            <FieldLabel text="Point de livraison exact" />
+            <LocationMapPicker
+              lat={lat}
+              lng={lng}
+              onChange={(la, lo) => {
+                setLat(la);
+                setLng(lo);
+              }}
+              testID="address-location-picker"
+            />
 
             <FieldLabel text={t('settings.addresses.districtLabel')} />
             <TextInput

@@ -14,6 +14,14 @@ interface Body {
   district?: string | null;
   details?: string | null;
   is_default?: boolean;
+  // Exact delivery point picked on the map; overrides the city centroid default
+  // (the addresses geo trigger only fills lat/lng when they're null).
+  lat?: number | null;
+  lng?: number | null;
+}
+// A finite coordinate within bounds, OR null/undefined (clear / not set).
+function isCoord(v: unknown, max: number): boolean {
+  return v === undefined || v === null || (typeof v === 'number' && Number.isFinite(v) && v >= -max && v <= max);
 }
 function valid(b: unknown): b is Body {
   const x = b as Body;
@@ -23,6 +31,8 @@ function valid(b: unknown): b is Body {
   if (x.district != null && (typeof x.district !== 'string' || x.district.length > 80)) return false;
   if (x.details != null && (typeof x.details !== 'string' || x.details.length > 200)) return false;
   if (x.is_default != null && typeof x.is_default !== 'boolean') return false;
+  if (!isCoord(x.lat, 90)) return false;
+  if (!isCoord(x.lng, 180)) return false;
   return true;
 }
 
@@ -58,9 +68,11 @@ Deno.serve(makePost<Body>('/v1/addresses/add', valid, async ({ sb, body, req }) 
       city,
       district,
       details,
+      lat: body.lat ?? null,
+      lng: body.lng ?? null,
       is_default: false, // promoted in the RPC below if needed ; insert always false to avoid race
     })
-    .select('id, label, city, district, details, is_default, created_at')
+    .select('id, label, city, district, details, lat, lng, is_default, created_at')
     .single();
   if (eIns || !row) {
     console.error('[address-add] insert error:', eIns);

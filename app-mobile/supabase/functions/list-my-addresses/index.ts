@@ -24,7 +24,7 @@ Deno.serve(makePost<Body>('/v1/addresses/list', valid, async ({ sb, req }) => {
   const userId = await requireUser(req);
   const { data, error } = await sb
     .from('addresses')
-    .select('id, label, city, district, details, is_default, created_at')
+    .select('id, label, city, district, details, lat, lng, is_default, created_at')
     .eq('user_id', userId)
     .order('is_default', { ascending: false })
     .order('created_at', { ascending: false });

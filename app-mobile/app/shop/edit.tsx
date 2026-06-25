@@ -19,6 +19,7 @@ import { TopBar } from '../../src/components/nav/TopBar';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { CitySelectField } from '../../src/components/forms/CitySelectField';
+import { LocationMapPicker } from '../../src/components/location/LocationMapPicker';
 import { useMyShops, useUpsertShop } from '../../src/data/queries';
 import { useUploadAvatar } from '../../src/data/queries/auth';
 import { useToast } from '../../src/components/feedback/Toast';
@@ -50,6 +51,11 @@ export default function ShopEditRoute() {
   const [about, setAbout] = useState('');
   const [avatar, setAvatar] = useState('');
   const [cover, setCover] = useState('');
+  // Exact shop point — picked on the map. The shop list view doesn't return lat/lng,
+  // so we can't pre-fill the saved pin; we only SEND coords when the seller actually
+  // picks one (shop-upsert preserves the existing pin when lat/lng is omitted).
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   // Prefill once the shop loads (useState can't read async data at init).
@@ -69,7 +75,8 @@ export default function ShopEditRoute() {
       city.trim() !== (shop?.city ?? '') ||
       about.trim() !== (shop?.about ?? '') ||
       avatar !== (shop?.avatar ?? '') ||
-      cover !== (shop?.cover ?? ''));
+      cover !== (shop?.cover ?? '') ||
+      (lat != null && lng != null));
   const canSave = dirty && !!name.trim() && name.trim().length >= 2 && !!city.trim() && !busy;
 
   async function pick(kind: 'logo' | 'cover') {
@@ -107,6 +114,7 @@ export default function ShopEditRoute() {
         about: about.trim(),
         avatar_url: avatar || null,
         cover_url: cover || null,
+        ...(lat != null && lng != null ? { lat, lng } : {}),
       });
       toast.show(t('shopEdit.successToast'), 'success');
       if (router.canGoBack()) router.back();
@@ -209,6 +217,20 @@ export default function ShopEditRoute() {
 
           {label(t('shopEdit.cityLabel'))}
           <CitySelectField label="" value={city} onChange={setCity} />
+
+          {label('LOCALISATION EXACTE')}
+          <Text variant="micro" tone="muted" style={{ marginTop: -4, marginBottom: 8, textTransform: 'none', letterSpacing: 0 }}>
+            Place le point exact de ta boutique sur la carte (sinon, le centre de ta ville est utilisé).
+          </Text>
+          <LocationMapPicker
+            lat={lat}
+            lng={lng}
+            onChange={(la, lo) => {
+              setLat(la);
+              setLng(lo);
+            }}
+            testID="shop-location-picker"
+          />
 
           {label(t('shopEdit.aboutLabel'))}
           <TextInput

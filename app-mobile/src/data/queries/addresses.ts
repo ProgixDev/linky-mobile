@@ -12,6 +12,9 @@ export interface UserAddress {
   city: string;
   district: string | null;
   details: string | null;
+  /** Exact delivery point (picked on the map; falls back to the city centroid). */
+  lat: number | null;
+  lng: number | null;
   is_default: boolean;
   created_at: string;
 }
@@ -21,6 +24,9 @@ export interface AddressInput {
   city: string;
   district?: string | null;
   details?: string | null;
+  /** Exact delivery point picked on the map; overrides the city centroid default. */
+  lat?: number | null;
+  lng?: number | null;
   is_default?: boolean;
 }
 

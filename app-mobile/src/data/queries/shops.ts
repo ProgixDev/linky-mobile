@@ -11,6 +11,9 @@ export interface UpsertShopInput {
   about?: string;
   cover_url?: string | null;
   avatar_url?: string | null;
+  /** Exact shop point picked on the map; overrides the city centroid default. */
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export function useShops(limit?: number) {

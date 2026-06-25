@@ -14,6 +14,13 @@ interface Body {
   city: string;
   district?: string | null;
   details?: string | null;
+  // Exact delivery point picked on the map; overrides the city centroid default.
+  lat?: number | null;
+  lng?: number | null;
+}
+// A finite coordinate within bounds, OR null/undefined (clear / not set).
+function isCoord(v: unknown, max: number): boolean {
+  return v === undefined || v === null || (typeof v === 'number' && Number.isFinite(v) && v >= -max && v <= max);
 }
 function valid(b: unknown): b is Body {
   const x = b as Body;
@@ -23,6 +30,8 @@ function valid(b: unknown): b is Body {
   if (typeof x.city !== 'string' || x.city.length === 0 || x.city.length > 60) return false;
   if (x.district != null && (typeof x.district !== 'string' || x.district.length > 80)) return false;
   if (x.details != null && (typeof x.details !== 'string' || x.details.length > 200)) return false;
+  if (!isCoord(x.lat, 90)) return false;
+  if (!isCoord(x.lng, 180)) return false;
   return true;
 }
 
@@ -56,10 +65,12 @@ Deno.serve(makePost<Body>('/v1/addresses/update', valid, async ({ sb, body, req 
       city,
       district: body.district?.trim() || null,
       details: body.details?.trim() || null,
+      lat: body.lat ?? null,
+      lng: body.lng ?? null,
     })
     .eq('id', body.address_id)
     .eq('user_id', userId)
-    .select('id, label, city, district, details, is_default, created_at')
+    .select('id, label, city, district, details, lat, lng, is_default, created_at')
     .single();
   if (eUpd || !row) {
     console.error('[address-update] update error:', eUpd);

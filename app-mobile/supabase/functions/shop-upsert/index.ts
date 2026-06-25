@@ -13,10 +13,18 @@ interface Body {
   about?: string;
   cover_url?: string | null;
   avatar_url?: string | null;
+  // Exact shop point picked on the map; overrides the city centroid default.
+  lat?: number | null;
+  lng?: number | null;
 }
 
 function isUuid(s: unknown): s is string {
   return typeof s === 'string' && /^[0-9a-f-]{36}$/i.test(s);
+}
+
+// A finite coordinate within bounds, OR null/undefined (clear / not set).
+function isCoord(v: unknown, max: number): boolean {
+  return v === undefined || v === null || (typeof v === 'number' && Number.isFinite(v) && v >= -max && v <= max);
 }
 
 // Shop cover/avatar must be a clean https URL inside OUR Supabase storage
@@ -51,6 +59,8 @@ function valid(b: unknown): b is Body {
   if (x.about !== undefined && (typeof x.about !== 'string' || x.about.length > 800)) return false;
   if (x.cover_url !== undefined && x.cover_url !== null && (typeof x.cover_url !== 'string' || x.cover_url.length > 500)) return false;
   if (x.avatar_url !== undefined && x.avatar_url !== null && (typeof x.avatar_url !== 'string' || x.avatar_url.length > 500)) return false;
+  if (!isCoord(x.lat, 90)) return false;
+  if (!isCoord(x.lng, 180)) return false;
   return true;
 }
 
@@ -70,15 +80,31 @@ Deno.serve(makePost<Body>('/v1/shops/upsert', valid, async ({ sb, body, req }) =
     about: body.about?.trim() ?? '',
     cover_url: body.cover_url ?? null,
     avatar_url: body.avatar_url ?? null,
+    lat: body.lat ?? null,
+    lng: body.lng ?? null,
     updated_at: new Date().toISOString(),
   };
+
+  // On UPDATE, only touch lat/lng when the client actually sent them — a partial
+  // edit (e.g. just the name) must NOT wipe a previously-picked exact point back to
+  // the city centroid. INSERT always sets them (null → the geo trigger fills the centroid).
+  const updateFields: Record<string, unknown> = {
+    name: payload.name,
+    city: payload.city,
+    about: payload.about,
+    cover_url: payload.cover_url,
+    avatar_url: payload.avatar_url,
+    updated_at: payload.updated_at,
+  };
+  if (body.lat !== undefined) updateFields.lat = body.lat;
+  if (body.lng !== undefined) updateFields.lng = body.lng;
 
   let row: ShopRow | null = null;
   if (body.id) {
     // Update only if caller owns it. The composite filter both finds and authorizes.
     const { data, error } = await sb
       .from('shops')
-      .update({ name: payload.name, city: payload.city, about: payload.about, cover_url: payload.cover_url, avatar_url: payload.avatar_url, updated_at: payload.updated_at })
+      .update(updateFields)
       .eq('id', body.id)
       .eq('owner_id', userId)
       .select('*')
