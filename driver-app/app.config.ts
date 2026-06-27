@@ -193,8 +193,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // url: 'https://u.expo.dev/<EAS_PROJECT_ID>',
   },
   extra: {
+    // Re-linked under @borzvalor (achrafbenamrane@proton.me) 2026-06-27 — fresh build quota.
     eas: {
-      projectId: '8b60f38d-6054-41e4-940c-76a3c979136b',
+      projectId: '042d3f87-35d3-4ef6-ade5-860ad21ea20f',
     },
   },
 });
