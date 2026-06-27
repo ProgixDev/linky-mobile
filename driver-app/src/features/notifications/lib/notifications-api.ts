@@ -23,7 +23,9 @@ export type NotificationsPage = {
 export async function fetchNotifications(cursor?: NotificationCursor): Promise<NotificationsPage> {
   const data = await apiPost<unknown>({
     path: '/list-notifications',
-    body: cursor ? { cursor } : {},
+    // app:'driver' scopes the inbox to delivery notifications only — a livreur who
+    // is also a marketplace user must not see buyer/seller notifications here.
+    body: { app: 'driver', ...(cursor ? { cursor } : {}) },
   });
   const parsed = NotificationListResponseSchema.safeParse(data);
   if (!parsed.success) throw new Error('Unexpected notifications response');

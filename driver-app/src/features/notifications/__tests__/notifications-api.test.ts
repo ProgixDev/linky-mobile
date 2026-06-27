@@ -32,7 +32,10 @@ describe('fetchNotifications', () => {
 
     const page = await fetchNotifications();
 
-    expect(mockApiPost).toHaveBeenCalledWith({ path: '/list-notifications', body: {} });
+    expect(mockApiPost).toHaveBeenCalledWith({
+      path: '/list-notifications',
+      body: { app: 'driver' },
+    });
     expect(page.unreadCount).toBe(3);
     expect(page.nextCursor).toEqual({ created_at: '2026-06-25T10:00:00.000Z', id: 'n1' });
     expect(page.items[0]).toEqual({
@@ -67,7 +70,10 @@ describe('fetchNotifications', () => {
 
     await fetchNotifications(cursor);
 
-    expect(mockApiPost).toHaveBeenCalledWith({ path: '/list-notifications', body: { cursor } });
+    expect(mockApiPost).toHaveBeenCalledWith({
+      path: '/list-notifications',
+      body: { app: 'driver', cursor },
+    });
   });
 
   it('throws on an unexpected payload shape', async () => {

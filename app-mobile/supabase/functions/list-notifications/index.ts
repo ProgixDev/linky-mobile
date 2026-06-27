@@ -14,7 +14,7 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 
 interface Cursor { created_at: string; id: string }
-interface Body { limit?: number; cursor?: Cursor }
+interface Body { limit?: number; cursor?: Cursor; app?: 'driver' | 'marketplace' }
 
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 100;
@@ -36,6 +36,7 @@ function valid(b: unknown): b is Body {
   const x = b as Record<string, unknown>;
   if (x.limit !== undefined && (typeof x.limit !== 'number' || x.limit < 1 || x.limit > MAX_LIMIT)) return false;
   if (x.cursor !== undefined && x.cursor !== null && !validCursor(x.cursor)) return false;
+  if (x.app !== undefined && x.app !== 'driver' && x.app !== 'marketplace') return false;
   return true;
 }
 
@@ -61,6 +62,11 @@ Deno.serve(makePost<Body>('/v1/notifications/list', valid, async ({ sb, body, re
     .select('id, category, title, body, icon_hint, deeplink, ref_type, ref_id, read_at, created_at')
     .eq('user_id', userId);
 
+  // Scope to the calling app: the driver app sends app:'driver' and sees ONLY
+  // delivery notifications; the marketplace app sends nothing and excludes them.
+  if (body.app === 'driver') q = q.eq('app', 'driver');
+  else q = q.neq('app', 'driver');
+
   if (body.cursor) {
     q = q.or(
       `created_at.lt.${body.cursor.created_at},and(created_at.eq.${body.cursor.created_at},id.lt.${body.cursor.id})`,
@@ -81,11 +87,14 @@ Deno.serve(makePost<Body>('/v1/notifications/list', valid, async ({ sb, body, re
   const hasMore = all.length > limit;
   const items = hasMore ? all.slice(0, limit) : all;
 
-  const { count, error: cErr } = await sb
+  let cq = sb
     .from('notifications')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
     .is('read_at', null);
+  if (body.app === 'driver') cq = cq.eq('app', 'driver');
+  else cq = cq.neq('app', 'driver');
+  const { count, error: cErr } = await cq;
   if (cErr) {
     console.error('[list-notifications] unread count error:', cErr);
     throwApi('INTERNAL_ERROR', 500, 'Erreur chargement notifications.');

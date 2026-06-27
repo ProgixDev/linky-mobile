@@ -67,6 +67,10 @@ export async function notify(sb: SupabaseClient, input: NotifyInput): Promise<vo
         deeplink: input.deeplink ?? null,
         ref_type: input.refType ?? null,
         ref_id: input.refId ?? null,
+        // Which app this notification is FOR. The driver inbox shows app='driver'
+        // only; the marketplace inbox excludes it — a user can be both buyer/seller
+        // AND livreur on one account, so each app must see only its own notifications.
+        app: input.app ?? 'marketplace',
       })),
     );
     if (insErr) console.error('[push] notifications insert failed:', insErr);
