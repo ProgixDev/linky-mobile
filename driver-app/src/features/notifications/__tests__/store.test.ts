@@ -1,3 +1,5 @@
+import { presentLocalNotification } from '@/shared/lib/push';
+
 import { fetchNotifications, markNotificationsRead } from '../lib/notifications-api';
 import { type AppNotification } from '../model/schema';
 import { useNotificationsStore } from '../model/store';
@@ -8,10 +10,14 @@ jest.mock('../lib/notifications-api', () => ({
 }));
 // setBadgeCount lives in shared/lib/push (expo-notifications mocked globally); spy so the
 // store's badge side-effects don't reach the native stub with surprises.
-jest.mock('@/shared/lib/push', () => ({ setBadgeCount: jest.fn(async () => undefined) }));
+jest.mock('@/shared/lib/push', () => ({
+  setBadgeCount: jest.fn(async () => undefined),
+  presentLocalNotification: jest.fn(async () => undefined),
+}));
 
 const mockFetch = fetchNotifications as jest.Mock;
 const mockMark = markNotificationsRead as jest.Mock;
+const mockPresent = presentLocalNotification as jest.Mock;
 
 const notif = (over: Partial<AppNotification> = {}): AppNotification => ({
   id: 'n1',
@@ -119,5 +125,50 @@ describe('reset', () => {
     const s = useNotificationsStore.getState();
     expect(s.items).toEqual([]);
     expect(s.unreadCount).toBe(0);
+  });
+});
+
+describe('local notification on new (no-FCM real-time)', () => {
+  it('does NOT pop a banner on the first (baseline) load', async () => {
+    mockFetch.mockResolvedValue({ items: [notif()], nextCursor: null, unreadCount: 1 });
+    await useNotificationsStore.getState().load();
+    expect(mockPresent).not.toHaveBeenCalled();
+  });
+
+  it('pops once for a genuinely-new unread item on a later refresh', async () => {
+    mockFetch.mockResolvedValueOnce({
+      items: [notif({ id: 'n1' })],
+      nextCursor: null,
+      unreadCount: 1,
+    });
+    await useNotificationsStore.getState().load(); // baseline — no banner
+
+    mockFetch.mockResolvedValueOnce({
+      items: [notif({ id: 'n2', title: 'Course n2' }), notif({ id: 'n1' })],
+      nextCursor: null,
+      unreadCount: 2,
+    });
+    await useNotificationsStore.getState().refresh();
+
+    expect(mockPresent).toHaveBeenCalledTimes(1);
+    expect(mockPresent).toHaveBeenCalledWith(expect.objectContaining({ title: 'Course n2' }));
+  });
+
+  it('does not re-pop already-seen items, nor pop read ones', async () => {
+    mockFetch.mockResolvedValueOnce({
+      items: [notif({ id: 'n1' })],
+      nextCursor: null,
+      unreadCount: 1,
+    });
+    await useNotificationsStore.getState().load();
+
+    mockFetch.mockResolvedValueOnce({
+      items: [notif({ id: 'n1' }), notif({ id: 'n3', read: true })],
+      nextCursor: null,
+      unreadCount: 1,
+    });
+    await useNotificationsStore.getState().refresh();
+
+    expect(mockPresent).not.toHaveBeenCalled();
   });
 });

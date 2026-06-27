@@ -176,3 +176,33 @@ export async function setBadgeCount(count: number): Promise<void> {
     // ignore
   }
 }
+
+/**
+ * Show a LOCAL notification immediately — NO push service / FCM required. The
+ * foreground delivery poller calls this so a newly-assigned course pops as a system
+ * banner WITHOUT Firebase. It fires while the app is alive (the foreground handler
+ * presents it as a banner + sound); a fully-killed app still can't be woken without
+ * FCM — an Android platform rule no backend can bypass. `data.deeplink` lets a tap
+ * open the delivery via the same response listener that handles real pushes.
+ */
+export async function presentLocalNotification(input: {
+  title: string;
+  body: string;
+  deeplink?: string | null;
+  category?: string | null;
+}): Promise<void> {
+  try {
+    await ensureDeliveryChannel();
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: input.title,
+        body: input.body,
+        sound: 'default',
+        data: { deeplink: input.deeplink ?? null, category: input.category ?? null },
+      },
+      trigger: null, // immediate — the foreground handler presents it as a banner
+    });
+  } catch (e) {
+    logger.warn('[push] presentLocalNotification failed', e);
+  }
+}

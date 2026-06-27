@@ -122,9 +122,17 @@ export function useNotificationObservers({
         void refreshNotifications();
       }
     });
+    // No-FCM real-time: while the app is FOREGROUNDED, poll the inbox every 20s. The
+    // store pops a LOCAL notification (system banner) for any new unread delivery, so a
+    // courier on shift is alerted without a push service. A backgrounded/killed app
+    // can't be woken without FCM (Android platform rule) — accepted trade-off.
+    const poll = setInterval(() => {
+      if (AppState.currentState === 'active') void refreshNotifications();
+    }, 20_000);
     return () => {
       tokenSub.remove();
       appSub.remove();
+      clearInterval(poll);
     };
   }, [enabled, refreshNotifications]);
 }
