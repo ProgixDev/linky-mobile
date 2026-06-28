@@ -34,7 +34,7 @@ describe('requestOtp', () => {
     expect(mockApiPost).toHaveBeenCalledWith({
       path: '/otp-request',
       authed: false,
-      body: { channel: 'email', target: 'driver@example.com', purpose: 'signin' },
+      body: { channel: 'email', target: 'driver@example.com', purpose: 'signin', app: 'driver' },
     });
     expect(result).toEqual({ ok: true, otpId: 'otp-1', devCode: '123456' });
   });
@@ -62,6 +62,18 @@ describe('requestOtp', () => {
       ok: false,
       kind: 'delivery_failed',
       message: 'Envoi impossible.',
+    });
+  });
+
+  it('maps a marketplace email to email_in_marketplace (driver ≠ customer)', async () => {
+    mockApiPost.mockRejectedValue(
+      apiErr(409, 'EMAIL_IN_MARKETPLACE', 'Cet email est déjà utilisé sur l’app Linky.'),
+    );
+
+    expect(await requestOtp({ email: 'buyer@example.com' })).toEqual({
+      ok: false,
+      kind: 'email_in_marketplace',
+      message: 'Cet email est déjà utilisé sur l’app Linky.',
     });
   });
 
@@ -96,7 +108,7 @@ describe('verifyOtp', () => {
     expect(mockApiPost).toHaveBeenCalledWith({
       path: '/otp-verify',
       authed: false,
-      body: { otp_id: 'otp-1', code: '123456' },
+      body: { otp_id: 'otp-1', code: '123456', app: 'driver' },
     });
     expect(result).toEqual({ ok: true, bundle });
   });

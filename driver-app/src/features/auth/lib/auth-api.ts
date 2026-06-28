@@ -40,6 +40,8 @@ const FALLBACK: Record<OtpErrorKind, string> = {
   not_found: 'Code introuvable ou expiré.',
   delivery_failed: 'Envoi du code impossible. Réessaie plus tard.',
   offline: 'Connexion impossible. Vérifie ta connexion.',
+  email_in_marketplace:
+    'Cet email est déjà utilisé sur l’app Linky (client / vendeur). Tu ne peux pas être à la fois client et livreur — utilise une autre adresse email pour ton compte livreur.',
   error: 'Une erreur est survenue. Réessaie.',
 };
 
@@ -61,6 +63,8 @@ function kindForCode(status: number, code: string): OtpErrorKind {
       return 'not_found';
     case 'OTP_DELIVERY_FAILED':
       return 'delivery_failed';
+    case 'EMAIL_IN_MARKETPLACE':
+      return 'email_in_marketplace';
     default:
       return 'error';
   }
@@ -80,7 +84,7 @@ export async function requestOtp({ email }: { email: string }): Promise<OtpReque
     const data = await apiPost<unknown>({
       path: '/otp-request',
       authed: false,
-      body: { channel: 'email', target: email, purpose: 'signin' },
+      body: { channel: 'email', target: email, purpose: 'signin', app: 'driver' },
     });
     const parsed = OtpRequestResponseSchema.safeParse(data);
     if (!parsed.success) return { ok: false, kind: 'error', message: FALLBACK.error };
@@ -102,7 +106,7 @@ export async function verifyOtp({
     const data = await apiPost<unknown>({
       path: '/otp-verify',
       authed: false,
-      body: { otp_id: otpId, code },
+      body: { otp_id: otpId, code, app: 'driver' },
     });
     const parsed = AuthBundleSchema.safeParse(data);
     if (!parsed.success) return { ok: false, kind: 'error', message: FALLBACK.error };

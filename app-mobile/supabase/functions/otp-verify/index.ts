@@ -5,12 +5,13 @@ import { signAccessToken, randomRefreshToken } from '@shared/jwt.ts';
 import { bcryptHash } from '@shared/bcrypt.ts';
 import { detectCarrier } from '@shared/validate.ts';
 
-interface Body { otp_id: string; code: string }
+interface Body { otp_id: string; code: string; app?: 'driver' | 'marketplace' }
 
 function valid(b: unknown): b is Body {
   const x = b as Body;
   return !!x && typeof x.otp_id === 'string' && /^[0-9a-f-]{36}$/i.test(x.otp_id)
-    && typeof x.code === 'string' && /^\d{6}$/.test(x.code);
+    && typeof x.code === 'string' && /^\d{6}$/.test(x.code)
+    && (x.app === undefined || x.app === 'driver' || x.app === 'marketplace');
 }
 
 const MAX_ATTEMPTS = 5;
@@ -84,6 +85,13 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
 
   // Backfill user_id on the (already-consumed) OTP row for audit traceability.
   await sb.from('otp_codes').update({ user_id: userId }).eq('id', otp.id);
+
+  // Mark a NEWLY-created account with the app it was born in, so the driver app can
+  // refuse a login from a marketplace email (driver ≠ customer). Existing accounts keep
+  // their origin. Best-effort — must never block issuing the session.
+  if (wasCreated && body.app === 'driver') {
+    await sb.from('users').update({ origin_app: 'driver' }).eq('id', userId);
+  }
 
   const { token: access_token } = await signAccessToken(userId, jwtSecret);
   // Refresh token format: "<session_id>.<secret>". Embedding the session id lets refresh look up

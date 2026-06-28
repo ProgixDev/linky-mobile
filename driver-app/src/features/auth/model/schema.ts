@@ -72,4 +72,5 @@ export type OtpErrorKind =
   | 'not_found' // OTP_NOT_FOUND — unknown/expired otp_id
   | 'delivery_failed' // OTP_DELIVERY_FAILED — email couldn't be sent
   | 'offline' // transport failure — no connection (money/auth stays online)
+  | 'email_in_marketplace' // EMAIL_IN_MARKETPLACE — email already a Linky customer; can't be a livreur
   | 'error'; // anything else — generic, no internal leak

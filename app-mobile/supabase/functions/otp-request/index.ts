@@ -3,13 +3,14 @@ import { throwApi } from '@shared/errors.ts';
 import { hmacHex } from '@shared/hmac.ts';
 import { normalizePhone, normalizeEmail } from '@shared/validate.ts';
 
-interface Body { channel: 'phone' | 'email'; target: string; purpose: 'signin' }
+interface Body { channel: 'phone' | 'email'; target: string; purpose: 'signin'; app?: 'driver' | 'marketplace' }
 
 function valid(b: unknown): b is Body {
   const x = b as Body;
   return !!x && (x.channel === 'phone' || x.channel === 'email')
     && typeof x.target === 'string' && x.target.length > 0
-    && x.purpose === 'signin';
+    && x.purpose === 'signin'
+    && (x.app === undefined || x.app === 'driver' || x.app === 'marketplace');
 }
 
 const OTP_TTL_SEC = 300;
@@ -19,6 +20,21 @@ const PER_DAY = 10;
 Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
   const target = body.channel === 'phone' ? normalizePhone(body.target) : normalizeEmail(body.target);
   if (!target) throwApi('INVALID_TARGET', 400, body.channel === 'phone' ? 'Numéro invalide' : 'Email invalide');
+
+  // Driver app: a Linky MARKETPLACE email (client / vendeur / agent) cannot also be a
+  // livreur — driver and customer accounts are kept separate. Refuse BEFORE sending any
+  // OTP so the user gets a clear instruction, not a code. A brand-new email (no account)
+  // passes through; a `driver`-origin account passes through (existing livreur re-login).
+  if (body.app === 'driver' && body.channel === 'email') {
+    const { data: emailRow } = await sb.from('emails').select('user_id').eq('address', target).maybeSingle();
+    if (emailRow?.user_id) {
+      const { data: u } = await sb.from('users').select('origin_app').eq('id', emailRow.user_id).maybeSingle();
+      if (u && (u as { origin_app?: string }).origin_app !== 'driver') {
+        throwApi('EMAIL_IN_MARKETPLACE', 409,
+          'Cet email est déjà utilisé sur l’app Linky (client / vendeur). Tu ne peux pas être à la fois client et livreur — utilise une autre adresse email pour ton compte livreur.');
+      }
+    }
+  }
 
   const now = Date.now();
   const sixtySecAgo = new Date(now - 60_000).toISOString();
