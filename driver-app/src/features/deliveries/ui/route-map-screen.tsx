@@ -12,6 +12,7 @@ import { colors } from '@/shared/theme/colors';
 import { AppText, Button, EmptyState, Screen, Skeleton } from '@/shared/ui';
 
 import { getDelivery } from '../lib/deliveries-api';
+import { fetchDrivingRoute, type DrivingRoute } from '../lib/directions';
 import { boundsOf, formatDistanceKm, haversineKm } from '../lib/geo';
 import { type DeliveryDetail, type LatLng } from '../model/schema';
 
@@ -23,7 +24,7 @@ if (MAPBOX_TOKEN) {
   Mapbox.setTelemetryEnabled(false);
 }
 
-/** Rough city speed for the live ETA (no routing API — straight-line / avg). */
+/** Rough city speed for the FALLBACK ETA when the Directions route is unavailable. */
 const AVG_SPEED_KMH = 25;
 
 function formatGnf(amount: number): string {
@@ -37,15 +38,19 @@ const toLngLat = (p: LatLng): [number, number] => [p.lng, p.lat];
  * « Voir l'itinéraire » — the in-app tracking map (full-bleed map + a floating sheet
  * with the live ETA, the client address, and the product). The route line + the ETA
  * track DRIVER → client in real time: the driver's foreground GPS (expo-location) is
- * read on-device, so as the courier moves the line redraws and the « ~X min » counts
- * down. Coords come from get-delivery (no client-side geocoding); the driver position
- * is never sent anywhere.
+ * read on-device, and the Mapbox Directions API returns the road-following line + the
+ * real driving time, both re-fetched (throttled to ~150 m of movement) as the courier
+ * moves. If Directions is unavailable it degrades to a straight line + a haversine
+ * estimate. Coords come from get-delivery (no client-side geocoding); the driver
+ * position is sent only to Mapbox Directions for the route, never stored.
  */
 export function RouteMapScreen({ id }: { id: string }) {
   const [detail, setDetail] = useState<DeliveryDetail | null>(null);
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
   const [driver, setDriver] = useState<LatLng | null>(null);
+  const [route, setRoute] = useState<DrivingRoute | null>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
+  const routeAnchor = useRef<LatLng | null>(null);
 
   const loadDetail = useCallback(async () => {
     setPhase('loading');
@@ -93,13 +98,38 @@ export function RouteMapScreen({ id }: { id: string }) {
   // The LIVE leg: from the driver's current position (fallback: boutique) to the client.
   // Updates whenever `driver` changes → the line + ETA + distance are real-time.
   const lineFrom = driver ?? pickupCoord;
-  const distanceKm = useMemo(
-    () => (lineFrom && clientCoord ? haversineKm(lineFrom, clientCoord) : null),
-    [lineFrom, clientCoord],
-  );
+
+  // Fetch the ROAD route (Mapbox Directions) for the street-following line + the real
+  // driving ETA. Throttled to ~150 m of movement so the courier can ride without
+  // spamming the API; a failed fetch simply leaves the straight-line fallback in place.
+  useEffect(() => {
+    if (!lineFrom || !clientCoord || !MAPBOX_TOKEN) return;
+    const anchor = routeAnchor.current;
+    if (anchor && haversineKm(anchor, lineFrom) < 0.15) return;
+    routeAnchor.current = lineFrom;
+    let active = true;
+    void fetchDrivingRoute(lineFrom, clientCoord, MAPBOX_TOKEN).then((r) => {
+      if (active && r) setRoute(r);
+    });
+    return () => {
+      active = false;
+    };
+  }, [lineFrom, clientCoord]);
+
+  // Prefer the real road distance/time; fall back to straight-line × avg speed.
+  const distanceKm =
+    route && route.distanceM > 0
+      ? route.distanceM / 1000
+      : lineFrom && clientCoord
+        ? haversineKm(lineFrom, clientCoord)
+        : null;
   const distanceLabel = distanceKm != null ? formatDistanceKm(distanceKm) : null;
   const etaMin =
-    distanceKm != null ? Math.max(1, Math.round((distanceKm / AVG_SPEED_KMH) * 60)) : null;
+    route && route.durationSec > 0
+      ? Math.max(1, Math.round(route.durationSec / 60))
+      : distanceKm != null
+        ? Math.max(1, Math.round((distanceKm / AVG_SPEED_KMH) * 60))
+        : null;
 
   const bounds = useMemo(
     () => boundsOf([pickupCoord, clientCoord, driver].filter((p): p is LatLng => p != null)),
@@ -187,7 +217,9 @@ export function RouteMapScreen({ id }: { id: string }) {
                   properties: {},
                   geometry: {
                     type: 'LineString',
-                    coordinates: [toLngLat(lineFrom), toLngLat(clientCoord)],
+                    coordinates: route
+                      ? route.coordinates
+                      : [toLngLat(lineFrom), toLngLat(clientCoord)],
                   },
                 }}
               >
