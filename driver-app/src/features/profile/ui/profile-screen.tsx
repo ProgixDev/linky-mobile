@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { router, type Href } from 'expo-router';
 import { BadgeCheck } from 'lucide-react-native';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
@@ -234,7 +235,13 @@ export function ProfileScreen({
           </View>
         )}
 
-        <View className="mt-2 border-t border-ink-faint/15 pt-4">
+        <View className="mt-2 gap-1 border-t border-ink-faint/15 pt-4">
+          <Button
+            testID="profile-account"
+            variant="ghost"
+            label="Mon compte"
+            onPress={() => router.push('/account' as Href)}
+          />
           <Button
             testID="profile-sign-out"
             variant="ghost"

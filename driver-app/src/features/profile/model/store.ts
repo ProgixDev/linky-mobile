@@ -49,7 +49,17 @@ export const useProfileStore = create<ProfileState>((set) => ({
     }
     set({ saving: true, saveNote: null });
     const r = await saveProfile(parsed.data);
-    set({ saving: false, saveNote: r.ok ? 'Profil mis à jour.' : r.message });
+    if (!r.ok) {
+      set({ saving: false, saveNote: r.message });
+      return;
+    }
+    // The snapshot is read from the application — re-fetch so the view reflects the edit.
+    const fresh = await fetchProfile();
+    set((s) => ({
+      saving: false,
+      saveNote: 'Profil mis à jour.',
+      view: fresh.ok ? fresh.view : s.view,
+    }));
   },
 
   clearNote: () => set({ saveNote: null }),

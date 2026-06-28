@@ -32,7 +32,9 @@ function applyFilter(items: Delivery[], key: FilterKey, now: number): Delivery[]
     case 'aujourdhui':
       return items.filter((d) => isActive(d) && isSameDay(getDeadline(d), now));
     case 'terminees':
-      return items.filter((d) => d.status === 'delivered');
+      return items.filter(
+        (d) => d.status === 'delivered' || d.status === 'failed' || d.status === 'cancelled',
+      );
   }
 }
 

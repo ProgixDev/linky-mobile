@@ -1,4 +1,4 @@
-import { apiPost } from '@/shared/lib/api';
+import { ApiError, apiPost } from '@/shared/lib/api';
 
 import {
   ProfileStatusWireSchema,
@@ -40,15 +40,16 @@ export async function fetchProfile(): Promise<ProfileResult> {
 export type SaveResult = { ok: true } | { ok: false; message: string };
 
 /**
- * Save the edited profile.
- *
- * STUB (exec-plan backend ask #3): there is NO livreur profile-update endpoint yet
- * (the marketplace has `update-profile`; the livreur equivalent is pending). The
- * form + Zod validation are fully wired, so the day the endpoint ships this becomes
- * a one-line `apiPost('/update-livreur-profile', input)`. Until then we surface an
- * honest "coming soon" instead of pretending the change persisted.
+ * Save the edited profile via `update-livreur-profile` — it updates the livreur
+ * application (the profile read source) and mirrors name / city onto `users`. The
+ * store reloads the snapshot on success so the read-only view reflects the change.
  */
-export async function saveProfile(_input: ProfileEdit): Promise<SaveResult> {
-  // TODO(backend ask #3): POST /update-livreur-profile { full_name, city, vehicle_type }.
-  return { ok: false, message: 'La mise à jour du profil sera bientôt disponible.' };
+export async function saveProfile(input: ProfileEdit): Promise<SaveResult> {
+  try {
+    await apiPost<unknown>({ path: '/update-livreur-profile', body: input });
+    return { ok: true };
+  } catch (e) {
+    const message = e instanceof ApiError ? e.message_fr : 'Mise à jour impossible. Réessaie.';
+    return { ok: false, message };
+  }
 }
