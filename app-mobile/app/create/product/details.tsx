@@ -1,6 +1,7 @@
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { Sparkles } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -12,17 +13,35 @@ import { TopBar } from '../../../src/components/nav/TopBar';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { CitySelectField } from '../../../src/components/forms/CitySelectField';
 import { useCreateListing } from '../../../src/stores/createListing';
+import { useGenerateDescription } from '../../../src/data/queries';
+import { useToast } from '../../../src/components/feedback/Toast';
+import { toToastMessage } from '../../../src/lib/api';
 import { gnfToEur } from '../../../src/lib/currency';
 
 export default function CreateProductDetailsRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const state = useCreateListing();
+  const gen = useGenerateDescription();
+  const toast = useToast();
+
+  const onGenerate = async () => {
+    if (gen.isPending || state.title.trim().length < 2) return;
+    try {
+      const desc = await gen.mutateAsync({ title: state.title, condition: state.condition });
+      state.set('description', desc.slice(0, 600));
+    } catch (e) {
+      toast.show(toToastMessage(e, 'Génération impossible. Réessaie.'), 'danger');
+    }
+  };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('create.topbarTitle')} back />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
+      >
         <ProgressDots total={6} current={3} />
         <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
           {t('create.stepDotsWith', { current: 4, total: 6, label: t('create.stepDetailsLabel') })}
@@ -32,16 +51,54 @@ export default function CreateProductDetailsRoute() {
         </Text>
 
         <View style={{ gap: 12 }}>
-          <Input label={t('create.fieldTitle')} value={state.title} onChangeText={(txt) => state.set('title', txt)} />
+          <Input
+            label={t('create.fieldTitle')}
+            value={state.title}
+            onChangeText={(txt) => state.set('title', txt)}
+          />
 
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
-              <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 5,
+              }}
+            >
+              <Text
+                variant="micro"
+                tone="muted"
+                style={{ textTransform: 'none', letterSpacing: 0 }}
+              >
                 {t('create.fieldDescription')}
               </Text>
-              <Text variant="micro" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
-                {t('create.fieldDescCount', { count: state.description.length })}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                {state.title.trim().length >= 2 ? (
+                  <Pressable
+                    onPress={onGenerate}
+                    disabled={gen.isPending}
+                    hitSlop={6}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    <Sparkles size={13} color={colors.primary} />
+                    <Text
+                      variant="micro"
+                      style={{
+                        color: colors.primary,
+                        textTransform: 'none',
+                        letterSpacing: 0,
+                        fontWeight: '600',
+                      }}
+                    >
+                      {gen.isPending ? 'Génération…' : 'Générer avec l’IA'}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Text variant="micro" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
+                  {t('create.fieldDescCount', { count: state.description.length })}
+                </Text>
+              </View>
             </View>
             <Input
               multiline
@@ -72,14 +129,24 @@ export default function CreateProductDetailsRoute() {
           </View>
 
           <View>
-            <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginBottom: 6 }}>
+            <Text
+              variant="micro"
+              tone="muted"
+              style={{ textTransform: 'none', letterSpacing: 0, marginBottom: 6 }}
+            >
               {t('create.fieldCondition')}
             </Text>
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {(['neuf', 'occasion', 'reconditionné'] as const).map((c) => (
                 <Chip
                   key={c}
-                  label={c === 'neuf' ? t('create.condNeuf') : c === 'occasion' ? t('create.condOccasion') : t('create.condReconditionne')}
+                  label={
+                    c === 'neuf'
+                      ? t('create.condNeuf')
+                      : c === 'occasion'
+                        ? t('create.condOccasion')
+                        : t('create.condReconditionne')
+                  }
                   active={state.condition === c}
                   onPress={() => state.set('condition', c)}
                   block

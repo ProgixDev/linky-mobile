@@ -1,4 +1,5 @@
 export * from './addresses';
+export * from './ai';
 export * from './auth';
 export * from './phones';
 export * from './products';
