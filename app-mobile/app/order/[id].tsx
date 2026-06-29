@@ -218,6 +218,29 @@ export default function OrderRoute() {
           </Card>
         </View>
 
+        {isBuyer && order.status === 'released' && !order.hasReviewed && (
+          <View style={{ marginTop: 18 }}>
+            <Card padding={16}>
+              <Text variant="bodyMSemibold">Comment s'est passée ta commande ?</Text>
+              <Text
+                variant="micro"
+                tone="muted"
+                style={{ marginTop: 4, letterSpacing: 0, textTransform: 'none' }}
+              >
+                Ton avis aide les autres acheteurs.
+              </Text>
+              <Button
+                style={{ marginTop: 12 }}
+                variant="primary"
+                block
+                label="Noter la boutique"
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /review typedRoute regenerates next start
+                onPress={() => router.push(`/review/${order.id}` as any)}
+              />
+            </Card>
+          </View>
+        )}
+
         {isBuyer && inHandoffWindow && qrPayload && (
           <>
             <View style={{ marginTop: 18 }}>

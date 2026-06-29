@@ -101,6 +101,10 @@ export default function RootLayout() {
                           options={{ animation: 'slide_from_right' }}
                         />
                         <Stack.Screen
+                          name="review/[orderId]"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
                           name="wallet/index"
                           options={{ animation: 'slide_from_right' }}
                         />

@@ -18,12 +18,19 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { ProductCard } from '../../src/components/lists/ProductCard';
-import { useShop, useProducts, useFindOrCreateConversation, useToggleShopFollow } from '../../src/data/queries';
+import {
+  useShop,
+  useProducts,
+  useFindOrCreateConversation,
+  useToggleShopFollow,
+  useShopReviews,
+} from '../../src/data/queries';
 import { useAuth } from '../../src/stores/auth';
 import { haptic } from '../../src/lib/haptics';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
+import { Stars } from '../../src/components/reviews/StarRating';
 
 type Tab = 'articles' | 'reviews' | 'about';
 
@@ -35,6 +42,7 @@ export default function ShopRoute() {
   const { t } = useTranslation();
   const { data: shop, isLoading, isError, refetch } = useShop(id);
   const { data: products } = useProducts({ shopId: id });
+  const { data: reviews } = useShopReviews(id);
   const [tab, setTab] = useState<Tab>('articles');
   // Pre-prod: follow state is server-truth (get-shop returns is_following for
   // authed callers, follower_count is the denormalized cache). The toggle
@@ -76,7 +84,13 @@ export default function ShopRoute() {
   };
 
   if (isLoading || isError || !shop) {
-    return <DetailStateScreen loading={isLoading} title={t('shop.fallbackTitle')} onRetry={() => void refetch()} />;
+    return (
+      <DetailStateScreen
+        loading={isLoading}
+        title={t('shop.fallbackTitle')}
+        onRetry={() => void refetch()}
+      />
+    );
   }
 
   // Phase Y.1 — never render a bare/placeholder response time. The DB used to
@@ -104,7 +118,9 @@ export default function ShopRoute() {
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         {/* ===== Cover hero ===== */}
-        <View style={{ height: HERO_HEIGHT, backgroundColor: colors.bgSunken, position: 'relative' }}>
+        <View
+          style={{ height: HERO_HEIGHT, backgroundColor: colors.bgSunken, position: 'relative' }}
+        >
           <Image source={shop.cover} style={{ flex: 1 }} contentFit="cover" />
           <LinearGradient
             colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']}
@@ -365,8 +381,8 @@ export default function ShopRoute() {
                 tabId === 'articles'
                   ? t('shop.tabArticles')
                   : tabId === 'reviews'
-                  ? t('shop.tabReviews')
-                  : t('shop.tabAbout');
+                    ? t('shop.tabReviews')
+                    : t('shop.tabAbout');
               return (
                 <Pressable
                   key={tabId}
@@ -474,19 +490,68 @@ export default function ShopRoute() {
                 </Text>
               </View>
             </View>
-            {!isNewShop && (
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: colors.textMuted,
-                  marginTop: 20,
-                  textAlign: 'center',
-                  letterSpacing: 0,
-                }}
-              >
-                {t('shop.reviewsDetailsSoon')}
-              </Text>
-            )}
+            {!isNewShop &&
+              (reviews && reviews.length > 0 ? (
+                <View style={{ marginTop: 16, gap: 12 }}>
+                  {reviews.map((rv) => (
+                    <View
+                      key={rv.id}
+                      style={{
+                        padding: 14,
+                        borderRadius: 16,
+                        backgroundColor: colors.card,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        gap: 6,
+                      }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                          {rv.reviewerName ?? 'Client'}
+                        </Text>
+                        <Stars rating={rv.rating} />
+                      </View>
+                      {rv.comment ? (
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            color: colors.textMuted,
+                            lineHeight: 18,
+                            letterSpacing: 0,
+                          }}
+                        >
+                          {rv.comment}
+                        </Text>
+                      ) : null}
+                      <Text style={{ fontSize: 11, color: colors.textMuted, letterSpacing: 0 }}>
+                        {new Date(rv.createdAt).toLocaleDateString('fr-FR', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: colors.textMuted,
+                    marginTop: 20,
+                    textAlign: 'center',
+                    letterSpacing: 0,
+                  }}
+                >
+                  {t('shop.reviewsDetailsSoon')}
+                </Text>
+              ))}
           </View>
         )}
 
@@ -521,16 +586,18 @@ export default function ShopRoute() {
                   fontStyle: hasAbout ? 'normal' : 'italic',
                 }}
               >
-                {hasAbout
-                  ? shop.about
-                  : t('shop.aboutEmpty')}
+                {hasAbout ? shop.about : t('shop.aboutEmpty')}
               </Text>
             </View>
 
             <View style={{ marginTop: 14, gap: 10 }}>
               <InfoRow Icon={MapPin} label={t('shop.infoVille')} value={shop.city} />
               {hasResponseTime && (
-                <InfoRow Icon={Clock} label={t('shop.infoResponseTime')} value={shop.responseTime} />
+                <InfoRow
+                  Icon={Clock}
+                  label={t('shop.infoResponseTime')}
+                  value={shop.responseTime}
+                />
               )}
               {shop.verified && (
                 <InfoRow
@@ -656,11 +723,7 @@ function InfoRow({
           justifyContent: 'center',
         }}
       >
-        <Icon
-          size={14}
-          color={accent ? colors.accentText : colors.text}
-          strokeWidth={2}
-        />
+        <Icon size={14} color={accent ? colors.accentText : colors.text} strokeWidth={2} />
       </View>
       <View style={{ flex: 1 }}>
         <Text

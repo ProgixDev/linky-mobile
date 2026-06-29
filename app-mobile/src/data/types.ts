@@ -135,6 +135,16 @@ export interface Order {
   /** Delivery summary — present on get-order responses for order participants.
    *  Name only (no livreur phone/PII). Drives the seller's pick/change UI. */
   delivery?: OrderDelivery | null;
+  /** Whether the caller already reviewed this order (get-order) — gates the « Noter » CTA. */
+  hasReviewed?: boolean;
+}
+
+export interface Review {
+  id: ID;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  reviewerName: string | null;
 }
 
 export interface OrderDelivery {
