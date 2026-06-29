@@ -99,6 +99,21 @@ export async function getDelivery(deliveryId: string): Promise<DeliveryDetail> {
 }
 
 /**
+ * Mark the parcel as PICKED UP (assigned → in_transit). The server derives the driver
+ * from the JWT and only transitions the caller's own assigned delivery. Returns true on
+ * success, false on any failure — nothing money-related happens here, so a soft boolean
+ * is enough (the caller surfaces a retry note).
+ */
+export async function markPickup(deliveryId: string): Promise<boolean> {
+  try {
+    await apiPost<unknown>({ path: '/livreur-mark-pickup', body: { delivery_id: deliveryId } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Confirm the handoff — the irreversible money action (spec 002). Sends only the order
  * id + scanned token; the server derives the driver from the JWT and is the sole
  * authority on assignment, token validity, and idempotency (AC-9). Server error codes

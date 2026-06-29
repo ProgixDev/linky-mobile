@@ -24,6 +24,8 @@ type DeliveriesState = {
   clearCache: () => void;
   /** Drop one delivery from the list after a confirmed handoff (spec 002 AC-4). */
   removeDelivery: (id: string) => void;
+  /** Patch one delivery's status locally after a confirmed transition (e.g. pickup). */
+  setDeliveryStatus: (id: string, status: Delivery['status']) => void;
 };
 
 export const useDeliveriesStore = create<DeliveriesState>()(
@@ -68,6 +70,9 @@ export const useDeliveriesStore = create<DeliveriesState>()(
       clearCache: () => set({ items: [], status: 'idle', error: null, lastFetchedAt: null }),
 
       removeDelivery: (id) => set({ items: get().items.filter((d) => d.id !== id) }),
+
+      setDeliveryStatus: (id, status) =>
+        set({ items: get().items.map((d) => (d.id === id ? { ...d, status } : d)) }),
     }),
     {
       name: 'deliveries-store-v1',

@@ -7,7 +7,7 @@ import { makeId } from '@/shared/lib/id';
 import { colors } from '@/shared/theme/colors';
 import { AppText, Button, Card, EmptyState, Screen, Skeleton } from '@/shared/ui';
 
-import { confirmHandoff, getDelivery } from '../lib/deliveries-api';
+import { confirmHandoff, getDelivery, markPickup } from '../lib/deliveries-api';
 import { parseOrderQr } from '../lib/qr';
 import { type DeliveryDetail } from '../model/schema';
 import { useDeliveriesStore } from '../model/store';
@@ -84,9 +84,12 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
   const [detail, setDetail] = useState<DeliveryDetail | null>(null);
   const removeDelivery = useDeliveriesStore((s) => s.removeDelivery);
   const refreshList = useDeliveriesStore((s) => s.refresh);
+  const setDeliveryStatus = useDeliveriesStore((s) => s.setDeliveryStatus);
   // Synchronous single-flight guard: a money action must fire exactly once even if a
   // double-tap lands before the 'confirming' re-render disables the button (review P1).
   const submitting = useRef(false);
+  const [pickingUp, setPickingUp] = useState(false);
+  const [pickupError, setPickupError] = useState<string | null>(null);
 
   const loadDetail = useCallback(async () => {
     try {
@@ -154,6 +157,22 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
     },
     [detail, removeDelivery, refreshList],
   );
+
+  // Pickup is NOT a money action (just assigned → in_transit), so a soft optimistic flip
+  // + a retry note is enough — no idempotency/state-machine ceremony like confirm.
+  const onPickup = useCallback(async () => {
+    if (!detail || pickingUp) return;
+    setPickingUp(true);
+    setPickupError(null);
+    const ok = await markPickup(detail.id);
+    setPickingUp(false);
+    if (ok) {
+      setDetail({ ...detail, status: 'in_transit' });
+      setDeliveryStatus(detail.id, 'in_transit');
+    } else {
+      setPickupError('Impossible de marquer la récupération. Vérifie ta connexion et réessaie.');
+    }
+  }, [detail, pickingUp, setDeliveryStatus]);
 
   if (phase.kind === 'loading') {
     return (
@@ -365,11 +384,30 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
             />
           </Card>
         ) : phase.kind === 'detail' ? (
-          <Button
-            testID="delivery-detail-scan-button"
-            label="Scanner la livraison"
-            onPress={() => dispatch({ type: 'scan' })}
-          />
+          detail.status === 'assigned' ? (
+            // Step 1 of the handoff: collect the parcel at the boutique. Gating the scan
+            // behind this makes « En cours » mean a parcel that's actually picked up.
+            <View className="gap-3">
+              {pickupError ? (
+                <Card className="gap-2 bg-surface-muted" testID="delivery-detail-pickup-error">
+                  <AppText variant="body">{pickupError}</AppText>
+                </Card>
+              ) : null}
+              <Button
+                testID="delivery-detail-pickup-button"
+                label="J’ai récupéré le colis"
+                loading={pickingUp}
+                disabled={pickingUp}
+                onPress={() => void onPickup()}
+              />
+            </View>
+          ) : (
+            <Button
+              testID="delivery-detail-scan-button"
+              label="Scanner la livraison"
+              onPress={() => dispatch({ type: 'scan' })}
+            />
+          )
         ) : null}
       </ScrollView>
     </Screen>

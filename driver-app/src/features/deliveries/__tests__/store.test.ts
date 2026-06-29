@@ -97,6 +97,17 @@ describe('deliveries store', () => {
 
     expect(useDeliveriesStore.getState().items.map((d) => d.id)).toEqual(['a']);
   });
+
+  it('setDeliveryStatus patches one delivery in place (pickup → in_transit)', async () => {
+    mockFetch.mockResolvedValue([make({ id: 'a' }), make({ id: 'b' })]);
+    await useDeliveriesStore.getState().load();
+
+    useDeliveriesStore.getState().setDeliveryStatus('a', 'in_transit');
+
+    const items = useDeliveriesStore.getState().items;
+    expect(items.find((d) => d.id === 'a')?.status).toBe('in_transit');
+    expect(items.find((d) => d.id === 'b')?.status).toBe('assigned'); // untouched
+  });
 });
 
 describe('selectActiveDeliveries', () => {

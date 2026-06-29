@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
-import { confirmHandoff, fetchDeliveries, getDelivery } from '../lib/deliveries-api';
+import { confirmHandoff, fetchDeliveries, getDelivery, markPickup } from '../lib/deliveries-api';
 import type { Delivery, DeliveryDetail } from '../model/schema';
 import { useDeliveriesStore } from '../model/store';
 import { DeliveryDetailScreen } from '../ui/delivery-detail-screen';
@@ -8,6 +8,7 @@ import { DeliveryDetailScreen } from '../ui/delivery-detail-screen';
 jest.mock('../lib/deliveries-api', () => ({
   getDelivery: jest.fn(),
   confirmHandoff: jest.fn(),
+  markPickup: jest.fn(),
   // The detail screen reconciles the worklist with a background refresh on success.
   fetchDeliveries: jest.fn(),
 }));
@@ -41,6 +42,7 @@ jest.mock('expo-camera', () => ({
 
 const mockGet = getDelivery as jest.Mock;
 const mockConfirm = confirmHandoff as jest.Mock;
+const mockPickup = markPickup as jest.Mock;
 
 const ORDER_UUID = '11111111-1111-4111-8111-111111111111';
 const TOKEN_UUID = '22222222-2222-4222-8222-222222222222';
@@ -82,6 +84,7 @@ const initial = useDeliveriesStore.getState();
 beforeEach(() => {
   mockGet.mockReset();
   mockConfirm.mockReset();
+  mockPickup.mockReset().mockResolvedValue(true);
   (fetchDeliveries as jest.Mock).mockReset().mockResolvedValue([]);
   mockCamera.permission = { granted: true, canAskAgain: true };
   mockCamera.requestPermission.mockReset();
@@ -94,6 +97,8 @@ afterEach(() => jest.restoreAllMocks());
 
 // Drive the screen to the `review` phase via a valid scan of THIS order's QR.
 async function reachReview() {
+  // DETAIL starts 'assigned' → pick up first, which reveals the scan button.
+  fireEvent.press(await screen.findByTestId('delivery-detail-pickup-button'));
   fireEvent.press(await screen.findByTestId('delivery-detail-scan-button'));
   await screen.findByTestId('deliveries-scanner');
   act(() => mockCamera.onBarcodeScanned?.({ data: VALID_QR }));
@@ -117,10 +122,35 @@ describe('<DeliveryDetailScreen />', () => {
     expect(mockGet).toHaveBeenCalledWith('d1');
   });
 
+  it('shows the pickup step first and reveals the scan step after pickup (assigned → in_transit)', async () => {
+    mockGet.mockResolvedValue(DETAIL); // status 'assigned'
+
+    render(<DeliveryDetailScreen id="d1" />);
+    // Assigned ⇒ the scan is gated behind the pickup step.
+    fireEvent.press(await screen.findByTestId('delivery-detail-pickup-button'));
+    expect(mockPickup).toHaveBeenCalledWith('d1');
+
+    // After pickup the status flips to in_transit and the scan step appears.
+    expect(await screen.findByTestId('delivery-detail-scan-button')).toBeOnTheScreen();
+    expect(screen.getByTestId('delivery-detail-status')).toHaveTextContent('En cours');
+  });
+
+  it('keeps the pickup step and shows a retry note when pickup fails', async () => {
+    mockGet.mockResolvedValue(DETAIL);
+    mockPickup.mockResolvedValueOnce(false);
+
+    render(<DeliveryDetailScreen id="d1" />);
+    fireEvent.press(await screen.findByTestId('delivery-detail-pickup-button'));
+
+    expect(await screen.findByTestId('delivery-detail-pickup-error')).toBeOnTheScreen();
+    expect(screen.queryByTestId('delivery-detail-scan-button')).toBeNull();
+  });
+
   it('opens the camera scanner from the detail screen (AC-2)', async () => {
     mockGet.mockResolvedValue(DETAIL);
 
     render(<DeliveryDetailScreen id="d1" />);
+    fireEvent.press(await screen.findByTestId('delivery-detail-pickup-button'));
     fireEvent.press(await screen.findByTestId('delivery-detail-scan-button'));
 
     expect(await screen.findByTestId('deliveries-scanner')).toBeOnTheScreen();
@@ -181,6 +211,7 @@ describe('<DeliveryDetailScreen />', () => {
     mockGet.mockResolvedValue(DETAIL);
 
     render(<DeliveryDetailScreen id="d1" />);
+    fireEvent.press(await screen.findByTestId('delivery-detail-pickup-button'));
     fireEvent.press(await screen.findByTestId('delivery-detail-scan-button'));
     await screen.findByTestId('deliveries-scanner');
     act(() => mockCamera.onBarcodeScanned?.({ data: OTHER_QR }));
@@ -207,6 +238,7 @@ describe('<DeliveryDetailScreen />', () => {
     mockCamera.permission = { granted: false, canAskAgain: true };
 
     render(<DeliveryDetailScreen id="d1" />);
+    fireEvent.press(await screen.findByTestId('delivery-detail-pickup-button'));
     fireEvent.press(await screen.findByTestId('delivery-detail-scan-button'));
 
     expect(await screen.findByTestId('deliveries-scanner-permission')).toBeOnTheScreen();
@@ -221,6 +253,7 @@ describe('<DeliveryDetailScreen />', () => {
     mockCamera.permission = { granted: false, canAskAgain: false };
 
     render(<DeliveryDetailScreen id="d1" />);
+    fireEvent.press(await screen.findByTestId('delivery-detail-pickup-button'));
     fireEvent.press(await screen.findByTestId('delivery-detail-scan-button'));
 
     expect(await screen.findByTestId('deliveries-scanner-settings')).toBeOnTheScreen();
@@ -231,6 +264,7 @@ describe('<DeliveryDetailScreen />', () => {
     mockCamera.permission = { granted: false, canAskAgain: true, status: 'undetermined' };
 
     render(<DeliveryDetailScreen id="d1" />);
+    fireEvent.press(await screen.findByTestId('delivery-detail-pickup-button'));
     fireEvent.press(await screen.findByTestId('delivery-detail-scan-button'));
 
     // Happy path: request the OS permission immediately + show loading — never the
