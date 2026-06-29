@@ -243,6 +243,12 @@ export function ProfileScreen({
             onPress={() => router.push('/account' as Href)}
           />
           <Button
+            testID="profile-help"
+            variant="ghost"
+            label="Aide & support"
+            onPress={() => router.push('/help' as Href)}
+          />
+          <Button
             testID="profile-sign-out"
             variant="ghost"
             label="Se déconnecter"
