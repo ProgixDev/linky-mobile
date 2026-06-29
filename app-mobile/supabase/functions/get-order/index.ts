@@ -140,13 +140,21 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
     // error doesn't stay silent.
   }
 
+  // Has the caller already reviewed this order? Drives the buyer's « Noter la boutique » CTA.
+  const { data: myReview } = await sb
+    .from('reviews')
+    .select('id')
+    .eq('order_id', body.id)
+    .eq('reviewer_id', userId)
+    .maybeSingle();
+
   return {
     body: {
       // PII opt-in (Phase LIVREUR) : both buyer and seller receive scan_token.
       // Buyer needs it to render their own on-screen QR for livreur handoff ;
       // seller still gets it for the legacy printed-QR path. Non-participants
       // never reach this branch (FORBIDDEN above).
-      order:  { ...mapOrder(r, { includeScanToken: isParticipant }), delivery },
+      order:  { ...mapOrder(r, { includeScanToken: isParticipant }), delivery, hasReviewed: !!myReview },
       intent: intentRow ? mapPaymentIntent(intentRow as PaymentIntentRow) : null,
     },
   };
