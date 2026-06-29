@@ -5,6 +5,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { notifyDetached } from '@shared/push.ts';
 
 interface Body {
   order_id: string;
@@ -77,6 +78,18 @@ Deno.serve(makePost<Body>('/v1/reviews/create', valid, async ({ sb, body, req })
   const count = ratings.length;
   const avg = count ? Math.round((ratings.reduce((a, b) => a + b, 0) / count) * 10) / 10 : 0;
   await sb.from('shops').update({ rating: avg, review_count: count }).eq('id', order.shop_id);
+
+  // Tell the seller they got a new review (best-effort; never blocks the rating).
+  notifyDetached(sb, {
+    userIds: [order.seller_id],
+    category: 'order',
+    title: 'Nouvel avis',
+    body: `Un client t'a laissé un avis ${body.rating}/5 sur ta boutique.`,
+    iconHint: 'star',
+    deeplink: `/shop/${order.shop_id}`,
+    refType: 'shop',
+    refId: order.shop_id,
+  });
 
   return { body: { ok: true, rating: avg, reviewCount: count } };
 }));
