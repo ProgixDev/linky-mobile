@@ -1,6 +1,12 @@
 import { act, fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
-import { confirmHandoff, fetchDeliveries, getDelivery, markPickup } from '../lib/deliveries-api';
+import {
+  confirmHandoff,
+  fetchDeliveries,
+  getDelivery,
+  markPickup,
+  reportIssue,
+} from '../lib/deliveries-api';
 import type { Delivery, DeliveryDetail } from '../model/schema';
 import { useDeliveriesStore } from '../model/store';
 import { DeliveryDetailScreen } from '../ui/delivery-detail-screen';
@@ -9,6 +15,7 @@ jest.mock('../lib/deliveries-api', () => ({
   getDelivery: jest.fn(),
   confirmHandoff: jest.fn(),
   markPickup: jest.fn(),
+  reportIssue: jest.fn(),
   // The detail screen reconciles the worklist with a background refresh on success.
   fetchDeliveries: jest.fn(),
 }));
@@ -43,6 +50,7 @@ jest.mock('expo-camera', () => ({
 const mockGet = getDelivery as jest.Mock;
 const mockConfirm = confirmHandoff as jest.Mock;
 const mockPickup = markPickup as jest.Mock;
+const mockReportIssue = reportIssue as jest.Mock;
 
 const ORDER_UUID = '11111111-1111-4111-8111-111111111111';
 const TOKEN_UUID = '22222222-2222-4222-8222-222222222222';
@@ -85,6 +93,7 @@ beforeEach(() => {
   mockGet.mockReset();
   mockConfirm.mockReset();
   mockPickup.mockReset().mockResolvedValue(true);
+  mockReportIssue.mockReset().mockResolvedValue(true);
   (fetchDeliveries as jest.Mock).mockReset().mockResolvedValue([]);
   mockCamera.permission = { granted: true, canAskAgain: true };
   mockCamera.requestPermission.mockReset();
@@ -144,6 +153,18 @@ describe('<DeliveryDetailScreen />', () => {
 
     expect(await screen.findByTestId('delivery-detail-pickup-error')).toBeOnTheScreen();
     expect(screen.queryByTestId('delivery-detail-scan-button')).toBeNull();
+  });
+
+  it('reports a delivery problem (→ failed) and drops it from the active list', async () => {
+    mockGet.mockResolvedValue(DETAIL); // assigned
+
+    render(<DeliveryDetailScreen id="d1" />);
+    fireEvent.press(await screen.findByTestId('delivery-detail-issue-button'));
+    fireEvent.press(await screen.findByTestId('delivery-detail-issue-client_absent'));
+    fireEvent.press(screen.getByTestId('delivery-detail-issue-confirm'));
+
+    await waitFor(() => expect(mockReportIssue).toHaveBeenCalledWith('d1', 'client_absent'));
+    expect(useDeliveriesStore.getState().items.find((d) => d.id === 'd1')).toBeUndefined();
   });
 
   it('opens the camera scanner from the detail screen (AC-2)', async () => {

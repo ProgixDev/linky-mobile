@@ -1,13 +1,20 @@
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { cn } from '@/shared/lib/cn';
 import { makeId } from '@/shared/lib/id';
 import { colors } from '@/shared/theme/colors';
 import { AppText, Button, Card, EmptyState, Screen, Skeleton } from '@/shared/ui';
 
-import { confirmHandoff, getDelivery, markPickup } from '../lib/deliveries-api';
+import {
+  confirmHandoff,
+  getDelivery,
+  markPickup,
+  reportIssue,
+  type DeliveryIssueReason,
+} from '../lib/deliveries-api';
 import { parseOrderQr } from '../lib/qr';
 import { type DeliveryDetail } from '../model/schema';
 import { useDeliveriesStore } from '../model/store';
@@ -18,6 +25,14 @@ const STATUS_LABEL: Record<string, string> = {
   in_transit: 'En cours',
   delivered: 'Livrée',
 };
+
+const ISSUE_REASONS: { key: DeliveryIssueReason; label: string }[] = [
+  { key: 'client_absent', label: 'Client absent' },
+  { key: 'wrong_address', label: 'Mauvaise adresse' },
+  { key: 'refused', label: 'Colis refusé' },
+  { key: 'unreachable', label: 'Client injoignable' },
+  { key: 'other', label: 'Autre' },
+];
 
 function formatGnf(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} GNF`;
@@ -90,6 +105,10 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
   const submitting = useRef(false);
   const [pickingUp, setPickingUp] = useState(false);
   const [pickupError, setPickupError] = useState<string | null>(null);
+  const [issueOpen, setIssueOpen] = useState(false);
+  const [issueReason, setIssueReason] = useState<DeliveryIssueReason | null>(null);
+  const [reportingIssue, setReportingIssue] = useState(false);
+  const [issueError, setIssueError] = useState<string | null>(null);
 
   const loadDetail = useCallback(async () => {
     try {
@@ -173,6 +192,22 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
       setPickupError('Impossible de marquer la récupération. Vérifie ta connexion et réessaie.');
     }
   }, [detail, pickingUp, setDeliveryStatus]);
+
+  // Report a problem — the unhappy path (assigned/in_transit → failed). Drops the
+  // delivery from the worklist; the server notifies the seller to re-dispatch.
+  const onConfirmIssue = useCallback(async () => {
+    if (!detail || !issueReason || reportingIssue) return;
+    setReportingIssue(true);
+    setIssueError(null);
+    const ok = await reportIssue(detail.id, issueReason);
+    setReportingIssue(false);
+    if (ok) {
+      removeDelivery(detail.id);
+      router.back();
+    } else {
+      setIssueError('Impossible de signaler le problème. Vérifie ta connexion et réessaie.');
+    }
+  }, [detail, issueReason, reportingIssue, removeDelivery]);
 
   if (phase.kind === 'loading') {
     return (
@@ -384,29 +419,90 @@ export function DeliveryDetailScreen({ id }: { id: string }) {
             />
           </Card>
         ) : phase.kind === 'detail' ? (
-          detail.status === 'assigned' ? (
-            // Step 1 of the handoff: collect the parcel at the boutique. Gating the scan
-            // behind this makes « En cours » mean a parcel that's actually picked up.
-            <View className="gap-3">
-              {pickupError ? (
-                <Card className="gap-2 bg-surface-muted" testID="delivery-detail-pickup-error">
-                  <AppText variant="body">{pickupError}</AppText>
-                </Card>
+          issueOpen ? (
+            <Card className="gap-3" testID="delivery-detail-issue">
+              <AppText variant="title">Quel est le problème ?</AppText>
+              {issueError ? (
+                <AppText variant="body" className="text-ink-muted">
+                  {issueError}
+                </AppText>
               ) : null}
+              <View className="gap-2">
+                {ISSUE_REASONS.map((r) => {
+                  const on = issueReason === r.key;
+                  return (
+                    <Pressable
+                      key={r.key}
+                      testID={`delivery-detail-issue-${r.key}`}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                      onPress={() => setIssueReason(r.key)}
+                      className={cn(
+                        'rounded-control border px-3 py-2.5',
+                        on ? 'border-brand-600 bg-brand-50' : 'border-ink-faint/20 bg-surface',
+                      )}
+                    >
+                      <AppText
+                        variant="body"
+                        className={cn(on ? 'font-sans-medium text-brand-700' : '')}
+                      >
+                        {r.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
               <Button
-                testID="delivery-detail-pickup-button"
-                label="J’ai récupéré le colis"
-                loading={pickingUp}
-                disabled={pickingUp}
-                onPress={() => void onPickup()}
+                testID="delivery-detail-issue-confirm"
+                label="Confirmer le problème"
+                loading={reportingIssue}
+                disabled={!issueReason || reportingIssue}
+                onPress={() => void onConfirmIssue()}
+              />
+              <Button
+                testID="delivery-detail-issue-cancel"
+                variant="ghost"
+                label="Annuler"
+                onPress={() => {
+                  setIssueOpen(false);
+                  setIssueReason(null);
+                  setIssueError(null);
+                }}
+              />
+            </Card>
+          ) : (
+            <View className="gap-2">
+              {detail.status === 'assigned' ? (
+                // Step 1 of the handoff: collect the parcel. Gating the scan behind this
+                // makes « En cours » mean a parcel that's actually picked up.
+                <View className="gap-3">
+                  {pickupError ? (
+                    <Card className="gap-2 bg-surface-muted" testID="delivery-detail-pickup-error">
+                      <AppText variant="body">{pickupError}</AppText>
+                    </Card>
+                  ) : null}
+                  <Button
+                    testID="delivery-detail-pickup-button"
+                    label="J’ai récupéré le colis"
+                    loading={pickingUp}
+                    disabled={pickingUp}
+                    onPress={() => void onPickup()}
+                  />
+                </View>
+              ) : (
+                <Button
+                  testID="delivery-detail-scan-button"
+                  label="Scanner la livraison"
+                  onPress={() => dispatch({ type: 'scan' })}
+                />
+              )}
+              <Button
+                testID="delivery-detail-issue-button"
+                variant="ghost"
+                label="Signaler un problème"
+                onPress={() => setIssueOpen(true)}
               />
             </View>
-          ) : (
-            <Button
-              testID="delivery-detail-scan-button"
-              label="Scanner la livraison"
-              onPress={() => dispatch({ type: 'scan' })}
-            />
           )
         ) : null}
       </ScrollView>

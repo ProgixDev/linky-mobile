@@ -1,6 +1,12 @@
 import { ApiError, apiPost } from '@/shared/lib/api';
 
-import { confirmHandoff, fetchDeliveries, getDelivery, pingLocation } from '../lib/deliveries-api';
+import {
+  confirmHandoff,
+  fetchDeliveries,
+  getDelivery,
+  pingLocation,
+  reportIssue,
+} from '../lib/deliveries-api';
 
 // Mock the Linky fetch client. A real ApiError subclass keeps the lib's
 // `instanceof ApiError` branch working (status/code/message_fr carried through).
@@ -182,6 +188,23 @@ describe('pingLocation', () => {
     mockApiPost.mockRejectedValue(new Error('down'));
 
     await expect(pingLocation('d1', 1, 2)).resolves.toBeUndefined();
+  });
+});
+
+describe('reportIssue', () => {
+  it('posts the delivery id + reason to livreur-report-issue', async () => {
+    mockApiPost.mockResolvedValue({ ok: true });
+
+    expect(await reportIssue('d1', 'client_absent')).toBe(true);
+    expect(mockApiPost).toHaveBeenCalledWith({
+      path: '/livreur-report-issue',
+      body: { delivery_id: 'd1', reason: 'client_absent' },
+    });
+  });
+
+  it('returns false on failure', async () => {
+    mockApiPost.mockRejectedValue(new Error('down'));
+    expect(await reportIssue('d1', 'other')).toBe(false);
   });
 });
 

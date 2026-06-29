@@ -128,6 +128,33 @@ export async function pingLocation(deliveryId: string, lat: number, lng: number)
   }
 }
 
+export type DeliveryIssueReason =
+  | 'client_absent'
+  | 'wrong_address'
+  | 'refused'
+  | 'unreachable'
+  | 'other';
+
+/**
+ * Report a delivery problem — moves the delivery assigned/in_transit → failed (the
+ * server marks it failed + notifies the seller). Returns true on success, false on any
+ * failure. Not a money action; the order/escrow stays held for admin/seller resolution.
+ */
+export async function reportIssue(
+  deliveryId: string,
+  reason: DeliveryIssueReason,
+): Promise<boolean> {
+  try {
+    await apiPost<unknown>({
+      path: '/livreur-report-issue',
+      body: { delivery_id: deliveryId, reason },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Confirm the handoff — the irreversible money action (spec 002). Sends only the order
  * id + scanned token; the server derives the driver from the JWT and is the sole
