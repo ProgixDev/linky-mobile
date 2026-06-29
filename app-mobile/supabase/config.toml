@@ -469,6 +469,9 @@ verify_jwt = false
 [functions.list-shop-reviews]
 verify_jwt = false
 
+[functions.generate-description]
+verify_jwt = false
+
 [functions.get-delivery]
 verify_jwt = false
 
