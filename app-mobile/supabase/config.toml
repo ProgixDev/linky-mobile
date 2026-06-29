@@ -454,6 +454,9 @@ verify_jwt = false
 [functions.livreur-mark-pickup]
 verify_jwt = false
 
+[functions.set-livreur-availability]
+verify_jwt = false
+
 [functions.update-livreur-profile]
 verify_jwt = false
 

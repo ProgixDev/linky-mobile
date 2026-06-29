@@ -21,7 +21,7 @@ Deno.serve(makePost<Body>('/v1/livreur/application-status', valid, async ({ sb, 
 
   const { data: user, error: userErr } = await sb
     .from('users')
-    .select('roles')
+    .select('roles, is_online')
     .eq('id', userId)
     .maybeSingle();
   if (userErr) {
@@ -41,7 +41,8 @@ Deno.serve(makePost<Body>('/v1/livreur/application-status', valid, async ({ sb, 
 
   const hasRole = !!user && Array.isArray(user.roles) && (user.roles as string[]).includes('livreur');
   if (hasRole) {
-    return { body: { status: 'approved', application: app ?? null } };
+    const isOnline = (user as { is_online?: boolean }).is_online ?? false;
+    return { body: { status: 'approved', application: app ?? null, is_online: isOnline } };
   }
 
   if (!app) {

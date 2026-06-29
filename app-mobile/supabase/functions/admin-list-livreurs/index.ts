@@ -3,7 +3,8 @@
 //
 // Body : {} (empty).
 // Response : { livreurs: [{ id, name, phone, city, vehicleType,
-//          activeDeliveries }] } — every user carrying the 'livreur' role.
+//          activeDeliveries, isOnline }] } — every user carrying the 'livreur' role.
+//   - isOnline : the courier's self-set availability (users.is_online).
 //   - phone        : the user's primary phone (contact for dispatch).
 //   - city/vehicle  : from the courier's livreur_applications row (falls back
 //                     to users.city when granted outside an application).
@@ -26,7 +27,7 @@ Deno.serve(makePost<Body>('/v1/admin/livreurs/list', valid, async ({ sb, req }) 
 
   const { data: users, error } = await sb
     .from('users')
-    .select('id, display_name, city')
+    .select('id, display_name, city, is_online')
     .contains('roles', ['livreur'])
     .order('display_name', { ascending: true });
   if (error) {
@@ -34,7 +35,7 @@ Deno.serve(makePost<Body>('/v1/admin/livreurs/list', valid, async ({ sb, req }) 
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
 
-  const rows = (users as { id: string; display_name: string | null; city: string | null }[] | null) ?? [];
+  const rows = (users as { id: string; display_name: string | null; city: string | null; is_online: boolean | null }[] | null) ?? [];
   const ids = rows.map((u) => u.id);
 
   const phoneByUser = new Map<string, string>();
@@ -67,6 +68,7 @@ Deno.serve(makePost<Body>('/v1/admin/livreurs/list', valid, async ({ sb, req }) 
       city: app?.city ?? u.city ?? null,
       vehicleType: app?.vehicle_type ?? null,
       activeDeliveries: activeByUser.get(u.id) ?? 0,
+      isOnline: u.is_online ?? false,
     };
   });
 
