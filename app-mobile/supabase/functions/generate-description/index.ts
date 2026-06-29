@@ -26,12 +26,31 @@ function valid(b: unknown): b is Body {
 }
 
 Deno.serve(
-  makePost<Body>('/v1/ai/generate-description', valid, async ({ req, body }) => {
-    await requireUser(req);
+  makePost<Body>('/v1/ai/generate-description', valid, async ({ req, body, sb }) => {
+    const userId = await requireUser(req);
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
       throwApi('AI_UNAVAILABLE', 503, "La génération par IA n'est pas encore activée.");
+    }
+
+    // Rate limit — every call is a paid Anthropic request. 8/min, 60/day per user.
+    const now = Date.now();
+    const { count: perMin } = await sb
+      .from('ai_generation_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', new Date(now - 60_000).toISOString());
+    if ((perMin ?? 0) >= 8) {
+      throwApi('AI_RATE_LIMITED', 429, 'Trop de générations. Réessaie dans un instant.');
+    }
+    const { count: perDay } = await sb
+      .from('ai_generation_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', new Date(now - 86_400_000).toISOString());
+    if ((perDay ?? 0) >= 60) {
+      throwApi('AI_RATE_LIMITED', 429, 'Limite quotidienne de générations atteinte.');
     }
 
     const facts = [
@@ -76,6 +95,7 @@ Deno.serve(
         .join('')
         .trim();
       if (!text) throwApi('AI_FAILED', 502, 'La génération est revenue vide. Réessaie.');
+      await sb.from('ai_generation_log').insert({ user_id: userId });
       return { body: { description: text } };
     } catch (e) {
       console.error('[generate-description] threw:', e);
