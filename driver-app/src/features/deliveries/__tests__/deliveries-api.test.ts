@@ -1,6 +1,6 @@
 import { ApiError, apiPost } from '@/shared/lib/api';
 
-import { confirmHandoff, fetchDeliveries, getDelivery } from '../lib/deliveries-api';
+import { confirmHandoff, fetchDeliveries, getDelivery, pingLocation } from '../lib/deliveries-api';
 
 // Mock the Linky fetch client. A real ApiError subclass keeps the lib's
 // `instanceof ApiError` branch working (status/code/message_fr carried through).
@@ -163,6 +163,25 @@ describe('getDelivery', () => {
     mockApiPost.mockResolvedValue({ id: 'd1' });
 
     await expect(getDelivery('d1')).rejects.toThrow('Unexpected delivery response');
+  });
+});
+
+describe('pingLocation', () => {
+  it('posts the delivery id + lat/lng to update-livreur-location', async () => {
+    mockApiPost.mockResolvedValue({ ok: true });
+
+    await pingLocation('d1', 9.5, -13.7);
+
+    expect(mockApiPost).toHaveBeenCalledWith({
+      path: '/update-livreur-location',
+      body: { delivery_id: 'd1', lat: 9.5, lng: -13.7 },
+    });
+  });
+
+  it('swallows errors — streaming is best-effort', async () => {
+    mockApiPost.mockRejectedValue(new Error('down'));
+
+    await expect(pingLocation('d1', 1, 2)).resolves.toBeUndefined();
   });
 });
 

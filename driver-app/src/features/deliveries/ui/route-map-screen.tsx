@@ -11,7 +11,7 @@ import { logger } from '@/shared/lib/logger';
 import { colors } from '@/shared/theme/colors';
 import { AppText, Button, EmptyState, Screen, Skeleton } from '@/shared/ui';
 
-import { getDelivery } from '../lib/deliveries-api';
+import { getDelivery, pingLocation } from '../lib/deliveries-api';
 import { fetchDrivingRoute, type DrivingRoute } from '../lib/directions';
 import { boundsOf, formatDistanceKm, haversineKm } from '../lib/geo';
 import { type DeliveryDetail, type LatLng } from '../model/schema';
@@ -51,6 +51,7 @@ export function RouteMapScreen({ id }: { id: string }) {
   const [route, setRoute] = useState<DrivingRoute | null>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const routeAnchor = useRef<LatLng | null>(null);
+  const driverRef = useRef<LatLng | null>(null);
 
   const loadDetail = useCallback(async () => {
     setPhase('loading');
@@ -88,6 +89,28 @@ export function RouteMapScreen({ id }: { id: string }) {
       watchRef.current = null;
     };
   }, []);
+
+  // Mirror the latest GPS into a ref so the streaming interval reads it without
+  // re-subscribing on every position change.
+  useEffect(() => {
+    driverRef.current = driver;
+  }, [driver]);
+
+  // Stream the courier's live position while en route (active delivery) so the buyer
+  // can watch the approach. Best-effort, every 15 s; the server ignores pings for a
+  // non-active / not-yours delivery.
+  useEffect(() => {
+    const active = detail?.status === 'assigned' || detail?.status === 'in_transit';
+    if (!detail || !active) return;
+    const deliveryId = detail.id;
+    const tick = () => {
+      const loc = driverRef.current;
+      if (loc) void pingLocation(deliveryId, loc.lat, loc.lng);
+    };
+    tick();
+    const interval = setInterval(tick, 15000);
+    return () => clearInterval(interval);
+  }, [detail]);
 
   const pickupCoord = useMemo<LatLng | null>(() => {
     const p = detail?.pickup;

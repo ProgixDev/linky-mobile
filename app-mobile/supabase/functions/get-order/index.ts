@@ -65,7 +65,7 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
   // (deliveries.order_id is unique), so maybeSingle is safe.
   const { data: deliveryRow, error: deliveryErr } = await sb
     .from('deliveries')
-    .select('id, status, livreur_id, delivery_address')
+    .select('id, status, livreur_id, delivery_address, gps_lat, gps_lng, livreur_lat, livreur_lng, livreur_location_at')
     .eq('order_id', body.id)
     .maybeSingle();
   if (deliveryErr) {
@@ -78,9 +78,21 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
     city: string | null;
     livreurId: string | null;
     livreurName: string | null;
+    clientLocation: { lat: number; lng: number } | null;
+    livreurLocation: { lat: number; lng: number; at: string | null } | null;
   } | null = null;
   if (deliveryRow) {
-    const d = deliveryRow as { id: string; status: string; livreur_id: string | null; delivery_address: Record<string, unknown> | null };
+    const d = deliveryRow as {
+      id: string;
+      status: string;
+      livreur_id: string | null;
+      delivery_address: Record<string, unknown> | null;
+      gps_lat: number | string | null;
+      gps_lng: number | string | null;
+      livreur_lat: number | string | null;
+      livreur_lng: number | string | null;
+      livreur_location_at: string | null;
+    };
     let livreurName: string | null = null;
     if (d.livreur_id) {
       const { data: livreur } = await sb
@@ -95,6 +107,17 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
       city: (d.delivery_address?.city as string | null) ?? null,
       livreurId: d.livreur_id,
       livreurName,
+      // Drop-off (client) + the courier's last live position — feeds the buyer's
+      // tracking map. quartier/ville-level coords; livreurLocation null until the
+      // first ping.
+      clientLocation:
+        d.gps_lat != null && d.gps_lng != null
+          ? { lat: Number(d.gps_lat), lng: Number(d.gps_lng) }
+          : null,
+      livreurLocation:
+        d.livreur_lat != null && d.livreur_lng != null
+          ? { lat: Number(d.livreur_lat), lng: Number(d.livreur_lng), at: d.livreur_location_at }
+          : null,
     };
   }
 

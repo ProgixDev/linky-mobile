@@ -114,6 +114,21 @@ export async function markPickup(deliveryId: string): Promise<boolean> {
 }
 
 /**
+ * Best-effort: push the courier's live position for buyer-side tracking (every ~15 s
+ * while en route). Fire-and-forget — a failed ping is ignored; the next tick retries.
+ */
+export async function pingLocation(deliveryId: string, lat: number, lng: number): Promise<void> {
+  try {
+    await apiPost<unknown>({
+      path: '/update-livreur-location',
+      body: { delivery_id: deliveryId, lat, lng },
+    });
+  } catch {
+    // streaming is best-effort — swallow.
+  }
+}
+
+/**
  * Confirm the handoff — the irreversible money action (spec 002). Sends only the order
  * id + scanned token; the server derives the driver from the JWT and is the sole
  * authority on assignment, token validity, and idempotency (AC-9). Server error codes

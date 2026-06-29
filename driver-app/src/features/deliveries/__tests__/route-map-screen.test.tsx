@@ -39,7 +39,7 @@ jest.mock('expo-location', () => ({
   Accuracy: { Balanced: 3 },
 }));
 
-jest.mock('../lib/deliveries-api', () => ({ getDelivery: jest.fn() }));
+jest.mock('../lib/deliveries-api', () => ({ getDelivery: jest.fn(), pingLocation: jest.fn() }));
 const mockGet = getDelivery as jest.Mock;
 
 const detail = (over: Partial<DeliveryDetail> = {}): DeliveryDetail => ({
