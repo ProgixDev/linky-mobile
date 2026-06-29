@@ -1,7 +1,8 @@
 // AI product-description generator — writes a short French marketing description from
-// the product's title / category / condition / keywords via the Anthropic Messages API.
-// Authed (requireUser). Gated on ANTHROPIC_API_KEY: returns AI_UNAVAILABLE until the
-// key is configured as a Supabase secret. Deno → raw HTTPS to the Anthropic API (no SDK).
+// the product's title / category / condition / keywords via the Google Gemini API
+// (free tier). Authed (requireUser). Rate-limited (8/min, 60/day per user) to stay well
+// inside the free quota. Gated on GEMINI_API_KEY: returns AI_UNAVAILABLE until the key
+// is configured as a Supabase secret. Deno → raw HTTPS (no SDK).
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
@@ -12,6 +13,9 @@ interface Body {
   condition?: string;
   keywords?: string;
 }
+
+// Free-tier Gemini flash model. Swap here if Google renames the model.
+const GEMINI_MODEL = 'gemini-2.0-flash';
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -29,12 +33,12 @@ Deno.serve(
   makePost<Body>('/v1/ai/generate-description', valid, async ({ req, body, sb }) => {
     const userId = await requireUser(req);
 
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) {
       throwApi('AI_UNAVAILABLE', 503, "La génération par IA n'est pas encore activée.");
     }
 
-    // Rate limit — every call is a paid Anthropic request. 8/min, 60/day per user.
+    // Rate limit — keep usage inside the free quota. 8/min, 60/day per user.
     const now = Date.now();
     const { count: perMin } = await sb
       .from('ai_generation_log')
@@ -70,28 +74,27 @@ Deno.serve(
       `${facts}\n\nDescription :`;
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey!,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 500, temperature: 0.7 },
+          }),
         },
-        body: JSON.stringify({
-          model: 'claude-opus-4-8',
-          max_tokens: 500,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
+      );
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
-        console.error('[generate-description] anthropic error:', res.status, detail);
+        console.error('[generate-description] gemini error:', res.status, detail);
         throwApi('AI_FAILED', 502, 'Génération impossible pour le moment. Réessaie.');
       }
-      const json = (await res.json()) as { content?: { type: string; text?: string }[] };
-      const text = (json.content ?? [])
-        .filter((blk) => blk.type === 'text')
-        .map((blk) => blk.text ?? '')
+      const json = (await res.json()) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const text = (json.candidates?.[0]?.content?.parts ?? [])
+        .map((p) => p.text ?? '')
         .join('')
         .trim();
       if (!text) throwApi('AI_FAILED', 502, 'La génération est revenue vide. Réessaie.');

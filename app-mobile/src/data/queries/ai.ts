@@ -1,6 +1,6 @@
 // AI helpers — product description generation via the generate-description edge
-// function (Anthropic). Inert until ANTHROPIC_API_KEY is configured server-side
-// (the endpoint returns AI_UNAVAILABLE, surfaced as a toast).
+// function (Google Gemini, free tier). Inert until GEMINI_API_KEY is configured
+// server-side (the endpoint returns AI_UNAVAILABLE, surfaced as a toast).
 import { useMutation } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
 
