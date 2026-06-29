@@ -3,7 +3,7 @@
 // the driver as it moves. Reuses the same Mapbox setup as PropertyLocationMap. The
 // driver streams its GPS from the Linky Driver app (update-livreur-location); this
 // screen is purely a consumer — no location of the buyer's own is read.
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -15,9 +15,11 @@ import { Card } from '../../src/components/primitives/Card';
 import { TopBar } from '../../src/components/nav/TopBar';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 import { useOrderTracking } from '../../src/data/queries';
+import { fetchDrivingRoute, type DrivingRoute } from '../../src/lib/directions';
 
 // Idempotent — same init the other Mapbox screens use.
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? null);
+const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '';
 
 function freshness(iso: string | null): string | null {
   if (!iso) return null;
@@ -34,6 +36,7 @@ export default function TrackRoute() {
   const { colors } = useTheme();
   const { data: order, isLoading, isError, refetch } = useOrderTracking(id);
   const cameraRef = useRef<Camera>(null);
+  const [route, setRoute] = useState<DrivingRoute | null>(null);
 
   const delivery = order?.delivery ?? null;
   const driver = delivery?.livreurLocation ?? null;
@@ -65,6 +68,21 @@ export default function TrackRoute() {
     );
   }, [points]);
 
+  // Road-following route + driving ETA (Mapbox Directions). Re-fetches when the driver
+  // position changes (the poll only yields a new position when they move → self-throttling).
+  // Falls back to a straight line + no ETA if Directions is unavailable.
+  useEffect(() => {
+    if (!driver || !client || !MAPBOX_TOKEN) return;
+    let active = true;
+    void fetchDrivingRoute(driver, client, MAPBOX_TOKEN).then((r) => {
+      if (active && r) setRoute(r);
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- coord values, not refs
+  }, [driver?.lat, driver?.lng, client?.lat, client?.lng]);
+
   if (isLoading || isError || !order) {
     return (
       <DetailStateScreen
@@ -77,6 +95,8 @@ export default function TrackRoute() {
 
   const isDone = delivery?.status === 'delivered' || order.status === 'released';
   const updated = driver ? freshness(driver.at) : null;
+  const etaMin =
+    route && route.durationSec > 0 ? Math.max(1, Math.round(route.durationSec / 60)) : null;
 
   let statusLine: string;
   if (isDone) {
@@ -114,10 +134,12 @@ export default function TrackRoute() {
                   properties: {},
                   geometry: {
                     type: 'LineString',
-                    coordinates: [
-                      [driver.lng, driver.lat],
-                      [client.lng, client.lat],
-                    ],
+                    coordinates: route
+                      ? route.coordinates
+                      : [
+                          [driver.lng, driver.lat],
+                          [client.lng, client.lat],
+                        ],
                   },
                 }}
               >
@@ -185,6 +207,11 @@ export default function TrackRoute() {
         <View style={{ position: 'absolute', left: 12, right: 12, bottom: 16 }}>
           <Card padding={16} elevated>
             <Text variant="bodyMSemibold">{statusLine}</Text>
+            {!isDone && etaMin ? (
+              <Text variant="bodyMSemibold" style={{ marginTop: 4, color: colors.primary }}>
+                Arrivée estimée dans ~{etaMin} min
+              </Text>
+            ) : null}
             {updated && !isDone ? (
               <Text
                 variant="micro"
