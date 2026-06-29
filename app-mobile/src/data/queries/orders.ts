@@ -8,7 +8,10 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiPost } from '../../lib/api';
 import type { Order, OrderStatus, PaymentIntent, PaymentMethod } from '../types';
 
-interface Cursor { created_at: string; id: string }
+interface Cursor {
+  created_at: string;
+  id: string;
+}
 
 export interface MyOrdersFilters {
   status?: OrderStatus;
@@ -61,7 +64,10 @@ export function useSellerOrders(filters: MyOrdersFilters = {}) {
   });
 }
 
-interface OrderEnvelope { order: Order; intent: PaymentIntent | null }
+interface OrderEnvelope {
+  order: Order;
+  intent: PaymentIntent | null;
+}
 
 // /get-order now returns BOTH the order and its latest payment_intent (null
 // for wallet orders). useOrder uses TanStack `select` to project just the
@@ -95,6 +101,23 @@ export function useOrder(id: string | undefined) {
   });
 }
 
+/** Buyer courier-tracking poll — same ['order', id] cache as useOrder, but refetches
+ *  the envelope every 12s WHILE the delivery is en route (assigned/in_transit) so the
+ *  live driver position on the tracking map keeps moving. Stops on any terminal state. */
+export function useOrderTracking(id: string | undefined) {
+  return useQuery({
+    queryKey: ['order', id],
+    enabled: !!id,
+    queryFn: () => fetchOrderEnvelope(id),
+    select: (env) => env.order,
+    refetchInterval: (query) => {
+      const s = query.state.data?.order?.delivery?.status;
+      return s === 'assigned' || s === 'in_transit' ? 12_000 : false;
+    },
+    refetchIntervalInBackground: false,
+  });
+}
+
 /** Confirmation-screen hook. Same query+cache as useOrder; returns both pieces. */
 export function useOrderWithIntent(id: string | undefined) {
   return useQuery({
@@ -123,7 +146,7 @@ export interface PlaceOrderInput {
 
 export interface PlaceOrderResult {
   order: Order;
-  intent?: PaymentIntent;  // present for rail methods, absent for wallet
+  intent?: PaymentIntent; // present for rail methods, absent for wallet
   /** Stripe payment-sheet bundle — present only for paymentMethod 'card'. */
   payment?: { client_secret: string; publishable_key: string };
 }
@@ -131,7 +154,12 @@ export interface PlaceOrderResult {
 export function usePlaceOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ productId, quantity, paymentMethod, payerPhone }: PlaceOrderInput): Promise<PlaceOrderResult> => {
+    mutationFn: async ({
+      productId,
+      quantity,
+      paymentMethod,
+      payerPhone,
+    }: PlaceOrderInput): Promise<PlaceOrderResult> => {
       return apiPost<PlaceOrderResult>({
         path: '/place-order',
         body: {

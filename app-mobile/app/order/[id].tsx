@@ -30,10 +30,10 @@ const STAGE_DEFS: Array<{
   eventKind?: string;
   eventLabel?: string;
 }> = [
-  { key: 'placed',    labelKey: 'order.stagePlaced',    eventLabel: 'Commande passée' },
-  { key: 'paid',      labelKey: 'order.stagePaid',      eventLabel: 'Paiement reçu en séquestre' },
+  { key: 'placed', labelKey: 'order.stagePlaced', eventLabel: 'Commande passée' },
+  { key: 'paid', labelKey: 'order.stagePaid', eventLabel: 'Paiement reçu en séquestre' },
   { key: 'preparing', labelKey: 'order.stagePreparing', eventKind: 'shipped' },
-  { key: 'released',  labelKey: 'order.stageReleased',  eventLabel: 'Réception confirmée' },
+  { key: 'released', labelKey: 'order.stageReleased', eventLabel: 'Réception confirmée' },
 ];
 
 export default function OrderRoute() {
@@ -42,13 +42,16 @@ export default function OrderRoute() {
   const { t } = useTranslation();
   const { data: order, isLoading, isError, refetch } = useOrder(id);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
-  const STAGES = useMemo(
-    () => STAGE_DEFS.map((s) => ({ ...s, label: t(s.labelKey) })),
-    [t],
-  );
+  const STAGES = useMemo(() => STAGE_DEFS.map((s) => ({ ...s, label: t(s.labelKey) })), [t]);
 
   if (isLoading || isError || !order) {
-    return <DetailStateScreen loading={isLoading} title={t('order.fallbackTitle')} onRetry={() => void refetch()} />;
+    return (
+      <DetailStateScreen
+        loading={isLoading}
+        title={t('order.fallbackTitle')}
+        onRetry={() => void refetch()}
+      />
+    );
   }
 
   const currentStageIdx = STAGES.findIndex((s) => s.key === order.status);
@@ -75,12 +78,12 @@ export default function OrderRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('order.trackingTitle')} back subtitle={`#${order.reference}`} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+      >
         {(isBuyer || isSeller) && (
-          <OrderResolutionBanner
-            order={order}
-            viewerRole={isBuyer ? 'buyer' : 'seller'}
-          />
+          <OrderResolutionBanner order={order} viewerRole={isBuyer ? 'buyer' : 'seller'} />
         )}
         <Card padding={12}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
@@ -93,7 +96,11 @@ export default function OrderRoute() {
               <Text style={{ fontSize: 13, fontWeight: '600' }} numberOfLines={2}>
                 {order.productSnapshot.title}
               </Text>
-              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+              <Text
+                variant="micro"
+                tone="muted"
+                style={{ letterSpacing: 0, textTransform: 'none' }}
+              >
                 {t('order.qty', { count: order.quantity })}
               </Text>
             </View>
@@ -102,6 +109,21 @@ export default function OrderRoute() {
             </Text>
           </View>
         </Card>
+
+        {/* Live courier tracking — only while a delivery is assigned/en route. */}
+        {isBuyer &&
+          (order.delivery?.status === 'assigned' || order.delivery?.status === 'in_transit') && (
+            <View style={{ marginTop: 14 }}>
+              <Button
+                variant="primary"
+                block
+                label="Suivre le livreur"
+                leading={<I.truck size={16} color="#FFFFFF" />}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /track typedRoute regenerates next start
+                onPress={() => router.push(`/track/${order.id}` as any)}
+              />
+            </View>
+          )}
 
         <View style={{ marginTop: 18 }}>
           <MicroLabel label={t('order.stageStatus')} />
@@ -126,7 +148,8 @@ export default function OrderRoute() {
                         width: 22,
                         height: 22,
                         borderRadius: 999,
-                        backgroundColor: done || current ? colors.primary : action ? colors.accent : colors.border,
+                        backgroundColor:
+                          done || current ? colors.primary : action ? colors.accent : colors.border,
                         alignItems: 'center',
                         justifyContent: 'center',
                         shadowColor: current ? colors.primary : 'transparent',
@@ -137,16 +160,39 @@ export default function OrderRoute() {
                       {(done || current) && <I.check size={12} color="#FFFFFF" stroke={3} />}
                     </View>
                     {i < arr.length - 1 && (
-                      <View style={{ width: 2, flex: 1, backgroundColor: i < idx ? colors.primary : colors.border, marginTop: 2, minHeight: 30 }} />
+                      <View
+                        style={{
+                          width: 2,
+                          flex: 1,
+                          backgroundColor: i < idx ? colors.primary : colors.border,
+                          marginTop: 2,
+                          minHeight: 30,
+                        }}
+                      />
                     )}
                   </View>
                   <View style={{ flex: 1, paddingBottom: i < arr.length - 1 ? 22 : 0 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: done || current || action ? colors.text : colors.textMuted }}>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '600',
+                        color: done || current || action ? colors.text : colors.textMuted,
+                      }}
+                    >
                       {s.label}
                     </Text>
-                    <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
+                    <Text
+                      variant="micro"
+                      tone="muted"
+                      style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}
+                    >
                       {stageEvent
-                        ? new Date(stageEvent.at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                        ? new Date(stageEvent.at).toLocaleString('fr-FR', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
                         : action
                           ? t('order.stageActionRequired')
                           : ''}
@@ -157,7 +203,12 @@ export default function OrderRoute() {
                         tone="muted"
                         style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}
                       >
-                        {t('order.stageTracking', { tracking: stageEvent.tracking, carrier: stageEvent.carrier ? t('order.stageCarrierSuffix', { carrier: stageEvent.carrier }) : '' })}
+                        {t('order.stageTracking', {
+                          tracking: stageEvent.tracking,
+                          carrier: stageEvent.carrier
+                            ? t('order.stageCarrierSuffix', { carrier: stageEvent.carrier })
+                            : '',
+                        })}
                       </Text>
                     )}
                   </View>
@@ -172,7 +223,9 @@ export default function OrderRoute() {
             <View style={{ marginTop: 18 }}>
               <MicroLabel label={t('order.buyerQrLabel')} />
               <Card padding={20}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}
+                >
                   <I.qr size={16} color={colors.text} />
                   <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
                     {t('order.buyerQrTitle')}
@@ -198,7 +251,12 @@ export default function OrderRoute() {
                 <Text
                   variant="micro"
                   tone="muted"
-                  style={{ alignSelf: 'center', marginTop: 10, letterSpacing: 0, textTransform: 'none' }}
+                  style={{
+                    alignSelf: 'center',
+                    marginTop: 10,
+                    letterSpacing: 0,
+                    textTransform: 'none',
+                  }}
                 >
                   #{order.reference}
                 </Text>
@@ -246,7 +304,9 @@ export default function OrderRoute() {
           <View style={{ marginTop: 18 }}>
             <MicroLabel label={t('order.deliveryCodeLabel')} />
             <Card padding={20}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}
+              >
                 <I.qr size={16} color={colors.text} />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
                   {t('order.receiveCodeTitle')}
@@ -267,7 +327,12 @@ export default function OrderRoute() {
               <Text
                 variant="micro"
                 tone="muted"
-                style={{ alignSelf: 'center', marginTop: 10, letterSpacing: 0, textTransform: 'none' }}
+                style={{
+                  alignSelf: 'center',
+                  marginTop: 10,
+                  letterSpacing: 0,
+                  textTransform: 'none',
+                }}
               >
                 #{order.reference}
               </Text>

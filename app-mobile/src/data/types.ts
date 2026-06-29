@@ -6,9 +6,23 @@ export type ID = string;
 export type Condition = 'neuf' | 'occasion' | 'reconditionné';
 export type ListingStatus = 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
 export type PropertyType = 'location' | 'vente' | 'terrain';
-export type OrderStatus = 'placed' | 'paid' | 'preparing' | 'delivered' | 'released' | 'disputed' | 'cancelled' | 'refunded';
+export type OrderStatus =
+  | 'placed'
+  | 'paid'
+  | 'preparing'
+  | 'delivered'
+  | 'released'
+  | 'disputed'
+  | 'cancelled'
+  | 'refunded';
 export type PaymentMethod = 'orange-money' | 'mtn-money' | 'card' | 'wallet';
-export type DeliveryStatus = 'unassigned' | 'assigned' | 'in_transit' | 'delivered' | 'failed' | 'cancelled';
+export type DeliveryStatus =
+  | 'unassigned'
+  | 'assigned'
+  | 'in_transit'
+  | 'delivered'
+  | 'failed'
+  | 'cancelled';
 
 export interface User {
   id: ID;
@@ -129,6 +143,10 @@ export interface OrderDelivery {
   city: string | null;
   livreurId: ID | null;
   livreurName: string | null;
+  /** Drop-off (client) coords for the buyer tracking map — quartier/ville-level. */
+  clientLocation?: { lat: number; lng: number } | null;
+  /** The courier's last live position (pushed every ~15s while en route), or null. */
+  livreurLocation?: { lat: number; lng: number; at: string | null } | null;
 }
 
 export type PaymentIntentStatus = 'pending' | 'completed' | 'failed' | 'expired' | 'cancelled';

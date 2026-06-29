@@ -63,39 +63,61 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY} urlScheme="linky">
-      <SafeAreaProvider>
-        <KeyboardProvider>
-          <QueryClientProvider client={queryClient}>
-            <I18nextProvider i18n={i18n}>
-              <ThemeProvider>
-                <BottomSheetModalProvider>
-                  <ToastProvider>
-                    <PushBootstrap />
-                    <StatusBar style="auto" />
-                    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-                      <Stack.Screen name="(onboarding)" />
-                      <Stack.Screen name="(tabs)" />
-                      <Stack.Screen
-                        name="product/[id]"
-                        options={{ presentation: 'card', animation: 'slide_from_right' }}
-                      />
-                      <Stack.Screen
-                        name="property/[id]"
-                        options={{ presentation: 'card', animation: 'slide_from_right' }}
-                      />
-                      <Stack.Screen name="shop/[id]" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="cart" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="checkout" options={{ animation: 'slide_from_right' }} />
-                      {/* Phase V.3d -- /order/[id]/confirm is the SOLE QR-flow deep link.
+        <SafeAreaProvider>
+          <KeyboardProvider>
+            <QueryClientProvider client={queryClient}>
+              <I18nextProvider i18n={i18n}>
+                <ThemeProvider>
+                  <BottomSheetModalProvider>
+                    <ToastProvider>
+                      <PushBootstrap />
+                      <StatusBar style="auto" />
+                      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+                        <Stack.Screen name="(onboarding)" />
+                        <Stack.Screen name="(tabs)" />
+                        <Stack.Screen
+                          name="product/[id]"
+                          options={{ presentation: 'card', animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="property/[id]"
+                          options={{ presentation: 'card', animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="shop/[id]"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen name="cart" options={{ animation: 'slide_from_right' }} />
+                        <Stack.Screen name="checkout" options={{ animation: 'slide_from_right' }} />
+                        {/* Phase V.3d -- /order/[id]/confirm is the SOLE QR-flow deep link.
                           The legacy /orders/[id]/confirm-receipt route was deleted
                           (zero internal callers ; deep-linkable mock screen). */}
-                      <Stack.Screen name="order/[id]" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="wallet/index" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="wallet/recharger" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="wallet/retirer" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="wallet/envoyer" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="create/index" options={{ presentation: 'modal' }} />
-                      {/* Phase T.2 fix — the create/product/* and
+                        <Stack.Screen
+                          name="order/[id]"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="track/[id]"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="wallet/index"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="wallet/recharger"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="wallet/retirer"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="wallet/envoyer"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen name="create/index" options={{ presentation: 'modal' }} />
+                        {/* Phase T.2 fix — the create/product/* and
                           create/property/* per-step Stack.Screen entries
                           are now owned by the role-gated _layout.tsx files
                           under those subdirs (see
@@ -105,25 +127,52 @@ export default function RootLayout() {
                           their screenOptions. Keeping the entries here
                           would clash with the nested Stack and expo-router
                           would warn + drop the animation. */}
-                      <Stack.Screen name="messages/index" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="messages/[id]" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="kyc/intro" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="kyc/pending" options={{ animation: 'fade' }} />
-                      <Stack.Screen name="kyc/return" options={{ animation: 'fade' }} />
-                      <Stack.Screen name="dispute/[orderId]" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="settings/index" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="settings/phones" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="settings/theme" options={{ animation: 'slide_from_right' }} />
-                      <Stack.Screen name="settings/data-saver" options={{ animation: 'slide_from_right' }} />
-                    </Stack>
-                  </ToastProvider>
-                </BottomSheetModalProvider>
-              </ThemeProvider>
-            </I18nextProvider>
-          </QueryClientProvider>
-        </KeyboardProvider>
-      </SafeAreaProvider>
+                        <Stack.Screen
+                          name="messages/index"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="messages/[id]"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="notifications"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="kyc/intro"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen name="kyc/pending" options={{ animation: 'fade' }} />
+                        <Stack.Screen name="kyc/return" options={{ animation: 'fade' }} />
+                        <Stack.Screen
+                          name="dispute/[orderId]"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="settings/index"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="settings/phones"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="settings/theme"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                        <Stack.Screen
+                          name="settings/data-saver"
+                          options={{ animation: 'slide_from_right' }}
+                        />
+                      </Stack>
+                    </ToastProvider>
+                  </BottomSheetModalProvider>
+                </ThemeProvider>
+              </I18nextProvider>
+            </QueryClientProvider>
+          </KeyboardProvider>
+        </SafeAreaProvider>
       </StripeProvider>
     </GestureHandlerRootView>
   );
