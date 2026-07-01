@@ -1,0 +1,15 @@
+# Excluded from the EAS Build upload tarball. These are either regenerated on the
+# build server (native dirs via CNG `expo prebuild`, node_modules via install) or
+# pure local build caches — uploading them only bloats the tarball (was ~98 MB).
+node_modules/
+/android
+/ios
+.expo/
+.expo-shared/
+dist/
+.dist/
+web-build/
+.cxx/
+.gradle/
+*.log
+*.keystore
