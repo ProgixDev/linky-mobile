@@ -35,7 +35,7 @@ Deno.serve(makePost<Body>('/v1/shops/list', valid, async ({ sb, body }) => {
   const limit = body.limit ?? 50;
   let q = sb
     .from('shops_with_counts')
-    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count, created_at');
+    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count, created_at, opening_hours');
 
   if (verifiedOnly) q = q.eq('verified', true);
 

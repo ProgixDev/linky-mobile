@@ -30,7 +30,7 @@ export function PropertyCard({
         overflow: 'hidden',
       }}
       accessibilityRole="button"
-      accessibilityLabel={`${property.title}, ${formatGNF(property.priceGnf)}${property.perMonth ? ' par mois' : ''}`}
+      accessibilityLabel={`${property.title}, ${formatGNF(property.priceGnf)}${property.type === 'location' ? (property.perMonth ? ' par mois' : ' par jour') : ''}`}
     >
       <View style={{ aspectRatio: 16 / 9, backgroundColor: colors.bgSunken }}>
         <Image
@@ -64,8 +64,10 @@ export function PropertyCard({
         >
           <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14, fontVariant: ['tabular-nums'] }}>
             {formatGNF(property.priceGnf)}
-            {property.perMonth && (
-              <Text style={{ fontSize: 10, fontWeight: '500', opacity: 0.85 }}> /mois</Text>
+            {property.type === 'location' && (
+              <Text style={{ fontSize: 10, fontWeight: '500', opacity: 0.85 }}>
+                {property.perMonth ? ' /mois' : ' /jour'}
+              </Text>
             )}
           </Text>
         </View>

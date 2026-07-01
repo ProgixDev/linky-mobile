@@ -10,7 +10,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
-import { useCreateListing } from '../../../src/stores/createListing';
+import { useCreateListing, type PropertyPhoto } from '../../../src/stores/createListing';
 import { useRequestPhotoUploadUrl } from '../../../src/data/queries/products';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
@@ -46,7 +46,6 @@ export default function PropertyPhotosRoute() {
   const { t } = useTranslation();
   const propertyPhotos = useCreateListing((s) => s.propertyPhotos);
   const setVal = useCreateListing((s) => s.set);
-  const propertyType = useCreateListing((s) => s.propertyType);
   const valid = propertyPhotos.length >= 3;
   const requestUploadUrl = useRequestPhotoUploadUrl();
   const toast = useToast();
@@ -60,7 +59,40 @@ export default function PropertyPhotosRoute() {
     setVal('propertyPhotos', next);
   };
 
-  async function addOne() {
+  // Optimize + upload a single asset → returns the stored photo meta, or null on failure.
+  async function uploadAsset(
+    asset: ImagePicker.ImagePickerAsset,
+    position: number,
+  ): Promise<PropertyPhoto | null> {
+    // Optimize before upload: resize > 1600px down + re-encode as jpeg. Cuts
+    // typical camera output from ~3-5 MB to ~250-500 KB. Pass-through for small inputs.
+    const originalMime = resolveMime(asset);
+    const optimized = await optimizePhoto(asset.uri, originalMime);
+    const contentType = optimized.mimeType;
+    const filename = sanitizeFilename(asset.fileName, extForMime(contentType));
+
+    const { upload_url, public_url, path } = await requestUploadUrl.mutateAsync({
+      kind: 'property',
+      filename,
+      content_type: contentType,
+    });
+
+    const fileRes = await fetch(optimized.uri);
+    const blob = await fileRes.blob();
+    const putRes = await fetch(upload_url, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+      body: blob,
+    });
+    if (!putRes.ok) {
+      const raw = await putRes.text().catch(() => '');
+      console.error('[property-photos] storage PUT failed', putRes.status, raw);
+      return null;
+    }
+    return { url: public_url, storage_path: path, position };
+  }
+
+  async function addPhotos() {
     if (uploading || propertyPhotos.length >= MAX_PHOTOS) return;
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -68,47 +100,31 @@ export default function PropertyPhotosRoute() {
         toast.show('Autorise l’accès aux photos pour continuer', 'danger');
         return;
       }
+      // Multi-select: the picker caps at `remaining` so we never exceed MAX_PHOTOS.
+      const remaining = MAX_PHOTOS - propertyPhotos.length;
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: 'images',
         quality: 0.8,
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: true,
+        selectionLimit: remaining,
       });
       if (picked.canceled || picked.assets.length === 0) return;
 
       setUploading(true);
       haptic.light();
-      const asset = picked.assets[0];
-      // Optimize before upload: resize > 1600px down + re-encode as jpeg. Cuts
-      // typical camera output from ~3-5 MB to ~250-500 KB. Pass-through for small inputs.
-      const originalMime = resolveMime(asset);
-      const optimized = await optimizePhoto(asset.uri, originalMime);
-      const contentType = optimized.mimeType;
-      const filename = sanitizeFilename(asset.fileName, extForMime(contentType));
-
-      const { upload_url, public_url, path } = await requestUploadUrl.mutateAsync({
-        kind: 'property',
-        filename,
-        content_type: contentType,
-      });
-
-      const fileRes = await fetch(optimized.uri);
-      const blob = await fileRes.blob();
-      const putRes = await fetch(upload_url, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
-        body: blob,
-      });
-      if (!putRes.ok) {
-        const raw = await putRes.text().catch(() => '');
-        console.error('[property-photos] storage PUT failed', putRes.status, raw);
-        toast.show(t('create.photosUploadProperty'), 'danger');
-        return;
+      const toUpload = picked.assets.slice(0, remaining);
+      const uploaded: PropertyPhoto[] = [];
+      for (const asset of toUpload) {
+        try {
+          const photo = await uploadAsset(asset, propertyPhotos.length + uploaded.length);
+          if (photo) uploaded.push(photo);
+        } catch (e) {
+          console.error('[property-photos] one asset failed:', e);
+        }
       }
-
-      setVal('propertyPhotos', [
-        ...propertyPhotos,
-        { url: public_url, storage_path: path, position: propertyPhotos.length },
-      ]);
+      if (uploaded.length > 0) setVal('propertyPhotos', [...propertyPhotos, ...uploaded]);
+      // Some selected photos didn't make it — tell the user rather than silently drop.
+      if (uploaded.length < toUpload.length) toast.show(t('create.photosUploadProperty'), 'danger');
     } catch (e: unknown) {
       console.error('[property-photos] add error:', e);
       toast.show(toToastMessage(e, t('create.photosUploadProperty')), 'danger');
@@ -232,7 +248,7 @@ export default function PropertyPhotosRoute() {
 
           {/* Add tile */}
           <Pressable
-            onPress={addOne}
+            onPress={addPhotos}
             disabled={uploading || propertyPhotos.length >= MAX_PHOTOS}
             style={{
               width: '47%',
@@ -315,8 +331,7 @@ export default function PropertyPhotosRoute() {
           disabled={!valid}
           onPress={() => {
             haptic.medium();
-            // Terrain has no amenities (land) — skip straight to the preview.
-            router.push(propertyType === 'terrain' ? '/create/property/preview' : '/create/property/amenities');
+            router.push('/create/property/preview');
           }}
           style={{
             height: 56,

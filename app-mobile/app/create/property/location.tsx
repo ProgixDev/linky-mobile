@@ -34,6 +34,7 @@ export default function CreatePropertyLocationRoute() {
   const lat = useCreateListing((s) => s.lat);
   const lng = useCreateListing((s) => s.lng);
   const setVal = useCreateListing((s) => s.set);
+  const propertyType = useCreateListing((s) => s.propertyType);
   const [busy, setBusy] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [latInput, setLatInput] = useState(lat != null ? String(lat) : '');
@@ -215,7 +216,13 @@ export default function CreatePropertyLocationRoute() {
           label={t('create.continue')}
           style={{ flex: 1 }}
           disabled={lat == null || lng == null}
-          onPress={() => router.push('/create/property/photos')}
+          onPress={() =>
+            router.push(
+              propertyType === 'terrain'
+                ? '/create/property/photos'
+                : '/create/property/amenities',
+            )
+          }
         />
       </StickyBottom>
 

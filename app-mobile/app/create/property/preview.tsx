@@ -41,6 +41,9 @@ const AMENITY_LABEL_KEY: Record<string, string> = {
   pool:    'create.amenityPool',
   lift:    'create.amenityLift',
   terrace: 'create.amenityTerrace',
+  electricity: 'create.amenityElectricity',
+  water:   'create.amenityWater',
+  cellar:  'create.amenityCellar',
 };
 
 export default function PreviewRoute() {
@@ -164,7 +167,9 @@ export default function PreviewRoute() {
                   {formatGNF(state.priceGnf).replace(' GNF', '')}
                 </Text>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted }}>
-                  GNF{state.propertyType === 'location' ? t('create.perMonthAbbr') : ''}
+                  GNF{state.propertyType === 'location'
+                    ? (state.rentalPeriod === 'day' ? t('create.perDayAbbr') : t('create.perMonthAbbr'))
+                    : ''}
                 </Text>
               </View>
               <View
@@ -251,7 +256,9 @@ export default function PreviewRoute() {
               const property = await createProperty.mutateAsync({
                 type: state.propertyType,
                 title: state.title,
+                description: state.description.trim() || undefined,
                 price_minor: state.priceGnf,
+                per_month: state.propertyType === 'location' ? state.rentalPeriod === 'month' : undefined,
                 bedrooms: state.rooms || undefined,
                 area_sqm: state.areaSqm || undefined,
                 furnished: state.furnished,

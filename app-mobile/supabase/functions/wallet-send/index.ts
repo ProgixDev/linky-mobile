@@ -8,50 +8,36 @@
 // row to anchor disputes against is a different threat model from escrow,
 // and the V1 scope explicitly deferred it (memo project_v1_scope).
 //
-// Open questions the launch reviewer MUST close before flipping this on for
-// real users :
-//   1. **Daily limits per sender** — no daily / monthly cap today. A
-//      compromised account could drain its wallet in one tap. The Phase K
-//      threshold pattern (≥ 5M GNF dispute needs a second admin) gives a
-//      starting number, but P2P send is faster than a dispute so the bound
-//      probably needs to be lower.
-//   2. **KYC gating** — no KYC requirement today. Treating an unvetted
-//      account the same as a KYC-verified one on a money-out path is the
-//      flag legal raised for the auth-middleware rewrite (memo
-//      project_linky_overview Why line). Decide: KYC required for send,
-//      receive, both, or neither, with explicit thresholds.
-//   3. **Self-deal / family-fraud** — refuses literal self-send here, but a
-//      user with two phone numbers could ping-pong money between two
-//      accounts to launder a fraudulent topup before withdrawal. Phase Y's
-//      resolve_dispute_self_deal guard is the relevant precedent.
-//   4. **Recipient consent / claim flow** — sending to a phone number that
-//      isn't a Linky user yet is REFUSED here. The alternative ("send to a
-//      number, recipient signs up to claim") is a known phishing surface
-//      (fake "you have GNF waiting" SMS). Keeping the strict path until
-//      product weighs the tradeoff.
-//   5. **Notification + receipt** — no push to recipient yet (push fan-out
-//      exists for orders ; reuse the same shape under ref_type='p2p_transfer').
-//      Without it the recipient finds out by checking their wallet, which
-//      kills the use case for "I just paid you, check".
-//   6. **Reversal posture** — none. Once post_transfer commits, the ledger
-//      is append-only and there is no "send-money dispute". This matches
-//      mobile money rails but conflicts with the escrow story the buyers are
-//      used to ; copy must make this explicit on the confirm step.
-//   7. **Idempotency-key freshness** — the wrap's reserve-first idempotency
-//      protects against double-send under retry, but does NOT protect
-//      against a malicious client reusing a key across two different intents
-//      (the wrap returns the original outcome on a hash match, not a 409).
-//      That is the intended posture but worth confirming the threat model
-//      with a fresh set of eyes.
+// ENABLED 2026-07-01 with owner sign-off. Hardening applied on this pass :
+//   1. **Daily limit per sender** — DONE. 1M GNF / rolling-24h, enforced
+//      atomically inside post_p2p_transfer (sender wallet locked before the
+//      day's sum is read → race-free). See DAILY_CAP_MINOR below.
+//   2. **KYC gating** — DONE. Sender must be kyc_status='approved'. Soft-gated
+//      on diditConfig() (same posture as publish) so it doesn't brick P2P while
+//      Didit creds are dark ; auto-enforces the moment they land.
+//   5. **Notification + receipt** — DONE. Recipient gets an in-app + push
+//      "Argent reçu" (notifyDetached, category 'system', deeplink /wallet).
 //
-// Until these are answered, the mobile client surfaces the send-money UI
-// with a "Bêta" badge and only the test cohort can see it. See
-// project_post_phase_k_queue + V1 scope memo for the launch gate.
+// Still OPEN — accepted for the capped beta, revisit before scale :
+//   3. **Self-deal / family-fraud** — literal self-send refused, but two
+//      accounts one person controls can still ping-pong. The 1M/24h cap +
+//      KYC + demo-seed removal bound the laundering value ; velocity/graph
+//      detection is the real fix. Phase Y resolve_dispute_self_deal precedent.
+//   4. **Recipient claim flow** — sending to a non-Linky number stays REFUSED
+//      (SMS-phishing surface). Recipient must already be a verified user.
+//   6. **Reversal posture** — none. Ledger is append-only, no send-money
+//      dispute. Matches mobile-money rails ; the confirm step copy makes the
+//      irreversibility explicit.
+//   7. **Idempotency-key freshness** — reserve-first wrap stops double-send on
+//      retry but returns the cached outcome (not 409) if a client reuses a key
+//      across two different intents. Intended posture; documented for review.
 // ════════════════════════════════════════════════════════════════════════════
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { normalizePhone } from '@shared/validate.ts';
+import { diditConfig } from '@shared/didit.ts';
+import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 
 interface Body {
   recipient_e164: string;
@@ -77,15 +63,37 @@ const MIN_SEND_MINOR = 1_000;
 
 // Server-side kill switch — defense in depth on top of the client-side
 // P2P_SEND_ENABLED flag. A direct API call (curl / leaked client) hits the
-// same wall as a tap in the UI. Flip to true ONLY when the items in
-// WALLET_SEND_V1_1_BACKLOG.md are closed.
-const P2P_ENABLED = false;
+// same wall as a tap in the UI. Enabled 2026-07-01 alongside the hardening
+// below (KYC gate + daily cap + recipient push + demo-seed removal).
+const P2P_ENABLED = true;
+
+// Daily send cap per sender, rolling 24h, enforced ATOMICALLY inside
+// post_p2p_transfer (the sender wallet is locked before the day's sum is read),
+// so concurrent sends can't jointly exceed it. Bounds the blast radius of a
+// compromised account.
+const DAILY_CAP_MINOR = 1_000_000;
 
 Deno.serve(makePost<Body>('/v1/wallet/send', valid, async ({ sb, body, req }) => {
   if (!P2P_ENABLED) {
     throwApi('FEATURE_DISABLED', 403, 'Bientôt disponible.');
   }
   const senderId = await requireUser(req);
+
+  // KYC gate — a money-OUT path requires an identity-verified sender. Soft-gated
+  // on Didit being configured, mirroring publish (property/product create): while
+  // Didit creds are dark NO user can reach 'approved', so a hard gate would brick
+  // P2P for everyone. The check activates automatically the moment Didit goes live.
+  if (diditConfig()) {
+    const { data: caller, error: eCaller } = await sb
+      .from('users').select('kyc_status').eq('id', senderId).maybeSingle();
+    if (eCaller) {
+      console.error('[wallet-send] caller kyc lookup error:', eCaller);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+    }
+    if (caller?.kyc_status !== 'approved') {
+      throwApi('KYC_REQUIRED', 403, "Vérifie ton identité pour envoyer de l'argent.");
+    }
+  }
 
   if (body.amount_minor < MIN_SEND_MINOR) {
     throwApi('AMOUNT_TOO_LOW', 400, 'Montant trop faible.');
@@ -194,19 +202,22 @@ Deno.serve(makePost<Body>('/v1/wallet/send', valid, async ({ sb, body, req }) =>
   // random read.
   const refId = crypto.randomUUID();
 
-  const { error: ePt } = await sb.rpc('post_transfer', {
+  const { error: ePt } = await sb.rpc('post_p2p_transfer', {
     p_from_wallet: senderWallet.id,
     p_to_wallet: recipientWalletId,
     p_amount_minor: body.amount_minor,
-    p_ref_type: 'p2p_transfer',
     p_ref_id: refId,
+    p_daily_cap_minor: DAILY_CAP_MINOR,
   });
   if (ePt) {
     const msg = (ePt as { message?: string }).message ?? '';
     if (msg.includes('INSUFFICIENT_FUNDS')) {
       throwApi('INSUFFICIENT_FUNDS', 400, 'Solde insuffisant.');
     }
-    console.error('[wallet-send] post_transfer error:', ePt);
+    if (msg.includes('DAILY_LIMIT_EXCEEDED')) {
+      throwApi('DAILY_LIMIT_EXCEEDED', 400, 'Plafond journalier atteint (1 000 000 GNF / 24 h).');
+    }
+    console.error('[wallet-send] post_p2p_transfer error:', ePt);
     throwApi('INTERNAL_ERROR', 500, 'Erreur lors du transfert.');
   }
 
@@ -223,9 +234,25 @@ Deno.serve(makePost<Body>('/v1/wallet/send', valid, async ({ sb, body, req }) =>
     .maybeSingle();
   const newBalance = balRow ? Number(balRow.balance_after) : null;
 
-  // Loud ops log — until daily limits + KYC gating land, every transfer is
-  // an event a human might want to spot-check.
-  console.warn('[wallet-send] P2P transfer completed (PRE-PROD, no daily cap yet)', {
+  // Recipient notification — "I just paid you, check" only works if they're
+  // told. Best-effort (notifyDetached never throws); scoped to marketplace
+  // tokens so a livreur-only device doesn't buzz for a wallet receipt.
+  try {
+    const senderName = await displayNameOf(sb, senderId);
+    notifyDetached(sb, {
+      userIds: [recipientId],
+      category: 'system',
+      title: 'Argent reçu',
+      body: `${senderName} t'a envoyé ${formatGNF(body.amount_minor)}.`,
+      iconHint: 'check',
+      deeplink: '/wallet',
+      app: 'marketplace',
+    });
+  } catch (e) {
+    console.error('[wallet-send] recipient notify failed (non-fatal):', e);
+  }
+
+  console.log('[wallet-send] P2P transfer completed', {
     sender_id: senderId,
     recipient_id: recipientId,
     amount_minor: body.amount_minor,

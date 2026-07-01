@@ -6,7 +6,7 @@ import { ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -21,9 +21,8 @@ import { I } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useToast } from '../../src/components/feedback/Toast';
 import { useWallet } from '../../src/data/queries';
-import { apiPost, toToastMessage } from '../../src/lib/api';
+import { apiPost, ApiError, toToastMessage } from '../../src/lib/api';
 import { haptic } from '../../src/lib/haptics';
-import { useMutation } from '@tanstack/react-query';
 import { P2P_SEND_ENABLED } from '../../src/lib/flags';
 
 const QUICK_AMOUNTS = [10_000, 50_000, 100_000, 500_000];
@@ -62,21 +61,20 @@ export default function EnvoyerRoute() {
   const { show } = useToast();
   const walletQuery = useWallet();
   const send = useSendMoney();
+  // All hooks run BEFORE the feature-flag guard so hook order is identical
+  // whether P2P is on or off (rules-of-hooks).
+  const [phone, setPhone] = useState('');
+  const [amount, setAmount] = useState(0);
   const balance = walletQuery.data?.balanceGnf ?? 0;
 
-  // P2P send is gated OFF for shipped builds — see
-  // WALLET_SEND_V1_1_BACKLOG.md. Redirect any deep-link / typed URL away
-  // before the screen paints. Effect runs once on mount ; replace (not
-  // push) so the back button doesn't bounce the user right back here.
+  // If P2P send is gated OFF, redirect any deep-link / typed URL away before
+  // the screen paints. replace (not push) so back doesn't bounce here.
   useEffect(() => {
     if (!P2P_SEND_ENABLED) {
       router.replace('/wallet');
     }
   }, []);
   if (!P2P_SEND_ENABLED) return null;
-
-  const [phone, setPhone] = useState('');
-  const [amount, setAmount] = useState(0);
 
   const phoneValid = phone.length === 9 && phone.startsWith('6');
   const aboveMin = amount >= MIN_SEND_MINOR;
@@ -121,7 +119,15 @@ export default function EnvoyerRoute() {
           if (router.canGoBack()) router.back();
           else router.replace('/wallet');
         },
-        onError: (e) => show(toToastMessage(e, t('wallet.envoyer.errorToast')), 'danger'),
+        onError: (e) => {
+          // KYC gate — send it to the verification flow instead of a dead-end toast.
+          if (e instanceof ApiError && e.code === 'KYC_REQUIRED') {
+            show(toToastMessage(e, "Vérifie ton identité pour envoyer de l'argent."), 'info');
+            router.push('/kyc/intro');
+            return;
+          }
+          show(toToastMessage(e, t('wallet.envoyer.errorToast')), 'danger');
+        },
       },
     );
   }

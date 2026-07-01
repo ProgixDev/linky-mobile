@@ -41,6 +41,7 @@ function valid(b: unknown): b is Body {
 Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body }) => {
   const limit = body.limit ?? 50;
   const sortIsRecent = !body.sort || body.sort === 'recent';
+  const hasCursor = !!(body.cursor && sortIsRecent);
   let q = sb
     .from('products')
     .select('id, shop_id, title, description, price_minor, category, condition, status, photos, boosted, view_count, fav_count, city, district, created_at')
@@ -58,13 +59,24 @@ Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body }) => {
 
   // Keyset cursor only valid with recent sort — popular sorts by view_count which is
   // mutable, so a stable keyset would need a (view_count, id) tuple. Out of scope.
-  if (body.cursor && sortIsRecent) {
-    const { created_at, id } = body.cursor;
+  //
+  // Boosted products float to the top of the FIRST page only (ordering below).
+  // On deep (cursored) pages we exclude boosted rows so one with an old
+  // created_at — already shown on page 1 — can't reappear as a duplicate.
+  if (hasCursor) {
+    q = q.eq('boosted', false);
+    const { created_at, id } = body.cursor!;
     q = q.or(`created_at.lt.${created_at},and(created_at.eq.${created_at},id.lt.${id})`);
   }
 
-  if (body.sort === 'popular') q = q.order('view_count', { ascending: false });
-  else q = q.order('created_at', { ascending: false }).order('id', { ascending: false });
+  if (body.sort === 'popular') {
+    // popular isn't keyset-paginated (next_cursor stays null) so it's always
+    // page 1 — boosted first, then most-viewed.
+    q = q.order('boosted', { ascending: false }).order('view_count', { ascending: false });
+  } else {
+    if (!hasCursor) q = q.order('boosted', { ascending: false });
+    q = q.order('created_at', { ascending: false }).order('id', { ascending: false });
+  }
 
   const { data, error } = await q.limit(limit);
   if (error) {

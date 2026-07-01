@@ -32,6 +32,9 @@ export interface CreatePropertyInput {
   type: 'location' | 'vente' | 'terrain';
   title: string;
   description?: string;
+  // Rental billing period. Only sent for locations: true ⇒ /mois, false ⇒ /jour.
+  // Omitted for vente/terrain (backend forces false there).
+  per_month?: boolean;
   price_minor: number;
   bedrooms?: number;
   area_sqm?: number;
@@ -50,6 +53,7 @@ export interface UpdatePropertyInput {
   type?: 'location' | 'vente' | 'terrain';
   title?: string;
   description?: string;
+  per_month?: boolean;
   price_minor?: number;
   bedrooms?: number | null;
   area_sqm?: number | null;

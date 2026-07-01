@@ -732,3 +732,12 @@ verify_jwt = false
 
 [functions.admin-assign-delivery]
 verify_jwt = false
+
+[functions.create-boost]
+verify_jwt = false
+
+[functions.list-boosts]
+verify_jwt = false
+
+[functions.get-boost]
+verify_jwt = false

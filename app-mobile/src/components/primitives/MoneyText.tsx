@@ -9,6 +9,9 @@ export interface MoneyTextProps {
   size?: 'sm' | 'm' | 'l' | 'xl';
   inverse?: boolean;
   perMonth?: boolean;
+  // Rental billing period. When set, it takes precedence over `perMonth` and
+  // renders /jour or /mois. Lets daily rentals show the right unit.
+  period?: 'day' | 'month';
   showSecondary?: boolean;
   align?: 'left' | 'right' | 'center';
 }
@@ -25,6 +28,7 @@ export function MoneyText({
   size = 'm',
   inverse,
   perMonth,
+  period,
   showSecondary = true,
   align,
 }: MoneyTextProps) {
@@ -39,14 +43,15 @@ export function MoneyText({
     fontVariant: ['tabular-nums'],
     textAlign: align,
   };
+  const unit = period === 'day' ? '/jour' : period === 'month' || perMonth ? '/mois' : null;
   return (
     <View style={{ alignItems: align === 'right' ? 'flex-end' : align === 'center' ? 'center' : 'flex-start' }}>
       <Text style={primaryStyle}>
         {formatGNF(amountGnf)}
-        {perMonth && (
+        {unit && (
           <Text style={{ fontSize: sz.secondary, fontWeight: '500', color: primaryColor, opacity: 0.85 }}>
             {' '}
-            /mois
+            {unit}
           </Text>
         )}
       </Text>

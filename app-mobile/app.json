@@ -31,7 +31,8 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "plugins": [
@@ -89,8 +90,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5154ed32-fa42-448f-ae1e-c99722101c76"
+        "projectId": "b91c4258-6603-445e-847e-ff94a7375025"
       }
-    }
+    },
+    "owner": "achrafprojix"
   }
 }

@@ -20,6 +20,13 @@ export interface ProductRow {
   created_at: string;
 }
 
+export interface OpeningHoursRow {
+  always_open?: boolean;
+  days?: string[];
+  open?: string;
+  close?: string;
+}
+
 export interface ShopRow {
   id: string;
   owner_id: string;
@@ -33,6 +40,7 @@ export interface ShopRow {
   review_count: number;
   follower_count: number;
   response_time_text: string;
+  opening_hours?: OpeningHoursRow | null;
   product_count?: number; // present on shops_with_counts view only
   created_at: string;
 }
@@ -286,5 +294,51 @@ export function mapShop(r: ShopRow) {
     productCount: r.product_count ?? 0,
     responseTime: r.response_time_text,
     about: r.about,
+    // jsonb → camelCase for the frontend. null (unset) stays null so the
+    // storefront can decide to render no hours section at all.
+    openingHours: r.opening_hours
+      ? {
+          alwaysOpen: !!r.opening_hours.always_open,
+          days: Array.isArray(r.opening_hours.days) ? r.opening_hours.days : [],
+          open: typeof r.opening_hours.open === 'string' ? r.opening_hours.open : '',
+          close: typeof r.opening_hours.close === 'string' ? r.opening_hours.close : '',
+        }
+      : null,
+  };
+}
+
+// Boost purchase row → frontend shape. `products` is present only when the
+// SELECT embeds it (list-boosts / get-boost); the purchase_boost RPC returns
+// the bare boosts row, so the embed is optional here.
+export interface BoostRow {
+  id: string;
+  product_id: string;
+  seller_id: string;
+  amount_minor: number | string;
+  days: number;
+  status: 'active' | 'expired' | 'cancelled';
+  starts_at: string;
+  ends_at: string;
+  created_at: string;
+  products?: { title: string; photos: string[] | null; status: string } | null;
+}
+
+export function mapBoost(r: BoostRow) {
+  return {
+    id: r.id,
+    productId: r.product_id,
+    amountGnf: Number(r.amount_minor),
+    days: r.days,
+    status: r.status,
+    startsAt: r.starts_at,
+    endsAt: r.ends_at,
+    createdAt: r.created_at,
+    product: r.products
+      ? {
+          title: r.products.title,
+          photo: r.products.photos?.[0] ?? null,
+          status: r.products.status,
+        }
+      : undefined,
   };
 }

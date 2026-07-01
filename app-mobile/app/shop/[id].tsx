@@ -27,6 +27,7 @@ import {
 } from '../../src/data/queries';
 import { useAuth } from '../../src/stores/auth';
 import { haptic } from '../../src/lib/haptics';
+import { shopOpenStatus } from '../../src/lib/shopHours';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
@@ -97,6 +98,10 @@ export default function ShopRoute() {
   // ship a mojibake em-dash placeholder ; we now blank that and only show the
   // segment when a real value is present.
   const hasResponseTime = shop.responseTime.trim().length > 0;
+  // Dynamic opening status derived from the owner's configured schedule.
+  const status = shopOpenStatus(shop.openingHours);
+  const statusColor = status.is24h ? colors.accentText : status.isOpen ? colors.primaryDeep : colors.textMuted;
+  const statusBg = status.is24h ? colors.accentSoft : status.isOpen ? colors.primarySoft : colors.bgSunken;
   // Phase Y.2 / I.3d — count/rating honesty + pluralization via i18next.
   const articlesLabel = t('shop.article', { count: shop.productCount });
   const isNewShop = shop.reviewCount === 0;
@@ -275,6 +280,28 @@ export default function ShopRoute() {
                     </>
                   )}
                 </View>
+
+                {/* Dynamic open/closed + 24/24h badge from the owner's schedule. */}
+                {status.configured && (
+                  <View
+                    style={{
+                      alignSelf: 'flex-start',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginTop: 8,
+                      paddingHorizontal: 8,
+                      height: 22,
+                      borderRadius: 999,
+                      backgroundColor: statusBg,
+                    }}
+                  >
+                    <Clock size={10.5} color={statusColor} strokeWidth={2.25} />
+                    <Text style={{ fontSize: 10.5, fontWeight: '700', letterSpacing: 0.3, color: statusColor }}>
+                      {status.is24h ? '24/24h' : status.isOpen ? 'Ouvert' : 'Fermé'}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -592,6 +619,14 @@ export default function ShopRoute() {
 
             <View style={{ marginTop: 14, gap: 10 }}>
               <InfoRow Icon={MapPin} label={t('shop.infoVille')} value={shop.city} />
+              {status.configured && (
+                <InfoRow
+                  Icon={Clock}
+                  label={t('shop.infoHours')}
+                  value={status.is24h ? 'Ouvert 24h/24, 7j/7' : status.scheduleText}
+                  accent={status.is24h}
+                />
+              )}
               {hasResponseTime && (
                 <InfoRow
                   Icon={Clock}

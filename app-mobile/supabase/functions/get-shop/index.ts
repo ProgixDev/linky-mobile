@@ -13,7 +13,7 @@ function valid(b: unknown): b is Body {
 Deno.serve(makePost<Body>('/v1/shops/get', valid, async ({ sb, body, req }) => {
   const { data, error } = await sb
     .from('shops_with_counts')
-    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count')
+    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count, opening_hours')
     .eq('id', body.id)
     .maybeSingle();
   if (error) {

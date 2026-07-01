@@ -15,6 +15,9 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
+import { Switch } from '../../src/components/primitives/Switch';
+import { Chip } from '../../src/components/primitives/Chip';
+import { WEEK_ORDER, DAY_LABELS_FR } from '../../src/lib/shopHours';
 import { TopBar } from '../../src/components/nav/TopBar';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
@@ -56,6 +59,13 @@ export default function ShopEditRoute() {
   // picks one (shop-upsert preserves the existing pin when lat/lng is omitted).
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
+  // Opening hours. hoursEnabled off => no schedule (opening_hours null). Defaults
+  // are sensible starting points the owner can adjust once they enable the section.
+  const [hoursEnabled, setHoursEnabled] = useState(false);
+  const [alwaysOpen, setAlwaysOpen] = useState(false);
+  const [days, setDays] = useState<string[]>(['mon', 'tue', 'wed', 'thu', 'fri', 'sat']);
+  const [openTime, setOpenTime] = useState('08:00');
+  const [closeTime, setCloseTime] = useState('20:00');
   const [hydrated, setHydrated] = useState(false);
 
   // Prefill once the shop loads (useState can't read async data at init).
@@ -65,8 +75,43 @@ export default function ShopEditRoute() {
     setAbout(shop.about ?? '');
     setAvatar(shop.avatar ?? '');
     setCover(shop.cover ?? '');
+    if (shop.openingHours) {
+      setHoursEnabled(true);
+      setAlwaysOpen(shop.openingHours.alwaysOpen);
+      if (!shop.openingHours.alwaysOpen) {
+        if (shop.openingHours.days.length) setDays(shop.openingHours.days);
+        if (shop.openingHours.open) setOpenTime(shop.openingHours.open);
+        if (shop.openingHours.close) setCloseTime(shop.openingHours.close);
+      }
+    }
     setHydrated(true);
   }
+
+  const HM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const toggleDay = (d: string) =>
+    setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
+  const sanitizeTime = (txt: string) => txt.replace(/[^\d:]/g, '').slice(0, 5);
+
+  // Build the wire payload (or null) + a stable serialization for dirty checks.
+  const hoursPayload = !hoursEnabled
+    ? null
+    : {
+        always_open: alwaysOpen,
+        days: alwaysOpen ? [] : WEEK_ORDER.filter((d) => days.includes(d)),
+        open: alwaysOpen ? '00:00' : openTime,
+        close: alwaysOpen ? '00:00' : closeTime,
+      };
+  const originalHours = shop?.openingHours
+    ? {
+        always_open: shop.openingHours.alwaysOpen,
+        days: shop.openingHours.alwaysOpen ? [] : WEEK_ORDER.filter((d) => shop.openingHours!.days.includes(d)),
+        open: shop.openingHours.alwaysOpen ? '00:00' : shop.openingHours.open,
+        close: shop.openingHours.alwaysOpen ? '00:00' : shop.openingHours.close,
+      }
+    : null;
+  const hoursDirty = JSON.stringify(hoursPayload) !== JSON.stringify(originalHours);
+  // A configured (non-24h) schedule needs at least one day and valid HH:MM times.
+  const hoursValid = !hoursEnabled || alwaysOpen || (days.length > 0 && HM_RE.test(openTime) && HM_RE.test(closeTime));
 
   const busy = uploadLogo.isPending || uploadCover.isPending;
   const dirty =
@@ -76,8 +121,9 @@ export default function ShopEditRoute() {
       about.trim() !== (shop?.about ?? '') ||
       avatar !== (shop?.avatar ?? '') ||
       cover !== (shop?.cover ?? '') ||
+      hoursDirty ||
       (lat != null && lng != null));
-  const canSave = dirty && !!name.trim() && name.trim().length >= 2 && !!city.trim() && !busy;
+  const canSave = dirty && !!name.trim() && name.trim().length >= 2 && !!city.trim() && !busy && hoursValid;
 
   async function pick(kind: 'logo' | 'cover') {
     const m = kind === 'logo' ? uploadLogo : uploadCover;
@@ -114,6 +160,7 @@ export default function ShopEditRoute() {
         about: about.trim(),
         avatar_url: avatar || null,
         cover_url: cover || null,
+        opening_hours: hoursPayload,
         ...(lat != null && lng != null ? { lat, lng } : {}),
       });
       toast.show(t('shopEdit.successToast'), 'success');
@@ -244,6 +291,92 @@ export default function ShopEditRoute() {
           <Text variant="micro" tone="faint" style={{ alignSelf: 'flex-end', marginTop: 6, fontVariant: ['tabular-nums'] }}>
             {about.length} / 800
           </Text>
+
+          {/* Opening hours — drives the storefront's dynamic Ouvert/Fermé +
+              24/24h badge on the client side. */}
+          {label(t('shopEdit.hoursSection'))}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 14,
+              height: 56,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.card,
+            }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{t('shopEdit.hoursEnable')}</Text>
+            <Switch value={hoursEnabled} onChange={setHoursEnabled} />
+          </View>
+
+          {hoursEnabled && (
+            <>
+              <View
+                style={{
+                  marginTop: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 14,
+                  height: 56,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{t('shopEdit.hours24')}</Text>
+                <Switch value={alwaysOpen} onChange={setAlwaysOpen} />
+              </View>
+
+              {!alwaysOpen && (
+                <>
+                  <Text variant="micro" tone="muted" style={{ marginTop: 14, marginBottom: 8, textTransform: 'none', letterSpacing: 0 }}>
+                    {t('shopEdit.hoursDays')}
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {WEEK_ORDER.map((d) => (
+                      <Chip key={d} label={DAY_LABELS_FR[d]} active={days.includes(d)} onPress={() => toggleDay(d)} />
+                    ))}
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 12, marginTop: 14 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text variant="micro" tone="muted" style={{ marginBottom: 6, textTransform: 'none', letterSpacing: 0 }}>
+                        {t('shopEdit.hoursOpen')}
+                      </Text>
+                      <TextInput
+                        value={openTime}
+                        onChangeText={(txt) => setOpenTime(sanitizeTime(txt))}
+                        placeholder="08:00"
+                        placeholderTextColor={colors.textFaint}
+                        keyboardType="numbers-and-punctuation"
+                        maxLength={5}
+                        style={inputStyle}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text variant="micro" tone="muted" style={{ marginBottom: 6, textTransform: 'none', letterSpacing: 0 }}>
+                        {t('shopEdit.hoursClose')}
+                      </Text>
+                      <TextInput
+                        value={closeTime}
+                        onChangeText={(txt) => setCloseTime(sanitizeTime(txt))}
+                        placeholder="20:00"
+                        placeholderTextColor={colors.textFaint}
+                        keyboardType="numbers-and-punctuation"
+                        maxLength={5}
+                        style={inputStyle}
+                      />
+                    </View>
+                  </View>
+                </>
+              )}
+            </>
+          )}
         </ScrollView>
 
         <View style={{ paddingHorizontal: 20, paddingVertical: 16 }}>

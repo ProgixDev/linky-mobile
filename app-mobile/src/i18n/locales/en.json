@@ -44,7 +44,7 @@
   },
   "tabs": {
     "home": "Home",
-    "marche": "Market",
+    "marche": "Listings",
     "decouvrir": "Discover",
     "boutique": "Shop",
     "profil": "Profile",
@@ -138,7 +138,7 @@
     "roleGateLabel": "your dashboard"
   },
   "marche": {
-    "titleMarche": "Market",
+    "titleMarche": "Listings",
     "titleConcurrence": "Competition",
     "subtitleSeller": "Scout the other shops in your category.",
     "subtitleAgent": "Watch the other listings in Conakry.",

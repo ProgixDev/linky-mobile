@@ -20,6 +20,9 @@ interface CreateListingState {
   photos: string[];
   // Property-specific
   propertyType: 'location' | 'vente' | 'terrain';
+  // Rental billing period — only meaningful when propertyType === 'location'.
+  // 'month' maps to per_month=true (the historical default), 'day' to false.
+  rentalPeriod: 'day' | 'month';
   rooms: number;
   areaSqm: number;
   city: string;
@@ -51,6 +54,7 @@ const DEFAULTS = {
   condition: 'occasion' as const,
   photos: [] as string[],
   propertyType: 'location' as const,
+  rentalPeriod: 'month' as 'day' | 'month',
   rooms: 0,
   areaSqm: 0,
   city: '',

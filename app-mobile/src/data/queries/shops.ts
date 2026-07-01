@@ -14,6 +14,13 @@ export interface UpsertShopInput {
   /** Exact shop point picked on the map; overrides the city centroid default. */
   lat?: number | null;
   lng?: number | null;
+  /** Opening schedule (snake_case wire shape). null clears it. */
+  opening_hours?: {
+    always_open: boolean;
+    days: string[];
+    open: string;
+    close: string;
+  } | null;
 }
 
 export function useShops(limit?: number) {

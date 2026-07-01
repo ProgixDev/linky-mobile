@@ -22,6 +22,8 @@ import {
   Pause,
   CircleDot,
   Pencil,
+  Zap,
+  ChevronRight,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -262,6 +264,48 @@ export function ShopDashboard() {
             onPress={() => router.push('/pro/stats')}
           />
         </View>
+      </View>
+
+      {/* Boost — paid product visibility (Phase T.3 removed the fake entry; this
+          is the wired one). Standalone banner rather than a 5th quick action so
+          the 4-grid layout stays intact and the revenue feature stands out. */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
+        <Pressable
+          onPress={() => {
+            haptic.light();
+            router.push('/pro/boost');
+          }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            padding: 14,
+            borderRadius: 16,
+            backgroundColor: colors.accentSoft,
+          }}
+        >
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: colors.card,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Zap size={20} color={colors.accentText} strokeWidth={2.25} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accentText, letterSpacing: 0 }}>
+              {t('pro.boostBannerTitle')}
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.accentText, opacity: 0.85, letterSpacing: 0, marginTop: 1 }}>
+              {t('pro.boostBannerSub')}
+            </Text>
+          </View>
+          <ChevronRight size={18} color={colors.accentText} strokeWidth={2} />
+        </Pressable>
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 22, flexDirection: 'row', gap: 10 }}>

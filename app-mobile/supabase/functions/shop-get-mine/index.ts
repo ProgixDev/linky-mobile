@@ -12,7 +12,7 @@ Deno.serve(makePost<Record<string, unknown>>(
     const userId = await requireUser(req);
     const { data, error } = await sb
       .from('shops_with_counts')
-      .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count')
+      .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count, opening_hours')
       .eq('owner_id', userId)
       .order('created_at', { ascending: true });
     if (error) {

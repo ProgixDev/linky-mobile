@@ -25,7 +25,7 @@ import { formatGNF } from '../../src/lib/format';
 const MESSAGE_MAX_LENGTH = 2000;
 
 export default function ChatRoute() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, draft } = useLocalSearchParams<{ id: string; draft?: string }>();
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { data, isLoading, isError, refetch } = useConversation(id);
@@ -33,7 +33,9 @@ export default function ChatRoute() {
   const me = useAuth((s) => s.authUserId);
   const markRead = useMarkConversationRead(id);
   const toast = useToast();
-  const [text, setText] = useState('');
+  // Seed the composer from a ?draft= param once (e.g. the property "Négocier le
+  // prix" opener). The user edits/confirms before sending — nothing auto-sends.
+  const [text, setText] = useState(typeof draft === 'string' ? draft : '');
   const scrollRef = useRef<ScrollView>(null);
   const messageCount = data?.messages.length ?? 0;
 

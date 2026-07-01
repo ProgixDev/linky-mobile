@@ -4,8 +4,9 @@
 // conditionals in this file.
 
 // P2P wallet send (wallet-to-wallet money transfer between Linky accounts).
-// SHIPPED 2026-06-20 but GATED OFF — the ledger is sound (post_transfer is
-// the same primitive escrow uses, atomic + double-entry) but AML/abuse
-// gating is incomplete. See linky-mobile/WALLET_SEND_V1_1_BACKLOG.md for
-// the full must-fix list before flipping this on.
-export const P2P_SEND_ENABLED = false;
+// ENABLED 2026-07-01 with owner sign-off, once the must-fix AML/abuse gating
+// landed: KYC gate (soft-gated on Didit), 1M GNF/24h atomic daily cap, recipient
+// push, and removal of the demo-seed free-money credit. Backend enforces the
+// same in wallet-send (P2P_ENABLED + post_p2p_transfer). Still open, accepted for
+// the capped beta: two-account family-fraud, reversal policy — see wallet-send header.
+export const P2P_SEND_ENABLED = true;

@@ -60,6 +60,37 @@ export default function CreatePhotosRoute() {
   const remaining = MAX_PHOTOS - photos.length;
   const canAdd = remaining > 0 && !uploading;
 
+  // Upload a single picked asset → returns its public URL, or null on failure.
+  async function uploadAsset(asset: ImagePicker.ImagePickerAsset): Promise<string | null> {
+    // Optimize before upload: resize > 1600px down + re-encode as jpeg. Cuts
+    // typical camera output from ~3-5 MB to ~250-500 KB. Pass-through for small inputs.
+    const originalMime = resolveMime(asset);
+    const optimized = await optimizePhoto(asset.uri, originalMime);
+    const contentType = optimized.mimeType;
+    const filename = sanitizeFilename(asset.fileName, extForMime(contentType));
+
+    const { upload_url, public_url } = await requestUploadUrl.mutateAsync({
+      kind: 'product',
+      filename,
+      content_type: contentType,
+    });
+
+    // Turn the (possibly resized) file:// URI into a Blob for a raw PUT to Storage.
+    const fileRes = await fetch(optimized.uri);
+    const blob = await fileRes.blob();
+    const putRes = await fetch(upload_url, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+      body: blob,
+    });
+    if (!putRes.ok) {
+      const raw = await putRes.text().catch(() => '');
+      console.error('[photos] storage PUT failed', putRes.status, raw);
+      return null;
+    }
+    return public_url;
+  }
+
   async function handleAdd() {
     if (!canAdd) return;
     try {
@@ -69,44 +100,29 @@ export default function CreatePhotosRoute() {
         return;
       }
 
+      // Multi-select: the picker caps at `remaining` so we never exceed MAX_PHOTOS.
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: 'images',
         quality: 0.8,
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: true,
+        selectionLimit: remaining,
       });
       if (picked.canceled || picked.assets.length === 0) return;
 
       setUploading(true);
-      const asset = picked.assets[0];
-      // Optimize before upload: resize > 1600px down + re-encode as jpeg. Cuts
-      // typical camera output from ~3-5 MB to ~250-500 KB. Pass-through for small inputs.
-      const originalMime = resolveMime(asset);
-      const optimized = await optimizePhoto(asset.uri, originalMime);
-      const contentType = optimized.mimeType;
-      const filename = sanitizeFilename(asset.fileName, extForMime(contentType));
-
-      const { upload_url, public_url } = await requestUploadUrl.mutateAsync({
-        kind: 'product',
-        filename,
-        content_type: contentType,
-      });
-
-      // Turn the (possibly resized) file:// URI into a Blob for a raw PUT to Storage.
-      const fileRes = await fetch(optimized.uri);
-      const blob = await fileRes.blob();
-      const putRes = await fetch(upload_url, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
-        body: blob,
-      });
-      if (!putRes.ok) {
-        const raw = await putRes.text().catch(() => '');
-        console.error('[photos] storage PUT failed', putRes.status, raw);
-        show(t('create.photosUploadFailed'), 'danger');
-        return;
+      const toUpload = picked.assets.slice(0, remaining);
+      const uploaded: string[] = [];
+      for (const asset of toUpload) {
+        try {
+          const url = await uploadAsset(asset);
+          if (url) uploaded.push(url);
+        } catch (e) {
+          console.error('[photos] one asset failed:', e);
+        }
       }
-
-      setVal('photos', [...photos, public_url]);
+      if (uploaded.length > 0) setVal('photos', [...photos, ...uploaded]);
+      // Some selected photos didn't make it — tell the user rather than silently drop.
+      if (uploaded.length < toUpload.length) show(t('create.photosUploadFailed'), 'danger');
     } catch (e: unknown) {
       console.error('[photos] add error:', e);
       show(toToastMessage(e, t('create.photosUploadFailed')), 'danger');

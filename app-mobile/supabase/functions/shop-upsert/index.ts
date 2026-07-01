@@ -6,6 +6,13 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapShop, type ShopRow } from '@shared/catalog.ts';
 
+interface OpeningHours {
+  always_open: boolean;
+  days: string[];
+  open: string;
+  close: string;
+}
+
 interface Body {
   id?: string;
   name: string;
@@ -16,6 +23,23 @@ interface Body {
   // Exact shop point picked on the map; overrides the city centroid default.
   lat?: number | null;
   lng?: number | null;
+  // Owner-configured opening schedule. null clears it; omitted leaves it untouched.
+  opening_hours?: OpeningHours | null;
+}
+
+const DAY_SET = new Set(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
+const HM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function validOpeningHours(v: unknown): boolean {
+  if (v === undefined || v === null) return true;
+  if (typeof v !== 'object') return false;
+  const x = v as Record<string, unknown>;
+  if (typeof x.always_open !== 'boolean') return false;
+  if (!Array.isArray(x.days) || x.days.length > 7) return false;
+  if (!x.days.every((d) => typeof d === 'string' && DAY_SET.has(d))) return false;
+  if (typeof x.open !== 'string' || !HM_RE.test(x.open)) return false;
+  if (typeof x.close !== 'string' || !HM_RE.test(x.close)) return false;
+  return true;
 }
 
 function isUuid(s: unknown): s is string {
@@ -61,6 +85,7 @@ function valid(b: unknown): b is Body {
   if (x.avatar_url !== undefined && x.avatar_url !== null && (typeof x.avatar_url !== 'string' || x.avatar_url.length > 500)) return false;
   if (!isCoord(x.lat, 90)) return false;
   if (!isCoord(x.lng, 180)) return false;
+  if (!validOpeningHours(x.opening_hours)) return false;
   return true;
 }
 
@@ -82,6 +107,7 @@ Deno.serve(makePost<Body>('/v1/shops/upsert', valid, async ({ sb, body, req }) =
     avatar_url: body.avatar_url ?? null,
     lat: body.lat ?? null,
     lng: body.lng ?? null,
+    opening_hours: body.opening_hours ?? null,
     updated_at: new Date().toISOString(),
   };
 
@@ -98,6 +124,9 @@ Deno.serve(makePost<Body>('/v1/shops/upsert', valid, async ({ sb, body, req }) =
   };
   if (body.lat !== undefined) updateFields.lat = body.lat;
   if (body.lng !== undefined) updateFields.lng = body.lng;
+  // Only touch hours when the client actually sent them, so a partial edit
+  // (e.g. just the name) never wipes a previously-saved schedule.
+  if (body.opening_hours !== undefined) updateFields.opening_hours = body.opening_hours;
 
   let row: ShopRow | null = null;
   if (body.id) {
@@ -125,7 +154,7 @@ Deno.serve(makePost<Body>('/v1/shops/upsert', valid, async ({ sb, body, req }) =
   // Pull the joined view so product_count is included in the response.
   const { data: withCounts } = await sb
     .from('shops_with_counts')
-    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count')
+    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count, opening_hours')
     .eq('id', row!.id)
     .single();
   return { body: { shop: mapShop((withCounts ?? row) as ShopRow) } };

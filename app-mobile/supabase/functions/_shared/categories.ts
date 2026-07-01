@@ -1,14 +1,19 @@
-// V1 product category whitelist. Mirrors the 6 grouped tiles in the create-product wizard
+// V1 product category whitelist. Mirrors the tiles in the create-product wizard
 // (app/create/product/category.tsx) — the wizard is the source of truth, this list just
-// enforces it server-side so manual API hits can't slip in arbitrary labels. Keep the two
-// lists in sync when adding/renaming tiles. Schema accepts any text, so no migration needed.
+// enforces it server-side so manual API hits can't slip in arbitrary labels. Keep this
+// list, the create wizard, and the Marché browse filter (app/(tabs)/marche.tsx) in sync
+// when adding/renaming tiles. Schema accepts any text, so no migration needed.
 export const PRODUCT_CATEGORIES = [
-  'Mode & Beauté',
   'Électronique',
-  'Maison',
+  'Téléphonie',
+  'Informatique',
+  'Alimentation',
+  'Maison & Déco',
+  'Vêtements & Mode',
+  'Sport & Loisirs',
+  'Beauté & Santé',
   'Auto & Moto',
-  'Beauté & Soin',
-  'Services',
+  'Autres',
 ] as const;
 
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];

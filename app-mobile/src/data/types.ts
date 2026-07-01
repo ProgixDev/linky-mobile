@@ -38,6 +38,16 @@ export interface User {
   roles: Array<'buyer' | 'seller' | 'agent' | 'livreur'>;
 }
 
+// Owner-configured storefront schedule. When alwaysOpen is true the shop is
+// open 24/24h, 7/7 and days/open/close are ignored. days use lowercase 3-letter
+// codes: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'.
+export interface ShopHours {
+  alwaysOpen: boolean;
+  days: string[];
+  open: string;  // 'HH:MM'
+  close: string; // 'HH:MM'
+}
+
 export interface Shop {
   id: ID;
   ownerId: ID;
@@ -52,6 +62,9 @@ export interface Shop {
   productCount: number;
   responseTime: string;
   about: string;
+  // null / undefined when the owner hasn't set a schedule — the storefront then
+  // renders no hours section or badge.
+  openingHours?: ShopHours | null;
   // Present on get-shop responses for authed callers ; absent / false on
   // list-shops and anonymous reads. Stays optional so existing mock data
   // (which doesn't set it) keeps typechecking.
@@ -104,6 +117,26 @@ export interface Property {
 export type DiscoverItem =
   | { kind: 'product'; item: Product }
   | { kind: 'property'; item: Property };
+
+// A paid boost on one of the seller's products. `product` is embedded on
+// list/get responses (title + cover + status) for display; absent on the
+// create response, which returns the bare boost.
+export interface Boost {
+  id: ID;
+  productId: ID;
+  amountGnf: number;
+  days: number;
+  status: 'active' | 'expired' | 'cancelled';
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+  product?: { title: string; photo: string | null; status: string };
+}
+
+export interface BoostTier {
+  days: number;
+  amountGnf: number;
+}
 
 export interface CartLine {
   productId: ID;

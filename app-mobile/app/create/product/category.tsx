@@ -19,12 +19,16 @@ type Tint = 'primary' | 'accent' | 'cream' | 'info';
 // flip with the active language. Matching by code keeps filters consistent
 // across language changes.
 const CATEGORY_DEFS: { code: string; labelKey: string; icon: IconKey; tint: Tint }[] = [
-  { code: 'Mode & Beauté', labelKey: 'create.catModeBeauty', icon: 'shirt', tint: 'primary' },
-  { code: 'Électronique', labelKey: 'create.catElectronique', icon: 'phone', tint: 'accent' },
-  { code: 'Maison', labelKey: 'create.catMaison', icon: 'sofa', tint: 'cream' },
-  { code: 'Auto & Moto', labelKey: 'create.catAutoMoto', icon: 'car', tint: 'info' },
-  { code: 'Beauté & Soin', labelKey: 'create.catBeauteSoin', icon: 'drop', tint: 'primary' },
-  { code: 'Services', labelKey: 'create.catServices', icon: 'zap', tint: 'accent' },
+  { code: 'Électronique', labelKey: 'create.catElectronique', icon: 'zap', tint: 'accent' },
+  { code: 'Téléphonie', labelKey: 'create.catTelephonie', icon: 'phone', tint: 'primary' },
+  { code: 'Informatique', labelKey: 'create.catInformatique', icon: 'layers', tint: 'info' },
+  { code: 'Alimentation', labelKey: 'create.catAlimentation', icon: 'store', tint: 'cream' },
+  { code: 'Maison & Déco', labelKey: 'create.catMaisonDeco', icon: 'sofa', tint: 'primary' },
+  { code: 'Vêtements & Mode', labelKey: 'create.catVetementsMode', icon: 'shirt', tint: 'accent' },
+  { code: 'Sport & Loisirs', labelKey: 'create.catSportLoisirs', icon: 'trend', tint: 'info' },
+  { code: 'Beauté & Santé', labelKey: 'create.catBeauteSante', icon: 'drop', tint: 'primary' },
+  { code: 'Auto & Moto', labelKey: 'create.catAutoMoto', icon: 'car', tint: 'cream' },
+  { code: 'Autres', labelKey: 'create.catAutres', icon: 'package', tint: 'accent' },
 ];
 
 export default function CreateCategoryRoute() {

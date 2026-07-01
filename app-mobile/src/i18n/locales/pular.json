@@ -44,7 +44,7 @@
   },
   "tabs": {
     "home": "Accueil",
-    "marche": "Marché",
+    "marche": "Annonces",
     "decouvrir": "Découvrir",
     "boutique": "Boutique",
     "profil": "Profil",
@@ -138,7 +138,7 @@
     "roleGateLabel": "ton tableau de bord"
   },
   "marche": {
-    "titleMarche": "Marché",
+    "titleMarche": "Annonces",
     "titleConcurrence": "Concurrence",
     "subtitleSeller": "Scout les autres boutiques de ta catégorie.",
     "subtitleAgent": "Surveille les autres biens à Conakry.",
@@ -815,7 +815,7 @@
     "visitsToastError": "Action impossible"
   },
   "buyer": {
-    "requestsTitle": "Mes demandes de visite",
+    "requestsTitle": "Mes demandes",
     "requestsSubtitle": "Suis tes demandes et leurs réponses.",
     "requestsEmptyTitle": "Aucune demande pour le moment",
     "requestsEmpty": "Quand tu enverras une demande de visite sur un bien, elle s'affichera ici.",
@@ -1323,7 +1323,7 @@
       "row2Title": "Qualité d'image réduite",
       "row2Sub": "Les photos chargent en qualité standard au lieu de HD.",
       "row3Title": "Liste sur 1 colonne en 3G",
-      "row3Sub": "Marché bascule sur une vue compacte quand le réseau est lent.",
+      "row3Sub": "La page Annonces bascule sur une vue compacte quand le réseau est lent.",
       "autoNote": "On active automatiquement ce mode quand on détecte une connexion lente, même si tu ne l'as pas allumé."
     },
     "addresses": {

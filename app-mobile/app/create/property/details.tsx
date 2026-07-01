@@ -81,10 +81,59 @@ export default function CreatePropertyDetailsRoute() {
             onChangeText={(txt) => state.set('title', txt)}
             placeholder={isTerrain ? t('create.fieldTitlePlaceholderTerrain') : t('create.fieldTitlePlaceholderHome')}
           />
+
+          {/* Description — the create flow never collected one, so every new
+              listing shipped with an empty description. Whole box is tappable
+              (Input wraps a Pressable that focuses the multiline field). */}
+          <View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+              <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
+                {t('create.fieldDescription')}
+              </Text>
+              <Text variant="micro" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
+                {state.description.length} / 600
+              </Text>
+            </View>
+            <Input
+              multiline
+              value={state.description}
+              onChangeText={(txt) => state.set('description', txt.slice(0, 600))}
+              placeholder={t('create.fieldDescriptionPropPlaceholder')}
+            />
+          </View>
+
+          {/* Rental billing period — only for locations. Drives per_month on
+              the backend (month ⇒ true, day ⇒ false). */}
+          {state.propertyType === 'location' && (
+            <View>
+              <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginBottom: 6 }}>
+                {t('create.fieldRentalPeriod')}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <Chip
+                  label={t('create.rentalPeriodMonth')}
+                  active={state.rentalPeriod === 'month'}
+                  onPress={() => state.set('rentalPeriod', 'month')}
+                  block
+                />
+                <Chip
+                  label={t('create.rentalPeriodDay')}
+                  active={state.rentalPeriod === 'day'}
+                  onPress={() => state.set('rentalPeriod', 'day')}
+                  block
+                />
+              </View>
+            </View>
+          )}
+
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}>
               <Input
-                label={state.propertyType === 'location' ? t('create.fieldPriceMonth') : t('create.fieldPriceTotal2')}
+                label={
+                  state.propertyType === 'location'
+                    ? (state.rentalPeriod === 'day' ? t('create.fieldPriceDay') : t('create.fieldPriceMonth'))
+                    : t('create.fieldPriceTotal2')
+                }
                 value={new Intl.NumberFormat('fr-FR').format(state.priceGnf)}
                 onChangeText={(txt) => state.set('priceGnf', Number(txt.replace(/\D/g, '')) || 0)}
                 keyboardType="number-pad"

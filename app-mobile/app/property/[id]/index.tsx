@@ -65,6 +65,25 @@ export default function PropertyDetailRoute() {
     }
   }
 
+  // Négocier le prix (rentals) — offers have no dedicated backend in V1, so we
+  // open the owner conversation seeded with a negotiation opener the buyer can
+  // edit before sending. Reuses the same pinned-listing chat as Contacter.
+  async function onNegotiatePress() {
+    if (!prop?.ownerId || !prop?.id) return;
+    haptic.light();
+    try {
+      const r = await findOrCreate.mutateAsync({
+        recipient_id: prop.ownerId,
+        pinned_kind: 'property',
+        pinned_id: prop.id,
+      });
+      const draft = `Bonjour, le prix de « ${prop.title} » est-il négociable ?`;
+      router.push(`/messages/${r.conversation_id}?draft=${encodeURIComponent(draft)}`);
+    } catch (e) {
+      show(toToastMessage(e, "Impossible d'ouvrir la conversation"), 'danger');
+    }
+  }
+
   if (isLoading || isError || !prop) {
     return <DetailStateScreen loading={isLoading} title={t('property.fallbackTitle')} onRetry={() => void refetch()} />;
   }
@@ -162,11 +181,28 @@ export default function PropertyDetailRoute() {
           <Text variant="titleL" style={{ fontSize: 18, marginBottom: 2 }}>
             {prop.title}
           </Text>
-          <MoneyText amountGnf={prop.priceGnf} size="l" perMonth={prop.perMonth} />
-          {prop.perMonth && (
+          <MoneyText
+            amountGnf={prop.priceGnf}
+            size="l"
+            period={prop.type === 'location' ? (prop.perMonth ? 'month' : 'day') : undefined}
+          />
+          {prop.type === 'location' && (
             <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
-              par mois · charges incluses
+              {prop.perMonth ? 'par mois · charges incluses' : 'par jour'}
             </Text>
+          )}
+
+          {/* Négocier le prix — rentals only, and never on your own listing
+              (find-or-create-conversation 403s self-targets). */}
+          {prop.type === 'location' && !isOwnProperty && (
+            <Button
+              variant="outline"
+              label="Négocier le prix"
+              leading={<I.msg size={15} color={colors.text} />}
+              onPress={onNegotiatePress}
+              disabled={findOrCreate.isPending || !prop.ownerId}
+              style={{ marginTop: 12, alignSelf: 'flex-start' }}
+            />
           )}
 
           {isTerrain && (

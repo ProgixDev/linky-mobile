@@ -6,15 +6,15 @@ import {
   Wifi,
   Car,
   Snowflake,
-  Bath,
   ChefHat,
-  Sofa,
-  Tv,
   Shield,
   Trees,
   Waves,
   ArrowUpDown,
   Sun,
+  Zap,
+  Droplet,
+  Box,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -26,18 +26,18 @@ import { useCreateListing } from '../../../src/stores/createListing';
 
 // Phase I.9 — ids are stable backend keys ; labels resolve via i18n at render.
 const AMENITY_DEFS: { id: string; labelKey: string; Icon: LucideIcon }[] = [
-  { id: 'wifi',    labelKey: 'create.amenityWifi',       Icon: Wifi },
-  { id: 'park',    labelKey: 'create.amenityParking',    Icon: Car },
-  { id: 'ac',      labelKey: 'create.amenityClim',       Icon: Snowflake },
-  { id: 'bath',    labelKey: 'create.amenityBath',       Icon: Bath },
-  { id: 'kitchen', labelKey: 'create.amenityKitchen',    Icon: ChefHat },
-  { id: 'furn',    labelKey: 'create.amenityFurn',       Icon: Sofa },
-  { id: 'tv',      labelKey: 'create.amenityTv',         Icon: Tv },
-  { id: 'sec',     labelKey: 'create.amenitySec',        Icon: Shield },
-  { id: 'garden',  labelKey: 'create.amenityGardenAlt',  Icon: Trees },
-  { id: 'pool',    labelKey: 'create.amenityPool',       Icon: Waves },
-  { id: 'lift',    labelKey: 'create.amenityLift',       Icon: ArrowUpDown },
-  { id: 'terrace', labelKey: 'create.amenityTerrace',    Icon: Sun },
+  { id: 'electricity', labelKey: 'create.amenityElectricity', Icon: Zap },
+  { id: 'water',       labelKey: 'create.amenityWater',       Icon: Droplet },
+  { id: 'ac',          labelKey: 'create.amenityClim',        Icon: Snowflake },
+  { id: 'park',        labelKey: 'create.amenityParking',     Icon: Car },
+  { id: 'sec',         labelKey: 'create.amenitySec',         Icon: Shield },
+  { id: 'pool',        labelKey: 'create.amenityPool',        Icon: Waves },
+  { id: 'garden',      labelKey: 'create.amenityGardenAlt',   Icon: Trees },
+  { id: 'kitchen',     labelKey: 'create.amenityKitchen',     Icon: ChefHat },
+  { id: 'wifi',        labelKey: 'create.amenityWifi',        Icon: Wifi },
+  { id: 'lift',        labelKey: 'create.amenityLift',        Icon: ArrowUpDown },
+  { id: 'terrace',     labelKey: 'create.amenityTerrace',     Icon: Sun },
+  { id: 'cellar',      labelKey: 'create.amenityCellar',      Icon: Box },
 ];
 
 export default function AmenitiesRoute() {
@@ -149,7 +149,7 @@ export default function AmenitiesRoute() {
         <Pressable
           onPress={() => {
             haptic.medium();
-            router.push('/create/property/preview');
+            router.push('/create/property/photos');
           }}
           style={{
             height: 56,

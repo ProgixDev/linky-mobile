@@ -48,6 +48,7 @@ export default function PropertyEditRoute() {
   const [type, setType] = useState<PType>('location');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [perMonth, setPerMonth] = useState(true);
   const [price, setPrice] = useState(0);
   const [area, setArea] = useState(0);
   const [rooms, setRooms] = useState(0);
@@ -61,6 +62,7 @@ export default function PropertyEditRoute() {
     setType(prop.type as PType);
     setTitle(prop.title);
     setDescription(prop.description);
+    setPerMonth(prop.perMonth);
     setPrice(prop.priceGnf);
     setArea(prop.areaSqm ?? 0);
     setRooms(prop.bedrooms ?? 0);
@@ -86,6 +88,7 @@ export default function PropertyEditRoute() {
     (type !== prop.type ||
       title.trim() !== prop.title ||
       description.trim() !== prop.description ||
+      (type === 'location' && perMonth !== prop.perMonth) ||
       price !== prop.priceGnf ||
       area !== (prop.areaSqm ?? 0) ||
       rooms !== (prop.bedrooms ?? 0) ||
@@ -103,6 +106,7 @@ export default function PropertyEditRoute() {
         type,
         title: title.trim(),
         description: description.trim(),
+        per_month: type === 'location' ? perMonth : undefined,
         price_minor: price,
         area_sqm: area || null,
         bedrooms: isTerrain ? null : rooms || null,
@@ -159,10 +163,22 @@ export default function PropertyEditRoute() {
 
             <Input label={t('propertyEdit.titleLabel')} value={title} onChangeText={setTitle} />
 
+            {type === 'location' && (
+              <View>
+                <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginBottom: 6 }}>
+                  {t('propertyEdit.rentalPeriodLabel')}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <Chip label={t('propertyEdit.rentalPeriodMonth')} active={perMonth} onPress={() => setPerMonth(true)} block />
+                  <Chip label={t('propertyEdit.rentalPeriodDay')} active={!perMonth} onPress={() => setPerMonth(false)} block />
+                </View>
+              </View>
+            )}
+
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <Input
-                  label={type === 'location' ? t('propertyEdit.pricePerMonth') : t('propertyEdit.priceLabel')}
+                  label={type === 'location' ? (perMonth ? t('propertyEdit.pricePerMonth') : t('propertyEdit.pricePerDay')) : t('propertyEdit.priceLabel')}
                   value={new Intl.NumberFormat('fr-FR').format(price)}
                   onChangeText={(txt) => setPrice(Number(txt.replace(/\D/g, '')) || 0)}
                   keyboardType="number-pad"

@@ -40,6 +40,7 @@ export function Input({
 }: InputProps) {
   const { colors, radii } = useTheme();
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const Leading = leadingIcon ? I[leadingIcon] : null;
   const Trailing = trailingIcon ? I[trailingIcon] : null;
   return (
@@ -49,7 +50,8 @@ export function Input({
           {label}
         </Text>
       )}
-      <View
+      <Pressable
+        onPress={() => inputRef.current?.focus()}
         style={{
           height: multiline ? undefined : compact ? 44 : 48,
           minHeight: multiline ? 100 : undefined,
@@ -69,6 +71,7 @@ export function Input({
           </View>
         )}
         <TextInput
+          ref={inputRef}
           {...rest}
           multiline={multiline}
           onFocus={(e) => {
@@ -85,6 +88,7 @@ export function Input({
             color: colors.text,
             fontSize: 14,
             paddingVertical: 0,
+            minHeight: multiline ? 96 : undefined,
             textAlignVertical: multiline ? 'top' : 'center',
           }}
         />
@@ -93,7 +97,7 @@ export function Input({
             <Trailing size={18} color={colors.textMuted} />
           </Pressable>
         )}
-      </View>
+      </Pressable>
       {errorText ? (
         <Text variant="caption" tone="danger" style={{ marginTop: 6 }}>
           {errorText}

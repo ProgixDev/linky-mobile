@@ -122,7 +122,11 @@ export default function VisitRequestRoute() {
                 }}
               >
                 {formatGNF(property.priceGnf)}
-                {property.perMonth && <Text style={{ fontWeight: '500', color: colors.textMuted }}>{t('property.visitPerMonth')}</Text>}
+                {property.type === 'location' && (
+                  <Text style={{ fontWeight: '500', color: colors.textMuted }}>
+                    {property.perMonth ? t('property.visitPerMonth') : ' /jour'}
+                  </Text>
+                )}
               </Text>
             </View>
           </View>

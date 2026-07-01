@@ -48,12 +48,16 @@ import { useTranslation } from 'react-i18next';
 // (create/product/category.tsx) or the filter returns nothing.
 const PRODUCT_CATEGORY_DEFS = [
   { code: 'Tout', labelKey: 'marche.catTout' },
-  { code: 'Mode & Beauté', labelKey: 'marche.catMode' },
-  { code: 'Électronique', labelKey: 'marche.catElectronique' },
-  { code: 'Maison', labelKey: 'marche.catMaison' },
-  { code: 'Beauté & Soin', labelKey: 'marche.catBeaute' },
-  { code: 'Auto & Moto', labelKey: 'marche.catAuto' },
-  { code: 'Services', labelKey: 'create.catServices' },
+  { code: 'Électronique', labelKey: 'create.catElectronique' },
+  { code: 'Téléphonie', labelKey: 'create.catTelephonie' },
+  { code: 'Informatique', labelKey: 'create.catInformatique' },
+  { code: 'Alimentation', labelKey: 'create.catAlimentation' },
+  { code: 'Maison & Déco', labelKey: 'create.catMaisonDeco' },
+  { code: 'Vêtements & Mode', labelKey: 'create.catVetementsMode' },
+  { code: 'Sport & Loisirs', labelKey: 'create.catSportLoisirs' },
+  { code: 'Beauté & Santé', labelKey: 'create.catBeauteSante' },
+  { code: 'Auto & Moto', labelKey: 'create.catAutoMoto' },
+  { code: 'Autres', labelKey: 'create.catAutres' },
 ] as const;
 const PROPERTY_TYPE_DEFS: { value: 'location' | 'vente' | 'terrain'; labelKey: string }[] = [
   { value: 'location', labelKey: 'marche.propLocation' },
