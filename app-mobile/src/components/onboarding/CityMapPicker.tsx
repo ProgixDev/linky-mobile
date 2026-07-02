@@ -10,6 +10,12 @@ import { haptic } from '../../lib/haptics';
 // Idempotent — safe to call multiple times. Reads the public token from EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN.
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? null);
 
+// A build that ships WITHOUT the public token crashes the native MapView on
+// mount — fatal here because this is the sign-up city step (blocks every new
+// user). When the token is absent we skip the map entirely; the region tabs +
+// city chips below still let the user pick a city, so onboarding never blocks.
+const HAS_MAPBOX_TOKEN = !!(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '').trim();
+
 export interface GuineaCity {
   name: string;
   region: string;
@@ -297,9 +303,14 @@ export function CityMapPicker({
           backgroundColor: colors.bgSunken,
         }}
       >
-        {Platform.OS === 'web' ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text tone="muted">La carte n'est pas disponible sur le web.</Text>
+        {Platform.OS === 'web' || !HAS_MAPBOX_TOKEN ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16, gap: 8 }}>
+            <MapPin size={22} color={colors.textMuted} strokeWidth={1.75} />
+            <Text tone="muted" center style={{ letterSpacing: 0 }}>
+              {Platform.OS === 'web'
+                ? "La carte n'est pas disponible sur le web."
+                : 'Sélectionne ta ville dans la liste ci-dessus.'}
+            </Text>
           </View>
         ) : (
           <MapView
