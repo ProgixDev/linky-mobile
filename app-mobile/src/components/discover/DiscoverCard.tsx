@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import {
   Heart,
   Share2,
+  MessageCircle,
   Sparkles as SparklesIcon,
   RotateCcw,
   Video as VideoIcon,
@@ -323,6 +324,10 @@ export function DiscoverCard({
         <DiscoverRail
           isFav={isFav}
           onLike={onLike}
+          onComment={() => {
+            haptic.light();
+            router.push(`/comments/${isProduct ? 'product' : 'property'}/${id}` as never);
+          }}
           onShare={() => {
             haptic.light();
             void Share.share({ message: t('decouvrir.card.shareMessage') }).catch(() => {});
@@ -494,21 +499,20 @@ export function DiscoverCard({
 function DiscoverRail({
   isFav,
   onLike,
+  onComment,
   onShare,
   likeCount,
   bottomAnchor,
 }: {
   isFav: boolean;
   onLike: () => void;
+  onComment: () => void;
   onShare: () => void;
   likeCount: string;
   bottomAnchor: number;
 }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  // The old "info" item was a tiny redundant tap target for the same nav as
-  // the full-width "See details" CTA below the card. Removed so the rail
-  // stays focused on the actions only available here (like + share).
   const items = [
     {
       key: 'like',
@@ -523,6 +527,13 @@ function DiscoverRail({
       label: likeCount,
       onPress: onLike,
       bg: isFav ? colors.danger : 'rgba(0,0,0,0.4)',
+    },
+    {
+      key: 'comment',
+      icon: <MessageCircle size={21} color="#FFFFFF" strokeWidth={2} />,
+      label: t('decouvrir.card.comment'),
+      onPress: onComment,
+      bg: 'rgba(0,0,0,0.4)',
     },
     {
       key: 'share',

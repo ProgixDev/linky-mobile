@@ -11,6 +11,7 @@ import { Button, IconButton } from '../../../src/components/primitives/Button';
 import { MoneyText } from '../../../src/components/primitives/MoneyText';
 import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { MicroLabel } from '../../../src/components/lists/SectionHeader';
+import { ListingComments } from '../../../src/components/comments/ListingComments';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
@@ -306,6 +307,12 @@ export default function PropertyDetailRoute() {
               <Text variant="bodyM">{prop.description}</Text>
             </View>
           )}
+
+          {/* Commentaires */}
+          <View style={{ marginTop: 18 }}>
+            <MicroLabel label="Commentaires" />
+            <ListingComments kind="property" id={prop.id} />
+          </View>
         </View>
       </ScrollView>
 

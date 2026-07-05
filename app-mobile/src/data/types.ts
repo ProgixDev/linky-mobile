@@ -180,6 +180,16 @@ export interface Review {
   reviewerName: string | null;
 }
 
+// A comment under a product or property listing (public discussion thread).
+export interface Comment {
+  id: ID;
+  body: string;
+  createdAt: string;
+  authorId: ID;
+  authorName: string | null;
+  authorAvatarUrl: string | null;
+}
+
 export interface OrderDelivery {
   status: DeliveryStatus;
   /** Snapshotted delivery city (from the order's address snapshot), or null. */

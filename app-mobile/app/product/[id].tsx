@@ -24,6 +24,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ProductCard } from '../../src/components/lists/ProductCard';
+import { ListingComments } from '../../src/components/comments/ListingComments';
 import { haptic } from '../../src/lib/haptics';
 import { useProduct, useProducts, useToggleFavorite, useTrackView, useFindOrCreateConversation } from '../../src/data/queries';
 import { useShop } from '../../src/data/queries/shops';
@@ -577,6 +578,11 @@ export default function ProductDetailRoute() {
             </Text>
           </Section>
         )}
+
+        {/* ===== Commentaires ===== */}
+        <Section title="Commentaires">
+          <ListingComments kind="product" id={product.id} />
+        </Section>
 
         {/* ===== Related ===== */}
         {related && related.length > 1 && (

@@ -472,6 +472,12 @@ verify_jwt = false
 [functions.list-shop-reviews]
 verify_jwt = false
 
+[functions.list-comments]
+verify_jwt = false
+
+[functions.post-comment]
+verify_jwt = false
+
 [functions.generate-description]
 verify_jwt = false
 
