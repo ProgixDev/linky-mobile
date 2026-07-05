@@ -63,9 +63,11 @@ const MIN_SEND_MINOR = 1_000;
 
 // Server-side kill switch — defense in depth on top of the client-side
 // P2P_SEND_ENABLED flag. A direct API call (curl / leaked client) hits the
-// same wall as a tap in the UI. Enabled 2026-07-01 alongside the hardening
-// below (KYC gate + daily cap + recipient push + demo-seed removal).
-const P2P_ENABLED = true;
+// same wall as a tap in the UI. DISABLED again 2026-07-02 by client decision:
+// person-to-person transfer is out of contract scope + needs a money-transmitter
+// licence (BCRG) + AML we won't take on now. The wallet stays a marketplace
+// balance only. Endpoint returns FEATURE_DISABLED.
+const P2P_ENABLED = false;
 
 // Daily send cap per sender, rolling 24h, enforced ATOMICALLY inside
 // post_p2p_transfer (the sender wallet is locked before the day's sum is read),
