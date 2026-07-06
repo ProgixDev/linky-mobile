@@ -6,13 +6,13 @@ import { Avatar } from '../primitives/Avatar';
 import { I } from '../../icons/Icon';
 import type { Shop } from '../../data/types';
 
-export function ShopMiniCard({ shop }: { shop: Shop }) {
+export function ShopMiniCard({ shop, width = 140 }: { shop: Shop; width?: number }) {
   const { colors, radii } = useTheme();
   return (
     <Pressable
       onPress={() => router.push(`/shop/${shop.id}`)}
       style={{
-        width: 140,
+        width,
         padding: 12,
         backgroundColor: colors.card,
         borderWidth: 1,

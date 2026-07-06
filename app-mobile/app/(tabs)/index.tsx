@@ -391,19 +391,22 @@ function BuyerHome() {
           </View>
         </View>
 
-        {/* Featured shops */}
+        {/* Featured shops — same swipe row as popular products : two cards
+            visible, a peek of the third, snap per card. */}
         <View style={{ marginTop: 28 }}>
           <SectionHeader title={t('home.shopsSection')} action={t('home.seeAll')} onAction={() => router.push('/(tabs)/marche')} />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 10, paddingHorizontal: 20 }}
+            snapToInterval={POPULAR_CARD_WIDTH + 12}
+            decelerationRate="fast"
+            contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
           >
             {shopsLoading
               ? Array.from({ length: 3 }).map((_, i) => (
-                  <View key={i} style={{ width: 150, height: 96, borderRadius: 16, backgroundColor: colors.bgSunken }} />
+                  <View key={i} style={{ width: POPULAR_CARD_WIDTH, height: 110, borderRadius: 16, backgroundColor: colors.bgSunken }} />
                 ))
-              : shops?.map((s) => <ShopMiniCard key={s.id} shop={s} />) ?? null}
+              : shops?.map((s) => <ShopMiniCard key={s.id} shop={s} width={POPULAR_CARD_WIDTH} />) ?? null}
           </ScrollView>
         </View>
 
