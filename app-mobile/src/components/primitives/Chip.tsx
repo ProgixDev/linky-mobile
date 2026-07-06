@@ -65,7 +65,14 @@ export function Chip({ label, active, variant = 'default', onPress, leading, tra
     >
       {leading}
       <Text
+        // Same fit treatment as Button: block chips in tight rows (e.g. 4
+        // condition chips incl. « Reconditionné ») auto-scale instead of
+        // clipping against the pill border.
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
         style={{
+          flexShrink: 1,
           color: fg,
           fontSize: 13,
           fontWeight: '600',

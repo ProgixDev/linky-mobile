@@ -93,10 +93,18 @@ export function HoldToConfirmButton({
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
+          paddingHorizontal: 18,
         }}
       >
         <I.check size={18} color="#FFFFFF" />
-        <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}>{label}</Text>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+          style={{ flexShrink: 1, textAlign: 'center', color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}
+        >
+          {label}
+        </Text>
       </View>
     </Pressable>
   );

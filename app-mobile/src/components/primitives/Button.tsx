@@ -148,7 +148,15 @@ export function Button({
             {leading}
             {label && (
               <Text
+                // Long French labels in flex-constrained rows used to wrap and
+                // get clipped by the fixed-height pill. One line, auto-scaled
+                // down (max −25%) to fit, ellipsis as the last resort.
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
                 style={{
+                  flexShrink: 1,
+                  textAlign: 'center',
                   color: palette.fg,
                   fontSize: FONTS[size],
                   fontWeight: size === 'lg' ? '700' : '600',

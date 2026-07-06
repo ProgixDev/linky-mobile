@@ -105,7 +105,9 @@ export default function BookingDetailRoute() {
         {/* Stage actions */}
         {booking.status === 'accepted' && (
           <HoldToConfirmButton
-            label={payBusy ? 'Paiement en cours…' : `Maintenir pour signer & payer ${formatGNF(booking.totalGnf)}`}
+            // Amount lives in the trust strip above — keeping it out of the
+            // label stops the text from crowding the 56px pill.
+            label={payBusy ? 'Paiement en cours…' : 'Maintenir pour signer & payer'}
             onConfirm={onSignPay}
             disabled={payBusy}
           />

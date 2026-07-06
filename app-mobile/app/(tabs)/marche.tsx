@@ -642,7 +642,9 @@ export default function MarcheRoute() {
               </View>
 
               <MicroLabel label={t('marche.filterCondition')} />
-              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
+              {/* 4 chips incl. « Reconditionné » — wrap instead of squeezing
+                  them block-width into one row. */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
                 {[
                   { label: t('marche.catTout'), value: null },
                   { label: t('create.condNeuf'), value: 'neuf' },
@@ -654,7 +656,6 @@ export default function MarcheRoute() {
                     label={c.label}
                     active={filters.productCondition === c.value}
                     onPress={() => filters.setProductCondition(c.value)}
-                    block
                   />
                 ))}
               </View>
