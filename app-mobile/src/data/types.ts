@@ -180,6 +180,59 @@ export interface Review {
   reviewerName: string | null;
 }
 
+// Rental booking (location par jour / par mois) — tenant journey through to
+// the in-app contract signature + escrow payment.
+export type BookingStatus =
+  | 'requested' | 'accepted' | 'rejected' | 'cancelled'
+  | 'paid' | 'active' | 'completed' | 'disputed' | 'refunded';
+
+export interface BookingContract {
+  version: number;
+  landlord_name: string;
+  tenant_name: string;
+  property_title: string;
+  property_location: string;
+  period: 'day' | 'month';
+  start_date: string;
+  end_date: string | null;
+  months: number | null;
+  rent_minor: number;
+  amount_minor: number;
+  fees_minor: number;
+  total_minor: number;
+  clauses: string[];
+}
+
+export interface Booking {
+  id: ID;
+  propertyId: ID;
+  period: 'day' | 'month';
+  startDate: string;
+  endDate: string | null;
+  months: number | null;
+  rentGnf: number;
+  amountGnf: number;
+  feesGnf: number;
+  totalGnf: number;
+  status: BookingStatus;
+  note: string;
+  property: {
+    title: string;
+    city: string;
+    district: string | null;
+    cover_url: string | null;
+    price_minor: number;
+    per_month: boolean;
+  };
+  contract: BookingContract | null;
+  landlordSignedAt: string | null;
+  tenantSignedAt: string | null;
+  events: { at: string; label: string }[];
+  createdAt: string;
+  // Tenant lists carry the landlord's name; landlord lists the tenant's.
+  counterpartyName: string | null;
+}
+
 // A comment under a product or property listing (public discussion thread).
 export interface Comment {
   id: ID;

@@ -700,6 +700,30 @@ verify_jwt = false
 [functions.visit-respond]
 verify_jwt = false
 
+[functions.visit-complete]
+verify_jwt = false
+
+[functions.booking-request]
+verify_jwt = false
+
+[functions.booking-respond]
+verify_jwt = false
+
+[functions.booking-sign-pay]
+verify_jwt = false
+
+[functions.booking-cancel]
+verify_jwt = false
+
+[functions.booking-checkin-confirm]
+verify_jwt = false
+
+[functions.list-my-bookings]
+verify_jwt = false
+
+[functions.list-landlord-bookings]
+verify_jwt = false
+
 [functions.wallet-balance]
 verify_jwt = false
 

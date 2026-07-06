@@ -60,6 +60,8 @@ function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAc
   if (isBuyer) {
     out.push({ Icon: Package, label: t('profil.qa.commandes'), href: '/orders' });
     out.push({ Icon: CalendarDays, label: t('profil.qa.demandes'), href: '/buyer/requests' });
+    // Booking flow — tenant's rental bookings (location par jour / par mois).
+    out.push({ Icon: CalendarCheck, label: t('profil.qa.reservations'), href: '/bookings' });
     out.push({ Icon: Heart, label: t('profil.qa.favoris'), href: '/favorites' });
   }
   if (isSeller) {

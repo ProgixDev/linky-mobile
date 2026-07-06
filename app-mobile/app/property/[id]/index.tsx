@@ -290,12 +290,21 @@ export default function PropertyDetailRoute() {
 
           {!isTerrain && (
             <View style={{ marginTop: 14 }}>
-              <TrustStrip tone="primary">
-                <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-                  <Text style={{ fontWeight: '700' }}>Visite avant signature. </Text>
-                  Tu ne paies aucun acompte tant que tu n'as pas visité le bien et confirmé.
-                </Text>
-              </TrustStrip>
+              {prop.type === 'location' ? (
+                <TrustStrip tone="primary">
+                  <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
+                    <Text style={{ fontWeight: '700' }}>Réservation sécurisée. </Text>
+                    Ton paiement reste en séquestre jusqu'à ton emménagement. La visite est possible avant de réserver, mais optionnelle.
+                  </Text>
+                </TrustStrip>
+              ) : (
+                <TrustStrip tone="primary">
+                  <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
+                    <Text style={{ fontWeight: '700' }}>Visite obligatoire. </Text>
+                    Pour un achat, la visite du bien est obligatoire avant toute transaction sur l'application.
+                  </Text>
+                </TrustStrip>
+              )}
             </View>
           )}
 
@@ -341,7 +350,35 @@ export default function PropertyDetailRoute() {
             onPress={onChatPress}
             disabled={findOrCreate.isPending || !prop.ownerId}
           />
+        ) : prop.type === 'location' ? (
+          // Booking flow (client 2026-07) : renting is the primary action ;
+          // the visit stays available but OPTIONAL for rentals.
+          <View style={{ flex: 1, gap: 8 }}>
+            <Button
+              size="lg"
+              block
+              label="Réserver ce logement"
+              onPress={() => router.push(`/property/${prop.id}/book` as never)}
+            />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Button
+                variant="outline"
+                style={{ flex: 1 }}
+                label="Contacter"
+                leading={<I.msg size={16} color={colors.text} />}
+                onPress={onChatPress}
+                disabled={findOrCreate.isPending || !prop.ownerId}
+              />
+              <Button
+                variant="outline"
+                style={{ flex: 1 }}
+                label="Visiter (optionnel)"
+                onPress={() => router.push(`/property/${prop.id}/visit`)}
+              />
+            </View>
+          </View>
         ) : (
+          // Achat/vente : la visite est OBLIGATOIRE avant toute transaction.
           <>
             <Button
               variant="outline"

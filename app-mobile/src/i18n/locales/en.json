@@ -1144,6 +1144,7 @@
     "qa": {
       "commandes": "Orders",
       "demandes": "Requests",
+      "reservations": "Bookings",
       "favoris": "Favorites",
       "ventes": "Sales",
       "retraits": "Withdrawals",

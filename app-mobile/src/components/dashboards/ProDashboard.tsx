@@ -723,6 +723,12 @@ export function EstateDashboard() {
             label={t('proDashboard.qaVisits')}
             onPress={() => router.push('/pro/visites')}
           />
+          {/* Booking flow — the "Suivi des baux" screens are real now. */}
+          <QuickAction
+            Icon={KeyRound}
+            label="Baux"
+            onPress={() => router.push('/agent/leases' as never)}
+          />
           <QuickAction
             Icon={MessageSquare}
             label={t('proDashboard.qaRequests')}

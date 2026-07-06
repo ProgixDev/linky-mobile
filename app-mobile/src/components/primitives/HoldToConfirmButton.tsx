@@ -34,6 +34,10 @@ export function HoldToConfirmButton({
       if (val >= 1 && (prev ?? 0) < 1) {
         runOnJS(haptic.success)();
         runOnJS(onConfirm)();
+        // Re-arm after firing: without this, progress stays at 1 and the
+        // button is dead until remount — which kills retry paths that keep
+        // the same button mounted (e.g. a dismissed booking payment sheet).
+        progress.value = withTiming(0, { duration: 350 });
       }
     },
   );

@@ -9,6 +9,7 @@ export * from './discover';
 export * from './orders';
 export * from './reviews';
 export * from './comments';
+export * from './bookings';
 export * from './boost';
 export * from './payments';
 export * from './wallet';

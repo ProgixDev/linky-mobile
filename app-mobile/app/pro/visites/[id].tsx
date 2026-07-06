@@ -18,6 +18,10 @@ import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { EmptyState, ErrorStateView } from '../../../src/components/feedback/EmptyState';
 import { Skeleton } from '../../../src/components/primitives/Skeleton';
 import { useAgentVisits } from '../../../src/data/queries/properties';
+import { useCompleteVisit } from '../../../src/data/queries';
+import { Button } from '../../../src/components/primitives/Button';
+import { useToast } from '../../../src/components/feedback/Toast';
+import { toToastMessage } from '../../../src/lib/api';
 
 // Phase I.3j -- status labels resolved via i18n at render. Keys mirror the
 // existing pro.status.* set EXCEPT accepted ("Confirmee" here vs "Acceptee"
@@ -53,6 +57,8 @@ export default function VisitDetailRoute() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const visitsQuery = useAgentVisits();
+  const completeVisit = useCompleteVisit();
+  const { show } = useToast();
   const visits = visitsQuery.data ?? [];
   const visit = visits.find((v) => v.id === id);
 
@@ -280,6 +286,26 @@ export default function VisitDetailRoute() {
             </Text>
           </Pressable>
         </Section>
+
+        {/* Mark-completed — the writer of visit_requests.status='completed'.
+            Required by the achat/vente rule: a completed visit is the
+            precondition for any on-app transaction. */}
+        {visit.status === 'accepted' && (
+          <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
+            <Button
+              size="lg"
+              block
+              label={completeVisit.isPending ? 'Enregistrement…' : 'Marquer la visite comme effectuée'}
+              disabled={completeVisit.isPending}
+              onPress={() =>
+                completeVisit.mutate(visit.id, {
+                  onSuccess: () => show('Visite marquée comme effectuée ✅', 'success'),
+                  onError: (e) => show(toToastMessage(e, 'Action impossible.'), 'danger'),
+                })
+              }
+            />
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

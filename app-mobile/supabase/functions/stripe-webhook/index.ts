@@ -55,6 +55,7 @@ import type Stripe from 'stripe';
 import { serviceClient } from '@shared/db.ts';
 import { constructWebhookEvent } from '@shared/stripe.ts';
 import { notifyOrderPaid } from '@shared/order-paid-push.ts';
+import { notifyDetached } from '@shared/push.ts';
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -205,6 +206,80 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return json({ error: 'topup_failed' }, 500); // 500 → Stripe retries
     }
     return json({ received: true, topup_credited: true }, 200);
+  }
+
+  // ── BOOKING branch ───────────────────────────────────────────────────────
+  // Rental booking payment (booking-sign-pay) tags metadata.kind='booking'.
+  // Mirrors the topup branch : no payment_intents row — the money lands via
+  // confirm_booking_payment (idempotent, one-sided escrow credit + status flip).
+  if (pi.metadata?.kind === 'booking') {
+    const bookingId = pi.metadata.booking_id;
+    if (!bookingId) {
+      console.error('[stripe-webhook] booking PI missing booking_id', pi.id);
+      return json({ received: true, ignored: true }, 200);
+    }
+    const { data: bk, error: bkErr } = await sb
+      .from('bookings')
+      .select('total_minor, currency, status, landlord_id, tenant_id, property_snapshot')
+      .eq('id', bookingId)
+      .maybeSingle();
+    if (bkErr) {
+      console.error('[stripe-webhook] booking lookup failed:', bkErr);
+      return json({ error: 'booking_lookup_failed' }, 500);
+    }
+    if (!bk) {
+      console.error('[stripe-webhook] no bookings row for', bookingId, pi.id);
+      return json({ received: true, ignored: true }, 200);
+    }
+    // Settlement integrity — the settled amount MUST equal the recorded total.
+    if (pi.amount !== Number(bk.total_minor) || pi.currency !== 'gnf' || bk.currency !== 'GNF') {
+      console.error('[stripe-webhook] CRITICAL booking amount/currency mismatch — NOT credited', {
+        stripe_pi: pi.id, booking_id: bookingId,
+        pi_amount: pi.amount, pi_currency: pi.currency,
+        rec_total: bk.total_minor, rec_currency: bk.currency,
+      });
+      return json({ received: true, mismatch: true }, 200);
+    }
+    if (event.type !== 'payment_intent.succeeded') {
+      return json({ received: true, booking_noncomplete: true }, 200);
+    }
+    if (bk.status !== 'accepted') {
+      // A SUCCEEDED charge for a booking that is already past 'accepted' means
+      // Stripe holds money we did not credit (double-PI edge case) — that
+      // charge needs a manual refund. Scream, don't swallow.
+      console.error('[stripe-webhook] CRITICAL booking charge on non-accepted booking — manual refund required', {
+        stripe_pi: pi.id, booking_id: bookingId, booking_status: bk.status, amount: pi.amount,
+      });
+      return json({ received: true, booking_already: true }, 200);
+    }
+    const { data: outcome, error: cbErr } = await sb.rpc('confirm_booking_payment', { p_booking_id: bookingId });
+    if (cbErr) {
+      console.error('[stripe-webhook] confirm_booking_payment failed:', cbErr);
+      return json({ error: 'booking_confirm_failed' }, 500); // 500 → Stripe retries
+    }
+    if (outcome === 'conflict') {
+      // The dates were taken by another paid booking between accept and payment.
+      // The charge WAS captured but NOT credited — manual refund required.
+      console.error('[stripe-webhook] CRITICAL booking dates-conflict — charge captured, NOT credited, manual refund required', {
+        stripe_pi: pi.id, booking_id: bookingId, amount: pi.amount,
+      });
+      return json({ received: true, booking_conflict: true }, 200);
+    }
+    if (outcome === 'confirmed') {
+      const title = ((bk.property_snapshot as { title?: string } | null)?.title) ?? 'votre bien';
+      notifyDetached(sb, {
+        userIds: [bk.landlord_id as string],
+        category: 'booking',
+        title: 'Réservation payée',
+        body: `Le contrat pour « ${title} » est signé — le loyer est sécurisé en séquestre.`,
+        iconHint: 'check',
+        deeplink: `/agent/leases/${bookingId}`,
+        refType: 'booking',
+        refId: bookingId,
+        app: 'marketplace',
+      });
+    }
+    return json({ received: true, booking: outcome }, 200);
   }
 
   const { data: intent, error: lookupErr } = await sb
