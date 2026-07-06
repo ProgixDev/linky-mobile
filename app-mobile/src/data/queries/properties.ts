@@ -24,7 +24,16 @@ export interface PropertyFilters {
   priceMaxGnf?: number;
   distanceToRoadMaxM?: number;
   furnishedOnly?: boolean;
+  // Rental billing period ('month' ⇒ per_month=true, 'day' ⇒ false, 'all'/undefined ⇒ both).
+  rentalPeriod?: 'all' | 'month' | 'day';
   query?: string;
+}
+
+// 'all'/undefined sends nothing; 'month'/'day' map to the per_month boolean.
+function periodToPerMonth(p: PropertyFilters['rentalPeriod']): boolean | undefined {
+  if (p === 'month') return true;
+  if (p === 'day') return false;
+  return undefined;
 }
 
 export interface CreatePropertyInput {
@@ -127,6 +136,7 @@ export function useProperties(filters: PropertyFilters = {}) {
           price_max: filters.priceMaxGnf || undefined,
           distance_max: filters.distanceToRoadMaxM || undefined,
           furnished: filters.furnishedOnly === true ? true : undefined,
+          per_month: periodToPerMonth(filters.rentalPeriod),
           query: filters.query || undefined,
         },
       });
@@ -220,6 +230,7 @@ export function useInfiniteProperties(filters: PropertyFilters = {}) {
           price_max: filters.priceMaxGnf || undefined,
           distance_max: filters.distanceToRoadMaxM || undefined,
           furnished: filters.furnishedOnly === true ? true : undefined,
+          per_month: periodToPerMonth(filters.rentalPeriod),
           query: filters.query || undefined,
           cursor: pageParam,
         },

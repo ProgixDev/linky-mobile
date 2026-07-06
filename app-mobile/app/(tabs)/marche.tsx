@@ -35,7 +35,7 @@ import { haptic } from '../../src/lib/haptics';
 import { useFilters, hasActiveFilters } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
 import { useProductsInfinite, useInfiniteProperties } from '../../src/data/queries';
-import { GUINEA_CITIES } from '../../src/components/onboarding/CityMapPicker';
+import { CityFilterChips } from '../../src/components/forms/CityFilterChips';
 import { haversineKm } from '../../src/lib/distance';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -148,6 +148,8 @@ export default function MarcheRoute() {
     // store key). Thread it into list-products so the selection actually
     // narrows results instead of being a no-op control.
     city: filters.city ?? undefined,
+    priceMaxGnf: filters.productPriceMaxGnf,
+    condition: filters.productCondition,
     query: debouncedSearch || undefined,
     sort: filters.productSort,
   });
@@ -158,6 +160,7 @@ export default function MarcheRoute() {
     priceMaxGnf: filters.priceMaxGnf,
     distanceToRoadMaxM: filters.distanceToRoadMaxM,
     furnishedOnly: filters.furnishedOnly,
+    rentalPeriod: filters.propertyType === 'location' ? filters.rentalPeriod : undefined,
     query: debouncedSearch || undefined,
   });
   const products = productsQuery.products;
@@ -615,98 +618,202 @@ export default function MarcheRoute() {
       {/* ===== Filter sheet ===== */}
       <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('marche.filterSheetTitle')} snapPoints={['80%']}>
         <ScrollView style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-          <MicroLabel label={t('marche.filterType')} />
-          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
-            {PROPERTY_TYPES.map((pt) => (
-              <Chip
-                key={pt.value}
-                label={pt.label}
-                active={filters.propertyType === pt.value}
-                onPress={() => filters.setPropertyType(pt.value)}
-                block
-              />
-            ))}
-          </View>
+          {isArticles ? (
+            <>
+              {/* ===== ARTICLES filters — the sheet used to show immobilier
+                  filters on this tab (type/pièces/goudron/meublé did nothing
+                  for products). Now: price + condition + city, all wired. */}
+              <MicroLabel label={t('marche.filterMaxPrice')} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+                {[
+                  { label: t('marche.catTout'), value: 0 },
+                  { label: '< 100k', value: 100_000 },
+                  { label: '< 500k', value: 500_000 },
+                  { label: '< 1M', value: 1_000_000 },
+                  { label: '< 5M', value: 5_000_000 },
+                ].map((p) => (
+                  <Chip
+                    key={p.label}
+                    label={p.label}
+                    active={filters.productPriceMaxGnf === p.value}
+                    onPress={() => filters.setProductPriceMax(p.value)}
+                  />
+                ))}
+              </View>
 
-          <MicroLabel label={t('marche.filterMaxPrice')} />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-            {[
-              { label: t('marche.catTout'), value: 0 },
-              { label: '< 1M', value: 1_000_000 },
-              { label: '< 2M', value: 2_000_000 },
-              { label: '< 5M', value: 5_000_000 },
-              { label: '< 10M', value: 10_000_000 },
-            ].map((p) => (
-              <Chip
-                key={p.label}
-                label={p.label}
-                active={filters.priceMaxGnf === p.value}
-                onPress={() => filters.setPriceRange(filters.priceMinGnf, p.value)}
-              />
-            ))}
-          </View>
+              <MicroLabel label={t('marche.filterCondition')} />
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
+                {[
+                  { label: t('marche.catTout'), value: null },
+                  { label: t('create.condNeuf'), value: 'neuf' },
+                  { label: t('create.condOccasion'), value: 'occasion' },
+                  { label: t('create.condReconditionne'), value: 'reconditionné' },
+                ].map((c) => (
+                  <Chip
+                    key={c.label}
+                    label={c.label}
+                    active={filters.productCondition === c.value}
+                    onPress={() => filters.setProductCondition(c.value)}
+                    block
+                  />
+                ))}
+              </View>
 
-          <MicroLabel label={t('marche.filterCity')} />
-          {/* Phase R.3 — full 39-city list (was the 8 regional capitals only :
-              a property saved with city='Ratoma' was unreachable via filter).
-              Same list the onboarding + création wizards use. */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-            {GUINEA_CITIES.map((c) => (
-              <Chip
-                key={c.name}
-                label={c.name}
-                active={filters.city === c.name}
-                onPress={() => filters.setCity(filters.city === c.name ? null : c.name)}
-              />
-            ))}
-          </View>
+              <MicroLabel label={t('marche.filterCity')} />
+              <View style={{ marginBottom: 18 }}>
+                <CityFilterChips value={filters.city} onChange={filters.setCity} />
+              </View>
+            </>
+          ) : (
+            <>
+              <MicroLabel label={t('marche.filterType')} />
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
+                {PROPERTY_TYPES.map((pt) => (
+                  <Chip
+                    key={pt.value}
+                    label={pt.label}
+                    active={filters.propertyType === pt.value}
+                    onPress={() => filters.setPropertyType(pt.value)}
+                    block
+                  />
+                ))}
+              </View>
 
-          <MicroLabel label={t('marche.filterRooms')} />
-          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
-            {[t('marche.filterRoomStudio'), '1', '2', '3', '4+'].map((r) => {
-              const value = r.toLowerCase();
-              return (
-                <Chip
-                  key={r}
-                  label={r}
-                  active={filters.rooms === value}
-                  onPress={() => filters.setRooms(filters.rooms === value ? null : value)}
-                  block
-                />
-              );
-            })}
-          </View>
+              {/* Rental billing period — /mois and /jour prices aren't
+                  comparable, so the period narrows before the price buckets. */}
+              {filters.propertyType === 'location' && (
+                <>
+                  <MicroLabel label={t('marche.filterPeriod')} />
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
+                    {([
+                      { label: t('marche.catTout'), value: 'all' },
+                      { label: t('create.rentalPeriodMonth'), value: 'month' },
+                      { label: t('create.rentalPeriodDay'), value: 'day' },
+                    ] as const).map((p) => (
+                      <Chip
+                        key={p.value}
+                        label={p.label}
+                        active={filters.rentalPeriod === p.value}
+                        onPress={() => filters.setRentalPeriod(p.value)}
+                        block
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
 
-          <MicroLabel label={t('marche.filterDistanceRoad')} />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-            {[
-              { label: t('marche.catTout'), value: 0 },
-              { label: '< 250 m', value: 250 },
-              { label: '< 500 m', value: 500 },
-              { label: '< 1 km', value: 1000 },
-              { label: '< 2 km', value: 2000 },
-            ].map((d) => (
-              <Chip
-                key={d.label}
-                label={d.label}
-                active={filters.distanceToRoadMaxM === d.value}
-                onPress={() => filters.setDistanceMax(d.value)}
-              />
-            ))}
-          </View>
+              <MicroLabel label={t('marche.filterMaxPrice')} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+                {/* Buckets scale with what's being priced : loyer /jour, loyer
+                    /mois, or a sale price. A stale ceiling is cleared by the
+                    store when type/period changes. */}
+                {(filters.propertyType === 'location'
+                  ? filters.rentalPeriod === 'day'
+                    ? [
+                        { label: t('marche.catTout'), value: 0 },
+                        { label: '< 250k', value: 250_000 },
+                        { label: '< 500k', value: 500_000 },
+                        { label: '< 1M', value: 1_000_000 },
+                        { label: '< 2M', value: 2_000_000 },
+                      ]
+                    : [
+                        { label: t('marche.catTout'), value: 0 },
+                        { label: '< 1M', value: 1_000_000 },
+                        { label: '< 2M', value: 2_000_000 },
+                        { label: '< 5M', value: 5_000_000 },
+                        { label: '< 10M', value: 10_000_000 },
+                      ]
+                  : filters.propertyType === 'vente'
+                    ? [
+                        { label: t('marche.catTout'), value: 0 },
+                        { label: '< 100M', value: 100_000_000 },
+                        { label: '< 300M', value: 300_000_000 },
+                        { label: '< 500M', value: 500_000_000 },
+                        { label: '< 1Md', value: 1_000_000_000 },
+                      ]
+                    : [
+                        { label: t('marche.catTout'), value: 0 },
+                        { label: '< 50M', value: 50_000_000 },
+                        { label: '< 100M', value: 100_000_000 },
+                        { label: '< 300M', value: 300_000_000 },
+                        { label: '< 500M', value: 500_000_000 },
+                      ]
+                ).map((p) => (
+                  <Chip
+                    key={p.label}
+                    label={p.label}
+                    active={filters.priceMaxGnf === p.value}
+                    onPress={() => filters.setPriceRange(filters.priceMinGnf, p.value)}
+                  />
+                ))}
+              </View>
 
-          <MicroLabel label={t('marche.filterFurnished')} />
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingVertical: 6,
-            }}
-          >
-            <Text style={{ fontSize: 13, fontWeight: '500' }}>{t('marche.filterFurnishedOnly')}</Text>
-            <Switch value={filters.furnishedOnly} onChange={filters.setFurnishedOnly} />
-          </View>
+              <MicroLabel label={t('marche.filterCity')} />
+              <View style={{ marginBottom: 18 }}>
+                <CityFilterChips value={filters.city} onChange={filters.setCity} />
+              </View>
+
+              {/* Rooms/furnished don't exist on terrain — filtering by them
+                  there matched nothing. Hidden (and cleared by the store). */}
+              {filters.propertyType !== 'terrain' && (
+                <>
+                  <MicroLabel label={t('marche.filterRooms')} />
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
+                    {[
+                      { label: t('marche.filterRoomStudio'), value: 'studio' },
+                      { label: '1', value: '1' },
+                      { label: '2', value: '2' },
+                      { label: '3', value: '3' },
+                      { label: '4+', value: '4+' },
+                    ].map((r) => (
+                      <Chip
+                        key={r.value}
+                        label={r.label}
+                        active={filters.rooms === r.value}
+                        onPress={() => filters.setRooms(filters.rooms === r.value ? null : r.value)}
+                        block
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
+
+              <MicroLabel label={t('marche.filterDistanceRoad')} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+                {[
+                  { label: t('marche.catTout'), value: 0 },
+                  { label: '< 250 m', value: 250 },
+                  { label: '< 500 m', value: 500 },
+                  { label: '< 1 km', value: 1000 },
+                  { label: '< 2 km', value: 2000 },
+                ].map((d) => (
+                  <Chip
+                    key={d.label}
+                    label={d.label}
+                    active={filters.distanceToRoadMaxM === d.value}
+                    onPress={() => filters.setDistanceMax(d.value)}
+                  />
+                ))}
+              </View>
+
+              {filters.propertyType !== 'terrain' && (
+                <>
+                  <MicroLabel label={t('marche.filterFurnished')} />
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: 6,
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '500' }}>{t('marche.filterFurnishedOnly')}</Text>
+                    <Switch value={filters.furnishedOnly} onChange={filters.setFurnishedOnly} />
+                  </View>
+                </>
+              )}
+            </>
+          )}
         </ScrollView>
         <View
           style={{

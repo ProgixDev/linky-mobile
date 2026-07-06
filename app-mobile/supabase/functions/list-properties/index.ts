@@ -20,6 +20,9 @@ interface Body {
   price_max?: number;
   distance_max?: number;
   furnished?: boolean;
+  // Rental billing period filter: true = /mois, false = /jour. Keeps price
+  // buckets meaningful (per-day and per-month prices aren't comparable).
+  per_month?: boolean;
   query?: string;
   limit?: number;
   cursor?: Cursor;
@@ -53,6 +56,7 @@ function valid(b: unknown): b is Body {
   if (x.price_max !== undefined && (typeof x.price_max !== 'number' || !Number.isInteger(x.price_max) || x.price_max < 0)) return false;
   if (x.distance_max !== undefined && (typeof x.distance_max !== 'number' || !Number.isInteger(x.distance_max) || x.distance_max < 0 || x.distance_max > 50_000)) return false;
   if (x.furnished !== undefined && typeof x.furnished !== 'boolean') return false;
+  if (x.per_month !== undefined && typeof x.per_month !== 'boolean') return false;
   if (x.query !== undefined && (typeof x.query !== 'string' || x.query.length > 200)) return false;
   if (x.limit !== undefined && (typeof x.limit !== 'number' || x.limit < 1 || x.limit > 100)) return false;
   if (x.cursor !== undefined && !validCursor(x.cursor)) return false;
@@ -78,6 +82,7 @@ Deno.serve(makePost<Body>('/v1/properties/list', valid, async ({ sb, body }) => 
   if (body.price_max !== undefined)    q = q.lte('price_minor', body.price_max);
   if (body.distance_max !== undefined) q = q.lte('distance_to_road_m', body.distance_max);
   if (body.furnished !== undefined)    q = q.eq('furnished', body.furnished);
+  if (body.per_month !== undefined)    q = q.eq('per_month', body.per_month);
 
   if (body.query) {
     // ILIKE on title + description; escape % and , to prevent users from broadening

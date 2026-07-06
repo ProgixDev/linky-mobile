@@ -3,11 +3,19 @@ import { create } from 'zustand';
 export type MarcheTab = 'articles' | 'immobilier';
 export type PropertyTypeFilter = 'location' | 'vente' | 'terrain';
 
+// Rental billing-period filter — 'all' = both, 'month' = /mois, 'day' = /jour.
+// Splitting the period keeps the price buckets meaningful (a 500k/jour stay
+// and a 500k/mois lease are not the same price).
+export type RentalPeriodFilter = 'all' | 'month' | 'day';
+
 interface FiltersState {
   marcheTab: MarcheTab;
   productCategory: string; // 'all' | category name
   productSort: 'recent' | 'popular';
+  productPriceMaxGnf: number; // 0 = Tout
+  productCondition: string | null; // 'neuf' | 'occasion' | 'reconditionné'
   propertyType: PropertyTypeFilter;
+  rentalPeriod: RentalPeriodFilter; // only meaningful when propertyType==='location'
   city: string | null;
   rooms: string | null; // 'studio' | '1' | '2' | '3' | '4+'
   priceMinGnf: number;
@@ -18,7 +26,10 @@ interface FiltersState {
   setMarcheTab: (t: MarcheTab) => void;
   setProductCategory: (c: string) => void;
   setProductSort: (s: 'recent' | 'popular') => void;
+  setProductPriceMax: (v: number) => void;
+  setProductCondition: (c: string | null) => void;
   setPropertyType: (t: PropertyTypeFilter) => void;
+  setRentalPeriod: (p: RentalPeriodFilter) => void;
   setCity: (c: string | null) => void;
   setRooms: (r: string | null) => void;
   setPriceRange: (min: number, max: number) => void;
@@ -32,7 +43,10 @@ const DEFAULTS = {
   marcheTab: 'articles' as MarcheTab,
   productCategory: 'all',
   productSort: 'recent' as 'recent' | 'popular',
+  productPriceMaxGnf: 0,
+  productCondition: null as string | null,
   propertyType: 'location' as PropertyTypeFilter,
+  rentalPeriod: 'all' as RentalPeriodFilter,
   city: null as string | null,
   rooms: null as string | null,
   // 0 = « Tout » : the query layer sends `value || undefined`, so 0 means no
@@ -61,11 +75,14 @@ export function hasActiveFilters(s: FiltersState, isArticles: boolean): boolean 
     return (
       s.productCategory !== DEFAULTS.productCategory ||
       s.productSort !== DEFAULTS.productSort ||
+      s.productPriceMaxGnf !== DEFAULTS.productPriceMaxGnf ||
+      s.productCondition !== DEFAULTS.productCondition ||
       s.city !== DEFAULTS.city
     );
   }
   return (
     s.propertyType !== DEFAULTS.propertyType ||
+    s.rentalPeriod !== DEFAULTS.rentalPeriod ||
     s.city !== DEFAULTS.city ||
     s.rooms !== DEFAULTS.rooms ||
     s.priceMaxGnf !== DEFAULTS.priceMaxGnf ||
@@ -79,7 +96,21 @@ export const useFilters = create<FiltersState>((set) => ({
   setMarcheTab: (marcheTab) => set({ marcheTab }),
   setProductCategory: (productCategory) => set({ productCategory }),
   setProductSort: (productSort) => set({ productSort }),
-  setPropertyType: (propertyType) => set({ propertyType }),
+  setProductPriceMax: (productPriceMaxGnf) => set({ productPriceMaxGnf }),
+  setProductCondition: (productCondition) => set({ productCondition }),
+  // Type switch clears type-specific sub-filters that would otherwise silently
+  // exclude everything (rooms/furnished don't exist on terrain; period is
+  // rental-only) — mirrors the create-flow's selectType cleanup.
+  setPropertyType: (propertyType) =>
+    set((s) => ({
+      propertyType,
+      rentalPeriod: propertyType === 'location' ? s.rentalPeriod : 'all',
+      // Price buckets differ per type (rent vs sale scales) — a carried-over
+      // ceiling from another type would filter silently with no visible chip.
+      priceMaxGnf: 0,
+      ...(propertyType === 'terrain' ? { rooms: null, furnishedOnly: false } : {}),
+    })),
+  setRentalPeriod: (rentalPeriod) => set({ rentalPeriod, priceMaxGnf: 0 }),
   setCity: (city) => set({ city }),
   setRooms: (rooms) => set({ rooms }),
   setPriceRange: (priceMinGnf, priceMaxGnf) => set({ priceMinGnf, priceMaxGnf }),

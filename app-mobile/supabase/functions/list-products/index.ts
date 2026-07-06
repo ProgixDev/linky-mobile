@@ -10,9 +10,14 @@ interface Body {
   query?: string;
   shop_id?: string;
   sort?: 'recent' | 'popular';
+  // Filter-sheet additions: price ceiling (GNF minor) + product condition.
+  price_max?: number;
+  condition?: 'neuf' | 'occasion' | 'reconditionné';
   limit?: number;
   cursor?: Cursor;
 }
+
+const CONDITIONS = new Set(['neuf', 'occasion', 'reconditionné']);
 
 // Phase V.2 -- anchored. See discover-feed for the rationale.
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
@@ -33,6 +38,8 @@ function valid(b: unknown): b is Body {
   if (x.query !== undefined && typeof x.query !== 'string') return false;
   if (x.shop_id !== undefined && (typeof x.shop_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.shop_id))) return false;
   if (x.sort !== undefined && x.sort !== 'recent' && x.sort !== 'popular') return false;
+  if (x.price_max !== undefined && (typeof x.price_max !== 'number' || !Number.isInteger(x.price_max) || x.price_max < 0)) return false;
+  if (x.condition !== undefined && (typeof x.condition !== 'string' || !CONDITIONS.has(x.condition))) return false;
   if (x.limit !== undefined && (typeof x.limit !== 'number' || x.limit < 1 || x.limit > 100)) return false;
   if (x.cursor !== undefined && !validCursor(x.cursor)) return false;
   return true;
@@ -50,6 +57,8 @@ Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body }) => {
   if (body.category && body.category !== 'all') q = q.eq('category', body.category);
   if (body.city && body.city.trim().length > 0) q = q.eq('city', body.city.trim());
   if (body.shop_id) q = q.eq('shop_id', body.shop_id);
+  if (body.price_max !== undefined && body.price_max > 0) q = q.lte('price_minor', body.price_max);
+  if (body.condition) q = q.eq('condition', body.condition);
   if (body.query) {
     // V1 text search: ILIKE on title + description. .or() with comma syntax. Escape % and , to
     // prevent users from broadening their own query by injecting wildcards or breaking the filter.

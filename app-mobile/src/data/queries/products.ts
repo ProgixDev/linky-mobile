@@ -63,6 +63,10 @@ export interface ProductFilters {
   city?: string;
   query?: string;
   shopId?: string;
+  /** Price ceiling in GNF (0/undefined = no filter). */
+  priceMaxGnf?: number;
+  /** Product condition ('neuf' | 'occasion' | 'reconditionné'). */
+  condition?: string | null;
   /** 'recent' (default) pages with the keyset cursor ; 'popular' is single-page
       by design — list-products returns no cursor for view_count ordering. */
   sort?: 'recent' | 'popular';
@@ -250,6 +254,8 @@ export function useProductsInfinite(filters: ProductFilters = {}) {
           city: filters.city || undefined,
           query: filters.query || undefined,
           shop_id: filters.shopId || undefined,
+          price_max: filters.priceMaxGnf || undefined,
+          condition: filters.condition || undefined,
           sort: filters.sort === 'popular' ? 'popular' : undefined,
           cursor: pageParam,
         },
