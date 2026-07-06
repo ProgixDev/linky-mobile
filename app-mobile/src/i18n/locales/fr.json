@@ -221,7 +221,8 @@
     "catTerrains": "Terrains",
     "decouvrirBadge": "NOUVEAU",
     "decouvrirTitle": "Découvre en swipant.",
-    "decouvrirSub": "Articles et logements, à la file."
+    "decouvrirSub": "Articles et logements, à la file.",
+    "walletOpen": "Voir le wallet"
   },
   "wallet": {
     "title": "Mon portefeuille",
@@ -1222,7 +1223,8 @@
       "retraits": "Retraits",
       "visites": "Visites",
       "wallet": "Wallet",
-      "kyc": "KYC"
+      "kyc": "KYC",
+      "scan": "Scanner"
     },
     "boutiqueHero": {
       "shopTitle": "Ma boutique",

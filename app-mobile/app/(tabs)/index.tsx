@@ -1,9 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Dimensions, ScrollView, View, Pressable } from 'react-native';
-
-// Popular-products swipe row: two cards fully visible inside the 20px page
-// padding, with a sliver of the third peeking as the swipe affordance.
-const POPULAR_CARD_WIDTH = Math.round((Dimensions.get('window').width - 2 * 20 - 12) / 2.12);
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -15,8 +11,6 @@ import {
   Bell,
   ShoppingBag,
   Plus,
-  ArrowDownToLine,
-  QrCode,
   Store,
   Wallet,
   ChevronRight,
@@ -39,6 +33,7 @@ import {
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
+import { Button } from '../../src/components/primitives/Button';
 import { Avatar } from '../../src/components/primitives/Avatar';
 import { SectionHeader } from '../../src/components/lists/SectionHeader';
 import { ShopMiniCard } from '../../src/components/lists/ShopCard';
@@ -62,6 +57,11 @@ import {
   useMyProperties,
   useUnreadNotificationsCount,
 } from '../../src/data/queries';
+
+// Popular-products / featured-shops swipe rows: two cards fully visible inside
+// the 20px page padding, with a sliver of the third peeking as the swipe
+// affordance.
+const POPULAR_CARD_WIDTH = Math.round((Dimensions.get('window').width - 2 * 20 - 12) / 2.12);
 
 export default function HomeRoute() {
   const roles = useAuth((s) => s.roles);
@@ -300,47 +300,32 @@ function BuyerHome() {
             balanceGnf={wallet?.balanceGnf ?? 0}
             ready={walletReady}
             onRecharger={WALLET_TOPUP_ENABLED ? () => router.push('/wallet/recharger') : undefined}
-            onRetirer={() => router.push('/wallet/retirer')}
             onTap={() => router.push('/wallet')}
           />
         </View>
 
-        {/* Quick actions */}
+        {/* Quick actions slimmed (client ask 2026-07-06) : Scanner + Retirer
+            moved to the Profil shortcuts, the Wallet tile folded into the
+            green card above. Vendre stays as a single full-width CTA. */}
         <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <QuickAction
-              Icon={QrCode}
-              label={t('home.qaScan')}
-              onPress={() => router.push('/scan')}
-            />
-            <QuickAction
-              Icon={ArrowDownToLine}
-              label={t('home.qaWithdraw')}
-              onPress={() => router.push('/wallet/retirer')}
-            />
-            <QuickAction
-              Icon={Store}
-              label={t('home.qaSell')}
-              onPress={() => {
-                // Phase T.2 — pure buyer used to dead-end into the create
-                // modal's "Va dans Profil → Rôles" copy (a screen that
-                // didn't exist). Route the upgrade pitch instead ; sellers
-                // and agents continue straight into the wizard.
-                if (roles.includes('seller') || roles.includes('agent')) {
-                  router.push('/create');
-                } else {
-                  router.push('/profil/devenir?role=seller' as never);
-                }
-              }}
-            />
-            {/* Top-up removed (wallet restructure) — surface the wallet itself
-                instead so the row keeps 4 actions. */}
-            <QuickAction
-              Icon={Wallet}
-              label={t('home.qaWallet')}
-              onPress={() => router.push('/wallet')}
-            />
-          </View>
+          <Button
+            variant="dark"
+            size="lg"
+            block
+            label={t('home.qaSell')}
+            leading={<Store size={16} color="#FFFFFF" strokeWidth={2} />}
+            onPress={() => {
+              // Phase T.2 — pure buyer used to dead-end into the create
+              // modal's "Va dans Profil → Rôles" copy (a screen that
+              // didn't exist). Route the upgrade pitch instead ; sellers
+              // and agents continue straight into the wizard.
+              if (roles.includes('seller') || roles.includes('agent')) {
+                router.push('/create');
+              } else {
+                router.push('/profil/devenir?role=seller' as never);
+              }
+            }}
+          />
         </View>
 
         {/* Categories — 4 col x 2 row grid */}
@@ -663,13 +648,11 @@ function HomeWalletCard({
   balanceGnf,
   ready,
   onRecharger,
-  onRetirer,
   onTap,
 }: {
   balanceGnf: number;
   ready: boolean;
   onRecharger?: () => void;
-  onRetirer: () => void;
   onTap: () => void;
 }) {
   const { t } = useTranslation();
@@ -796,11 +779,13 @@ function HomeWalletCard({
                 </Text>
               </Pressable>
             )}
+            {/* Retirer moved to the Profil shortcuts (client ask 2026-07-06) —
+                the card is now the wallet entry point itself. */}
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();
                 haptic.light();
-                onRetirer();
+                onTap();
               }}
               style={{
                 flex: 1,
@@ -815,9 +800,9 @@ function HomeWalletCard({
                 borderColor: 'rgba(255,255,255,0.22)',
               }}
             >
-              <ArrowDownToLine size={14} color="#FFFFFF" strokeWidth={2.25} />
+              <Wallet size={14} color="#FFFFFF" strokeWidth={2.25} />
               <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 13.5 }}>
-                {t('home.walletWithdraw')}
+                {t('home.walletOpen')}
               </Text>
             </Pressable>
           </View>
@@ -827,55 +812,8 @@ function HomeWalletCard({
   );
 }
 
-function QuickAction({
-  Icon,
-  label,
-  onPress,
-}: {
-  Icon: LucideIcon;
-  label: string;
-  onPress: () => void;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      onPress={() => {
-        haptic.light();
-        onPress();
-      }}
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        gap: 8,
-      }}
-    >
-      <View
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 18,
-          backgroundColor: colors.card,
-          borderWidth: 1,
-          borderColor: colors.border,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icon size={22} color={colors.text} strokeWidth={1.75} />
-      </View>
-      <Text
-        style={{
-          fontSize: 11.5,
-          fontWeight: '600',
-          color: colors.text,
-          letterSpacing: 0,
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
+// QuickAction tile row removed 2026-07-06 — Scanner/Retirer live in the
+// Profil shortcuts, Wallet is the green card, Vendre is a full-width CTA.
 
 // Phase I.9 — categories carry a stable filter CODE (matches the legacy
 // hardcoded string used by useFilters + marche's PRODUCT_CATEGORY_DEFS for

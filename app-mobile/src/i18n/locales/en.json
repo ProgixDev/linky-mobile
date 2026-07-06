@@ -217,7 +217,8 @@
     "catTerrains": "Land",
     "decouvrirBadge": "NEW",
     "decouvrirTitle": "Discover by swiping.",
-    "decouvrirSub": "Items and homes, one after another."
+    "decouvrirSub": "Items and homes, one after another.",
+    "walletOpen": "Open wallet"
   },
   "wallet": {
     "title": "My wallet",
@@ -1154,7 +1155,8 @@
       "retraits": "Withdrawals",
       "visites": "Visits",
       "wallet": "Wallet",
-      "kyc": "KYC"
+      "kyc": "KYC",
+      "scan": "Scan"
     },
     "boutiqueHero": {
       "shopTitle": "My shop",
