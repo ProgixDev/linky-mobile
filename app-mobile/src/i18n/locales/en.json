@@ -621,7 +621,8 @@
     "publishListingBusy": "Publishing…",
     "publishedSuccess": "Listing published 🎉",
     "publishFailed": "Publish failed",
-    "perMonthAbbr": " /mo"
+    "perMonthAbbr": " /mo",
+    "fieldDistance": "Distance to road (m)"
   },
   "seller": {
     "ordersTitle": "Orders received",
@@ -929,7 +930,8 @@
     "furnishedSub": "Fitted kitchen, bed, living room",
     "save": "Save",
     "successToast": "Listing updated.",
-    "errorToast": "Couldn't update the listing."
+    "errorToast": "Couldn't update the listing.",
+    "fieldDistance": "Distance to road (m)"
   },
   "product": {
     "fallbackTitle": "Listing",

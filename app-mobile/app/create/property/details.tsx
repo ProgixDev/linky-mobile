@@ -13,7 +13,6 @@ import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
 import { TopBar } from '../../../src/components/nav/TopBar';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { CitySelectField } from '../../../src/components/forms/CitySelectField';
-import { I } from '../../../src/icons/Icon';
 import { useCreateListing } from '../../../src/stores/createListing';
 
 const PROPERTY_TYPE_DEFS = [
@@ -167,32 +166,15 @@ export default function CreatePropertyDetailsRoute() {
 
           <Input label={t('create.fieldDistrict')} value={state.district} onChangeText={(txt) => state.set('district', txt)} placeholder={t('create.fieldDistrictPlaceholder')} />
 
-          {/* Distance to road — hero */}
-          <View
-            style={{
-              padding: 16,
-              borderRadius: radii.lg,
-              backgroundColor: colors.accentSoft,
-              borderWidth: 1.5,
-              borderColor: colors.accent,
-            }}
-          >
-            <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 8 }}>
-              <I.road size={14} color={colors.accentText} />
-              <Text style={{ fontSize: 11, color: colors.accentText, fontWeight: '700', letterSpacing: 0.4 }}>
-                {t('create.distanceLabel')}
-              </Text>
-            </View>
-            <Input
-              value={String(state.distanceToRoadMeters)}
-              onChangeText={(txt) => state.set('distanceToRoadMeters', Number(txt.replace(/\D/g, '')) || 0)}
-              keyboardType="number-pad"
-              trailingIcon={undefined}
-            />
-            <Text variant="caption" style={{ color: colors.accentText, marginTop: 6, letterSpacing: 0 }}>
-              {t('create.distanceHelper')}
-            </Text>
-          </View>
+          {/* Distance au goudron — plain field like the others (the amber
+              « champ clé » hero box read as an error/warning; client ask
+              2026-07-06). */}
+          <Input
+            label={t('create.fieldDistance')}
+            value={String(state.distanceToRoadMeters)}
+            onChangeText={(txt) => state.set('distanceToRoadMeters', Number(txt.replace(/\D/g, '')) || 0)}
+            keyboardType="number-pad"
+          />
 
           {!isTerrain && (
             <View

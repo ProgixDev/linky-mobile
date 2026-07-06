@@ -18,7 +18,6 @@ import { TopBar } from '../../../src/components/nav/TopBar';
 import { Skeleton } from '../../../src/components/primitives/Skeleton';
 import { ErrorStateView } from '../../../src/components/feedback/EmptyState';
 import { CitySelectField } from '../../../src/components/forms/CitySelectField';
-import { I } from '../../../src/icons/Icon';
 import { useProperty, useUpdateProperty } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
@@ -224,27 +223,14 @@ export default function PropertyEditRoute() {
               <Input multiline value={description} onChangeText={(txt) => setDescription(txt.slice(0, 600))} />
             </View>
 
-            <View
-              style={{
-                padding: 16,
-                borderRadius: radii.lg,
-                backgroundColor: colors.accentSoft,
-                borderWidth: 1.5,
-                borderColor: colors.accent,
-              }}
-            >
-              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 8 }}>
-                <I.road size={14} color={colors.accentText} />
-                <Text style={{ fontSize: 11, color: colors.accentText, fontWeight: '700', letterSpacing: 0.4 }}>
-                  {t('propertyEdit.distanceLabel')}
-                </Text>
-              </View>
-              <Input
-                value={String(distance)}
-                onChangeText={(txt) => setDistance(Number(txt.replace(/\D/g, '')) || 0)}
-                keyboardType="number-pad"
-              />
-            </View>
+            {/* Distance au goudron — plain field, same treatment as the
+                create wizard (client ask 2026-07-06). */}
+            <Input
+              label={t('propertyEdit.fieldDistance')}
+              value={String(distance)}
+              onChangeText={(txt) => setDistance(Number(txt.replace(/\D/g, '')) || 0)}
+              keyboardType="number-pad"
+            />
 
             {!isTerrain && (
               <View

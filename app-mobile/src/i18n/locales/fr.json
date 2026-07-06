@@ -465,7 +465,7 @@
     "amenityWifi": "Wi-Fi",
     "amenityParking": "Parking",
     "amenityClim": "Climatisation",
-    "amenityWater": "Eau",
+    "amenityWater": "Eau courante",
     "amenityElectricity": "Électricité",
     "amenityGenerator": "Groupe électrogène",
     "amenityPool": "Piscine",
@@ -606,8 +606,6 @@
     "amenityGardenAlt": "Jardin / cour",
     "amenityLift": "Ascenseur",
     "amenityTerrace": "Balcon / terrasse",
-    "amenityElectricity": "Électricité",
-    "amenityWater": "Eau courante",
     "amenityCellar": "Cave",
     "amenityContinue_one": "Continuer · {{count}} sélectionné",
     "amenityContinue_other": "Continuer · {{count}} sélectionnés",
@@ -642,7 +640,8 @@
     "publishedSuccess": "Annonce publiée 🎉",
     "publishFailed": "Publication échouée",
     "perMonthAbbr": " /mois",
-    "perDayAbbr": " /jour"
+    "perDayAbbr": " /jour",
+    "fieldDistance": "Distance au goudron (m)"
   },
   "seller": {
     "ordersTitle": "Commandes reçues",
@@ -999,7 +998,8 @@
     "furnishedSub": "Cuisine équipée, lit, salon",
     "save": "Enregistrer",
     "successToast": "Annonce mise à jour.",
-    "errorToast": "Impossible de mettre à jour l'annonce."
+    "errorToast": "Impossible de mettre à jour l'annonce.",
+    "fieldDistance": "Distance au goudron (m)"
   },
   "product": {
     "fallbackTitle": "Annonce",

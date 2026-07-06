@@ -621,7 +621,8 @@
     "publishListingBusy": "Publication…",
     "publishedSuccess": "Annonce publiée 🎉",
     "publishFailed": "Publication échouée",
-    "perMonthAbbr": " /mois"
+    "perMonthAbbr": " /mois",
+    "fieldDistance": "Distance au goudron (m)"
   },
   "seller": {
     "ordersTitle": "Mes ventes",
@@ -929,7 +930,8 @@
     "furnishedSub": "Cuisine équipée, lit, salon",
     "save": "Enregistrer",
     "successToast": "Annonce mise à jour.",
-    "errorToast": "Impossible de mettre à jour l'annonce."
+    "errorToast": "Impossible de mettre à jour l'annonce.",
+    "fieldDistance": "Distance au goudron (m)"
   },
   "product": {
     "fallbackTitle": "Annonce",
