@@ -9,6 +9,11 @@ const SECTION_DEFS: { headingKey: string; bodyKey: string }[] = [
   { headingKey: 'legal.terms2H', bodyKey: 'legal.terms2B' },
   { headingKey: 'legal.terms3H', bodyKey: 'legal.terms3B' },
   { headingKey: 'legal.terms4H', bodyKey: 'legal.terms4B' },
+  // Wallet restructure — agent-of-payee clauses (mandat d'encaissement +
+  // effet libératoire), placed right after "Paiements et frais". Displayed
+  // numbering is automatic from array order.
+  { headingKey: 'legal.terms10H', bodyKey: 'legal.terms10B' },
+  { headingKey: 'legal.terms11H', bodyKey: 'legal.terms11B' },
   { headingKey: 'legal.terms5H', bodyKey: 'legal.terms5B' },
   { headingKey: 'legal.terms6H', bodyKey: 'legal.terms6B' },
   { headingKey: 'legal.terms7H', bodyKey: 'legal.terms7B' },

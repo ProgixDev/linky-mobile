@@ -12,12 +12,19 @@ function valid(b: unknown): b is Body {
     && (x.method === undefined || typeof x.method === 'string');
 }
 
+// Kill switch — wallet restructure 2026-07 (see wallet-topup-card): the
+// rechargeable balance is removed, so no new top-up intents may be recorded.
+const TOPUP_ENABLED = false;
+
 // Records a PENDING top-up intent. No money moves: a payment rail will later confirm it and
 // credit the wallet via a single locked ledger entry (post_external_credit, payments module).
 Deno.serve(makePost<Body>(
   '/v1/wallet/topup-intent',
   valid,
   async ({ sb, body, req }) => {
+    if (!TOPUP_ENABLED) {
+      throwApi('FEATURE_DISABLED', 403, "La recharge du portefeuille n'est plus disponible — le paiement se fait directement à la commande.");
+    }
     const userId = await requireUser(req);
     const { data, error } = await sb
       .from('topup_intents')

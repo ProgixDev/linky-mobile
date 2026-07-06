@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { NoiseOverlay } from '../../src/components/visuals/NoiseOverlay';
+import { WALLET_TOPUP_ENABLED } from '../../src/lib/flags';
 import {
   Bell,
   ShoppingBag,
@@ -294,7 +295,7 @@ function BuyerHome() {
           <HomeWalletCard
             balanceGnf={wallet?.balanceGnf ?? 0}
             ready={walletReady}
-            onRecharger={() => router.push('/wallet/recharger')}
+            onRecharger={WALLET_TOPUP_ENABLED ? () => router.push('/wallet/recharger') : undefined}
             onRetirer={() => router.push('/wallet/retirer')}
             onTap={() => router.push('/wallet')}
           />
@@ -328,10 +329,12 @@ function BuyerHome() {
                 }
               }}
             />
+            {/* Top-up removed (wallet restructure) — surface the wallet itself
+                instead so the row keeps 4 actions. */}
             <QuickAction
               Icon={Wallet}
-              label={t('home.qaTopup')}
-              onPress={() => router.push('/wallet/recharger')}
+              label={t('home.qaWallet')}
+              onPress={() => router.push('/wallet')}
             />
           </View>
         </View>
@@ -649,7 +652,7 @@ function HomeWalletCard({
 }: {
   balanceGnf: number;
   ready: boolean;
-  onRecharger: () => void;
+  onRecharger?: () => void;
   onRetirer: () => void;
   onTap: () => void;
 }) {
@@ -751,28 +754,32 @@ function HomeWalletCard({
           </Text>
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation();
-                haptic.light();
-                onRecharger();
-              }}
-              style={{
-                flex: 1,
-                height: 44,
-                borderRadius: 999,
-                backgroundColor: '#FFFFFF',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-              }}
-            >
-              <Plus size={14} color="#0A5240" strokeWidth={2.5} />
-              <Text style={{ color: '#0A5240', fontWeight: '700', fontSize: 13.5 }}>
-                {t('home.walletRecharge')}
-              </Text>
-            </Pressable>
+            {/* Top-up removed (wallet restructure) — pill renders only when the
+                parent passes onRecharger (gated by WALLET_TOPUP_ENABLED). */}
+            {onRecharger && (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  haptic.light();
+                  onRecharger();
+                }}
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 999,
+                  backgroundColor: '#FFFFFF',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <Plus size={14} color="#0A5240" strokeWidth={2.5} />
+                <Text style={{ color: '#0A5240', fontWeight: '700', fontSize: 13.5 }}>
+                  {t('home.walletRecharge')}
+                </Text>
+              </Pressable>
+            )}
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();

@@ -74,25 +74,30 @@ export function WalletGlanceCard({
         </View>
       </View>
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-        <Pressable
-          onPress={() => {
-            haptic.light();
-            onRecharger?.();
-          }}
-          style={{
-            flex: 1,
-            height: large ? 40 : 36,
-            borderRadius: 999,
-            backgroundColor: 'rgba(255,255,255,0.18)',
-            flexDirection: 'row',
-            gap: 5,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <I.plus size={14} color="#FFFFFF" />
-          <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Recharger</Text>
-        </Pressable>
+        {/* Top-up removed (wallet restructure) — the button only renders when a
+            caller passes onRecharger, and no caller does while
+            WALLET_TOPUP_ENABLED is false. */}
+        {onRecharger && (
+          <Pressable
+            onPress={() => {
+              haptic.light();
+              onRecharger();
+            }}
+            style={{
+              flex: 1,
+              height: large ? 40 : 36,
+              borderRadius: 999,
+              backgroundColor: 'rgba(255,255,255,0.18)',
+              flexDirection: 'row',
+              gap: 5,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <I.plus size={14} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Recharger</Text>
+          </Pressable>
+        )}
         {onEnvoyer && (
           <Pressable
             onPress={() => {

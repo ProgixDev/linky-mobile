@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -69,6 +69,15 @@ export default function CheckoutRoute() {
   // was still loading or had errored, framing a wallet payment as
   // impossible.
   const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!wallet;
+  // Wallet restructure : the balance is earnings-funded only (no top-up), so
+  // the wallet rail is offered only when there's something to spend.
+  const walletPayable = walletReady && (wallet?.balanceGnf ?? 0) > 0;
+  // If a background refetch drops the balance to 0 while 'wallet' is selected,
+  // the row unmounts — snap the selection back to card so the radio state,
+  // info panel and the Payer action can never disagree with the visible UI.
+  useEffect(() => {
+    if (selected === 'wallet' && !walletPayable) setSelected('card');
+  }, [selected, walletPayable]);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   // Keeps the Payer button busy across the whole sheet flow (place-order →
   // init → present), not just the mutation.
@@ -220,6 +229,10 @@ export default function CheckoutRoute() {
 
         <MicroLabel label={t('checkout.sectionOther')} />
         <Card padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
+          {/* Wallet restructure : the balance is funded by sales earnings only
+              (top-up removed), so the wallet rail only shows when there is
+              actually something to spend. Zero-balance buyers see card only. */}
+          {walletPayable && (
           <Pressable
             onPress={() => setSelected('wallet')}
             style={{ padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}
@@ -257,9 +270,17 @@ export default function CheckoutRoute() {
               {selected === 'wallet' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
             </View>
           </Pressable>
+          )}
           <Pressable
             onPress={() => setSelected('card')}
-            style={{ padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border }}
+            style={{
+              padding: 14,
+              flexDirection: 'row',
+              gap: 12,
+              alignItems: 'center',
+              borderTopWidth: walletPayable ? 1 : 0,
+              borderTopColor: colors.border,
+            }}
           >
             <View
               style={{

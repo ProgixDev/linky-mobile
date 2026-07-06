@@ -56,8 +56,9 @@ export default function BoostNewRoute() {
       router.replace('/pro/boost');
     } catch (e) {
       if (e instanceof ApiError && e.code === 'INSUFFICIENT_FUNDS') {
+        // Top-up removed (wallet restructure) — the wallet is funded by sales
+        // earnings only, so there is no recharge screen to send the seller to.
         toast.show(t('pro.boostInsufficientBody'), 'danger');
-        router.push('/wallet/recharger');
         return;
       }
       toast.show(e instanceof ApiError ? e.message_fr : t('pro.boostErrorToast'), 'danger');

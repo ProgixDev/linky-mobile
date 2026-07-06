@@ -2,7 +2,7 @@
 // on the Lengopay contract, so card is the one wet funding rail: amount entry
 // -> wallet-topup-card (Stripe PaymentIntent) -> PaymentSheet -> the
 // stripe-webhook credits the wallet via confirm_topup a couple seconds later.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -22,6 +22,7 @@ import { useToast } from '../../src/components/feedback/Toast';
 import { useTopupCard, useWallet } from '../../src/data/queries';
 import { toToastMessage } from '../../src/lib/api';
 import { haptic } from '../../src/lib/haptics';
+import { WALLET_TOPUP_ENABLED } from '../../src/lib/flags';
 
 const MIN_TOPUP = 10_000;
 const QUICK_AMOUNTS = [50_000, 100_000, 200_000, 500_000];
@@ -40,8 +41,21 @@ export default function RechargerRoute() {
   const [amount, setAmount] = useState(100_000);
   const [busy, setBusy] = useState(false);
 
+  // Top-up removed (wallet restructure) : a rechargeable spendable balance is
+  // e-money under Guinean law (BCRG agrément required). Redirect deep-links /
+  // old entry points away before the screen paints. replace, not push, so back
+  // doesn't bounce here.
+  useEffect(() => {
+    if (!WALLET_TOPUP_ENABLED) {
+      router.replace('/wallet');
+    }
+  }, []);
+
   const tooLow = amount < MIN_TOPUP;
   const canPay = !tooLow && !busy && !topup.isPending;
+
+  // All hooks above run unconditionally (rules-of-hooks) ; bail after them.
+  if (!WALLET_TOPUP_ENABLED) return null;
 
   async function pay() {
     if (!canPay) return;

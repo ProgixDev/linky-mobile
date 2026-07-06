@@ -17,6 +17,14 @@ import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/st
 const MIN_TOPUP = 10_000;      // 10 000 GNF floor (card fees make tiny top-ups silly)
 const MAX_TOPUP = 50_000_000;  // 50M GNF ceiling (sanity bound)
 
+// Kill switch — wallet restructure 2026-07: a rechargeable balance spendable
+// with third-party sellers meets Guinea's e-money definition (Loi L/2017/031/AN)
+// and would require a BCRG EME agrément. Orders are paid PER-ORDER via the
+// place-order card/mobile-money rails; the wallet only holds seller earnings.
+// stripe-webhook's topup branch stays live to settle any in-flight top-up.
+// Client twin: WALLET_TOPUP_ENABLED in src/lib/flags.ts.
+const TOPUP_ENABLED = false;
+
 interface Body { amount_minor: number }
 
 function valid(b: unknown): b is Body {
@@ -29,6 +37,9 @@ function valid(b: unknown): b is Body {
 }
 
 Deno.serve(makePost<Body>('/v1/wallet/topup-card', valid, async ({ sb, body, req }) => {
+  if (!TOPUP_ENABLED) {
+    throwApi('FEATURE_DISABLED', 403, "La recharge du portefeuille n'est plus disponible — le paiement se fait directement à la commande.");
+  }
   const userId = await requireUser(req);
   if (!stripeConfigured()) {
     throwApi('STRIPE_NOT_CONFIGURED', 503, 'Le paiement par carte arrive bientôt.');
