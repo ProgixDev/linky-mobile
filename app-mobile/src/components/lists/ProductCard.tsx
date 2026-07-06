@@ -133,13 +133,15 @@ export function ProductCard({
         <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'], marginTop: 2 }}>
           {formatGNF(product.priceGnf)}
         </Text>
-        {!compact && (
+        {/* Location line. Pre-fix this rendered product.shopId — a mock-era
+            leftover ('s_mamadou_shop') that shows a raw UUID with real data. */}
+        {!compact && (product.district || product.city) ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
             <Text variant="micro" tone="muted" numberOfLines={1} style={{ textTransform: 'none', letterSpacing: 0 }}>
-              {product.shopId.replace('s_', '').replace(/_/g, ' ')}
+              {[product.district, product.city].filter(Boolean).join(', ')}
             </Text>
           </View>
-        )}
+        ) : null}
       </View>
     </Pressable>
   );

@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, View, Pressable } from 'react-native';
+import { Dimensions, ScrollView, View, Pressable } from 'react-native';
+
+// Popular-products swipe row: two cards fully visible inside the 20px page
+// padding, with a sliver of the third peeking as the swipe affordance.
+const POPULAR_CARD_WIDTH = Math.round((Dimensions.get('window').width - 2 * 20 - 12) / 2.12);
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -403,26 +407,35 @@ function BuyerHome() {
           </ScrollView>
         </View>
 
-        {/* Popular products */}
-        <View style={{ marginTop: 28, paddingHorizontal: 20 }}>
-          <SectionHeader
-            title={t('home.popularSection')}
-            action={t('home.seeAll')}
-            onAction={() => router.push('/(tabs)/marche')}
-          />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+        {/* Popular products — one horizontal swipe row : two cards visible,
+            a peek of the third invites the swipe (was a vertical 2-col grid). */}
+        <View style={{ marginTop: 28 }}>
+          <View style={{ paddingHorizontal: 20 }}>
+            <SectionHeader
+              title={t('home.popularSection')}
+              action={t('home.seeAll')}
+              onAction={() => router.push('/(tabs)/marche')}
+            />
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={POPULAR_CARD_WIDTH + 12}
+            decelerationRate="fast"
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+          >
             {prodLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <View key={i} style={{ flexBasis: '47%', flexGrow: 1 }}>
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <View key={i} style={{ width: POPULAR_CARD_WIDTH }}>
                     <ProductCardSkeleton />
                   </View>
                 ))
               : products?.map((p) => (
-                  <View key={p.id} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                  <View key={p.id} style={{ width: POPULAR_CARD_WIDTH }}>
                     <ProductCard product={p} />
                   </View>
                 ))}
-          </View>
+          </ScrollView>
         </View>
 
         {/* Découvrir teaser */}
