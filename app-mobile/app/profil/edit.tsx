@@ -8,17 +8,69 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { Camera, ChevronLeft, ChevronRight, Phone as PhoneIcon, User as UserIcon } from 'lucide-react-native';
+import { Camera, ChevronLeft, ChevronRight, MapPin, Phone as PhoneIcon, ShieldCheck, User as UserIcon, UserCog } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { CityMapPicker } from '../../src/components/onboarding/CityMapPicker';
 import { useAuth } from '../../src/stores/auth';
 import { useUpdateProfile, useUploadAvatar } from '../../src/data/queries/auth';
-import { useMyPhones } from '../../src/data/queries';
+import { useMyPhones, useKycStatus } from '../../src/data/queries';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { useTranslation } from 'react-i18next';
+
+function AccountRow({
+  Icon,
+  label,
+  value,
+  valueTone,
+  onPress,
+}: {
+  Icon: LucideIcon;
+  label: string;
+  value?: string;
+  valueTone?: 'success';
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{
+        minHeight: 56,
+        paddingHorizontal: 14,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.card,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <Icon size={18} color={colors.textMuted} strokeWidth={1.75} />
+      <Text style={{ flex: 1, fontSize: 15.5, fontWeight: '500', color: colors.text }} numberOfLines={1}>
+        {label}
+      </Text>
+      {value && (
+        <Text
+          style={{
+            fontSize: 12.5,
+            fontWeight: valueTone === 'success' ? '700' : '500',
+            color: valueTone === 'success' ? colors.primaryDeep : colors.textMuted,
+          }}
+        >
+          {value}
+        </Text>
+      )}
+      <ChevronRight size={16} color={colors.textFaint} strokeWidth={2} />
+    </Pressable>
+  );
+}
 
 type AvatarMime = 'image/jpeg' | 'image/png' | 'image/webp';
 function resolveMime(asset: ImagePicker.ImagePickerAsset): AvatarMime {
@@ -44,6 +96,11 @@ export default function ProfilEditRoute() {
   // double the surface area for the same flow.
   const phonesQuery = useMyPhones();
   const primaryPhone = phonesQuery.data?.find((p) => p.is_primary);
+  // Account rows (addresses / roles / KYC) moved here from the Profil tab
+  // (client ask 2026-07-06) — the tab keeps only app preferences.
+  const roles = useAuth((s) => s.roles);
+  const { data: kyc } = useKycStatus();
+  const kycApproved = (kyc?.kycStatus ?? currentUser?.kyc_status) === 'approved';
 
   const [name, setName] = useState(currentUser?.display_name ?? '');
   const [city, setCity] = useState(currentUser?.city ?? '');
@@ -354,6 +411,40 @@ export default function ProfilEditRoute() {
             </Text>
           </Pressable>
         )}
+
+        {/* Compte — rangées déplacées depuis l'onglet Profil. */}
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: '700',
+            color: colors.textFaint,
+            letterSpacing: 0.6,
+            marginTop: 24,
+            marginBottom: 8,
+          }}
+        >
+          COMPTE
+        </Text>
+        <View style={{ gap: 10 }}>
+          <AccountRow
+            Icon={MapPin}
+            label={t('profil.row.addresses')}
+            onPress={() => router.push('/settings/addresses')}
+          />
+          <AccountRow
+            Icon={UserCog}
+            label={t('profil.row.roles')}
+            value={t('profil.row.roleCount', { count: roles.length })}
+            onPress={() => router.push('/profil/roles' as never)}
+          />
+          <AccountRow
+            Icon={ShieldCheck}
+            label={t('profil.row.kyc')}
+            value={kycApproved ? t('profil.row.kycVerified') : undefined}
+            valueTone={kycApproved ? 'success' : undefined}
+            onPress={() => router.push('/kyc/intro')}
+          />
+        </View>
       </ScrollView>
 
       <View style={{ paddingHorizontal: 20, paddingVertical: 16 }}>

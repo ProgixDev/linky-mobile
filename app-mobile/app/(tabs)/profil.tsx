@@ -5,7 +5,6 @@ import { Image } from 'expo-image';
 import {
   ChevronRight,
   MapPin,
-  Phone,
   Bell,
   Globe2,
   Sparkles as SparklesIcon,
@@ -26,8 +25,6 @@ import {
   Building2,
   CalendarCheck,
   Banknote,
-  UserCog,
-  Home as HomeIcon,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -72,7 +69,8 @@ function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAc
     out.push({ Icon: CalendarCheck, label: t('profil.qa.visites'), href: '/pro/visites' });
   }
   out.push({ Icon: Wallet, label: t('profil.qa.wallet'), href: '/wallet' });
-  out.push({ Icon: ShieldCheck, label: t('profil.qa.kyc'), href: '/kyc/intro' });
+  // KYC moved to « Modifier mon profil » (client ask 2026-07-06) — account
+  // management lives there, the chips row keeps day-to-day shortcuts.
   return out;
 }
 
@@ -345,54 +343,8 @@ export default function ProfilRoute() {
         <View style={{ paddingHorizontal: 24, paddingTop: 28 }}>
           <SectionLabel label={t('profil.section.reglages')} />
           <SettingsCard>
-            <Row
-              Icon={Phone}
-              label={t('profil.row.phones')}
-              onPress={() => router.push('/settings/phones')}
-            />
-            <Row
-              Icon={MapPin}
-              label={t('profil.row.addresses')}
-              onPress={() => router.push('/settings/addresses')}
-            />
-            <Row
-              Icon={UserCog}
-              label={t('profil.row.roles')}
-              value={t('profil.row.roleCount', { count: roles.length })}
-              onPress={() => router.push('/profil/roles' as never)}
-            />
-            <Row
-              Icon={ShieldCheck}
-              label={t('profil.row.kyc')}
-              onPress={() => router.push('/kyc/intro')}
-              right={
-                kycApproved ? (
-                  <View
-                    style={{
-                      paddingHorizontal: 10,
-                      height: 24,
-                      borderRadius: 999,
-                      backgroundColor: colors.primarySoft,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 10.5,
-                        fontWeight: '700',
-                        color: colors.primaryDeep,
-                        letterSpacing: 0.3,
-                        lineHeight: 12,
-                        includeFontPadding: false,
-                      }}
-                    >
-                      {t('profil.row.kycVerified')}
-                    </Text>
-                  </View>
-                ) : undefined
-              }
-            />
+            {/* Phones / Addresses / Roles / KYC rows moved to
+                « Modifier mon profil » (client ask 2026-07-06). */}
             <Row
               Icon={Bell}
               label={t('profil.row.notifications')}
