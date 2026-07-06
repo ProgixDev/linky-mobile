@@ -149,11 +149,11 @@ export function Button({
             {label && (
               <Text
                 // Long French labels in flex-constrained rows used to wrap and
-                // get clipped by the fixed-height pill. One line, auto-scaled
-                // down (max −25%) to fit, ellipsis as the last resort.
+                // get clipped by the fixed-height pill. One line + ellipsis.
+                // NO adjustsFontSizeToFit : on Android it measures the full
+                // available width and draws the glyphs off-center (labels
+                // rendered pushed right on auto-width buttons).
                 numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
                 style={{
                   flexShrink: 1,
                   textAlign: 'center',

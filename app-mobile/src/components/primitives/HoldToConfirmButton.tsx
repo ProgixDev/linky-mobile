@@ -99,8 +99,6 @@ export function HoldToConfirmButton({
         <I.check size={18} color="#FFFFFF" />
         <Text
           numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.75}
           style={{ flexShrink: 1, textAlign: 'center', color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}
         >
           {label}
