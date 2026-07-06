@@ -261,6 +261,25 @@ function BuyerHome() {
               {firstName} 👋
             </Text>
           </View>
+          {/* Vendre — compact header pill (client ask 2026-07-06 : moved out
+              of the content flow ; the header carries the universal actions). */}
+          <Button
+            size="sm"
+            variant="primary"
+            label={t('home.qaSell')}
+            leading={<Store size={14} color="#FFFFFF" strokeWidth={2.25} />}
+            onPress={() => {
+              // Phase T.2 — pure buyer used to dead-end into the create
+              // modal's "Va dans Profil → Rôles" copy (a screen that
+              // didn't exist). Route the upgrade pitch instead ; sellers
+              // and agents continue straight into the wizard.
+              if (roles.includes('seller') || roles.includes('agent')) {
+                router.push('/create');
+              } else {
+                router.push('/profil/devenir?role=seller' as never);
+              }
+            }}
+          />
           <CircleAction
             onPress={() => router.push('/notifications')}
             accessibilityLabel={t('home.notifications')}
@@ -304,29 +323,9 @@ function BuyerHome() {
           />
         </View>
 
-        {/* Quick actions slimmed (client ask 2026-07-06) : Scanner + Retirer
-            moved to the Profil shortcuts, the Wallet tile folded into the
-            green card above. Vendre stays as a single full-width CTA. */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
-          <Button
-            variant="dark"
-            size="lg"
-            block
-            label={t('home.qaSell')}
-            leading={<Store size={16} color="#FFFFFF" strokeWidth={2} />}
-            onPress={() => {
-              // Phase T.2 — pure buyer used to dead-end into the create
-              // modal's "Va dans Profil → Rôles" copy (a screen that
-              // didn't exist). Route the upgrade pitch instead ; sellers
-              // and agents continue straight into the wizard.
-              if (roles.includes('seller') || roles.includes('agent')) {
-                router.push('/create');
-              } else {
-                router.push('/profil/devenir?role=seller' as never);
-              }
-            }}
-          />
-        </View>
+        {/* Quick-action tiles removed (client ask 2026-07-06) : Scanner +
+            Retirer live in the Profil shortcuts, the Wallet tile folded into
+            the green card above, Vendre moved to the header pill. */}
 
         {/* Categories — 4 col x 2 row grid */}
         <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
