@@ -381,6 +381,9 @@ export interface BuyerVisitRequest extends VisitRequest {
     // currency with fractional units ever gets bolted on. Values identical.
     priceGnf: number;
     perMonth: boolean;
+    // Distinguishes daily rentals (perMonth=false, show « /jour ») from
+    // vente/terrain (bare price). Optional: older fn payloads omit it.
+    type?: 'location' | 'vente' | 'terrain';
     coverUrl?: string;
   };
 }

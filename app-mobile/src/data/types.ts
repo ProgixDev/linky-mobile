@@ -328,4 +328,6 @@ export interface AppNotification {
   at: string;
   read: boolean;
   iconHint: string;
+  // In-app route ('/order/xyz'). Server sends it; rows navigate on tap.
+  deeplink?: string | null;
 }

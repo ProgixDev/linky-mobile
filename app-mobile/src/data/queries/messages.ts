@@ -271,6 +271,7 @@ function mapNotificationRow(n: NotificationRowWire): AppNotification {
     at: n.created_at,
     read: n.read_at !== null,
     iconHint: n.icon_hint,
+    deeplink: n.deeplink,
   };
 }
 

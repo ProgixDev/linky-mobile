@@ -51,9 +51,18 @@ export function BookingStatusChip({ status }: { status: BookingStatus }) {
   );
 }
 
+// 'YYYY-MM-DD' → « 6 juil. 2026 » (was rendering the raw ISO string).
+export function formatBookingDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 export function bookingPeriodText(b: Booking): string {
-  if (b.period === 'day') return `Du ${b.startDate} au ${b.endDate}`;
-  return `À partir du ${b.startDate} · ${b.months ?? 1} mois`;
+  if (b.period === 'day') return `Du ${formatBookingDate(b.startDate)} au ${formatBookingDate(b.endDate as string)}`;
+  return `À partir du ${formatBookingDate(b.startDate)} · ${b.months ?? 1} mois`;
 }
 
 export function BookingCard({ booking, onPress }: { booking: Booking; onPress: () => void }) {
@@ -111,7 +120,7 @@ export function ContractView({ booking }: { booking: Booking }) {
       <ContractRow k="Locataire" v={c.tenant_name} />
       <ContractRow k="Bien" v={c.property_title} />
       <ContractRow k="Adresse" v={c.property_location} />
-      <ContractRow k="Période" v={c.period === 'day' ? `Du ${c.start_date} au ${c.end_date}` : `${c.months} mois à partir du ${c.start_date}`} />
+      <ContractRow k="Période" v={c.period === 'day' ? `Du ${formatBookingDate(c.start_date)} au ${formatBookingDate(c.end_date ?? c.start_date)}` : `${c.months} mois à partir du ${formatBookingDate(c.start_date)}`} />
       <ContractRow k={c.period === 'day' ? 'Loyer / jour' : 'Loyer / mois'} v={formatGNF(c.rent_minor)} />
       <ContractRow k="Montant" v={formatGNF(c.amount_minor)} />
       <ContractRow k="Frais de service (3%)" v={formatGNF(c.fees_minor)} />

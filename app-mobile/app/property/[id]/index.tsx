@@ -94,7 +94,9 @@ export default function PropertyDetailRoute() {
   const metas: [IconKey, string, string][] = isTerrain
     ? [
         ['area', 'Surface', `${prop.areaSqm}m²`],
-        ['check', 'Titre', 'Foncier'],
+        // Was a hardcoded « Titre : Foncier » — a fabricated land-title claim
+        // shown on EVERY terrain. Replaced with real data (the city).
+        ['pin', 'Ville', prop.city],
         ['road', 'Goudron', `${prop.distanceToRoadMeters}m`],
       ]
     : [
@@ -189,7 +191,8 @@ export default function PropertyDetailRoute() {
           />
           {prop.type === 'location' && (
             <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
-              {prop.perMonth ? 'par mois · charges incluses' : 'par jour'}
+              {/* « charges incluses » removed — no data field asserts it. */}
+              {prop.perMonth ? 'par mois' : 'par jour'}
             </Text>
           )}
 

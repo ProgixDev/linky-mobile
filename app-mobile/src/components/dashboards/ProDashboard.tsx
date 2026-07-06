@@ -401,7 +401,7 @@ export function ShopDashboard() {
                   key={`pr-${p.id}`}
                   kind="property"
                   title={p.title}
-                  price={`${formatGNF(p.priceGnf)}${p.perMonth ? t('proDashboard.perMonth') : ''}`}
+                  price={`${formatGNF(p.priceGnf)}${p.type === 'location' ? (p.perMonth ? t('proDashboard.perMonth') : t('create.perDayAbbr')) : ''}`}
                   cover={p.photos[0]}
                   status={p.status}
                   onPress={() => router.push(`/property/${p.id}`)}
@@ -1184,8 +1184,10 @@ function PropertyRow({
           >
             {price}
           </Text>
-          {perMonth && (
-            <Text style={{ fontSize: 11, color: colors.textMuted, letterSpacing: 0 }}>/mois</Text>
+          {type === 'location' && (
+            <Text style={{ fontSize: 11, color: colors.textMuted, letterSpacing: 0 }}>
+              {perMonth ? '/mois' : '/jour'}
+            </Text>
           )}
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 }}>

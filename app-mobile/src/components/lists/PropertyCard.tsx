@@ -41,11 +41,9 @@ export function PropertyCard({
           transition={imgProps.transition}
           priority={imgProps.priority}
         />
-        {property.ownerId === 'u_mamadou' && (
-          <View style={{ position: 'absolute', top: 10, left: 10 }}>
-            <Badge tone="verified" />
-          </View>
-        )}
+        {/* Mock-era leftover removed: the badge was gated on
+            ownerId === 'u_mamadou' (a seed id), so it never rendered with real
+            data. Property has no verified field — reinstate when one exists. */}
         {property.badge && (
           <View style={{ position: 'absolute', top: 10, right: 10 }}>
             <Badge tone={property.badge === 'Réservé' ? 'reserved' : 'new'} label={property.badge} />

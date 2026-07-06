@@ -59,7 +59,15 @@ export function DiscoverCard({
   const id = data.item.id;
   const title = data.item.title;
   const price = data.item.priceGnf;
-  const perMonth = !isProduct && data.kind === 'property' ? data.item.perMonth : false;
+  // Rentals show their billing unit; sales/terrains show a bare price. The
+  // old `perMonth`-only gate left daily rentals unit-less (looked like a
+  // sale price on the highest-traffic buyer surface).
+  const rentalSuffix =
+    !isProduct && data.kind === 'property' && data.item.type === 'location'
+      ? data.item.perMonth
+        ? '/mois'
+        : '/jour'
+      : null;
   const photos = data.item.photos;
   const videoUrl = !isProduct ? data.item.videoUrl : undefined;
   const district = !isProduct ? data.item.district : isProduct ? data.item.city : '';
@@ -386,7 +394,7 @@ export function DiscoverCard({
               >
                 {formatGNF(price)}
               </Text>
-              {perMonth && (
+              {rentalSuffix && (
                 <Text
                   style={{
                     color: 'rgba(255,255,255,0.7)',
@@ -395,7 +403,7 @@ export function DiscoverCard({
                     letterSpacing: 0,
                   }}
                 >
-                  /mois
+                  {rentalSuffix}
                 </Text>
               )}
               <Text

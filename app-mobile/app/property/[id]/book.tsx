@@ -15,6 +15,7 @@ import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { MicroLabel } from '../../../src/components/lists/SectionHeader';
 import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { BookingCalendar } from '../../../src/components/booking/BookingCalendar';
+import { formatBookingDate } from '../../../src/components/booking/BookingUI';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
 import { useProperty, useRequestBooking } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
@@ -112,7 +113,7 @@ export default function BookPropertyRoute() {
               {startDate && !endDate
                 ? 'Choisis maintenant la date de départ.'
                 : startDate && endDate
-                  ? `${nights} nuit${nights > 1 ? 's' : ''} · du ${startDate} au ${endDate}`
+                  ? `${nights} nuit${nights > 1 ? 's' : ''} · du ${formatBookingDate(startDate)} au ${formatBookingDate(endDate)}`
                   : "Choisis la date d'arrivée."}
             </Text>
           )}

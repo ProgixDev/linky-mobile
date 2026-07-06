@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/theme/ThemeProvider';
@@ -43,6 +44,9 @@ export default function NotificationsRoute() {
         at: n.created_at,
         read: n.read_at !== null,
         iconHint: n.icon_hint,
+        // Pre-fix, the deeplink was fetched then dropped here — every row
+        // rendered as a dead View. Rows now navigate like a push tap does.
+        deeplink: n.deeplink,
       })),
     );
   }, [notifQuery.data]);
@@ -189,16 +193,23 @@ function NotificationRow({ item }: { item: AppNotification }) {
           : item.category === 'promo'
             ? { bg: colors.accentSoft, fg: colors.accentText }
             : { bg: colors.bgSunken, fg: colors.text };
+  // Same guard as the push-tap handler (push.ts): only in-app routes.
+  const canOpen = typeof item.deeplink === 'string' && item.deeplink.startsWith('/');
   return (
-    <View
-      style={{
+    <Pressable
+      disabled={!canOpen}
+      onPress={() => {
+        if (canOpen) router.push(item.deeplink as never);
+      }}
+      style={({ pressed }) => ({
         flexDirection: 'row',
         gap: 10,
         paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         alignItems: 'flex-start',
-      }}
+        opacity: pressed ? 0.65 : 1,
+      })}
     >
       <View
         style={{
@@ -222,6 +233,6 @@ function NotificationRow({ item }: { item: AppNotification }) {
         </Text>
       </View>
       {!item.read && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: colors.primary, marginTop: 6 }} />}
-    </View>
+    </Pressable>
   );
 }

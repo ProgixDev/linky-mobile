@@ -39,6 +39,7 @@ interface Row {
     city: string;
     price_minor: number;
     per_month: boolean;
+    type: string;
     photos: PhotoRow[] | null;
   } | null;
 }
@@ -68,6 +69,9 @@ function mapVisit(r: Row) {
           // pre-empt a future /100 bug if a fractional currency ever lands.
           priceGnf: Number(r.property.price_minor),
           perMonth: r.property.per_month,
+          // Lets the list card render « /jour » for daily rentals without
+          // mislabelling vente/terrain prices.
+          type: r.property.type,
           coverUrl: photoUrl,
         }
       : undefined,
@@ -83,7 +87,7 @@ Deno.serve(makePost<Body>('/v1/visits/list-mine-buyer', valid, async ({ sb, body
     .select(`
       id, property_id, buyer_id, requested_at, note, status,
       decided_at, decided_by_id, created_at,
-      property:properties ( id, title, district, city, price_minor, per_month,
+      property:properties ( id, title, district, city, price_minor, per_month, type,
         photos:property_photos ( url, position ) )
     `)
     .eq('buyer_id', userId);

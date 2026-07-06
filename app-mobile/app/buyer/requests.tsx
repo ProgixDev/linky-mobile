@@ -254,7 +254,11 @@ function VisitRow({ visit }: { visit: BuyerVisitRequest }) {
               {' · '}
               <Text style={{ fontWeight: '700', color: colors.text }}>
                 {formatGNF(visit.property.priceGnf)}
-                {visit.property.perMonth ? ' /mois' : ''}
+                {visit.property.perMonth
+                  ? ' /mois'
+                  : visit.property.type === 'location'
+                    ? ' /jour'
+                    : ''}
               </Text>
             </Text>
           </View>

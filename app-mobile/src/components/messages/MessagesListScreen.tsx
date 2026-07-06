@@ -196,7 +196,9 @@ export default function MessagesListScreen() {
               <Avatar source={c.otherUserAvatarUrl ?? undefined} size="lg" />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 13, fontWeight: c.unread > 0 ? '600' : '500' }} numberOfLines={1}>
+                  {/* flex:1 gives long names a shrink budget so they truncate
+                      instead of pushing the timestamp off the right edge. */}
+                  <Text style={{ flex: 1, marginRight: 8, fontSize: 13, fontWeight: c.unread > 0 ? '600' : '500' }} numberOfLines={1}>
                     {c.otherUserDisplayName ?? t('messages.fallbackUser')}
                   </Text>
                   <Text style={{ fontSize: 10, color: c.unread > 0 ? colors.primary : colors.textMuted, fontWeight: c.unread > 0 ? '600' : '400' }}>
