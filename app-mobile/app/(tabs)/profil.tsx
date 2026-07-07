@@ -25,7 +25,6 @@ import {
   Building2,
   CalendarCheck,
   Banknote,
-  QrCode,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -69,13 +68,12 @@ function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAc
     out.push({ Icon: CalendarCheck, label: t('profil.qa.visites'), href: '/pro/visites' });
   }
   out.push({ Icon: Wallet, label: t('profil.qa.wallet'), href: '/wallet' });
-  // Moved off the Home quick-action tiles (client ask 2026-07-06). Retirer is
-  // universal — refunds credit any wallet, not just sellers'. Scanner is how
-  // a buyer confirms receipt at handover.
+  // Retirer moved off the Home tiles (client 2026-07-06). Universal —
+  // refunds credit any wallet, not just sellers'.
   out.push({ Icon: Banknote, label: t('profil.qa.retraits'), href: '/wallet/retirer' });
-  out.push({ Icon: QrCode, label: t('profil.qa.scan'), href: '/scan' });
-  // KYC moved to « Modifier mon profil » (client ask 2026-07-06) — account
-  // management lives there, the chips row keeps day-to-day shortcuts.
+  // Scan chip removed (client 2026-07-07) — receipt-confirmation scanning is
+  // reached from the order screen itself, not a global shortcut.
+  // KYC lives in « Modifier mon profil » (client 2026-07-06).
   return out;
 }
 
