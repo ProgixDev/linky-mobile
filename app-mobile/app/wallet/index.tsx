@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
-import { Button, IconButton } from '../../src/components/primitives/Button';
+import { Button } from '../../src/components/primitives/Button';
 import { TopBar } from '../../src/components/nav/TopBar';
 import { WalletGlanceCard } from '../../src/components/lists/WalletCard';
 import { I } from '../../src/icons/Icon';
@@ -79,21 +79,10 @@ export default function WalletRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar
-        title={t('wallet.title')}
-        back
-        right={
-          // Phase U.0 should-fix — was IconButton with no onPress ; wired to /scan.
-          <IconButton
-            variant="secondary"
-            size={36}
-            onPress={() => router.push('/scan')}
-            accessibilityLabel={t('wallet.scanQr')}
-          >
-            <I.qr size={16} color={colors.text} />
-          </IconButton>
-        }
-      />
+      {/* QR-scan shortcut removed from the wallet header (client 2026-07-07):
+          scanning is a buyer receipt-confirmation action, it lives in the
+          Profil shortcuts — it had no place on the wallet. */}
+      <TopBar title={t('wallet.title')} back />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
