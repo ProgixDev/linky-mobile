@@ -34,16 +34,26 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_is_admin        boolean;
-  v_booking         record;
-  v_escrow_id       uuid := '00000000-0000-0000-0000-000000000001';
-  v_platform_id     uuid := '00000000-0000-0000-0000-000000000002';
-  v_tenant_wallet   uuid;
-  v_landlord_wallet uuid;
-  v_before          jsonb;
-  v_label           text;
-  v_new_status      text;
+  v_is_admin           boolean;
+  v_booking            record;
+  -- Resolve the system WALLET ids by user id — wallets.id is generated, the
+  -- '…0001'/'…0002' literals are USER ids (see 20260707_02's fix note).
+  v_escrow_wallet_id   uuid;
+  v_platform_wallet_id uuid;
+  v_tenant_wallet      uuid;
+  v_landlord_wallet    uuid;
+  v_before             jsonb;
+  v_label              text;
+  v_new_status         text;
 begin
+  select id into v_escrow_wallet_id from public.wallets
+   where user_id = '00000000-0000-0000-0000-000000000001' and currency = 'GNF';
+  select id into v_platform_wallet_id from public.wallets
+   where user_id = '00000000-0000-0000-0000-000000000002' and currency = 'GNF';
+  if v_escrow_wallet_id is null or v_platform_wallet_id is null then
+    raise exception 'SYSTEM_WALLET_MISSING';
+  end if;
+
   select is_admin into v_is_admin from public.users where id = p_admin_id;
   if v_is_admin is null then raise exception 'user_not_found' using errcode = 'P0002'; end if;
   if not v_is_admin then raise exception 'not_admin' using errcode = '42501'; end if;
@@ -77,7 +87,7 @@ begin
         returning id into v_tenant_wallet;
     end if;
 
-    perform public.post_transfer(v_escrow_id, v_tenant_wallet, v_booking.total_minor,
+    perform public.post_transfer(v_escrow_wallet_id, v_tenant_wallet, v_booking.total_minor,
                                  'booking_refund', p_booking_id);
 
     -- A refunded monthly lease frees the property again (mirror of the
@@ -100,10 +110,10 @@ begin
         returning id into v_landlord_wallet;
     end if;
 
-    perform public.post_transfer(v_escrow_id, v_landlord_wallet, v_booking.amount_minor,
+    perform public.post_transfer(v_escrow_wallet_id, v_landlord_wallet, v_booking.amount_minor,
                                  'booking_release', p_booking_id);
     if v_booking.fees_minor > 0 then
-      perform public.post_transfer(v_escrow_id, v_platform_id, v_booking.fees_minor,
+      perform public.post_transfer(v_escrow_wallet_id, v_platform_wallet_id, v_booking.fees_minor,
                                    'booking_platform_fee', p_booking_id);
     end if;
 
