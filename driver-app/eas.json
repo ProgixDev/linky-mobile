@@ -42,6 +42,11 @@
       "channel": "production",
       "environment": "production",
       "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
+        "EXPO_PUBLIC_API_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_po_kl-ezVok6uIgkaq67gQ_AmX_SLPm",
         "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoiYWNocmFmYmVuIiwiYSI6ImNtazdpMGhkejEwOTczZXNjajA5NXJvcTIifQ.341CFsER9te9GzraVNcDAg"
       }
     }
