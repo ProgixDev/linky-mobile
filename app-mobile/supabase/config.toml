@@ -550,6 +550,9 @@ verify_jwt = false
 [functions.list-my-visit-requests]
 verify_jwt = false
 
+[functions.delete-account]
+verify_jwt = false
+
 [functions.list-listings-admin]
 verify_jwt = false
 

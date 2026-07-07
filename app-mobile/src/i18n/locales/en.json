@@ -1423,11 +1423,11 @@
       "downloadLabel": "Download my data",
       "downloadSub": "Coming soon — for now, email us at support@linky.gn.",
       "deleteLabel": "Delete my account",
-      "deleteSub": "Ask our team to permanently delete your account.",
+      "deleteSub": "Permanently delete your account and free your number / email.",
       "deleteConfirmTitle": "Delete my account",
-      "deleteConfirmBody": "We'll open your mail app so you can send a request to our support team. They'll confirm the deletion by return mail.",
-      "deleteContinue": "Continue",
-      "deleteMailError": "Couldn't open your mail app.",
+      "deleteConfirmBody": "Your account will be deactivated immediately: profile anonymised, listings removed, phone and email freed. Your wallet must be empty and your orders completed. This is permanent.",
+      "deleteContinue": "Delete permanently",
+      "deleteMailError": "Deletion is not possible right now. Try again.",
       "bientotBadge": "SOON"
     }
   },

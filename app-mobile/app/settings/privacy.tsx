@@ -1,5 +1,7 @@
-import { Alert, Linking, Pressable, ScrollView, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import {
   Eye,
   Sparkles,
@@ -16,6 +18,9 @@ import { Switch } from '../../src/components/primitives/Switch';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { haptic } from '../../src/lib/haptics';
 import { usePrefs } from '../../src/stores/prefs';
+import { useAuth } from '../../src/stores/auth';
+import { apiPost, toToastMessage } from '../../src/lib/api';
+import { unregisterPushToken } from '../../src/lib/push';
 import { useToast } from '../../src/components/feedback/Toast';
 
 export default function PrivacyRoute() {
@@ -32,12 +37,13 @@ export default function PrivacyRoute() {
   const profilePublic = usePrefs((s) => s.privacyProfilePublic);
   const setProfilePublic = usePrefs((s) => s.setPrivacyProfilePublic);
 
-  // Phase Y.3 — "Supprimer mon compte" is a GDPR-required path with no V1
-  // self-serve backend. We open a mailto request to support@linky.gn so the
-  // user has a way to actually file the request, but we confirm first
-  // (irreversible-feeling) and we tell them the truth: it's a manual support
-  // workflow, not an automated 30-day countdown.
+  // Self-serve deletion (was a mailto stub) — calls the delete-account edge
+  // fn. The server refuses (409, explicit French message) while money is in
+  // motion: non-empty wallet, open orders/bookings, pending withdrawal.
+  const signOut = useAuth((s) => s.signOut);
+  const [deleting, setDeleting] = useState(false);
   const onDeleteAccount = () => {
+    if (deleting) return;
     Alert.alert(
       t('settings.privacy.deleteConfirmTitle'),
       t('settings.privacy.deleteConfirmBody'),
@@ -47,12 +53,20 @@ export default function PrivacyRoute() {
           text: t('settings.privacy.deleteContinue'),
           style: 'destructive',
           onPress: () => {
-            Linking.openURL(
-              'mailto:support@linky.gn?subject=' +
-                encodeURIComponent('Demande de suppression de mon compte Linky'),
-            ).catch(() => {
-              toast.show(t('settings.privacy.deleteMailError'), 'danger');
-            });
+            void (async () => {
+              setDeleting(true);
+              try {
+                await apiPost<{ deleted: boolean }>({ path: '/delete-account', body: {} });
+                // Push token first (authed call), then tear the session down.
+                await unregisterPushToken().catch(() => undefined);
+                await signOut();
+                router.replace('/(onboarding)' as never);
+              } catch (e) {
+                toast.show(toToastMessage(e, t('settings.privacy.deleteMailError')), 'danger');
+              } finally {
+                setDeleting(false);
+              }
+            })();
           },
         },
       ],

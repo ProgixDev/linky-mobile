@@ -1423,11 +1423,11 @@
       "downloadLabel": "Télécharger mes données",
       "downloadSub": "Bientôt — pour l'instant, écris-nous à support@linky.gn.",
       "deleteLabel": "Supprimer mon compte",
-      "deleteSub": "Demande à notre équipe la suppression définitive de ton compte.",
+      "deleteSub": "Supprime définitivement ton compte et libère ton numéro / e-mail.",
       "deleteConfirmTitle": "Supprimer mon compte",
-      "deleteConfirmBody": "On va ouvrir ton application mail pour envoyer une demande à notre équipe support. Ils confirmeront la suppression par retour de mail.",
-      "deleteContinue": "Continuer",
-      "deleteMailError": "Impossible d'ouvrir ton application mail.",
+      "deleteConfirmBody": "Ton compte sera désactivé immédiatement : profil anonymisé, annonces retirées, numéro et e-mail libérés. Ton portefeuille doit être vide et tes commandes terminées. Cette action est définitive.",
+      "deleteContinue": "Supprimer définitivement",
+      "deleteMailError": "Suppression impossible pour le moment. Réessaie.",
       "bientotBadge": "BIENTÔT"
     }
   },
