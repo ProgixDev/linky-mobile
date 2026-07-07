@@ -117,6 +117,45 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
     }
   }
 
+  // Email via Resend — takes priority over the Gmail relay once BOTH
+  // RESEND_API_KEY and RESEND_FROM are set. RESEND_FROM must be an address on
+  // a domain verified in the Resend dashboard (e.g. 'Linky <no-reply@linky.gn>');
+  // setting it before verification would break delivery, so the switch is
+  // deliberately gated on that second variable.
+  const resendKey = Deno.env.get('RESEND_API_KEY');
+  const resendFrom = Deno.env.get('RESEND_FROM');
+  if (body.channel === 'email' && resendKey && resendFrom) {
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${resendKey}`,
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: [target],
+          subject: `${code} — ton code de connexion Linky`,
+          html: `<div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:24px">
+            <h2 style="color:#0A5240;margin:0 0 8px">Linky</h2>
+            <p>Ton code de connexion :</p>
+            <p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:12px 0">${code}</p>
+            <p style="color:#666">Il expire dans 5 minutes. Si tu n'es pas à l'origine de cette demande, ignore cet email.</p>
+          </div>`,
+        }),
+      });
+      if (!r.ok) {
+        const detail = await r.text().catch(() => '');
+        console.error('[otp-request] resend delivery failed:', r.status, detail.slice(0, 400));
+        throwApi('OTP_DELIVERY_FAILED', 502, "Envoi du code par email impossible. Réessaie plus tard.");
+      }
+      return { body: { otp_id: inserted.id } }; // no dev_code in real delivery
+    } catch (e) {
+      console.error('[otp-request] resend fetch threw:', e);
+      throwApi('OTP_DELIVERY_FAILED', 502, "Envoi du code par email impossible. Réessaie plus tard.");
+    }
+  }
+
   if (body.channel === 'email' && canDeliverEmail) {
     try {
       const r = await fetch(`${landingUrl}/api/send-otp`, {
