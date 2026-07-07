@@ -127,8 +127,12 @@
       "shareMessage": "Check out this listing on Linky",
       "endTitle": "You've seen everything for today.",
       "endBody": "Come back tomorrow for new items and homes to discover.",
-      "endCta": "Refresh"
-    }
+      "endCta": "Refresh",
+      "comment": "Comment"
+    },
+    "filterAll": "All",
+    "filterProducts": "Products",
+    "filterProperties": "Real estate"
   },
   "boutique": {
     "modeShop": "Shop",
@@ -623,7 +627,22 @@
     "publishedSuccess": "Listing published 🎉",
     "publishFailed": "Publish failed",
     "perMonthAbbr": " /mo",
-    "fieldDistance": "Distance to road (m)"
+    "fieldDistance": "Distance to road (m)",
+    "catTelephonie": "Phones",
+    "catInformatique": "Computers",
+    "catAlimentation": "Food",
+    "catMaisonDeco": "Home & Decor",
+    "catVetementsMode": "Clothing & Fashion",
+    "catSportLoisirs": "Sports & Leisure",
+    "catBeauteSante": "Beauty & Health",
+    "catAutres": "Other",
+    "fieldPriceDay": "Price / day",
+    "fieldRentalPeriod": "Rental period",
+    "rentalPeriodMonth": "Monthly",
+    "rentalPeriodDay": "Daily",
+    "fieldDescriptionPropPlaceholder": "Describe the property: highlights, neighborhood, condition…",
+    "amenityCellar": "Cellar",
+    "perDayAbbr": " /day"
   },
   "seller": {
     "ordersTitle": "Orders received",
@@ -817,7 +836,45 @@
     "visitsBucketPast": "Past",
     "visitsToastAccepted": "Visit confirmed",
     "visitsToastRejected": "Request declined",
-    "visitsToastError": "Action failed"
+    "visitsToastError": "Action failed",
+    "boostSubtitle": "More views, more sales — put your products at the top of the market.",
+    "boostNewCta": "Boost a listing",
+    "boostFrom": "From {{price}}",
+    "boostHistoryTitle": "Your boosts",
+    "boostEmptyTitle": "No boosted listing",
+    "boostEmptyBody": "Boost a product to place it at the top of the market and gain visibility.",
+    "boostStatusActive": "Active",
+    "boostStatusExpired": "Ended",
+    "boostStatusCancelled": "Cancelled",
+    "boostRemaining_one": "{{count}} day left",
+    "boostRemaining_other": "{{count}} days left",
+    "boostEndsToday": "Ends today",
+    "boostNewTitle": "Boost a listing",
+    "boostPickProduct": "Pick a product",
+    "boostNoProducts": "You don't have an active product to boost yet.",
+    "boostGoCreate": "Publish a product",
+    "boostPickDuration": "Pick a duration",
+    "boostDays_one": "{{count}} day",
+    "boostDays_other": "{{count}} days",
+    "boostWalletBalance": "Wallet balance: {{balance}}",
+    "boostPayCta": "Pay {{price}} · boost",
+    "boostPaying": "Boosting…",
+    "boostSuccessToast": "Listing boosted! 🚀",
+    "boostErrorToast": "Can't boost right now. Try again.",
+    "boostInsufficientTitle": "Insufficient balance",
+    "boostInsufficientBody": "Insufficient balance — your sales earnings feed your Linky wallet.",
+    "boostRecharge": "Top up the wallet",
+    "boostDetailTitle": "Boost",
+    "boostDetailNotFound": "Boost not found",
+    "boostDetailActiveBanner": "This product is being highlighted.",
+    "boostDetailExpiredBanner": "This boost has ended.",
+    "boostDetailDuration": "Duration",
+    "boostDetailAmount": "Amount paid",
+    "boostDetailStart": "Start",
+    "boostDetailEnd": "End",
+    "boostDetailViewProduct": "View the listing →",
+    "boostBannerTitle": "Boost a listing",
+    "boostBannerSub": "More visibility, more sales."
   },
   "buyer": {
     "requestsTitle": "My requests",
@@ -882,7 +939,8 @@
     "infoVille": "City",
     "infoResponseTime": "Response time",
     "infoVerified": "Verified",
-    "infoVerifiedValue": "Identified by Linky"
+    "infoVerifiedValue": "Identified by Linky",
+    "infoHours": "Hours"
   },
   "shopEdit": {
     "topbar": "My shop",
@@ -897,7 +955,13 @@
     "successToast": "Shop updated.",
     "errorToast": "Couldn't update the shop.",
     "uploadError": "Upload failed.",
-    "photoPermission": "Allow photo access to continue."
+    "photoPermission": "Allow photo access to continue.",
+    "hoursSection": "OPENING HOURS",
+    "hoursEnable": "Show opening hours",
+    "hours24": "Open 24/7",
+    "hoursDays": "Opening days",
+    "hoursOpen": "Opens",
+    "hoursClose": "Closes"
   },
   "productEdit": {
     "topbar": "Edit listing",
@@ -932,7 +996,11 @@
     "save": "Save",
     "successToast": "Listing updated.",
     "errorToast": "Couldn't update the listing.",
-    "fieldDistance": "Distance to road (m)"
+    "fieldDistance": "Distance to road (m)",
+    "pricePerDay": "Price / day",
+    "rentalPeriodLabel": "Rental period",
+    "rentalPeriodMonth": "Monthly",
+    "rentalPeriodDay": "Daily"
   },
   "product": {
     "fallbackTitle": "Listing",

@@ -26,8 +26,8 @@ const VEHICLES = VehicleTypeSchema.options;
 
 /**
  * Profil — the courier's info (nom · ville · moyen de transport · photo) with an
- * edit form (Zod-validated). Save is STUBBED until the backend profile-update
- * endpoint ships (the note is honest about it). Shows the Approuvé badge and
+ * edit form (Zod-validated). Save persists through the shared update-profile
+ * endpoint (optimistic merge in the auth store). Shows the Approuvé badge and
  * sign-out. Auth logout is injected (onSignOut) to keep the boundary clean.
  */
 export function ProfileScreen({

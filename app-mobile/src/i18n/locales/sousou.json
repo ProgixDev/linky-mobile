@@ -127,8 +127,12 @@
       "shareMessage": "Découvre cette annonce sur Linky",
       "endTitle": "Tu as tout vu pour aujourd'hui.",
       "endBody": "Reviens demain pour de nouveaux articles et logements à découvrir.",
-      "endCta": "Actualiser"
-    }
+      "endCta": "Actualiser",
+      "comment": "Commenter"
+    },
+    "filterAll": "Tout",
+    "filterProducts": "Produits",
+    "filterProperties": "Immobilier"
   },
   "boutique": {
     "modeShop": "Boutique",
@@ -623,7 +627,22 @@
     "publishedSuccess": "Annonce publiée 🎉",
     "publishFailed": "Publication échouée",
     "perMonthAbbr": " /mois",
-    "fieldDistance": "Distance au goudron (m)"
+    "fieldDistance": "Distance au goudron (m)",
+    "catTelephonie": "Téléphonie",
+    "catInformatique": "Informatique",
+    "catAlimentation": "Alimentation",
+    "catMaisonDeco": "Maison & Déco",
+    "catVetementsMode": "Vêtements & Mode",
+    "catSportLoisirs": "Sport & Loisirs",
+    "catBeauteSante": "Beauté & Santé",
+    "catAutres": "Autres",
+    "fieldPriceDay": "Prix / jour",
+    "fieldRentalPeriod": "Période de location",
+    "rentalPeriodMonth": "Par mois",
+    "rentalPeriodDay": "Par jour",
+    "fieldDescriptionPropPlaceholder": "Décris le bien : atouts, quartier, état…",
+    "amenityCellar": "Cave",
+    "perDayAbbr": " /jour"
   },
   "seller": {
     "ordersTitle": "Mes ventes",
@@ -817,7 +836,45 @@
     "visitsBucketPast": "Passé",
     "visitsToastAccepted": "Visite confirmée",
     "visitsToastRejected": "Demande refusée",
-    "visitsToastError": "Action impossible"
+    "visitsToastError": "Action impossible",
+    "boostSubtitle": "Plus de vues, plus de ventes — mets tes produits en tête du marché.",
+    "boostNewCta": "Booster une annonce",
+    "boostFrom": "À partir de {{price}}",
+    "boostHistoryTitle": "Tes boosts",
+    "boostEmptyTitle": "Aucune annonce boostée",
+    "boostEmptyBody": "Booste un produit pour le placer en tête du marché et gagner en visibilité.",
+    "boostStatusActive": "Actif",
+    "boostStatusExpired": "Terminé",
+    "boostStatusCancelled": "Annulé",
+    "boostRemaining_one": "{{count}} jour restant",
+    "boostRemaining_other": "{{count}} jours restants",
+    "boostEndsToday": "Se termine aujourd'hui",
+    "boostNewTitle": "Booster une annonce",
+    "boostPickProduct": "Choisis un produit",
+    "boostNoProducts": "Tu n'as pas encore de produit actif à booster.",
+    "boostGoCreate": "Publier un produit",
+    "boostPickDuration": "Choisis une durée",
+    "boostDays_one": "{{count}} jour",
+    "boostDays_other": "{{count}} jours",
+    "boostWalletBalance": "Solde du portefeuille : {{balance}}",
+    "boostPayCta": "Payer {{price}} · booster",
+    "boostPaying": "Boost en cours…",
+    "boostSuccessToast": "Annonce boostée ! 🚀",
+    "boostErrorToast": "Impossible de booster pour le moment. Réessaie.",
+    "boostInsufficientTitle": "Solde insuffisant",
+    "boostInsufficientBody": "Solde insuffisant — tes gains de ventes alimentent ton portefeuille Linky.",
+    "boostRecharge": "Recharger le portefeuille",
+    "boostDetailTitle": "Boost",
+    "boostDetailNotFound": "Boost introuvable",
+    "boostDetailActiveBanner": "Ce produit est mis en avant.",
+    "boostDetailExpiredBanner": "Ce boost est terminé.",
+    "boostDetailDuration": "Durée",
+    "boostDetailAmount": "Montant payé",
+    "boostDetailStart": "Début",
+    "boostDetailEnd": "Fin",
+    "boostDetailViewProduct": "Voir l'annonce →",
+    "boostBannerTitle": "Booster une annonce",
+    "boostBannerSub": "Plus de visibilité, plus de ventes."
   },
   "buyer": {
     "requestsTitle": "Mes demandes",
@@ -882,7 +939,8 @@
     "infoVille": "Ville",
     "infoResponseTime": "Temps de réponse",
     "infoVerified": "Vérifié",
-    "infoVerifiedValue": "Vendeur identifié par Linky"
+    "infoVerifiedValue": "Vendeur identifié par Linky",
+    "infoHours": "Horaires"
   },
   "shopEdit": {
     "topbar": "Ma boutique",
@@ -897,7 +955,13 @@
     "successToast": "Boutique mise à jour.",
     "errorToast": "Impossible de mettre à jour la boutique.",
     "uploadError": "Téléversement échoué.",
-    "photoPermission": "Autorise l'accès aux photos pour continuer."
+    "photoPermission": "Autorise l'accès aux photos pour continuer.",
+    "hoursSection": "HORAIRES D'OUVERTURE",
+    "hoursEnable": "Afficher les horaires",
+    "hours24": "Ouverte 24h/24, 7j/7",
+    "hoursDays": "Jours d'ouverture",
+    "hoursOpen": "Ouverture",
+    "hoursClose": "Fermeture"
   },
   "productEdit": {
     "topbar": "Modifier l'annonce",
@@ -932,7 +996,11 @@
     "save": "Enregistrer",
     "successToast": "Annonce mise à jour.",
     "errorToast": "Impossible de mettre à jour l'annonce.",
-    "fieldDistance": "Distance au goudron (m)"
+    "fieldDistance": "Distance au goudron (m)",
+    "pricePerDay": "Prix / jour",
+    "rentalPeriodLabel": "Période de location",
+    "rentalPeriodMonth": "Par mois",
+    "rentalPeriodDay": "Par jour"
   },
   "product": {
     "fallbackTitle": "Annonce",
