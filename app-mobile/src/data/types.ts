@@ -275,6 +275,9 @@ export interface PaymentIntent {
   lastErrorMessage?: string;
   createdAt: string;
   completedAt?: string;
+  /** Lengopay hosted payment page — present on the place-order response only.
+   *  Reconstructable later as https://payment.lengopay.com/{railIntentId}. */
+  paymentUrl?: string;
 }
 
 export interface WalletMovement {

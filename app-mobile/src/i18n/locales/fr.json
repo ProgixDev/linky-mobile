@@ -1123,8 +1123,8 @@
     "confirmCardConfirmingTitle": "⏳  Confirmation en cours…",
     "confirmCardConfirmingBody": "Ta banque confirme le paiement de <strong>{{amount}}</strong> — ça prend quelques secondes.",
     "confirmCardConfirmingBodyPlain": "Ta banque confirme le paiement de {{amount}} — ça prend quelques secondes.",
-    "confirmCheckPhoneTitle": "⏳  Vérifie ton téléphone",
-    "confirmCheckPhoneBody": "Suis les instructions sur ton téléphone — accepte le paiement de {{amount}} pour confirmer.",
+    "confirmCheckPhoneTitle": "⏳  Finalise ton paiement",
+    "confirmCheckPhoneBody": "Ouvre la page de paiement, choisis Orange Money ou MTN MoMo et valide {{amount}}. Cet écran se met à jour automatiquement dès la confirmation.",
     "confirmTimeRemaining": "⏱  Temps restant : {{time}}",
     "confirmCancelling": "Annulation…",
     "confirmCancelPayment": "Annuler le paiement",
@@ -1145,7 +1145,8 @@
       "mtnMoney": "MTN Mobile Money",
       "mtnMoneyHint": "Disponible très bientôt",
       "mobileMoneyNote": "Orange Money et MTN Mobile Money seront activés très bientôt. En attendant, le paiement par carte bancaire fonctionne déjà."
-    }
+    },
+    "confirmOpenPayment": "Ouvrir la page de paiement"
   },
   "orders": {
     "title": "Mes commandes",

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
@@ -38,9 +38,12 @@ const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').
 
 // Phase I.8 / I.9 — name + hint come from i18n at render so they flip with
 // language. Brand colors + badge codes are stable.
+// 2026-07-07 — Lengopay merchant account live (licence verified against the
+// production API), rails un-dimmed: place-order returns the hosted
+// payment_url the buyer approves on.
 const METHOD_DEFS: { id: PaymentMethod; nameKey: string; hintKey: string; badge: string; badgeColor: string; comingSoon?: boolean }[] = [
-  { id: 'orange-money', nameKey: 'checkout.rails.orangeMoney', hintKey: 'checkout.rails.orangeMoneyHint', badge: 'OM', badgeColor: '#FF7900', comingSoon: true },
-  { id: 'mtn-money', nameKey: 'checkout.rails.mtnMoney', hintKey: 'checkout.rails.mtnMoneyHint', badge: 'M', badgeColor: '#FFC500', comingSoon: true },
+  { id: 'orange-money', nameKey: 'checkout.rails.orangeMoney', hintKey: 'checkout.rails.orangeMoneyHint', badge: 'OM', badgeColor: '#FF7900' },
+  { id: 'mtn-money', nameKey: 'checkout.rails.mtnMoney', hintKey: 'checkout.rails.mtnMoneyHint', badge: 'M', badgeColor: '#FFC500' },
 ];
 
 export default function CheckoutRoute() {
@@ -350,7 +353,14 @@ export default function CheckoutRoute() {
               {
                 onSuccess: ({ order, intent }) => {
                   if (intent) {
-                    // Rail path: route to confirmation screen with spinner + cron polling.
+                    // Rail path: open Lengopay's hosted payment page (the buyer
+                    // picks Orange/MTN and approves there), then route to the
+                    // confirmation screen which polls until the cron flips the
+                    // intent. The wait screen re-offers the page if the buyer
+                    // closed the browser without paying.
+                    if (intent.paymentUrl) {
+                      Linking.openURL(intent.paymentUrl).catch(() => undefined);
+                    }
                     // Phase U.3 — DO NOT clear cart yet ; the rail can still
                     // fail or be cancelled. Clear lives in the SUCCESS branch
                     // of confirm/[orderId].tsx.

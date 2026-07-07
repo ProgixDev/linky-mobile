@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ScrollView, View, Pressable, TextInput } from 'react-native';
+import { Linking, ScrollView, View, Pressable, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -315,6 +315,20 @@ export default function CheckoutConfirmRoute() {
             <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
               {t('checkout.confirmCheckPhoneBody', { amount: formatGNF(order.totalGnf) })}
             </Text>
+            {/* Lengopay hosted page — the buyer approves the payment there.
+                Reconstructed from the pay_id (railIntentId) so it survives a
+                screen reload; hidden while the placeholder id is in place. */}
+            {!intent.railIntentId.startsWith('pending-init-') && (
+              <Button
+                size="md"
+                block
+                style={{ marginTop: 14 }}
+                label={t('checkout.confirmOpenPayment')}
+                onPress={() => {
+                  void Linking.openURL(`https://payment.lengopay.com/${intent.railIntentId}`).catch(() => undefined);
+                }}
+              />
+            )}
             <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 16, fontVariant: ['tabular-nums'] }}>
               {t('checkout.confirmTimeRemaining', { time: `${mm}:${ss}` })}
             </Text>

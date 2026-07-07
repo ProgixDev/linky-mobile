@@ -1,56 +1,72 @@
-// Shared Lengopay-shaped types. Used by mock-lengopay (Phase I.2) and
-// _shared/lengopay.ts real client (Phase I.3). Mirrors Lengopay v2 Cash-In
-// surface as understood from documentation.lengopay.com + lengopay_flutter
-// pub.dev research during Phase I discovery. Real API may differ in field
-// names once sandbox access lands — types adjust then, contract stays.
+// Lengopay wire types — VERIFIED against the live production API on
+// 2026-07-07 with the merchant's real licence (probe transcript in the
+// launch-sprint notes):
+//
+//   Create : POST https://portal.lengopay.com/api/v1/payments
+//            headers  Authorization: Basic {licence}   (raw key, no base64-of-pair)
+//            body     { websiteid, amount, currency }  (amount number or string)
+//            200 →    { status:'Success', pay_id, payment_url }
+//            400 →    { status:'ERROR', message } ('Missing body fields',
+//                     'Unsupported amount' — amounts must be ≥ some floor;
+//                     100 GNF was refused, 1000 GNF accepted)
+//   Status : POST https://portal.lengopay.com/api/v1/transaction/status
+//            body     { pay_id, websiteid }
+//            200 →    { status:'INITIATED'|..., pay_id, gateway, account, amount, date }
+//
+// The buyer completes the payment ON Lengopay's hosted page (payment_url —
+// they pick Orange Money / MTN MoMo there), so init needs no phone/gateway.
+// pay_id is base64 WITH padding — never decode or re-encode it.
 
 export type LengopayMethod = 'orange-money' | 'mtn-money' | 'card';
-export type LengopayAccountType = 'lp-om-gn' | 'lp-momo-gn' | 'lp-card-gn';
 export type LengopayCurrency = 'GNF' | 'EUR';
 
-/**
- * Lengopay's wire-format status. Maps to our payment_intents.status as:
- *   Lengopay 'pending'   → our 'pending'
- *   Lengopay 'success'   → our 'completed'    (we use "completed" because
- *                                              order.status is 'released'
- *                                              after escrow split — avoid
- *                                              name collision)
- *   Lengopay 'failed'    → our 'failed'
- *   Lengopay 'cancelled' → our 'cancelled'
- * Our 'expired' status is internal-only (15-min TTL per Q7). Lengopay
- * never returns 'expired'; the cron worker assigns it locally when
- * created_at < now() - interval '15 min' and rail still says 'pending'.
- */
+/** Our normalized rail status (client normalizes Lengopay's wire casing). */
 export type LengopayIntentStatus = 'pending' | 'success' | 'failed' | 'cancelled';
 
 export interface LengopayInitRequest {
-  /** Stringified integer in minor units. E.g. '4944000' for 4 944 000 GNF.
-   *  Real client serializes via amount_minor.toString(). Mock just stores. */
-  amount: string;
+  /** Integer minor units (GNF has no decimals — minor == major). */
+  amount_minor: number;
   currency: LengopayCurrency;
-  website_id: string;
-  account_type: LengopayAccountType;
-  account_number: string;   // E.164 phone
-  callback_url?: string;    // Undefined — polling-primary per Q2 lock
 }
 
 export interface LengopayInitResponse {
-  pay_id: string;           // Lengopay's intent reference
-  status: LengopayIntentStatus;
-  message: string;
+  pay_id: string;
+  /** Hosted payment page (https://payment.lengopay.com/{pay_id}). */
+  payment_url: string;
+  status: LengopayIntentStatus; // normalized ('pending' right after init)
 }
 
 export interface LengopayStatusResponse {
   pay_id: string;
-  status: LengopayIntentStatus;
+  status: LengopayIntentStatus; // normalized
   message: string;
-  error_code?: string;      // populated on failed/cancelled responses
+  error_code?: string;
 }
 
-export function methodToAccountType(method: LengopayMethod): LengopayAccountType {
-  switch (method) {
-    case 'orange-money': return 'lp-om-gn';
-    case 'mtn-money':    return 'lp-momo-gn';
-    case 'card':         return 'lp-card-gn';
+/**
+ * Wire → normalized status. Conservative default: anything unknown stays
+ * 'pending' so the 15-min TTL sweep (not a mis-mapping) decides the outcome.
+ * Wire values observed/documented: INITIATED (fresh link, unpaid), PENDING,
+ * SUCCESS, FAILED, CANCELLED/CANCELED, EXPIRED. Some deployments return
+ * numeric statuses — treat non-strings as pending.
+ */
+export function normalizeLengopayStatus(raw: unknown): LengopayIntentStatus {
+  if (typeof raw !== 'string') return 'pending';
+  switch (raw.toUpperCase()) {
+    case 'SUCCESS':
+    case 'SUCCESSFUL':
+      return 'success';
+    case 'FAILED':
+    case 'FAILURE':
+      return 'failed';
+    case 'CANCELLED':
+    case 'CANCELED':
+    case 'EXPIRED':
+      return 'cancelled';
+    case 'INITIATED':
+    case 'PENDING':
+    case 'PROCESSING':
+    default:
+      return 'pending';
   }
 }

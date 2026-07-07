@@ -19,7 +19,6 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from '@shared/catalog.ts';
 import { initPayment } from '@shared/lengopay.ts';
-import { methodToAccountType } from '@shared/lengopay-types.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 
@@ -288,14 +287,15 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
 
   // S2 Step 2: call Lengopay init. On failure, transition intent → failed,
   // which cancels the order atomically via process_intent_outcome.
+  // Lengopay v1 hosted-page flow (verified 2026-07-07): init returns a
+  // payment_url where the buyer picks Orange/MTN themselves — no phone or
+  // gateway code goes in the init call (payer_phone stays stored on the
+  // intent for support/reference).
   let initResp;
   try {
     initResp = await initPayment({
-      amount:         String(orderRow.total_minor),
-      currency:       intentCurrency,
-      website_id:     Deno.env.get('LINKY_LENGOPAY_WEBSITE_ID') ?? '',
-      account_type:   methodToAccountType(body.payment_method as 'orange-money' | 'mtn-money'),
-      account_number: payerPhone,
+      amount_minor: Number(orderRow.total_minor),
+      currency:     intentCurrency as 'GNF' | 'EUR',
     });
   } catch (e) {
     console.error('[place-order] lengopay init error:', e);
@@ -343,6 +343,12 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     rail_status: initResp.status,
   };
   // Buyer-only response path (rail flow); never add scan_token to the SELECT
-  // or pass opts to mapOrder — scanToken stays undefined.
-  return { body: { order: mapOrder(orderRow), intent: mapPaymentIntent(finalIntent) } };
+  // or pass opts to mapOrder — scanToken stays undefined. paymentUrl is the
+  // Lengopay hosted page the app opens for the buyer to approve.
+  return {
+    body: {
+      order: mapOrder(orderRow),
+      intent: { ...mapPaymentIntent(finalIntent), paymentUrl: initResp.payment_url },
+    },
+  };
 }, stripPaymentSecret));

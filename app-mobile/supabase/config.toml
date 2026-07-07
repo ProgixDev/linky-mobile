@@ -619,8 +619,6 @@ verify_jwt = false
 [functions.mint-realtime-jwt]
 verify_jwt = false
 
-[functions.mock-lengopay]
-verify_jwt = false
 
 [functions.moderate-listing]
 verify_jwt = false

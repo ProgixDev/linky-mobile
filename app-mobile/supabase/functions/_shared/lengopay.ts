@@ -1,20 +1,29 @@
-// Lengopay v2 Cash-In HTTP client. Wraps mock and real rail behind a single
-// interface; toggle via LINKY_LENGOPAY_BASE_URL.
+// Lengopay v1 Payments HTTP client — rewritten 2026-07-07 against the REAL
+// production API (verified live with the merchant licence; see
+// lengopay-types.ts header for the probe results). The pre-rewrite client was
+// built on assumed shapes and had 4 wire bugs: Bearer instead of Basic auth,
+// wrong base URL, snake_case field guesses, GET status instead of POST.
 //
-// Dev / sandbox-absence:
-//   LINKY_LENGOPAY_BASE_URL = https://<ref>.supabase.co/functions/v1/mock-lengopay
-// Production:
-//   LINKY_LENGOPAY_BASE_URL = unset OR set to Lengopay's real production URL
+// Flow: init creates a hosted payment page (payment_url) where the buyer
+// picks Orange Money / MTN MoMo and approves; cron-poll-intents polls
+// transaction/status until SUCCESS/FAILED, the 15-min TTL sweep cancels
+// abandoned links.
+//
+// Env:
+//   LINKY_LENGOPAY_BASE_URL     — default https://portal.lengopay.com
+//                                 (point at the mock fn base only for tests)
+//   LINKY_LENGOPAY_LICENSE_KEY  — raw licence, sent as `Authorization: Basic {key}`
+//   LINKY_LENGOPAY_WEBSITE_ID   — merchant site id ('websiteid' on the wire)
 
-import type {
-  LengopayInitRequest,
-  LengopayInitResponse,
-  LengopayStatusResponse,
+import {
+  normalizeLengopayStatus,
+  type LengopayInitRequest,
+  type LengopayInitResponse,
+  type LengopayStatusResponse,
 } from '@shared/lengopay-types.ts';
 
-// B (resilience): hard-cap rail HTTP calls. Lengopay status should be
-// sub-second; if it's hanging beyond TIMEOUT_MS something's wrong upstream
-// and we'd rather fail fast + classify as RAIL_TRANSIENT than stack ticks.
+// B (resilience): hard-cap rail HTTP calls. Status should be sub-second; if
+// it hangs beyond TIMEOUT_MS we fail fast and classify as RAIL_TRANSIENT.
 const TIMEOUT_MS = 10_000;
 
 async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
@@ -27,43 +36,66 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
   }
 }
 
-// S4 — TODO: VERIFY at sandbox-access time. Wrong here = silent 404s in
-// production. Log a warning if base URL is unset so the placeholder issue
-// surfaces loud before first real txn (Q8 launch gate covers verification).
-const REAL_LENGOPAY_URL = 'https://api.lengopay.com/v2';
-if (!Deno.env.get('LINKY_LENGOPAY_BASE_URL')) {
-  console.warn(`[lengopay] LINKY_LENGOPAY_BASE_URL unset; using unverified placeholder ${REAL_LENGOPAY_URL}. Verify before V1 launch.`);
+function baseUrl(): string {
+  return Deno.env.get('LINKY_LENGOPAY_BASE_URL') || 'https://portal.lengopay.com';
 }
 
-function baseUrl(): string {
-  return Deno.env.get('LINKY_LENGOPAY_BASE_URL') || REAL_LENGOPAY_URL;
+function websiteId(): string {
+  return Deno.env.get('LINKY_LENGOPAY_WEBSITE_ID') ?? '';
 }
 
 function authHeaders(): Record<string, string> {
   const license = Deno.env.get('LINKY_LENGOPAY_LICENSE_KEY') ?? '';
-  const anon    = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
   const h: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${license}`,
+    // Lengopay's "Basic" is the raw licence key — NOT base64(user:pass).
+    'Authorization': `Basic ${license}`,
   };
-  // When LINKY_LENGOPAY_BASE_URL points at our mock (Supabase gateway),
-  // apikey is required for routing. Real Lengopay ignores apikey.
+  // Only needed when BASE_URL points at a Supabase-hosted mock (gateway
+  // routing); real Lengopay ignores it.
   if (anon) h['apikey'] = anon;
   return h;
 }
 
+export function lengopayConfigured(): boolean {
+  return !!Deno.env.get('LINKY_LENGOPAY_LICENSE_KEY') && !!websiteId();
+}
+
 export async function initPayment(req: LengopayInitRequest): Promise<LengopayInitResponse> {
-  const res = await fetchWithTimeout(`${baseUrl()}/init-payment`, {
-    method: 'POST', headers: authHeaders(), body: JSON.stringify(req),
+  const res = await fetchWithTimeout(`${baseUrl()}/api/v1/payments`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      websiteid: websiteId(),
+      amount: req.amount_minor,
+      currency: req.currency,
+    }),
   });
   if (!res.ok) throw new Error(`Lengopay init ${res.status}: ${await res.text()}`);
-  return await res.json() as LengopayInitResponse;
+  const raw = await res.json() as { status?: string; pay_id?: string; payment_url?: string; message?: string };
+  if (!raw.pay_id || !raw.payment_url) {
+    throw new Error(`Lengopay init malformed response: ${JSON.stringify(raw).slice(0, 300)}`);
+  }
+  return { pay_id: raw.pay_id, payment_url: raw.payment_url, status: 'pending' };
 }
 
 export async function getPaymentStatus(payId: string): Promise<LengopayStatusResponse> {
-  const res = await fetchWithTimeout(`${baseUrl()}/status/${encodeURIComponent(payId)}`, {
-    method: 'GET', headers: authHeaders(),
+  const res = await fetchWithTimeout(`${baseUrl()}/api/v1/transaction/status`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ pay_id: payId, websiteid: websiteId() }),
   });
   if (!res.ok) throw new Error(`Lengopay status ${res.status}: ${await res.text()}`);
-  return await res.json() as LengopayStatusResponse;
+  const raw = await res.json() as { status?: unknown; pay_id?: string; message?: string };
+  return {
+    pay_id: raw.pay_id ?? payId,
+    status: normalizeLengopayStatus(raw.status),
+    message: typeof raw.message === 'string' ? raw.message : '',
+  };
+}
+
+/** Hosted payment page for a pay_id — reconstructable client-side too. */
+export function paymentUrlFor(payId: string): string {
+  return `https://payment.lengopay.com/${payId}`;
 }
