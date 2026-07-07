@@ -10,6 +10,7 @@ import { TopBar } from '../src/components/nav/TopBar';
 import { I, type IconKey } from '../src/icons/Icon';
 import { useMarkNotificationsRead } from '../src/data/queries';
 import { useNotificationsInfinite } from '../src/data/queries/messages';
+import { useAuth } from '../src/stores/auth';
 import { Button } from '../src/components/primitives/Button';
 import { formatRelativeFR } from '../src/lib/format';
 import type { AppNotification } from '../src/data/types';
@@ -17,6 +18,20 @@ import { EmptyState, ErrorStateView } from '../src/components/feedback/EmptyStat
 import { Skeleton } from '../src/components/primitives/Skeleton';
 
 type Tab = 'all' | 'order' | 'message' | 'visit' | 'promo';
+
+// Filter tabs are role-aware (client 2026-07-07): a seller's alerts aren't an
+// agent's or a buyer's. 'order' (product orders) is hidden from a PURE agent;
+// 'visit' (property visits) is hidden from a PURE seller. 'all' / 'message' /
+// 'promo' are universal. The 'all' tab still shows everything the user
+// actually receives, so nothing is ever hidden from view — only the filter
+// chips adapt.
+const TAB_DEFS: { key: Tab; labelKey: string; show: (r: { buyer: boolean; seller: boolean; agent: boolean }) => boolean }[] = [
+  { key: 'all', labelKey: 'notifications.filterAll', show: () => true },
+  { key: 'order', labelKey: 'notifications.filterOrder', show: (r) => r.buyer || r.seller },
+  { key: 'message', labelKey: 'notifications.filterMessage', show: () => true },
+  { key: 'visit', labelKey: 'notifications.filterVisit', show: (r) => r.buyer || r.agent },
+  { key: 'promo', labelKey: 'notifications.filterPromo', show: () => true },
+];
 
 const ICON_FOR: Record<string, IconKey> = {
   check: 'check',
@@ -52,6 +67,20 @@ export default function NotificationsRoute() {
   }, [notifQuery.data]);
   const markRead = useMarkNotificationsRead();
   const [tab, setTab] = useState<Tab>('all');
+
+  // Role-aware filter chips.
+  const roles = useAuth((s) => s.roles);
+  const roleFlags = {
+    buyer: roles.includes('buyer'),
+    seller: roles.includes('seller'),
+    agent: roles.includes('agent'),
+  };
+  const visibleTabs = TAB_DEFS.filter((d) => d.show(roleFlags));
+  // If the active tab is hidden for this role, fall back to 'all'.
+  useEffect(() => {
+    if (!visibleTabs.some((d) => d.key === tab)) setTab('all');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roles]);
 
   useEffect(() => {
     // Mark all read on view
@@ -116,11 +145,14 @@ export default function NotificationsRoute() {
                 rendering interactive-but-useless above the error state. */}
             <View style={{ paddingBottom: 12 }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                <Chip label={t('notifications.filterAll')} active={tab === 'all'} onPress={() => setTab('all')} />
-                <Chip label={t('notifications.filterOrder')} active={tab === 'order'} onPress={() => setTab('order')} />
-                <Chip label={t('notifications.filterMessage')} active={tab === 'message'} onPress={() => setTab('message')} />
-                <Chip label={t('notifications.filterVisit')} active={tab === 'visit'} onPress={() => setTab('visit')} />
-                <Chip label={t('notifications.filterPromo')} active={tab === 'promo'} onPress={() => setTab('promo')} />
+                {visibleTabs.map((d) => (
+                  <Chip
+                    key={d.key}
+                    label={t(d.labelKey)}
+                    active={tab === d.key}
+                    onPress={() => setTab(d.key)}
+                  />
+                ))}
               </ScrollView>
             </View>
             {filtered.length === 0 && (
