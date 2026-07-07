@@ -90,17 +90,19 @@ export default function MarcheRoute() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // One-shot user-location fetch for the distance-from-user badge. If permission
-  // is denied or the sensor errors, we fall back to Conakry city center (between
-  // Matam and Ratoma communes) so the distance badge still renders with realistic
-  // km values for Guinean users — better than a missing badge.
+  // One-shot user-location fetch for the distance-from-user badge. CHECK-ONLY:
+  // we never PROMPT here — a cold location popup while browsing listings is
+  // jarring (client 2026-07-07). The request is made at the natural moment, on
+  // the onboarding map step (CityMapPicker). If permission isn't already
+  // granted (or the sensor errors) we fall back to Conakry city center so the
+  // distance badge still renders with realistic km — better than a missing one.
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
     let cancelled = false;
     const CONAKRY_FALLBACK = { lat: 9.5485, lng: -13.6770 };
     (async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.getForegroundPermissionsAsync();
         if (status !== 'granted') {
           if (!cancelled) setUserLocation(CONAKRY_FALLBACK);
           return;

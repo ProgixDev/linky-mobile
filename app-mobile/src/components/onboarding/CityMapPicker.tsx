@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import Mapbox, { MapView, Camera, PointAnnotation, type ScreenPointPayload } from '@rnmapbox/maps';
+import * as Location from 'expo-location';
 import type { Feature, Point } from 'geojson';
-import { Check, MapPin } from 'lucide-react-native';
+import { Check, LocateFixed, MapPin } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { haptic } from '../../lib/haptics';
@@ -92,6 +93,16 @@ function planarDistance(a: { lat: number; lng: number }, b: { lat: number; lng: 
   return Math.sqrt(dLat * dLat + dLng * dLng);
 }
 
+function nearestCity(lat: number, lng: number): GuineaCity {
+  let best = GUINEA_CITIES[0]!;
+  let bestD = Infinity;
+  for (const c of GUINEA_CITIES) {
+    const d = planarDistance({ lat, lng }, { lat: c.lat, lng: c.lng });
+    if (d < bestD) { bestD = d; best = c; }
+  }
+  return best;
+}
+
 export function CityMapPicker({
   value,
   onChange,
@@ -146,10 +157,53 @@ export function CityMapPicker({
 
   const handleSelect = (cityName: string) => {
     haptic.selection();
+    manuallyPicked.current = true;
     onChange(cityName);
     const c = GUINEA_CITIES.find((x) => x.name === cityName);
     if (c && c.region !== activeRegion) setActiveRegion(c.region as Region);
   };
+
+  // Location permission is requested HERE — the natural moment, when the
+  // signup map opens (client 2026-07-07: was popping unprompted on the Marché
+  // tab). On grant we center the map on the user and pre-select their nearest
+  // Guinea city (unless they've already tapped one). On deny, nothing happens —
+  // they pick manually. The Marché distance badge later reuses this grant
+  // without ever prompting again.
+  const manuallyPicked = useRef(false);
+  const [locating, setLocating] = useState(false);
+  const detectMyLocation = async (prompt: boolean) => {
+    try {
+      setLocating(true);
+      const perm = prompt
+        ? await Location.requestForegroundPermissionsAsync()
+        : await Location.getForegroundPermissionsAsync();
+      if (perm.status !== 'granted') return;
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { latitude, longitude } = pos.coords;
+      if (!latitude && !longitude) return;
+      cameraRef.current?.setCamera({
+        centerCoordinate: [longitude, latitude],
+        zoomLevel: 9,
+        animationDuration: 600,
+      });
+      // Only auto-fill the city if the user hasn't chosen one yet.
+      if (!manuallyPicked.current) {
+        const near = nearestCity(latitude, longitude);
+        onChange(near.name);
+        if (near.region !== activeRegion) setActiveRegion(near.region as Region);
+      }
+    } catch {
+      // GPS off / timeout — silent; manual city pick still works.
+    } finally {
+      setLocating(false);
+    }
+  };
+
+  // Auto-request once when the map mounts (natural first moment).
+  useEffect(() => {
+    if (HAS_MAPBOX_TOKEN) void detectMyLocation(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Mapbox onPress signature: Feature<Point, ScreenPointPayload>. Position is number[]
   // (potentially 3D with elevation), so we runtime-check both coords are present.
@@ -159,16 +213,7 @@ export function CityMapPicker({
     const lng = coords[0];
     const lat = coords[1];
     if (typeof lng !== 'number' || typeof lat !== 'number') return;
-    let nearest = GUINEA_CITIES[0]!;
-    let bestD = Infinity;
-    for (const c of GUINEA_CITIES) {
-      const d = planarDistance({ lat, lng }, { lat: c.lat, lng: c.lng });
-      if (d < bestD) {
-        bestD = d;
-        nearest = c;
-      }
-    }
-    handleSelect(nearest.name);
+    handleSelect(nearestCity(lat, lng).name);
   };
 
   return (
@@ -351,6 +396,32 @@ export function CityMapPicker({
               </PointAnnotation>
             ))}
           </MapView>
+        )}
+
+        {/* Locate-me — re-trigger the request (e.g. after a first refusal) and
+            recenter on the user. */}
+        {HAS_MAPBOX_TOKEN && Platform.OS !== 'web' && (
+          <Pressable
+            onPress={() => void detectMyLocation(true)}
+            disabled={locating}
+            accessibilityLabel="Utiliser ma position"
+            style={{
+              position: 'absolute',
+              bottom: 12,
+              right: 12,
+              width: 44,
+              height: 44,
+              borderRadius: 999,
+              backgroundColor: colors.card,
+              borderWidth: 1,
+              borderColor: colors.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: locating ? 0.5 : 1,
+            }}
+          >
+            <LocateFixed size={20} color={colors.primary} strokeWidth={2} />
+          </Pressable>
         )}
       </View>
 
