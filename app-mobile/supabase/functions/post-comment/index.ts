@@ -11,6 +11,8 @@ interface Body {
   listing_kind: 'product' | 'property';
   listing_id: string;
   body: string;
+  /** Reply target — a TOP-LEVEL comment on the same listing (one level only). */
+  parent_id?: string;
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -21,6 +23,7 @@ function valid(b: unknown): b is Body {
   const x = b as Record<string, unknown>;
   if (typeof x.listing_kind !== 'string' || !KINDS.has(x.listing_kind)) return false;
   if (typeof x.listing_id !== 'string' || !UUID_RE.test(x.listing_id)) return false;
+  if (x.parent_id !== undefined && (typeof x.parent_id !== 'string' || !UUID_RE.test(x.parent_id))) return false;
   if (typeof x.body !== 'string') return false;
   const t = x.body.trim();
   if (t.length < 1 || t.length > 1000) return false;
@@ -30,6 +33,28 @@ function valid(b: unknown): b is Body {
 Deno.serve(makePost<Body>('/v1/comments/create', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
   const text = body.body.trim();
+
+  // Reply target validation: the parent must exist, sit on THIS listing, and
+  // itself be top-level (one thread level — no reply-to-a-reply). Also capture
+  // the parent author so we can notify them.
+  let parentAuthorId: string | null = null;
+  if (body.parent_id) {
+    const { data: parent, error: pErr } = await sb
+      .from('comments')
+      .select('id, listing_kind, listing_id, parent_id, author_id')
+      .eq('id', body.parent_id)
+      .maybeSingle();
+    if (pErr) { console.error('[post-comment] parent lookup:', pErr); throwApi('INTERNAL_ERROR', 500, 'Erreur base de données'); }
+    if (!parent
+      || parent.listing_kind !== body.listing_kind
+      || parent.listing_id !== body.listing_id) {
+      throwApi('PARENT_NOT_FOUND', 404, 'Commentaire parent introuvable.');
+    }
+    if (parent.parent_id) {
+      throwApi('REPLY_TOO_DEEP', 400, 'On ne peut répondre qu\'à un commentaire principal.');
+    }
+    parentAuthorId = (parent as { author_id?: string }).author_id ?? null;
+  }
 
   // Light anti-spam: at most one comment per author per listing per 20s. Bounds
   // rapid-fire flooding + owner-notification spam without a full rate-limiter.
@@ -71,8 +96,14 @@ Deno.serve(makePost<Body>('/v1/comments/create', valid, async ({ sb, body, req }
 
   const { data: inserted, error: iErr } = await sb
     .from('comments')
-    .insert({ listing_kind: body.listing_kind, listing_id: body.listing_id, author_id: userId, body: text })
-    .select('id, body, created_at')
+    .insert({
+      listing_kind: body.listing_kind,
+      listing_id: body.listing_id,
+      author_id: userId,
+      body: text,
+      parent_id: body.parent_id ?? null,
+    })
+    .select('id, body, created_at, parent_id')
     .single();
   if (iErr || !inserted) {
     console.error('[post-comment] insert error:', iErr);
@@ -87,20 +118,36 @@ Deno.serve(makePost<Body>('/v1/comments/create', valid, async ({ sb, body, req }
   const displayName = ((me as { display_name?: string | null } | null)?.display_name) ?? null;
   const authorAvatarUrl = ((me as { avatar_url?: string | null } | null)?.avatar_url) ?? null;
 
-  // Notify the listing owner (best-effort; skip self-comment).
-  if (ownerId && ownerId !== userId) {
+  // Notifications (best-effort, dedup, never self-notify):
+  //  - a REPLY pings the parent comment's author ("… a répondu")
+  //  - a top-level comment pings the listing owner ("… a commenté")
+  const actor = displayName ?? 'Un utilisateur Linky';
+  const notified = new Set<string>([userId]);
+  if (parentAuthorId && !notified.has(parentAuthorId)) {
+    notified.add(parentAuthorId);
+    notifyDetached(sb, {
+      userIds: [parentAuthorId],
+      category: 'system',
+      title: 'Nouvelle réponse',
+      body: `${actor} a répondu à ton commentaire sur « ${title} ».`,
+      iconHint: 'msg',
+      deeplink: `/comments/${body.listing_kind}/${body.listing_id}`,
+      app: 'marketplace',
+    });
+  }
+  if (ownerId && !notified.has(ownerId)) {
     notifyDetached(sb, {
       userIds: [ownerId],
       category: 'system',
-      title: 'Nouveau commentaire',
-      body: `${displayName ?? 'Un utilisateur Linky'} a commenté « ${title} ».`,
+      title: body.parent_id ? 'Nouvelle réponse' : 'Nouveau commentaire',
+      body: `${actor} a ${body.parent_id ? 'répondu sur' : 'commenté'} « ${title} ».`,
       iconHint: 'msg',
       deeplink: `/comments/${body.listing_kind}/${body.listing_id}`,
       app: 'marketplace',
     });
   }
 
-  const row = inserted as { id: string; body: string; created_at: string };
+  const row = inserted as { id: string; body: string; created_at: string; parent_id: string | null };
   return {
     body: {
       comment: {
@@ -110,6 +157,10 @@ Deno.serve(makePost<Body>('/v1/comments/create', valid, async ({ sb, body, req }
         authorId: userId,
         authorName: displayName,
         authorAvatarUrl,
+        parentId: row.parent_id,
+        likeCount: 0,
+        likedByMe: false,
+        replies: [],
       },
     },
   };

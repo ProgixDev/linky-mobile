@@ -241,6 +241,11 @@ export interface Comment {
   authorId: ID;
   authorName: string | null;
   authorAvatarUrl: string | null;
+  parentId: ID | null;
+  likeCount: number;
+  likedByMe: boolean;
+  /** Present on top-level comments only; oldest-first. */
+  replies?: Comment[];
 }
 
 export interface OrderDelivery {

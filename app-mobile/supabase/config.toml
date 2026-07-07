@@ -553,6 +553,9 @@ verify_jwt = false
 [functions.delete-account]
 verify_jwt = false
 
+[functions.toggle-comment-like]
+verify_jwt = false
+
 [functions.admin-list-bookings]
 verify_jwt = false
 

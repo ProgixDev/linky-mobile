@@ -12,11 +12,16 @@ import { useListingComments, type CommentKind } from '../../data/queries';
 export function ListingComments({ kind, id }: { kind: CommentKind; id: string }) {
   const { colors } = useTheme();
   const { data: comments } = useListingComments(kind, id);
-  const count = comments?.length ?? 0;
+  // Total including replies — the "right number" the user expects.
+  const count = (comments ?? []).reduce((n, c) => n + 1 + (c.replies?.length ?? 0), 0);
   return (
     <View style={{ gap: 12 }}>
       {count > 0 &&
-        comments!.slice(0, 2).map((c) => <CommentRow key={c.id} comment={c} />)}
+        comments!.slice(0, 2).map((c) => (
+          // Preview is read-only — the button below opens the full thread where
+          // like / reply live.
+          <CommentRow key={c.id} comment={c} kind={kind} listingId={id} canInteract={false} />
+        ))}
       <Pressable
         onPress={() => router.push(`/comments/${kind}/${id}` as never)}
         style={{

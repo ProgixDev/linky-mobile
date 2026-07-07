@@ -1,9 +1,11 @@
-// Public list of comments under a product or property listing, newest first.
-// No auth required — matches the public discover feed (anyone can read a thread).
-// Author name + avatar are looked up in a second batched query + Map (project
-// convention; see list-shop-reviews). Response keys are camelCase.
+// Public list of comments under a product/property listing. Top-level comments
+// newest-first, each with its replies nested oldest-first (one thread level).
+// Each comment carries likeCount + likedByMe (optional auth: a signed-in caller
+// gets their like state; anonymous callers get false). No auth REQUIRED —
+// matches the public discover feed.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
+import { tryGetUser } from '@shared/auth.ts';
 
 interface Body {
   listing_kind: 'product' | 'property';
@@ -23,27 +25,36 @@ function valid(b: unknown): b is Body {
   return true;
 }
 
-interface CommentRow { id: string; body: string; created_at: string; author_id: string; }
+interface CommentRow {
+  id: string;
+  body: string;
+  created_at: string;
+  author_id: string;
+  parent_id: string | null;
+  like_count: number;
+}
 interface UserRow { id: string; display_name: string | null; avatar_url: string | null; }
 
-Deno.serve(makePost<Body>('/v1/comments/list', valid, async ({ sb, body }) => {
+Deno.serve(makePost<Body>('/v1/comments/list', valid, async ({ sb, body, req }) => {
   const limit = body.limit ?? 50;
+  const callerId = await tryGetUser(req);
 
+  // Pull ALL comments for the listing (top-level + replies) — replies are cheap
+  // and nesting client-side needs the full set. The `limit` caps top-level
+  // comments; replies ride along.
   const { data, error } = await sb
     .from('comments')
-    .select('id, body, created_at, author_id')
+    .select('id, body, created_at, author_id, parent_id, like_count')
     .eq('listing_kind', body.listing_kind)
     .eq('listing_id', body.listing_id)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+    .order('created_at', { ascending: false });
   if (error) {
     console.error('[list-comments] query error:', error);
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
   const rows = (data as CommentRow[] | null) ?? [];
 
-  // Second batched query for author identity — one FK to users, but we follow
-  // the reviews convention (explicit Map, not a PostgREST embed).
+  // Author identity — one batched query + Map (project convention).
   const byId = new Map<string, { displayName: string | null; avatarUrl: string | null }>();
   if (rows.length > 0) {
     const ids = [...new Set(rows.map((r) => r.author_id))];
@@ -53,13 +64,43 @@ Deno.serve(makePost<Body>('/v1/comments/list', valid, async ({ sb, body }) => {
     }
   }
 
-  const comments = rows.map((r) => ({
+  // likedByMe — one query for the caller's likes across this listing's comments.
+  const likedSet = new Set<string>();
+  if (callerId && rows.length > 0) {
+    const commentIds = rows.map((r) => r.id);
+    const { data: likes } = await sb
+      .from('comment_likes')
+      .select('comment_id')
+      .eq('user_id', callerId)
+      .in('comment_id', commentIds);
+    for (const l of (likes as { comment_id: string }[] | null) ?? []) likedSet.add(l.comment_id);
+  }
+
+  const shape = (r: CommentRow) => ({
     id: r.id,
     body: r.body,
     createdAt: r.created_at,
     authorId: r.author_id,
     authorName: byId.get(r.author_id)?.displayName ?? null,
     authorAvatarUrl: byId.get(r.author_id)?.avatarUrl ?? null,
+    parentId: r.parent_id,
+    likeCount: Number(r.like_count),
+    likedByMe: likedSet.has(r.id),
+  });
+
+  // Build the tree: top-level newest-first (already sorted desc), replies
+  // oldest-first under each parent.
+  const tops = rows.filter((r) => !r.parent_id).slice(0, limit).map(shape);
+  const repliesByParent = new Map<string, ReturnType<typeof shape>[]>();
+  for (const r of rows.filter((r) => r.parent_id)) {
+    const arr = repliesByParent.get(r.parent_id!) ?? [];
+    arr.push(shape(r));
+    repliesByParent.set(r.parent_id!, arr);
+  }
+  const comments = tops.map((c) => ({
+    ...c,
+    // rows were desc; reverse the replies for this parent to get oldest-first.
+    replies: (repliesByParent.get(c.id) ?? []).slice().reverse(),
   }));
 
   return { body: { comments } };
