@@ -553,6 +553,12 @@ verify_jwt = false
 [functions.delete-account]
 verify_jwt = false
 
+[functions.admin-list-bookings]
+verify_jwt = false
+
+[functions.admin-resolve-booking]
+verify_jwt = false
+
 [functions.list-listings-admin]
 verify_jwt = false
 

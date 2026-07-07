@@ -151,9 +151,11 @@ export default function LoginPage() {
                 <h1 className="font-display mt-5 text-4xl font-bold leading-tight tracking-tight">
                   Bienvenue.
                 </h1>
+                {/* V1 : la 2FA réelle (TOTP) arrive en V1.1 — ne pas promettre
+                    ce que l'écran ne fait pas. */}
                 <p className="mt-3 text-muted">
-                  Connecte-toi à ton back-office. Authentification 2FA
-                  obligatoire.
+                  Connecte-toi à ton back-office. Accès réservé à
+                  l&apos;équipe Linky.
                 </p>
 
                 <form onSubmit={handleCreds} className="mt-10 space-y-4">
