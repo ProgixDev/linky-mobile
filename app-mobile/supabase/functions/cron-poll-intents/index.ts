@@ -203,8 +203,68 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
+  // Booking PI sweep (2026-07-07) — abandoned booking payment sheets. Same
+  // cancel-first safety property as the stripe order sweep. 24h TTL (see
+  // 20260707_03: the sign-pay idempotency key replays for ~24h — cancelling
+  // sooner would hand a returning tenant the same canceled PI). Local action
+  // is only clearing bookings.stripe_pi_id — booking status is untouched, an
+  // 'accepted' booking stays payable through a fresh sign-pay call.
+  let bookingSwept = 0, bookingCancelled = 0, bookingAlreadyTerminal = 0, bookingSkipped = 0;
+  const { data: staleBookingPis, error: bookingPickErr } = await sb.rpc('pick_stale_booking_pis', { p_limit: 20 });
+  if (bookingPickErr) {
+    console.error('[cron-poll-intents] booking pick error:', bookingPickErr);
+  } else {
+    for (const row of (staleBookingPis ?? []) as { booking_id: string; stripe_pi_id: string; status: string }[]) {
+      bookingSwept++;
+      try {
+        let piStatus: string | null = null;
+        try {
+          const cancelledPi = await stripeClient().paymentIntents.cancel(row.stripe_pi_id);
+          piStatus = cancelledPi.status;
+        } catch (_cancelErr) {
+          try {
+            piStatus = (await stripeClient().paymentIntents.retrieve(row.stripe_pi_id)).status;
+          } catch (retrieveErr) {
+            console.error('[cron-poll-intents] booking PI retrieve error:', { booking: row.booking_id, pi: row.stripe_pi_id, retrieveErr });
+            bookingSkipped++;
+            continue;
+          }
+        }
+
+        if (piStatus === 'succeeded') {
+          // The webhook owns this payment (confirm_booking_payment is
+          // idempotent). On a cancelled/rejected booking the webhook's
+          // status guard logs the conflict — nothing to do here.
+          bookingAlreadyTerminal++;
+          continue;
+        }
+        if (piStatus !== 'canceled') {
+          console.error('[cron-poll-intents] booking PI in unexpected post-cancel state', { booking: row.booking_id, pi: row.stripe_pi_id, pi_status: piStatus });
+          bookingSkipped++;
+          continue;
+        }
+
+        // Charge window is closed on Stripe — detach the PI locally.
+        const { error: clearErr } = await sb
+          .from('bookings')
+          .update({ stripe_pi_id: null, updated_at: new Date().toISOString() })
+          .eq('id', row.booking_id);
+        if (clearErr) {
+          console.error('[cron-poll-intents] booking PI clear error:', { booking: row.booking_id, clearErr });
+          bookingSkipped++;
+          continue;
+        }
+        bookingCancelled++;
+      } catch (e) {
+        console.error('[cron-poll-intents] booking sweep iteration error:', { booking: row.booking_id, e });
+        bookingSkipped++;
+      }
+    }
+  }
+
   return new Response(JSON.stringify({
     polled, completed, failed, cancelled, stillPending, errors, expired: expiredCount ?? 0,
     stripeSwept, stripeCancelled, stripeAlreadyTerminal, stripeSkipped,
+    bookingSwept, bookingCancelled, bookingAlreadyTerminal, bookingSkipped,
   }), { status: 200, headers: { 'content-type': 'application/json' } });
 });
