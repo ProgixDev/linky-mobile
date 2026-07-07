@@ -72,11 +72,50 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
   if (e3 || !inserted) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
 
   // Email delivery: when LANDING_OTP_URL + OTP_EMAIL_SECRET are set, POST the code to
-  // the landing's /api/send-otp transactional endpoint. Phone delivery + email without
-  // landing configured fall through to the dev_code stub (no SMS provider wired yet).
+  // the landing's /api/send-otp transactional endpoint.
+  // Phone delivery: when TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM are set,
+  // send a real SMS via Twilio (TWILIO_FROM is either an E.164 number or a Messaging
+  // Service SID 'MG…'). Unconfigured channels fall through to the dev_code stub —
+  // setting the Twilio secrets flips phone signup to real delivery with no redeploy.
   const landingUrl = Deno.env.get('LANDING_OTP_URL');
   const emailSecret = Deno.env.get('OTP_EMAIL_SECRET');
   const canDeliverEmail = !!landingUrl && !!emailSecret;
+  const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+  const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+  const twilioFrom = Deno.env.get('TWILIO_FROM');
+  const canDeliverSms = !!twilioSid && !!twilioToken && !!twilioFrom;
+
+  if (body.channel === 'phone' && canDeliverSms) {
+    const params = new URLSearchParams({
+      To: target,
+      Body: `Linky : ton code de connexion est ${code}. Il expire dans 5 minutes.`,
+    });
+    // 'MG…' = Messaging Service SID ; anything else is treated as a From number.
+    if (/^MG[0-9a-f]{32}$/i.test(twilioFrom!)) params.set('MessagingServiceSid', twilioFrom!);
+    else params.set('From', twilioFrom!);
+    try {
+      const r = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
+            'content-type': 'application/x-www-form-urlencoded',
+          },
+          body: params.toString(),
+        },
+      );
+      if (!r.ok) {
+        const detail = await r.text().catch(() => '');
+        console.error('[otp-request] sms delivery failed:', r.status, detail.slice(0, 500));
+        throwApi('OTP_DELIVERY_FAILED', 502, 'Envoi du code par SMS impossible. Réessaie plus tard.');
+      }
+      return { body: { otp_id: inserted.id } }; // no dev_code in real delivery
+    } catch (e) {
+      console.error('[otp-request] sms fetch threw:', e);
+      throwApi('OTP_DELIVERY_FAILED', 502, 'Envoi du code par SMS impossible. Réessaie plus tard.');
+    }
+  }
 
   if (body.channel === 'email' && canDeliverEmail) {
     try {
@@ -102,7 +141,9 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
     }
   }
 
-  // Stub fallback: phone channel + email without landing configured.
+  // Stub fallback: only for channels whose provider is NOT configured (phone
+  // without Twilio secrets / email without the landing relay). Returns the
+  // code in the response — test-phase only; dies as soon as secrets are set.
   console.log(`[OTP STUB] channel=${body.channel} target=${target} code=${code} otp_id=${inserted.id}`);
   return { body: { otp_id: inserted.id, dev_code: code } };
 }));
