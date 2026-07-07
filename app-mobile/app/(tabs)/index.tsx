@@ -33,7 +33,6 @@ import {
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
-import { Button } from '../../src/components/primitives/Button';
 import { Avatar } from '../../src/components/primitives/Avatar';
 import { SectionHeader } from '../../src/components/lists/SectionHeader';
 import { ShopMiniCard } from '../../src/components/lists/ShopCard';
@@ -261,25 +260,8 @@ function BuyerHome() {
               {firstName} 👋
             </Text>
           </View>
-          {/* Vendre — compact header pill (client ask 2026-07-06 : moved out
-              of the content flow ; the header carries the universal actions). */}
-          <Button
-            size="sm"
-            variant="primary"
-            label={t('home.qaSell')}
-            leading={<Store size={14} color="#FFFFFF" strokeWidth={2.25} />}
-            onPress={() => {
-              // Phase T.2 — pure buyer used to dead-end into the create
-              // modal's "Va dans Profil → Rôles" copy (a screen that
-              // didn't exist). Route the upgrade pitch instead ; sellers
-              // and agents continue straight into the wizard.
-              if (roles.includes('seller') || roles.includes('agent')) {
-                router.push('/create');
-              } else {
-                router.push('/profil/devenir?role=seller' as never);
-              }
-            }}
-          />
+          {/* Vendre removed from the header (client 2026-07-06) — publishing
+              is reached via the pro dashboard / Profil rôles. */}
           <CircleAction
             onPress={() => router.push('/notifications')}
             accessibilityLabel={t('home.notifications')}
