@@ -50,7 +50,7 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
   // "Ma boutique" row. Both checks are pulled in a single read.
   const { data: caller, error: eCaller } = await sb
     .from('users')
-    .select('roles, kyc_status')
+    .select('roles, kyc_status, display_name')
     .eq('id', userId)
     .single();
   if (eCaller || !caller) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
@@ -83,9 +83,14 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     if (existing) {
       shopId = existing.id as string;
     } else {
+      // Personalize the auto-created shop from the owner's first name so buyers
+      // never see a generic « Ma boutique » (which read like « my shop » on
+      // every listing). Falls back to « Ma boutique » when the name is unset.
+      const firstName = String(caller.display_name ?? '').trim().split(/\s+/)[0];
+      const shopName = firstName ? `Boutique de ${firstName}` : 'Ma boutique';
       const { data: created, error: eIns } = await sb
         .from('shops')
-        .insert({ owner_id: userId, name: 'Ma boutique', city: body.city.trim(), about: '' })
+        .insert({ owner_id: userId, name: shopName, city: body.city.trim(), about: '' })
         .select('id').single();
       if (eIns || !created) {
         console.error('[product-create] auto-shop insert error:', eIns);

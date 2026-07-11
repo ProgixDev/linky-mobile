@@ -94,7 +94,7 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
   // "Mon agence" row. Both checks are pulled in a single read.
   const { data: caller, error: eCaller } = await sb
     .from('users')
-    .select('roles, kyc_status')
+    .select('roles, kyc_status, display_name')
     .eq('id', userId)
     .single();
   if (eCaller || !caller) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
@@ -127,9 +127,13 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
     if (existing) {
       shopId = existing.id as string;
     } else {
+      // Personalize the auto-created agency from the owner's first name (was a
+      // generic « Mon agence »). Falls back when the name is unset.
+      const firstName = String(caller.display_name ?? '').trim().split(/\s+/)[0];
+      const shopName = firstName ? `Agence de ${firstName}` : 'Mon agence';
       const { data: created, error: eIns } = await sb
         .from('shops')
-        .insert({ owner_id: userId, name: 'Mon agence', city: body.city.trim(), about: '' })
+        .insert({ owner_id: userId, name: shopName, city: body.city.trim(), about: '' })
         .select('id').single();
       if (eIns || !created) {
         console.error('[property-create] auto-shop insert error:', eIns);
