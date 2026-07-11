@@ -104,6 +104,32 @@ async function callRefresh(refreshToken: string): Promise<RefreshResponse> {
   return (await res.json()) as RefreshResponse;
 }
 
+// Decode a JWT's `exp` (seconds since epoch) without a library. Hermes lacks a
+// reliable atob, so base64url is decoded by hand. Returns null on any parse
+// failure — the caller treats null as "unknown → don't proactively refresh".
+// Only `exp` (an ASCII number) is read, so the Latin-1 byte decode is safe for
+// our self-rolled payload ({ sub, iat, exp, role }).
+const B64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function jwtExp(token: string): number | null {
+  try {
+    const seg = token.split('.')[1];
+    if (!seg) return null;
+    const b64 = seg.replace(/-/g, '+').replace(/_/g, '/');
+    let bits = 0, val = 0, out = '';
+    for (const ch of b64) {
+      const idx = B64_ALPHABET.indexOf(ch);
+      if (idx === -1) continue;
+      val = (val << 6) | idx;
+      bits += 6;
+      if (bits >= 8) { bits -= 8; out += String.fromCharCode((val >> bits) & 0xff); }
+    }
+    const claims = JSON.parse(out) as { exp?: number };
+    return typeof claims.exp === 'number' ? claims.exp : null;
+  } catch {
+    return null;
+  }
+}
+
 // Single-flight refresh: many in-flight requests may all 401 at once.
 let refreshInFlight: Promise<RefreshResponse> | null = null;
 
@@ -149,6 +175,31 @@ export async function apiPost<T>({ path, body, authed = true, idempotencyKey }: 
       throw new ApiError(0, { code: 'NETWORK_ERROR', message_fr: 'Connexion impossible' });
     }
   };
+
+  // Proactive refresh: an access token lives only 15 min. Optional-auth reads
+  // (list-comments and other public-but-personalized endpoints) return 200 even
+  // with an EXPIRED token — the server just treats the caller as anonymous — so
+  // the reactive 401 path below never fires and the app can sit on a stale token
+  // (symptom: comment hearts show empty after 15 min away, and a tap removes the
+  // real like). If the stored token is already expired and a refresh token
+  // exists, refresh BEFORE the call. refreshOnce is single-flight; on failure we
+  // fall through (the 401 path / anonymous read remains the backstop).
+  if (authed) {
+    const stored = await secure.get(SECURE_KEYS.authToken);
+    const exp = stored ? jwtExp(stored) : null;
+    if (exp !== null && exp * 1000 <= Date.now() + 30_000) {
+      const refresh = await secure.get(SECURE_KEYS.refreshToken);
+      if (refresh) {
+        try {
+          const next = await refreshOnce(refresh);
+          await secure.set(SECURE_KEYS.authToken, next.access_token);
+          await secure.set(SECURE_KEYS.refreshToken, next.refresh_token);
+        } catch {
+          /* fall through — reactive 401 refresh below is the backstop */
+        }
+      }
+    }
+  }
 
   let headers = await buildHeaders();
   let res = await send(headers);

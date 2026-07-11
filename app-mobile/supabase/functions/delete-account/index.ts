@@ -127,10 +127,17 @@ Deno.serve(makePost<Body>('/v1/account/delete', valid, async ({ sb, req }) => {
   await del('properties', (q) => q.update({ status: 'paused' }).eq('owner_id', userId).eq('status', 'active'));
 
   // Money-free bookings + pending visit requests: cancel rather than dangle.
+  // .is('stripe_pi_id', null) guards an 'accepted' booking that already has a
+  // captured-but-not-yet-webhooked charge (booking-sign-pay stamps stripe_pi_id
+  // while status is still 'accepted') — cancelling it here would strand the
+  // charge (review 2026-07-07). Such a booking is left for the webhook to
+  // settle → 'paid' (then the escrow guard above blocks deletion) or for the
+  // 24h PI sweep to clear its stripe_pi_id.
   await del('bookings', (q) =>
     q.update({ status: 'cancelled' })
       .or(`tenant_id.eq.${userId},landlord_id.eq.${userId}`)
-      .in('status', ['requested', 'accepted']));
+      .in('status', ['requested', 'accepted'])
+      .is('stripe_pi_id', null));
   await del('visit_requests', (q) => q.update({ status: 'cancelled' }).eq('buyer_id', userId).eq('status', 'pending'));
 
   if (cleanups.length > 0) {

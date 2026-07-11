@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Linking, ScrollView, View, Pressable, TextInput } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -11,13 +11,11 @@ import { Button } from '../../../src/components/primitives/Button';
 import { TopBar } from '../../../src/components/nav/TopBar';
 import { formatGNF } from '../../../src/lib/format';
 import { useToast } from '../../../src/components/feedback/Toast';
-import { useOrderWithIntent, usePlaceOrder } from '../../../src/data/queries/orders';
+import { useOrderWithIntent } from '../../../src/data/queries/orders';
 import { useCancelPendingPayment } from '../../../src/data/queries/payments';
 import { useCart } from '../../../src/stores/cart';
-import type { PaymentMethod } from '../../../src/data/types';
 
 const TTL_MS = 15 * 60 * 1000;
-const PHONE_RE = /^\d{9}$/;
 
 // P1 defensive: with the one-query design (useOrderWithIntent returns
 // {order, intent} in a single payload), INVALID is structurally impossible
@@ -53,12 +51,6 @@ function maskPhone(e164: string): string {
   return `+224 ${local.slice(0, 3)} •• ${local.slice(5, 7)} ${local.slice(7, 9)}`;
 }
 
-function formatLocalPhone(digits: string): string {
-  // 9 digits -> "6XX XX XX XX"
-  const d = digits.padEnd(9).slice(0, 9);
-  return `${d.slice(0, 3)} ${d.slice(3, 5)} ${d.slice(5, 7)} ${d.slice(7, 9)}`.trim();
-}
-
 export default function CheckoutConfirmRoute() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const { colors } = useTheme();
@@ -66,11 +58,6 @@ export default function CheckoutConfirmRoute() {
   const { show } = useToast();
   const { data, error, isLoading } = useOrderWithIntent(orderId);
   const cancel = useCancelPendingPayment();
-  const place = usePlaceOrder();
-
-  // Modifier UI state.
-  const [editingPhone, setEditingPhone] = useState(false);
-  const [newPhoneDigits, setNewPhoneDigits] = useState('');
 
   // Live countdown ticker (drives the mm:ss display only - no expiry trigger).
   const [now, setNow] = useState(Date.now());
@@ -199,32 +186,8 @@ export default function CheckoutConfirmRoute() {
     }
   }
 
-  async function handleModifierConfirm() {
-    if (!PHONE_RE.test(newPhoneDigits)) {
-      show(t('checkout.confirmEditPhoneInvalid'), 'danger');
-      return;
-    }
-    const newPhone = `+224${newPhoneDigits}`;
-    try {
-      await cancel.mutateAsync({ orderId: order!.id });
-      const result = await place.mutateAsync({
-        productId:     order!.productId,
-        quantity:      order!.quantity,
-        paymentMethod: order!.paymentMethod as PaymentMethod,
-        payerPhone:    newPhone,
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
-      router.replace(`/checkout/confirm/${result.order.id}` as any);
-    } catch {
-      show(t('checkout.confirmEditPhoneError'), 'danger');
-    }
-  }
-
-  // N2: only clear digits on the false→true transition.
-  function openModifier() {
-    if (!editingPhone) setNewPhoneDigits('');
-    setEditingPhone(true);
-  }
+  // Phone-edit flow removed with the Lengopay hosted-page migration (the number
+  // is entered on Lengopay's page now — an in-app edit was inert + destructive).
 
   // ─────────────────────────────────────────────────────────────────────────
   // WAIT state
@@ -236,59 +199,16 @@ export default function CheckoutConfirmRoute() {
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
           <Card padding={16} style={{ marginTop: 12 }}>
             <Row label={t('checkout.confirmRowMethod')} value={isCard ? t('checkout.card') : order.paymentMethod === 'orange-money' ? t('checkout.rails.orangeMoney') : t('checkout.rails.mtnMoney')} />
-            {!isCard && (
-            <Row
-              label={t('checkout.confirmRowNumber')}
-              value={editingPhone ? '' : (intent.payerPhone ? maskPhone(intent.payerPhone) : '—')}
-              right={
-                !editingPhone ? (
-                  <Pressable onPress={openModifier} hitSlop={6}>
-                    <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>{t('checkout.confirmEditPhone')}</Text>
-                  </Pressable>
-                ) : undefined
-              }
-            />
-            )}
-            {!isCard && editingPhone && (
-              <View style={{ marginTop: 8, padding: 12, borderRadius: 12, backgroundColor: colors.bgSunken }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>+224</Text>
-                  <TextInput
-                    keyboardType="number-pad"
-                    maxLength={9}
-                    value={newPhoneDigits}
-                    onChangeText={(t) => setNewPhoneDigits(t.replace(/\D/g, '').slice(0, 9))}
-                    placeholder={t('onboarding.phone.placeholder')}
-                    placeholderTextColor={colors.textFaint}
-                    style={{
-                      flex: 1, fontSize: 14, fontVariant: ['tabular-nums'],
-                      color: colors.text, paddingVertical: 6,
-                    }}
-                  />
-                </View>
-                <Text variant="micro" tone="muted" style={{ marginTop: 4, textTransform: 'none', letterSpacing: 0 }}>
-                  {t('checkout.confirmEditPhoneDisplayed', { phone: formatLocalPhone(newPhoneDigits) })}
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                  <Pressable
-                    onPress={() => setEditingPhone(false)}
-                    style={{ flex: 1, height: 40, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Text style={{ fontSize: 13, color: colors.text }}>{t('checkout.confirmEditPhoneCancel')}</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={handleModifierConfirm}
-                    disabled={!PHONE_RE.test(newPhoneDigits) || cancel.isPending || place.isPending}
-                    style={{
-                      flex: 1, height: 40, borderRadius: 10,
-                      backgroundColor: PHONE_RE.test(newPhoneDigits) ? colors.primary : colors.bgSunken,
-                      alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>{t('checkout.confirmEditPhoneConfirm')}</Text>
-                  </Pressable>
-                </View>
-              </View>
+            {/* Mobile-money is the Lengopay HOSTED-PAGE rail now: the buyer
+                enters + confirms their number ON Lengopay's page, so an in-app
+                « Modifier le numéro » is inert and only triggers a destructive
+                cancel+re-place (review 2026-07-07). The edit affordance is
+                removed; the number stays as read-only context. */}
+            {!isCard && intent.payerPhone && (
+              <Row
+                label={t('checkout.confirmRowNumber')}
+                value={maskPhone(intent.payerPhone)}
+              />
             )}
             <Row label={t('checkout.confirmRowAmount')} value={formatGNF(order.totalGnf)} />
           </Card>

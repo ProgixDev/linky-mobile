@@ -169,7 +169,9 @@ export function CityMapPicker({
   // Guinea city (unless they've already tapped one). On deny, nothing happens —
   // they pick manually. The Marché distance badge later reuses this grant
   // without ever prompting again.
-  const manuallyPicked = useRef(false);
+  // Seed from any pre-existing value: on the Edit-profile / address screens a
+  // city is already set, and auto-detect must NOT overwrite it (review 2026-07-07).
+  const manuallyPicked = useRef(!!value);
   const [locating, setLocating] = useState(false);
   const detectMyLocation = async (prompt: boolean) => {
     try {
@@ -199,9 +201,12 @@ export function CityMapPicker({
     }
   };
 
-  // Auto-request once when the map mounts (natural first moment).
+  // Auto-request once when the map mounts (natural first moment) — ONLY during
+  // fresh onboarding, where no city is chosen yet. When a value already exists
+  // (Edit profile, addresses), auto-detect would overwrite the city and, on
+  // screens that close the picker on change, snap it shut (review 2026-07-07).
   useEffect(() => {
-    if (HAS_MAPBOX_TOKEN) void detectMyLocation(true);
+    if (HAS_MAPBOX_TOKEN && !value) void detectMyLocation(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

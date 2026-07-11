@@ -9,6 +9,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { stripeClient } from '@shared/stripe.ts';
+import { getPaymentStatus } from '@shared/lengopay.ts';
 
 interface Body { order_id: string }
 
@@ -60,6 +61,26 @@ Deno.serve(makePost<Body>('/v1/payments/cancel-pending', valid, async ({ sb, bod
         console.error('[cancel-pending-payment] stripe PI cancel failed:', e);
         throwApi('RAIL_CANCEL_FAILED', 502, "Échec de l'annulation du paiement — réessaie.");
       }
+    }
+  }
+
+  // Lengopay has no cancel API, but a buyer can pay on the hosted page and
+  // THEN tap Annuler/Modifier before the cron poll flips the order — cancelling
+  // a paid order = money taken, escrow never credited (review 2026-07-07).
+  // Mirror the Stripe guard: check the rail status first ; if the payment
+  // already succeeded, refuse the cancel so polling can settle it to paid.
+  if (intent.rail === 'lengopay' && !intent.rail_intent_id.startsWith('pending-init-')) {
+    let railStatus: string | undefined;
+    try {
+      railStatus = (await getPaymentStatus(intent.rail_intent_id)).status;
+    } catch (e) {
+      // Don't block cancel on a rail hiccup — the 15-min TTL sweep is the
+      // backstop for a genuinely paid intent. Only swallow the fetch failure.
+      console.error('[cancel-pending-payment] lengopay status check failed (proceeding):', e);
+    }
+    // Throw OUTSIDE the try so the refusal isn't caught by the fetch handler.
+    if (railStatus === 'success') {
+      throwApi('PAYMENT_ALREADY_COMPLETED', 409, "Le paiement vient d'aboutir — ta commande est confirmée.");
     }
   }
 
