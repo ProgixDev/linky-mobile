@@ -20,7 +20,7 @@ Deno.serve(makePost<Body>('/v1/admin/users/list', valid, async ({ sb, body, req 
   await assertAdmin(sb, userId);
 
   let q = sb.from('users')
-    .select('id, display_name, avatar_url, kyc_status, is_admin, created_at')
+    .select('id, display_name, avatar_url, kyc_status, is_admin, status, created_at')
     .order('created_at', { ascending: false })
     .limit(100);
   const search = body.search?.trim();

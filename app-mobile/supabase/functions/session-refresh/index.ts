@@ -67,6 +67,17 @@ Deno.serve(makePost<Body>('/v1/session/refresh', valid, async ({ sb, body, req }
     throwApi('REFRESH_TOKEN_REUSE_DETECTED', 401, 'Sessions révoquées. Reconnecte-toi.');
   }
 
+  // Lock out a suspended/deleted account: a live session must die on its next
+  // refresh (≤15 min after suspension, the access-token TTL) — otherwise a
+  // banned user keeps working until their refresh token expires days later.
+  // admin-set-user-status also deletes sessions for immediate effect; this is
+  // the belt-and-suspenders guard.
+  const { data: statusRow } = await sb.from('users').select('status').eq('id', session.user_id).maybeSingle();
+  if (statusRow && (statusRow as { status?: string }).status !== 'active') {
+    await sb.from('sessions').update({ revoked_at: new Date().toISOString() }).eq('user_id', session.user_id);
+    throwApi('ACCOUNT_SUSPENDED', 403, 'Ce compte a été suspendu. Contacte le support Linky.');
+  }
+
   const { token: access_token } = await signAccessToken(session.user_id, jwtSecret);
   const newSecret = randomRefreshToken();
   const newHash = await bcryptHash(newSecret);

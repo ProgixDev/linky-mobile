@@ -13,6 +13,7 @@ import {
   Truck,
   PackageCheck,
   CalendarCheck,
+  ShieldAlert,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -43,6 +44,7 @@ const NAV: { section: string; items: Item[] }[] = [
       { href: '/candidatures', label: 'Candidatures livreurs', Icon: Truck },
       { href: '/livraisons', label: 'Livraisons', Icon: PackageCheck },
       { href: '/withdrawals', label: 'Retraits', Icon: Banknote },
+      { href: '/moderation', label: 'Modération', Icon: ShieldAlert },
     ],
   },
 ];

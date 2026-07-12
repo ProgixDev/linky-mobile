@@ -93,6 +93,15 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
     await sb.from('users').update({ origin_app: 'driver' }).eq('id', userId);
   }
 
+  // Suspended / deleted accounts cannot obtain a session — the mobile OTP path
+  // must enforce this like email-signin already does, otherwise admin
+  // suspension is toothless. A brand-new account defaults to 'active', so
+  // signup is unaffected. Checked BEFORE the session is created.
+  const { data: statusRow } = await sb.from('users').select('status').eq('id', userId).maybeSingle();
+  if (statusRow && (statusRow as { status?: string }).status !== 'active') {
+    throwApi('ACCOUNT_SUSPENDED', 403, 'Ce compte a été suspendu. Contacte le support Linky.');
+  }
+
   const { token: access_token } = await signAccessToken(userId, jwtSecret);
   // Refresh token format: "<session_id>.<secret>". Embedding the session id lets refresh look up
   // the row by primary key instead of scanning every session by hash.
