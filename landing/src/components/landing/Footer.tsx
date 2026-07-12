@@ -36,6 +36,7 @@ const LINKS: { title: string; items: { label: string; href: string }[] }[] = [
       { label: 'Politique de confidentialité', href: '/legal/privacy' },
       { label: 'Mentions légales', href: '/legal/notices' },
       { label: 'Cookies', href: '/legal/cookies' },
+      { label: 'Suppression de compte', href: '/legal/suppression-compte' },
     ],
   },
 ];
