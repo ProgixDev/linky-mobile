@@ -69,9 +69,11 @@ export default function PrivacyPage() {
             heading: 'Tes droits',
             body: (
               <p>
-                Tu peux à tout moment accéder à tes données, les modifier, les
-                exporter, ou demander leur suppression. Va dans{' '}
-                <strong>Profil → Confidentialité → Mes données</strong>.
+                Tu peux à tout moment accéder à tes données, les modifier ou
+                demander leur suppression directement dans{' '}
+                <strong>Profil → Confidentialité</strong>. Pour obtenir une copie
+                de tes données (export), écris-nous à{' '}
+                <strong>privacy@linky.gn</strong> — nous répondons sous 30 jours.
               </p>
             ),
           },

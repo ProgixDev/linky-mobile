@@ -67,7 +67,9 @@ function CommentsFeed() {
             <p className="mt-1 break-words text-sm text-[#0E1311]">{c.body}</p>
           </div>
           <DeleteBtn
-            pending={del.isPending}
+            // Only the row being deleted disables — the shared mutation's
+            // `variables` tells us which id is in flight.
+            pending={del.isPending && del.variables?.comment_id === c.id}
             onClick={() => {
               if (!window.confirm('Supprimer ce commentaire ? Ses réponses et likes seront aussi supprimés.')) return;
               del.mutate({ comment_id: c.id });
@@ -105,7 +107,8 @@ function ReviewsFeed() {
             {r.comment && <p className="mt-1 break-words text-sm text-[#0E1311]">{r.comment}</p>}
           </div>
           <DeleteBtn
-            pending={del.isPending}
+            // Only the row being deleted disables (see CommentsFeed note).
+            pending={del.isPending && del.variables?.review_id === r.id}
             onClick={() => {
               if (!window.confirm('Supprimer cet avis ? La note de la boutique sera recalculée.')) return;
               del.mutate({ review_id: r.id });

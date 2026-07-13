@@ -220,7 +220,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
     const { data: bk, error: bkErr } = await sb
       .from('bookings')
-      .select('total_minor, currency, status, landlord_id, tenant_id, property_snapshot')
+      .select('total_minor, currency, status, landlord_id, tenant_id, property_snapshot, stripe_pi_id')
       .eq('id', bookingId)
       .maybeSingle();
     if (bkErr) {
@@ -244,11 +244,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return json({ received: true, booking_noncomplete: true }, 200);
     }
     if (bk.status !== 'accepted') {
-      // A SUCCEEDED charge for a booking that is already past 'accepted' means
-      // Stripe holds money we did not credit (double-PI edge case) — that
-      // charge needs a manual refund. Scream, don't swallow.
-      console.error('[stripe-webhook] CRITICAL booking charge on non-accepted booking — manual refund required', {
-        stripe_pi: pi.id, booking_id: bookingId, booking_status: bk.status, amount: pi.amount,
+      // Stripe delivers payment_intent.succeeded at-least-once. The common case
+      // here is a benign DUPLICATE of the PI we already settled (booking flipped
+      // accepted → paid on the first delivery): same PI, no money issue → quiet
+      // ack. Do NOT scream for a refund on a correctly-paid booking.
+      if (bk.stripe_pi_id === pi.id) {
+        return json({ received: true, booking_already_paid: true }, 200);
+      }
+      // A DIFFERENT succeeded PI for an already-settled booking means Stripe
+      // holds money we did not credit (double-PI edge case) — that charge needs
+      // a manual refund. This is the only case that warrants the alarm.
+      console.error('[stripe-webhook] CRITICAL booking charge via unexpected PI on settled booking — manual refund required', {
+        stripe_pi: pi.id, booking_id: bookingId, booking_status: bk.status,
+        settled_pi: bk.stripe_pi_id, amount: pi.amount,
       });
       return json({ received: true, booking_already: true }, 200);
     }

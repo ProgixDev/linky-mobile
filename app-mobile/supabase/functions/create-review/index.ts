@@ -80,6 +80,10 @@ Deno.serve(makePost<Body>('/v1/reviews/create', valid, async ({ sb, body, req })
   await sb.from('shops').update({ rating: avg, review_count: count }).eq('id', order.shop_id);
 
   // Tell the seller they got a new review (best-effort; never blocks the rating).
+  // NB: no refType/refId — the notifications_ref_type_check constraint only
+  // allows order/conversation/visit_request/booking, and 'shop' would make the
+  // durable INSERT fail silently (killing the seller's only signal while push
+  // is inert). The deeplink alone drives tap-routing to the shop.
   notifyDetached(sb, {
     userIds: [order.seller_id],
     category: 'order',
@@ -87,8 +91,6 @@ Deno.serve(makePost<Body>('/v1/reviews/create', valid, async ({ sb, body, req })
     body: `Un client t'a laissé un avis ${body.rating}/5 sur ta boutique.`,
     iconHint: 'star',
     deeplink: `/shop/${order.shop_id}`,
-    refType: 'shop',
-    refId: order.shop_id,
   });
 
   return { body: { ok: true, rating: avg, reviewCount: count } };
