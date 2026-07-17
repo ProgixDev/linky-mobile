@@ -73,7 +73,7 @@ export default function PrivacyPage() {
                 demander leur suppression directement dans{' '}
                 <strong>Profil → Confidentialité</strong>. Pour obtenir une copie
                 de tes données (export), écris-nous à{' '}
-                <strong>privacy@linky.gn</strong> — nous répondons sous 30 jours.
+                <strong>privacy@linkygroup.com</strong> — nous répondons sous 30 jours.
               </p>
             ),
           },
@@ -114,7 +114,7 @@ export default function PrivacyPage() {
               <p>
                 Linky est réservée aux personnes de 18 ans et plus. Si tu
                 découvres qu&apos;un compte appartient à un mineur, signale-le
-                à <strong>privacy@linky.gn</strong>.
+                à <strong>privacy@linkygroup.com</strong>.
               </p>
             ),
           },
@@ -122,7 +122,7 @@ export default function PrivacyPage() {
             heading: 'Contact',
             body: (
               <p>
-                Toute question sur tes données : <strong>privacy@linky.gn</strong>.
+                Toute question sur tes données : <strong>privacy@linkygroup.com</strong>.
                 Notre Délégué à la Protection des Données répond sous 30 jours.
               </p>
             ),

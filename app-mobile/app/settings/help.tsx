@@ -55,7 +55,7 @@ export default function HelpRoute() {
             Icon={Mail}
             label={t('helpScreen.emailLabel')}
             sub={t('helpScreen.emailSub')}
-            onPress={() => Linking.openURL('mailto:support@linky.gn').catch(() => {})}
+            onPress={() => Linking.openURL('mailto:support@linkygroup.com').catch(() => {})}
             last
           />
         </Card>
@@ -81,7 +81,7 @@ export default function HelpRoute() {
             sub={t('helpScreen.securitySub')}
             onPress={() =>
               Linking.openURL(
-                'mailto:security@linky.gn?subject=' +
+                'mailto:security@linkygroup.com?subject=' +
                   encodeURIComponent(t('helpScreen.securitySubject')),
               ).catch(() => {})
             }
@@ -92,7 +92,7 @@ export default function HelpRoute() {
             sub={t('helpScreen.bugSub')}
             onPress={() =>
               Linking.openURL(
-                'mailto:support@linky.gn?subject=' +
+                'mailto:support@linkygroup.com?subject=' +
                   encodeURIComponent(t('helpScreen.bugSubject')),
               ).catch(() => {})
             }
@@ -101,7 +101,7 @@ export default function HelpRoute() {
             Icon={Activity}
             label={t('helpScreen.statusLabel')}
             sub={t('helpScreen.statusSub')}
-            onPress={() => Linking.openURL('https://linky.gn/status').catch(() => {})}
+            onPress={() => Linking.openURL('https://linkygroup.com/status').catch(() => {})}
             last
           />
         </Card>

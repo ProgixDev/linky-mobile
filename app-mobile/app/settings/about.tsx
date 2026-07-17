@@ -126,14 +126,14 @@ export default function AboutRoute() {
             Icon={Globe}
             label={t('aboutScreen.websiteLabel')}
             sub={t('aboutScreen.websiteSub')}
-            onPress={() => Linking.openURL('https://linky.gn').catch(() => {})}
+            onPress={() => Linking.openURL('https://linkygroup.com').catch(() => {})}
             trailing={<ExternalLink size={14} color={colors.textFaint} strokeWidth={2} />}
           />
           <ActionRow
             Icon={Mail}
             label={t('aboutScreen.writeLabel')}
             sub={t('aboutScreen.writeSub')}
-            onPress={() => Linking.openURL('mailto:hello@linky.gn').catch(() => {})}
+            onPress={() => Linking.openURL('mailto:hello@linkygroup.com').catch(() => {})}
             trailing={<ExternalLink size={14} color={colors.textFaint} strokeWidth={2} />}
             last
           />

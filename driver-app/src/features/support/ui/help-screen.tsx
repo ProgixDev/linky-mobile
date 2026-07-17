@@ -4,7 +4,7 @@ import { logger } from '@/shared/lib/logger';
 import { AppText, Button, Card, Screen } from '@/shared/ui';
 
 // Linky support channels — replace with the real ones before release.
-const SUPPORT_EMAIL = 'support@linky.gn';
+const SUPPORT_EMAIL = 'support@linkygroup.com';
 const SUPPORT_WHATSAPP = '224620000000'; // digits only, country code first (no +)
 
 const FAQ: { q: string; a: string }[] = [

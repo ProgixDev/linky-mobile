@@ -42,7 +42,7 @@ export default function AccountDeletionPage() {
             body: (
               <p>
                 Si tu ne peux plus ouvrir l&apos;app, écris-nous à{' '}
-                <a href="mailto:support@linky.gn">support@linky.gn</a> depuis
+                <a href="mailto:support@linkygroup.com">support@linkygroup.com</a> depuis
                 l&apos;adresse e-mail (ou avec le numéro) de ton compte, avec
                 pour objet <strong>« Suppression de compte »</strong>. Nous
                 traitons la demande sous 30 jours.
@@ -92,7 +92,7 @@ export default function AccountDeletionPage() {
             body: (
               <p>
                 Une question sur tes données&nbsp;?{' '}
-                <a href="mailto:privacy@linky.gn">privacy@linky.gn</a>.
+                <a href="mailto:privacy@linkygroup.com">privacy@linkygroup.com</a>.
               </p>
             ),
           },

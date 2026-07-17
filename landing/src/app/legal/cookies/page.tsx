@@ -91,7 +91,7 @@ export default function CookiesPage() {
             body: (
               <p>
                 Pour toute question sur l&apos;usage des cookies :{' '}
-                <a href="mailto:privacy@linky.gn">privacy@linky.gn</a>.
+                <a href="mailto:privacy@linkygroup.com">privacy@linkygroup.com</a>.
               </p>
             ),
           },

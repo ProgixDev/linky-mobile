@@ -36,10 +36,10 @@ export default function PressPage() {
             </p>
           </div>
           <a
-            href="mailto:press@linky.gn"
+            href="mailto:press@linkygroup.com"
             className="inline-flex h-12 items-center justify-center rounded-xl bg-[#e8a53d] px-6 text-sm font-bold text-[#0E1311] hover:opacity-90"
           >
-            press@linky.gn
+            press@linkygroup.com
           </a>
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function PressPage() {
         ].map((k) => (
           <a
             key={k.t}
-            href="mailto:press@linky.gn?subject=Kit%20de%20marque%20Linky"
+            href="mailto:press@linkygroup.com?subject=Kit%20de%20marque%20Linky"
             className="block rounded-2xl bg-white p-6 ring-1 ring-[#E5DED1] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-16px_rgba(14,19,17,0.15)]"
           >
             <h3 className="font-display text-lg font-bold tracking-tight">

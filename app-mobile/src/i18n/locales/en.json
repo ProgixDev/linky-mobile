@@ -1490,7 +1490,7 @@
       "toggleProfilePublic": "Public profile",
       "toggleProfilePublicSub": "Other users can see your name and listings.",
       "downloadLabel": "Download my data",
-      "downloadSub": "Coming soon — for now, email us at support@linky.gn.",
+      "downloadSub": "Coming soon — for now, email us at support@linkygroup.com.",
       "deleteLabel": "Delete my account",
       "deleteSub": "Permanently delete your account and free your number / email.",
       "deleteConfirmTitle": "Delete my account",
@@ -1512,9 +1512,9 @@
     "instagramLabel": "Instagram",
     "instagramSub": "@linkyapp",
     "websiteLabel": "Website",
-    "websiteSub": "linky.gn",
+    "websiteSub": "linkygroup.com",
     "writeLabel": "Write to us",
-    "writeSub": "hello@linky.gn",
+    "writeSub": "hello@linkygroup.com",
     "madeWith": "Made with",
     "atConakry": "in Conakry."
   },
@@ -1525,7 +1525,7 @@
     "sectionFaq": "FAQs",
     "sectionDeep": "Deeper help",
     "emailLabel": "Send an email",
-    "emailSub": "support@linky.gn",
+    "emailSub": "support@linkygroup.com",
     "securityLabel": "Report a security issue",
     "securitySub": "Hacked account, fraud, inappropriate content.",
     "securitySubject": "Linky security report",
@@ -1585,9 +1585,9 @@
     "priv7H": "Cookies and identifiers",
     "priv7B": "The app uses technical identifiers to work (session, preferences) and, if you allow, analytics identifiers to understand how Linky is used.",
     "priv8H": "Minors",
-    "priv8B": "Linky is reserved for people 18 and over. If you find that an account belongs to a minor, report it immediately to privacy@linky.gn.",
+    "priv8B": "Linky is reserved for people 18 and over. If you find that an account belongs to a minor, report it immediately to privacy@linkygroup.com.",
     "priv9H": "Contact",
-    "priv9B": "Any question about your data: privacy@linky.gn. Our Data Protection Officer answers within 30 days."
+    "priv9B": "Any question about your data: privacy@linkygroup.com. Our Data Protection Officer answers within 30 days."
   },
   "languages": {
     "fr": "Français",

@@ -83,10 +83,10 @@ export default function SecurityPage() {
             </p>
           </div>
           <a
-            href="mailto:security@linky.gn"
+            href="mailto:security@linkygroup.com"
             className="inline-flex h-12 items-center justify-center rounded-xl bg-[#e8a53d] px-6 text-sm font-bold text-[#0E1311] hover:opacity-90"
           >
-            security@linky.gn
+            security@linkygroup.com
           </a>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function SecurityPage() {
           'Change immédiatement ton mot de passe (Profil → Sécurité → Mot de passe).',
           'Active la 2FA si ce n\'est pas déjà fait.',
           'Vérifie l\'historique de connexion (Profil → Sécurité → Sessions).',
-          'Contacte support@linky.gn en précisant ton numéro de téléphone.',
+          'Contacte support@linkygroup.com en précisant ton numéro de téléphone.',
         ].map((s, i) => (
           <li
             key={s}

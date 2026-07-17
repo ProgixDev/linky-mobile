@@ -126,7 +126,7 @@ export default function HelpPage() {
             Contacter l&apos;équipe
           </a>
           <span className="text-xs text-white/55">
-            support@linky.gn · +224 622 00 00 00
+            support@linkygroup.com · +224 622 00 00 00
           </span>
         </div>
       </div>

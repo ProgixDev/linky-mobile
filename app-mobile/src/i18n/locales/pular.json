@@ -1490,7 +1490,7 @@
       "toggleProfilePublic": "Profil public",
       "toggleProfilePublicSub": "Les autres utilisateurs peuvent voir ton nom et tes annonces.",
       "downloadLabel": "Télécharger mes données",
-      "downloadSub": "Bientôt — pour l'instant, écris-nous à support@linky.gn.",
+      "downloadSub": "Bientôt — pour l'instant, écris-nous à support@linkygroup.com.",
       "deleteLabel": "Supprimer mon compte",
       "deleteSub": "Supprime définitivement ton compte et libère ton numéro / e-mail.",
       "deleteConfirmTitle": "Supprimer mon compte",
@@ -1512,9 +1512,9 @@
     "instagramLabel": "Instagram",
     "instagramSub": "@linkyapp",
     "websiteLabel": "Site web",
-    "websiteSub": "linky.gn",
+    "websiteSub": "linkygroup.com",
     "writeLabel": "Nous écrire",
-    "writeSub": "hello@linky.gn",
+    "writeSub": "hello@linkygroup.com",
     "madeWith": "Fait avec",
     "atConakry": "à Conakry."
   },
@@ -1525,7 +1525,7 @@
     "sectionFaq": "Questions fréquentes",
     "sectionDeep": "Aide approfondie",
     "emailLabel": "Envoyer un email",
-    "emailSub": "support@linky.gn",
+    "emailSub": "support@linkygroup.com",
     "securityLabel": "Signaler un problème de sécurité",
     "securitySub": "Compte piraté, fraude, contenu inapproprié.",
     "securitySubject": "Signalement sécurité Linky",
@@ -1585,9 +1585,9 @@
     "priv7H": "Cookies et identifiants",
     "priv7B": "L'app utilise des identifiants techniques pour fonctionner (session, préférences) et, si tu l'autorises, des identifiants d'analyse pour comprendre comment Linky est utilisé.",
     "priv8H": "Mineurs",
-    "priv8B": "Linky est réservée aux personnes de 18 ans et plus. Si tu découvres qu'un compte appartient à un mineur, signale-le immédiatement à privacy@linky.gn.",
+    "priv8B": "Linky est réservée aux personnes de 18 ans et plus. Si tu découvres qu'un compte appartient à un mineur, signale-le immédiatement à privacy@linkygroup.com.",
     "priv9H": "Contact",
-    "priv9B": "Toute question sur tes données : privacy@linky.gn. Notre Délégué à la Protection des Données te répond sous 30 jours."
+    "priv9B": "Toute question sur tes données : privacy@linkygroup.com. Notre Délégué à la Protection des Données te répond sous 30 jours."
   },
   "languages": {
     "fr": "Français",

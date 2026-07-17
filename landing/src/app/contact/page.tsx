@@ -11,25 +11,25 @@ const CHANNELS = [
   {
     t: 'Support utilisateurs',
     d: 'Pour acheteurs et vendeurs. Réponse < 1 h en semaine.',
-    addr: 'support@linky.gn',
+    addr: 'support@linkygroup.com',
     tag: 'support',
   },
   {
     t: 'Partenariats commerciaux',
     d: 'Distribution, intégrations, presse commerciale.',
-    addr: 'partners@linky.gn',
+    addr: 'partners@linkygroup.com',
     tag: 'business',
   },
   {
     t: 'Sécurité & signalements',
     d: 'Faille, compte piraté, contenu illicite.',
-    addr: 'security@linky.gn',
+    addr: 'security@linkygroup.com',
     tag: 'security',
   },
   {
     t: 'Presse & médias',
     d: 'Demandes presse, kit, interviews.',
-    addr: 'press@linky.gn',
+    addr: 'press@linkygroup.com',
     tag: 'press',
   },
 ];

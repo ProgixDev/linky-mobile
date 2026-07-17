@@ -92,7 +92,7 @@ export default function CareersPage() {
         {JOBS.map((j) => (
           <a
             key={j.title}
-            href={`mailto:jobs@linky.gn?subject=${encodeURIComponent(`Candidature — ${j.title}`)}`}
+            href={`mailto:jobs@linkygroup.com?subject=${encodeURIComponent(`Candidature — ${j.title}`)}`}
             className="flex items-center gap-4 rounded-2xl bg-white p-5 ring-1 ring-[#E5DED1] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-16px_rgba(14,19,17,0.15)] md:p-6"
           >
             <div className="flex-1">
@@ -140,10 +140,10 @@ export default function CareersPage() {
           embaucher. Envoie-nous un mot.
         </p>
         <a
-          href="mailto:jobs@linky.gn"
+          href="mailto:jobs@linkygroup.com"
           className="mt-5 inline-block rounded-xl bg-[#0e6e55] px-5 py-3 text-sm font-bold text-white hover:opacity-90"
         >
-          jobs@linky.gn
+          jobs@linkygroup.com
         </a>
       </div>
     </PageShell>

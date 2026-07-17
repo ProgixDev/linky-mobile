@@ -80,7 +80,7 @@ export default function StatusPage() {
     <PageShell
       eyebrow="Statut · live"
       title={anyDegraded ? 'Quelques services à surveiller.' : 'Tout est opérationnel.'}
-      subtitle="Mis à jour automatiquement toutes les 60 secondes. Pour s'abonner aux alertes : status@linky.gn"
+      subtitle="Mis à jour automatiquement toutes les 60 secondes. Pour s'abonner aux alertes : status@linkygroup.com"
     >
       {/* Global state banner */}
       <div

@@ -119,7 +119,7 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
 
   // Email via Resend — takes priority over the Gmail relay once BOTH
   // RESEND_API_KEY and RESEND_FROM are set. RESEND_FROM must be an address on
-  // a domain verified in the Resend dashboard (e.g. 'Linky <no-reply@linky.gn>');
+  // a domain verified in the Resend dashboard (e.g. 'Linky <no-reply@linkygroup.com>');
   // setting it before verification would break delivery, so the switch is
   // deliberately gated on that second variable.
   const resendKey = Deno.env.get('RESEND_API_KEY');

@@ -165,7 +165,7 @@ export default function LoginPage() {
                     type="email"
                     value={email}
                     onChange={setEmail}
-                    placeholder="ton@linky.gn"
+                    placeholder="ton@linkygroup.com"
                     autoComplete="email"
                   />
                   <Field
