@@ -4,6 +4,10 @@
     {
       "source": "/linky.apk",
       "destination": "https://njii6olstwjlpvas.public.blob.vercel-storage.com/linky.apk"
+    },
+    {
+      "source": "/linky-driver.apk",
+      "destination": "https://njii6olstwjlpvas.public.blob.vercel-storage.com/linky-driver.apk"
     }
   ],
   "headers": [
@@ -11,6 +15,13 @@
       "source": "/linky.apk",
       "headers": [
         { "key": "Content-Disposition", "value": "attachment; filename=\"linky.apk\"" },
+        { "key": "Content-Type", "value": "application/vnd.android.package-archive" }
+      ]
+    },
+    {
+      "source": "/linky-driver.apk",
+      "headers": [
+        { "key": "Content-Disposition", "value": "attachment; filename=\"linky-driver.apk\"" },
         { "key": "Content-Type", "value": "application/vnd.android.package-archive" }
       ]
     }
