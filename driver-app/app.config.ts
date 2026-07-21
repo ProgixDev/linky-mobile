@@ -192,10 +192,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // TODO(company): set after `eas init` + `eas update:configure`
     // url: 'https://u.expo.dev/<EAS_PROJECT_ID>',
   },
+  owner: 'linkyorg',
   extra: {
-    // Re-linked under @achrafprojix (achrafprojix@gmail.com) 2026-07-01 — fresh build quota.
+    // Re-linked under @linkyorg 2026-07-21 — fresh build quota (migration to client Supabase).
     eas: {
-      projectId: '031acb1f-7490-410d-ade7-11214ee170ce',
+      projectId: '8b8fdbe2-6af0-47bb-bc0b-7c5dfa1d6c88',
     },
   },
 });
