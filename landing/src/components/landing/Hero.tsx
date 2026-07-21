@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { ShieldCheck, Wallet, Sparkles } from 'lucide-react';
 import { AndroidDownloadButton } from './AndroidDownloadButton';
 import { AppStoreBadges } from './AppStoreBadges';
+import { ANDROID_APK_PATH, DRIVER_APK_PATH } from '@/lib/download';
 
 export function Hero() {
   return (
@@ -88,7 +89,22 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.15 }}
             className="mt-10 flex flex-col items-start gap-5"
           >
-            <AndroidDownloadButton variant="primary" />
+            <div className="flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center">
+              <AndroidDownloadButton
+                href={ANDROID_APK_PATH}
+                fileName="linky.apk"
+                kicker="Télécharger · Gratuit"
+                title="Linky"
+                variant="primary"
+              />
+              <AndroidDownloadButton
+                href={DRIVER_APK_PATH}
+                fileName="linky-driver.apk"
+                kicker="App livreur"
+                title="Linky Driver"
+                variant="secondary"
+              />
+            </div>
             <div className="flex flex-col gap-2.5">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-[#1E2825]/45">
                 Bientôt aussi sur

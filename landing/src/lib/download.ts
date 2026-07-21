@@ -17,5 +17,8 @@ export const ANDROID_APK_URL =
 // destination in vercel.json.
 export const ANDROID_APK_PATH = '/linky.apk';
 
+// Companion driver app — served the same way (Blob + vercel.json rewrite/headers).
+export const DRIVER_APK_PATH = '/linky-driver.apk';
+
 // Shown next to the download CTA so users know what they're getting.
 export const ANDROID_APK_LABEL = 'Android · APK';

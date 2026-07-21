@@ -1,5 +1,6 @@
 import { AppStoreBadges } from './AppStoreBadges';
 import { AndroidDownloadButton } from './AndroidDownloadButton';
+import { ANDROID_APK_PATH, DRIVER_APK_PATH } from '@/lib/download';
 
 export function CTABand() {
   return (
@@ -24,7 +25,22 @@ export function CTABand() {
             </p>
 
             <div className="mt-10 flex flex-col items-center gap-6">
-              <AndroidDownloadButton variant="onDark" />
+              <div className="flex flex-col flex-wrap justify-center gap-3 sm:flex-row sm:items-center">
+                <AndroidDownloadButton
+                  href={ANDROID_APK_PATH}
+                  fileName="linky.apk"
+                  kicker="Télécharger · Gratuit"
+                  title="Linky"
+                  variant="onDark"
+                />
+                <AndroidDownloadButton
+                  href={DRIVER_APK_PATH}
+                  fileName="linky-driver.apk"
+                  kicker="App livreur"
+                  title="Linky Driver"
+                  variant="onDarkGhost"
+                />
+              </div>
               <div className="flex flex-col items-center gap-2.5">
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-white/50">
                   Bientôt sur les stores
