@@ -12,9 +12,9 @@
       "env": {
         "APP_VARIANT": "development",
         "EXPO_PUBLIC_APP_ENV": "development",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
-        "EXPO_PUBLIC_API_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_po_kl-ezVok6uIgkaq67gQ_AmX_SLPm",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mkaddhcjneilvwqethjo.supabase.co",
+        "EXPO_PUBLIC_API_URL": "https://mkaddhcjneilvwqethjo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_imvOZli1yEDOhQ0xjOkBug_SGi_j9M2",
         "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoibGlua3kyMDI2IiwiYSI6ImNtcjQxZGRwdzA4NTIyeXNhbmkyeGo4dDYifQ.d7iWc6darW_rMRCDG-s_PQ"
       }
     },
@@ -31,9 +31,9 @@
       "env": {
         "APP_VARIANT": "preview",
         "EXPO_PUBLIC_APP_ENV": "preview",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
-        "EXPO_PUBLIC_API_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_po_kl-ezVok6uIgkaq67gQ_AmX_SLPm",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mkaddhcjneilvwqethjo.supabase.co",
+        "EXPO_PUBLIC_API_URL": "https://mkaddhcjneilvwqethjo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_imvOZli1yEDOhQ0xjOkBug_SGi_j9M2",
         "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoibGlua3kyMDI2IiwiYSI6ImNtcjQxZGRwdzA4NTIyeXNhbmkyeGo4dDYifQ.d7iWc6darW_rMRCDG-s_PQ"
       }
     },
@@ -44,9 +44,9 @@
       "env": {
         "APP_VARIANT": "production",
         "EXPO_PUBLIC_APP_ENV": "production",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
-        "EXPO_PUBLIC_API_URL": "https://fvvqgcsphwrmdlclnxcz.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_po_kl-ezVok6uIgkaq67gQ_AmX_SLPm",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mkaddhcjneilvwqethjo.supabase.co",
+        "EXPO_PUBLIC_API_URL": "https://mkaddhcjneilvwqethjo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_imvOZli1yEDOhQ0xjOkBug_SGi_j9M2",
         "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoibGlua3kyMDI2IiwiYSI6ImNtcjQxZGRwdzA4NTIyeXNhbmkyeGo4dDYifQ.d7iWc6darW_rMRCDG-s_PQ"
       }
     }
