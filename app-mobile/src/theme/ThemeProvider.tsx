@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Appearance, View } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import { colorScheme } from 'nativewind';
 import {
   type Colors,
@@ -32,16 +32,13 @@ const ThemeContext = createContext<Ctx | null>(null);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const stored = storage.getString(STORAGE_KEYS.themePreference) as ThemePreference | undefined;
   const [preference, setPreferenceState] = useState<ThemePreference>(stored ?? 'system');
-  const [systemTheme, setSystemTheme] = useState<ThemeName>(
-    () => (Appearance.getColorScheme() ?? 'light') as ThemeName,
-  );
-
-  useEffect(() => {
-    const sub = Appearance.addChangeListener(({ colorScheme: cs }) => {
-      setSystemTheme((cs ?? 'light') as ThemeName);
-    });
-    return () => sub.remove();
-  }, []);
+  // useColorScheme() is the reactive, RN-recommended source of the OS theme: it
+  // re-renders when the value resolves (Android can report null on the very
+  // first frame) and on every OS light/dark switch. Fixes "System stuck on
+  // light" when the device booted in dark mode (client 2026-07-26) — the old
+  // one-shot Appearance.getColorScheme() read never corrected a null-at-init.
+  const systemScheme = useColorScheme();
+  const systemTheme: ThemeName = systemScheme === 'dark' ? 'dark' : 'light';
 
   const theme: ThemeName = preference === 'system' ? systemTheme : preference;
 
