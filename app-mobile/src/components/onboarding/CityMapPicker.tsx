@@ -115,9 +115,7 @@ export function CityMapPicker({
     'Conakry') as Region;
   const [activeRegion, setActiveRegion] = useState<Region>(initialRegion);
   const regionScrollRef = useRef<ScrollView | null>(null);
-  const cityScrollRef = useRef<ScrollView | null>(null);
   const regionTabLayouts = useRef<Record<string, { x: number; w: number }>>({});
-  const cityChipLayouts = useRef<Record<string, { x: number; w: number }>>({});
   const cameraRef = useRef<Camera>(null);
 
   const selectedCity = useMemo(
@@ -125,25 +123,13 @@ export function CityMapPicker({
     [value],
   );
 
-  const citiesInRegion = useMemo(
-    () => GUINEA_CITIES.filter((c) => c.region === activeRegion),
-    [activeRegion],
-  );
-
-  // Keep the active region tab and selected city chip in view
+  // Keep the active region tab in view.
   useEffect(() => {
     const r = regionTabLayouts.current[activeRegion];
     if (r && regionScrollRef.current) {
       regionScrollRef.current.scrollTo({ x: Math.max(0, r.x - 16), animated: true });
     }
   }, [activeRegion]);
-
-  useEffect(() => {
-    const c = cityChipLayouts.current[value];
-    if (c && cityScrollRef.current) {
-      cityScrollRef.current.scrollTo({ x: Math.max(0, c.x - 16), animated: true });
-    }
-  }, [value, activeRegion]);
 
   // Pan/zoom the map whenever the selected city changes
   useEffect(() => {
@@ -266,6 +252,18 @@ export function CityMapPicker({
                 onPress={() => {
                   haptic.selection();
                   setActiveRegion(r);
+                  // City sub-list removed (client 2026-07-26) — tapping a region
+                  // recenters the map there so the user picks the city on the map
+                  // (a marker or any point).
+                  const cap = GUINEA_CITIES.find((c) => c.name === r)
+                    ?? GUINEA_CITIES.find((c) => c.region === r);
+                  if (cap) {
+                    cameraRef.current?.setCamera({
+                      centerCoordinate: [cap.lng, cap.lat],
+                      zoomLevel: 7,
+                      animationDuration: 600,
+                    });
+                  }
                 }}
                 style={{
                   height: 32,
@@ -285,56 +283,6 @@ export function CityMapPicker({
                   }}
                 >
                   {r}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* City chips for the active region */}
-      <View style={{ height: 36 }}>
-        <ScrollView
-          ref={cityScrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 2, gap: 6, alignItems: 'center' }}
-        >
-          {citiesInRegion.map((c) => {
-            const on = c.name === value;
-            return (
-              <Pressable
-                key={c.name}
-                onLayout={(e) => {
-                  cityChipLayouts.current[c.name] = {
-                    x: e.nativeEvent.layout.x,
-                    w: e.nativeEvent.layout.width,
-                  };
-                }}
-                onPress={() => handleSelect(c.name)}
-                style={{
-                  height: 32,
-                  paddingHorizontal: 12,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: on ? colors.primary : colors.border,
-                  backgroundColor: on ? colors.primarySoft : colors.card,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                }}
-              >
-                {on && <Check size={12} color={colors.primary} strokeWidth={3} />}
-                <Text
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: '600',
-                    color: on ? colors.primaryDeep : colors.text,
-                    letterSpacing: 0.1,
-                  }}
-                >
-                  {c.name}
                 </Text>
               </Pressable>
             );
