@@ -13,10 +13,9 @@ import * as Localization from 'expo-localization';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import fr from './locales/fr.json';
 import en from './locales/en.json';
-import pular from './locales/pular.json';
-import sousou from './locales/sousou.json';
+import es from './locales/es.json';
 
-export const SUPPORTED_LOCALES = ['fr', 'en', 'pular', 'sousou'] as const;
+export const SUPPORTED_LOCALES = ['fr', 'en', 'es'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 function isSupported(code: string | undefined | null): code is Locale {
@@ -45,8 +44,7 @@ void i18n.use(initReactI18next).init({
   resources: {
     fr: { translation: fr },
     en: { translation: en },
-    pular: { translation: pular },
-    sousou: { translation: sousou },
+    es: { translation: es },
   },
   lng: resolveInitialLocale(),
   fallbackLng: 'fr',

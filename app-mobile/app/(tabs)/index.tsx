@@ -9,6 +9,7 @@ import { NoiseOverlay } from '../../src/components/visuals/NoiseOverlay';
 import { WALLET_TOPUP_ENABLED } from '../../src/lib/flags';
 import {
   Bell,
+  Heart,
   ShoppingBag,
   Plus,
   Store,
@@ -260,8 +261,15 @@ function BuyerHome() {
               {firstName} 👋
             </Text>
           </View>
-          {/* Vendre removed from the header (client 2026-07-06) — publishing
-              is reached via the pro dashboard / Profil rôles. */}
+          {/* Favoris / notifications / panier — the trio, kept consistent with
+              the Marché header (client 2026-07-26). Favoris was moved here off
+              the Profil screen. */}
+          <CircleAction
+            onPress={() => router.push('/favorites')}
+            accessibilityLabel={t('home.favorites')}
+          >
+            <Heart size={18} color={colors.text} strokeWidth={1.75} />
+          </CircleAction>
           <CircleAction
             onPress={() => router.push('/notifications')}
             accessibilityLabel={t('home.notifications')}

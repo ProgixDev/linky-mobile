@@ -18,7 +18,6 @@ import {
   LogOut,
   Package,
   CalendarDays,
-  Heart,
   Wallet,
   Pencil,
   Store,
@@ -59,7 +58,7 @@ function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAc
     out.push({ Icon: CalendarDays, label: t('profil.qa.demandes'), href: '/buyer/requests' });
     // Booking flow — tenant's rental bookings (location par jour / par mois).
     out.push({ Icon: CalendarCheck, label: t('profil.qa.reservations'), href: '/bookings' });
-    out.push({ Icon: Heart, label: t('profil.qa.favoris'), href: '/favorites' });
+    // Favoris moved to the Accueil / Marché header trio (client 2026-07-26).
   }
   if (isSeller) {
     out.push({ Icon: Store, label: t('profil.qa.ventes'), href: '/seller/orders' });
@@ -81,8 +80,7 @@ function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAc
 const LANGUAGE_LABELS: Record<string, string> = {
   fr: 'Français',
   en: 'English',
-  pular: 'Pular',
-  sousou: 'Sousou',
+  es: 'Español',
 };
 
 export default function ProfilRoute() {

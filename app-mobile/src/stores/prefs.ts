@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import i18n from '../i18n';
 
-export type Language = 'fr' | 'en' | 'pular' | 'sousou';
+export type Language = 'fr' | 'en' | 'es';
 
 interface PrefsState {
   dataSaver: boolean;

@@ -191,6 +191,7 @@
     "seeProp_other": "Voir {{count}} biens"
   },
   "home": {
+    "favorites": "Favoris",
     "greeting": "Bonjour,",
     "fallbackName": "Toi",
     "notifications": "Notifications",
@@ -443,6 +444,13 @@
     "errorRetry": "Réessayer"
   },
   "create": {
+    "videoLabel": "Vidéo (optionnel)",
+    "videoHint": "Une courte vidéo (60 s max) rassure les acheteurs. Filme en tenant le téléphone à l'horizontale, à la lumière du jour.",
+    "videoAdd": "Ajouter une vidéo",
+    "videoAdded": "Vidéo ajoutée",
+    "videoRemove": "Retirer la vidéo",
+    "videoTooLong": "Vidéo trop longue (60 s maximum).",
+    "videoUploadError": "Envoi de la vidéo échoué.",
     "selectKindTitle": "Que veux-tu publier ?",
     "kindProductTitle": "Un article",
     "kindProductDesc": "Mode, électronique, beauté…",
@@ -974,9 +982,23 @@
     "condReconditionne": "Reconditionné",
     "save": "Enregistrer",
     "successToast": "Annonce mise à jour.",
-    "errorToast": "Impossible de mettre à jour l'annonce."
+    "errorToast": "Impossible de mettre à jour l'annonce.",
+    "photosLabel": "Photos",
+    "addPhoto": "Ajouter",
+    "removePhoto": "Supprimer la photo",
+    "setCover": "Définir en couverture",
+    "coverBadge": "Couverture",
+    "photoPermission": "Autorise l'accès aux photos pour continuer.",
+    "uploadError": "Téléversement échoué."
   },
   "propertyEdit": {
+    "photosLabel": "Photos",
+    "addPhoto": "Ajouter",
+    "removePhoto": "Supprimer la photo",
+    "setCover": "Définir en couverture",
+    "coverBadge": "Couverture",
+    "photoPermission": "Autorise l'accès aux photos pour continuer.",
+    "uploadError": "Téléversement échoué.",
     "topbar": "Modifier le bien",
     "typeLabel": "Type de bien",
     "typeLocation": "Location",
@@ -1076,6 +1098,13 @@
     "pay": "Passer au paiement"
   },
   "checkout": {
+    "pay": {
+      "title": "Paiement",
+      "close": "Fermer",
+      "hint": "Termine le paiement ci-dessus, puis appuie sur « J'ai payé ».",
+      "done": "J'ai payé",
+      "missing": "Lien de paiement introuvable."
+    },
     "title": "Moyen de paiement",
     "sectionMobileMoney": "Mobile Money",
     "sectionOther": "Autres options",

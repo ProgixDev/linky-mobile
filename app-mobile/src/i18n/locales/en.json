@@ -191,6 +191,7 @@
     "seeProp_other": "See {{count}} properties"
   },
   "home": {
+    "favorites": "Favorites",
     "greeting": "Hi,",
     "fallbackName": "You",
     "notifications": "Notifications",
@@ -443,6 +444,13 @@
     "errorRetry": "Try again"
   },
   "create": {
+    "videoLabel": "Video (optional)",
+    "videoHint": "A short video (60s max) reassures buyers. Film holding the phone horizontally, in daylight.",
+    "videoAdd": "Add a video",
+    "videoAdded": "Video added",
+    "videoRemove": "Remove video",
+    "videoTooLong": "Video too long (60s maximum).",
+    "videoUploadError": "Video upload failed.",
     "selectKindTitle": "What do you want to publish?",
     "kindProductTitle": "An item",
     "kindProductDesc": "Fashion, electronics, beauty…",
@@ -974,9 +982,23 @@
     "condReconditionne": "Refurbished",
     "save": "Save",
     "successToast": "Listing updated.",
-    "errorToast": "Couldn't update the listing."
+    "errorToast": "Couldn't update the listing.",
+    "photosLabel": "Photos",
+    "addPhoto": "Add",
+    "removePhoto": "Remove photo",
+    "setCover": "Set as cover",
+    "coverBadge": "Cover",
+    "photoPermission": "Allow photo access to continue.",
+    "uploadError": "Upload failed."
   },
   "propertyEdit": {
+    "photosLabel": "Photos",
+    "addPhoto": "Add",
+    "removePhoto": "Remove photo",
+    "setCover": "Set as cover",
+    "coverBadge": "Cover",
+    "photoPermission": "Allow photo access to continue.",
+    "uploadError": "Upload failed.",
     "topbar": "Edit property",
     "typeLabel": "Property type",
     "typeLocation": "Rental",
@@ -1076,6 +1098,13 @@
     "pay": "Continue to payment"
   },
   "checkout": {
+    "pay": {
+      "title": "Payment",
+      "close": "Close",
+      "hint": "Complete the payment above, then tap \"I've paid\".",
+      "done": "I've paid",
+      "missing": "Payment link not found."
+    },
     "title": "Payment method",
     "sectionMobileMoney": "Mobile Money",
     "sectionOther": "Other options",

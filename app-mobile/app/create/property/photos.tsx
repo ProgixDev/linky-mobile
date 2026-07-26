@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Plus, Trash2, Star } from 'lucide-react-native';
+import { Camera, Film, Plus, Trash2, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -50,6 +50,8 @@ export default function PropertyPhotosRoute() {
   const requestUploadUrl = useRequestPhotoUploadUrl();
   const toast = useToast();
   const [uploading, setUploading] = useState(false);
+  const videoUrl = useCreateListing((s) => s.videoUrl);
+  const [videoUploading, setVideoUploading] = useState(false);
 
   const removeAt = (i: number) => {
     haptic.light();
@@ -132,6 +134,65 @@ export default function PropertyPhotosRoute() {
       setUploading(false);
     }
   }
+
+  // ── Optional property video (client 2026-07-26) ─────────────────────────
+  const MAX_VIDEO_SEC = 60;
+  const resolveVideoMime = (asset: ImagePicker.ImagePickerAsset): string => {
+    const m = asset.mimeType?.toLowerCase();
+    if (m === 'video/mp4' || m === 'video/quicktime' || m === 'video/webm') return m;
+    const ext = (asset.fileName || asset.uri).toLowerCase().split('.').pop() ?? '';
+    if (ext === 'mov') return 'video/quicktime';
+    if (ext === 'webm') return 'video/webm';
+    return 'video/mp4';
+  };
+  const videoExt = (mime: string): string =>
+    mime === 'video/quicktime' ? 'mov' : mime === 'video/webm' ? 'webm' : 'mp4';
+
+  async function pickVideo() {
+    if (videoUploading) return;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        toast.show(t('create.photosPermDenied'), 'danger');
+        return;
+      }
+      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'videos', quality: 0.7 });
+      if (picked.canceled || picked.assets.length === 0) return;
+      const asset = picked.assets[0];
+      // ImagePicker reports video duration in milliseconds. Guard the ~60s cap
+      // (a few seconds of tolerance) — long videos are painful to upload on 3G.
+      if (typeof asset.duration === 'number' && asset.duration > (MAX_VIDEO_SEC + 5) * 1000) {
+        toast.show(t('create.videoTooLong'), 'danger');
+        return;
+      }
+      setVideoUploading(true);
+      const contentType = resolveVideoMime(asset);
+      const filename = `video.${videoExt(contentType)}`;
+      const { upload_url, public_url } = await requestUploadUrl.mutateAsync({
+        kind: 'property-video',
+        filename,
+        content_type: contentType,
+      });
+      const blob = await (await fetch(asset.uri)).blob();
+      const putRes = await fetch(upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+        body: blob,
+      });
+      if (!putRes.ok) {
+        const raw = await putRes.text().catch(() => '');
+        console.error('[property-video] storage PUT failed', putRes.status, raw);
+        toast.show(t('create.videoUploadError'), 'danger');
+        return;
+      }
+      setVal('videoUrl', public_url);
+    } catch (e) {
+      toast.show(toToastMessage(e, t('create.videoUploadError')), 'danger');
+    } finally {
+      setVideoUploading(false);
+    }
+  }
+  const removeVideo = () => setVal('videoUrl', undefined);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -282,6 +343,78 @@ export default function PropertyPhotosRoute() {
               </>
             )}
           </Pressable>
+        </View>
+
+        {/* Vidéo (optionnel) — client 2026-07-26 */}
+        <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+            {t('create.videoLabel')}
+          </Text>
+          <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17, marginBottom: 10 }}>
+            {t('create.videoHint')}
+          </Text>
+          {videoUrl ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                padding: 12,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  backgroundColor: colors.primarySoft,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Film size={18} color={colors.primary} strokeWidth={2} />
+              </View>
+              <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>
+                {t('create.videoAdded')}
+              </Text>
+              <Pressable onPress={removeVideo} hitSlop={8} accessibilityLabel={t('create.videoRemove')}>
+                <Trash2 size={18} color={colors.danger} strokeWidth={2} />
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={pickVideo}
+              disabled={videoUploading}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                height: 50,
+                borderRadius: 14,
+                borderWidth: 2,
+                borderStyle: 'dashed',
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                opacity: videoUploading ? 0.6 : 1,
+              }}
+            >
+              {videoUploading ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : (
+                <>
+                  <Film size={18} color={colors.text} strokeWidth={2} />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                    {t('create.videoAdd')}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          )}
         </View>
 
         {/* Tip */}

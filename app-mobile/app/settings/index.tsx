@@ -10,8 +10,8 @@ import { haptic } from '../../src/lib/haptics';
 import { usePrefs } from '../../src/stores/prefs';
 import { useToast } from '../../src/components/feedback/Toast';
 
-type LangCode = 'fr' | 'en' | 'pular' | 'sousou';
-type FlagKind = 'fr' | 'gb' | 'gn';
+type LangCode = 'fr' | 'en' | 'es';
+type FlagKind = 'fr' | 'gb' | 'es';
 
 interface LangOption {
   code: LangCode;
@@ -25,8 +25,7 @@ interface LangOption {
 const LANGUAGES: LangOption[] = [
   { code: 'fr', label: 'Français', flag: 'fr' },
   { code: 'en', label: 'English', flag: 'gb' },
-  { code: 'pular', label: 'Pular', flag: 'gn' },
-  { code: 'sousou', label: 'Sousou', flag: 'gn' },
+  { code: 'es', label: 'Español', flag: 'es' },
 ];
 
 function Flag({ kind }: { kind: FlagKind }) {
@@ -49,20 +48,20 @@ function Flag({ kind }: { kind: FlagKind }) {
       </View>
     );
   }
-  if (kind === 'gn') {
+  if (kind === 'es') {
+    // Spain — horizontal red / yellow / red (yellow band twice as tall).
     return (
       <View
         style={{
           width: 24,
           height: 16,
           borderRadius: 3,
-          flexDirection: 'row',
           overflow: 'hidden',
         }}
       >
-        <View style={{ flex: 1, backgroundColor: '#CE1126' }} />
-        <View style={{ flex: 1, backgroundColor: '#FCD116' }} />
-        <View style={{ flex: 1, backgroundColor: '#009460' }} />
+        <View style={{ flex: 1, backgroundColor: '#AA151B' }} />
+        <View style={{ flex: 2, backgroundColor: '#F1BF00' }} />
+        <View style={{ flex: 1, backgroundColor: '#AA151B' }} />
       </View>
     );
   }
@@ -108,7 +107,7 @@ function Flag({ kind }: { kind: FlagKind }) {
 // "À venir" sub-label + "Bientôt disponible." toast on tap. The day the
 // client ships translations, drop them from this set and the rows
 // re-enable with zero other code changes.
-const LAUNCH_LANGUAGES = new Set(['fr', 'en']);
+const LAUNCH_LANGUAGES = new Set(['fr', 'en', 'es']);
 
 export default function SettingsRoute() {
   const { colors } = useTheme();

@@ -28,6 +28,7 @@ interface Body {
   lat?: number | null;
   lng?: number | null;
   photos?: PropertyPhotoBody[];
+  video_url?: string | null;
   status?: 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
 }
 
@@ -75,6 +76,8 @@ function valid(b: unknown): b is Body {
     if (!Array.isArray(x.photos) || x.photos.length === 0 || x.photos.length > 12) return false;
     if (!x.photos.every(validPhoto)) return false;
   }
+  if (x.video_url !== undefined && x.video_url !== null &&
+      (typeof x.video_url !== 'string' || !URL_RE.test(x.video_url))) return false;
   if (x.status !== undefined && !(STATUSES as readonly string[]).includes(x.status as string)) return false;
   return true;
 }
@@ -117,6 +120,7 @@ Deno.serve(makePost<Body>('/v1/properties/update', valid, async ({ sb, body, req
   if (body.distance_to_road_m !== undefined) patch.distance_to_road_m = body.distance_to_road_m;
   if (body.lat !== undefined)                patch.lat = body.lat;
   if (body.lng !== undefined)                patch.lng = body.lng;
+  if (body.video_url !== undefined)          patch.video_url = body.video_url === null ? null : body.video_url;
   if (body.status !== undefined)             patch.status = body.status;
 
   // Photos: atomic replacement via RPC. Pre-normalize positions to 0..N-1 so the

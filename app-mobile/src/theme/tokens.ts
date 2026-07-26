@@ -54,15 +54,17 @@ export const lightColors: Colors = {
 
 export const darkColors: Colors = {
   ...brand,
-  bg: '#0E1311',
-  bgElev: '#181E1B',
-  bgSunken: '#0A0E0D',
-  card: '#181E1B',
+  // Fully-black dark mode (client request 2026-07-22): true-black base surfaces,
+  // cards/sheets lifted just enough for depth. No washed-out green tint.
+  bg: '#000000',
+  bgElev: '#121212',
+  bgSunken: '#000000',
+  card: '#121212',
   text: '#F7F3EC',
   textMuted: '#94A39C',
   textFaint: '#6A746F',
-  border: '#26302C',
-  borderStrong: '#354039',
+  border: '#242424',
+  borderStrong: '#333333',
   primarySoft: '#14271F',
   accentSoft: '#2A2114',
 };

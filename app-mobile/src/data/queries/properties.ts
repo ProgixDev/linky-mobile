@@ -55,6 +55,7 @@ export interface CreatePropertyInput {
   lat?: number;
   lng?: number;
   photos: { url: string; storage_path: string; position: number }[];
+  video_url?: string | null;
 }
 
 export interface UpdatePropertyInput {

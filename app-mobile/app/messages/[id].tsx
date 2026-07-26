@@ -186,6 +186,10 @@ export default function ChatRoute() {
         ref={scrollRef}
         contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 14, gap: 8 }}
         showsVerticalScrollIndicator={false}
+        // Client 2026-07-22: dragging the thread dismisses the keyboard, and taps
+        // on the messages close it too (send button still works).
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
       >
         {data?.messages.map((m) => {

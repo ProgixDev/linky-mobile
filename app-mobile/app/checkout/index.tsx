@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
@@ -49,7 +49,9 @@ const METHOD_DEFS: { id: PaymentMethod; nameKey: string; hintKey: string; badge:
 export default function CheckoutRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const [selected, setSelected] = useState<PaymentMethod>('card');
+  // Default to mobile money — the real Guinea rail. Card (Stripe) is hidden
+  // (client 2026-07-26: Guinean cards are refused by Stripe).
+  const [selected, setSelected] = useState<PaymentMethod>('orange-money');
   const METHODS: MethodOption[] = useMemo(
     () =>
       METHOD_DEFS.map((m) => ({
@@ -79,7 +81,7 @@ export default function CheckoutRoute() {
   // the row unmounts — snap the selection back to card so the radio state,
   // info panel and the Payer action can never disagree with the visible UI.
   useEffect(() => {
-    if (selected === 'wallet' && !walletPayable) setSelected('card');
+    if (selected === 'wallet' && !walletPayable) setSelected('orange-money');
   }, [selected, walletPayable]);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   // Keeps the Payer button busy across the whole sheet flow (place-order →
@@ -230,95 +232,53 @@ export default function CheckoutRoute() {
           {t('checkout.rails.mobileMoneyNote')}
         </Text>
 
-        <MicroLabel label={t('checkout.sectionOther')} />
-        <Card padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
-          {/* Wallet restructure : the balance is funded by sales earnings only
-              (top-up removed), so the wallet rail only shows when there is
-              actually something to spend. Zero-balance buyers see card only. */}
-          {walletPayable && (
-          <Pressable
-            onPress={() => setSelected('wallet')}
-            style={{ padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}
-          >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: colors.primarySoft,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <I.wallet size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.walletLinky')}</Text>
-              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', fontVariant: ['tabular-nums'] }}>
-                {t('checkout.walletBalance', { amount: walletReady ? formatGNF(wallet!.balanceGnf) : '—' })}
-              </Text>
-            </View>
-            <View
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 999,
-                backgroundColor: selected === 'wallet' ? colors.primary : 'transparent',
-                borderWidth: selected === 'wallet' ? 0 : 1.5,
-                borderColor: colors.borderStrong,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {selected === 'wallet' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
-            </View>
-          </Pressable>
-          )}
-          <Pressable
-            onPress={() => setSelected('card')}
-            style={{
-              padding: 14,
-              flexDirection: 'row',
-              gap: 12,
-              alignItems: 'center',
-              borderTopWidth: walletPayable ? 1 : 0,
-              borderTopColor: colors.border,
-            }}
-          >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: '#635BFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <I.card size={18} color="#FFFFFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.card')}</Text>
-              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', fontVariant: ['tabular-nums'] }}>
-                {t('checkout.cardSub')}
-              </Text>
-            </View>
-            <View
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 999,
-                backgroundColor: selected === 'card' ? colors.primary : 'transparent',
-                borderWidth: selected === 'card' ? 0 : 1.5,
-                borderColor: colors.borderStrong,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {selected === 'card' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
-            </View>
-          </Pressable>
-        </Card>
+        {/* « Autre » = wallet only. Card (Stripe) removed from the UI — it
+            doesn't work for Guinean cards (client 2026-07-26). The section only
+            shows when the wallet has a spendable balance. */}
+        {walletPayable && (
+          <>
+            <MicroLabel label={t('checkout.sectionOther')} />
+            <Card padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
+              <Pressable
+                onPress={() => setSelected('wallet')}
+                style={{ padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}
+              >
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    backgroundColor: colors.primarySoft,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <I.wallet size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.walletLinky')}</Text>
+                  <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', fontVariant: ['tabular-nums'] }}>
+                    {t('checkout.walletBalance', { amount: walletReady ? formatGNF(wallet!.balanceGnf) : '—' })}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 999,
+                    backgroundColor: selected === 'wallet' ? colors.primary : 'transparent',
+                    borderWidth: selected === 'wallet' ? 0 : 1.5,
+                    borderColor: colors.borderStrong,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {selected === 'wallet' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
+                </View>
+              </Pressable>
+            </Card>
+          </>
+        )}
 
         <Card padding={12}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
@@ -353,19 +313,19 @@ export default function CheckoutRoute() {
               {
                 onSuccess: ({ order, intent }) => {
                   if (intent) {
-                    // Rail path: open Lengopay's hosted payment page (the buyer
-                    // picks Orange/MTN and approves there), then route to the
-                    // confirmation screen which polls until the cron flips the
-                    // intent. The wait screen re-offers the page if the buyer
-                    // closed the browser without paying.
-                    if (intent.paymentUrl) {
-                      Linking.openURL(intent.paymentUrl).catch(() => undefined);
-                    }
+                    // Rail path: the Lengopay page (Orange/MTN) opens IN-APP in
+                    // a WebView (client 2026-07-26) — no external browser. The
+                    // pay screen routes on to the confirmation screen, which
+                    // polls until the cron flips the intent.
                     // Phase U.3 — DO NOT clear cart yet ; the rail can still
                     // fail or be cancelled. Clear lives in the SUCCESS branch
                     // of confirm/[orderId].tsx.
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
-                    router.replace(`/checkout/confirm/${order.id}` as any);
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; routes exist on disk.
+                    if (intent.paymentUrl) {
+                      router.replace({ pathname: '/checkout/pay', params: { url: intent.paymentUrl, orderId: order.id } } as any);
+                    } else {
+                      router.replace(`/checkout/confirm/${order.id}` as any);
+                    }
                   } else {
                     // Wallet path (no intent): order already at status='paid'.
                     // Phase U.3 — wallet payment is instant + non-cancellable

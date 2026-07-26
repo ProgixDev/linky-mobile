@@ -31,6 +31,7 @@ import { Switch } from '../../src/components/primitives/Switch';
 import { Button } from '../../src/components/primitives/Button';
 import { Chip } from '../../src/components/primitives/Chip';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
+import { HeaderActions } from '../../src/components/nav/HeaderActions';
 import { haptic } from '../../src/lib/haptics';
 import { useFilters, hasActiveFilters } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
@@ -217,6 +218,11 @@ export default function MarcheRoute() {
       >
         {/* ===== Header ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
+          {/* Favoris / notifications / panier — same trio as the Accueil header
+              (client 2026-07-26). */}
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 }}>
+            <HeaderActions />
+          </View>
           <Text
             style={{
               fontSize: 32,

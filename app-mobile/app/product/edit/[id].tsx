@@ -1,10 +1,15 @@
-// Seller edits an existing product. Reachable from the boutique dashboard's
-// manage sheet. Covers every product field except photos (photo swap/reorder is
-// a separate flow). Wired to useUpdateProduct -> /product-update.
+// Seller edits an existing product. Reachable from the product detail page's
+// "Modifier" CTA and the boutique dashboard's manage sheet. Covers every
+// product field INCLUDING photos (client 2026-07-22 — previously photos could
+// only be changed by deleting + recreating the listing). Wired to
+// useUpdateProduct -> /product-update, which accepts a photos[] array.
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Plus, Star, Trash2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -16,9 +21,11 @@ import { Skeleton } from '../../../src/components/primitives/Skeleton';
 import { ErrorStateView } from '../../../src/components/feedback/EmptyState';
 import { CitySelectField } from '../../../src/components/forms/CitySelectField';
 import { useProduct, useUpdateProduct } from '../../../src/data/queries';
+import { useRequestPhotoUploadUrl } from '../../../src/data/queries/products';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 import { gnfToEur } from '../../../src/lib/currency';
+import { optimizePhoto } from '../../../src/lib/photoOptimize';
 
 const CONDITIONS = ['neuf', 'occasion', 'reconditionné'] as const;
 // Phase I.3j — stable backend ids ; the visible label is resolved at render
@@ -28,6 +35,31 @@ const CONDITION_LABEL_KEY: Record<(typeof CONDITIONS)[number], string> = {
   occasion: 'productEdit.condOccasion',
   reconditionné: 'productEdit.condReconditionne',
 };
+
+const MAX_PHOTOS = 8;
+const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+type AllowedMime = (typeof ALLOWED_MIMES)[number];
+
+// Backend filename regex is ^[A-Za-z0-9._-]{1,80}$ — strip anything else and
+// clamp from the tail (keeps the extension). Mirrors the create-photos flow.
+function sanitizeFilename(raw: string | null | undefined, fallbackExt: string): string {
+  const base = (raw ?? `photo.${fallbackExt}`).replace(/[^A-Za-z0-9._-]/g, '');
+  const trimmed = base.length > 80 ? base.slice(base.length - 80) : base;
+  return trimmed || `photo.${fallbackExt}`;
+}
+function resolveMime(asset: ImagePicker.ImagePickerAsset): AllowedMime {
+  const m = asset.mimeType?.toLowerCase();
+  if (m === 'image/jpeg' || m === 'image/png' || m === 'image/webp') return m;
+  const ext = (asset.fileName || asset.uri).toLowerCase().split('.').pop() ?? '';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  return 'image/jpeg';
+}
+function extForMime(m: AllowedMime): string {
+  if (m === 'image/png') return 'png';
+  if (m === 'image/webp') return 'webp';
+  return 'jpg';
+}
 
 export default function ProductEditRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,6 +74,7 @@ export default function ProductEditRoute() {
   );
   const productQuery = useProduct(id);
   const update = useUpdateProduct();
+  const requestUploadUrl = useRequestPhotoUploadUrl();
   const product = productQuery.data;
 
   const [title, setTitle] = useState('');
@@ -49,6 +82,8 @@ export default function ProductEditRoute() {
   const [price, setPrice] = useState(0);
   const [condition, setCondition] = useState<(typeof CONDITIONS)[number]>('occasion');
   const [city, setCity] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   if (product && !hydrated) {
@@ -57,9 +92,12 @@ export default function ProductEditRoute() {
     setPrice(product.priceGnf);
     setCondition(product.condition as (typeof CONDITIONS)[number]);
     setCity(product.city ?? '');
+    setPhotos(product.photos ?? []);
     setHydrated(true);
   }
 
+  const photosDirty =
+    hydrated && !!product && JSON.stringify(photos) !== JSON.stringify(product.photos ?? []);
   const dirty =
     hydrated &&
     !!product &&
@@ -67,8 +105,74 @@ export default function ProductEditRoute() {
       description.trim() !== product.description ||
       price !== product.priceGnf ||
       condition !== product.condition ||
-      city.trim() !== (product.city ?? ''));
-  const canSave = dirty && !!title.trim() && price > 0 && !!city.trim();
+      city.trim() !== (product.city ?? '') ||
+      photosDirty);
+  const canSave = dirty && !!title.trim() && price > 0 && !!city.trim() && photos.length >= 1;
+
+  // Optimize + upload one asset -> its public URL, or null on failure.
+  async function uploadAsset(asset: ImagePicker.ImagePickerAsset): Promise<string | null> {
+    const originalMime = resolveMime(asset);
+    const optimized = await optimizePhoto(asset.uri, originalMime);
+    const contentType = optimized.mimeType;
+    const filename = sanitizeFilename(asset.fileName, extForMime(contentType));
+    const { upload_url, public_url } = await requestUploadUrl.mutateAsync({
+      kind: 'product',
+      filename,
+      content_type: contentType,
+    });
+    const blob = await (await fetch(optimized.uri)).blob();
+    const putRes = await fetch(upload_url, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+      body: blob,
+    });
+    if (!putRes.ok) {
+      const raw = await putRes.text().catch(() => '');
+      console.error('[product-edit] storage PUT failed', putRes.status, raw);
+      return null;
+    }
+    return public_url;
+  }
+
+  async function addPhotos() {
+    if (uploading || photos.length >= MAX_PHOTOS) return;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        toast.show(t('productEdit.photoPermission'), 'danger');
+        return;
+      }
+      const remaining = MAX_PHOTOS - photos.length;
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        quality: 0.8,
+        allowsMultipleSelection: true,
+        selectionLimit: remaining,
+      });
+      if (picked.canceled || picked.assets.length === 0) return;
+      setUploading(true);
+      const toUpload = picked.assets.slice(0, remaining);
+      const uploaded: string[] = [];
+      for (const asset of toUpload) {
+        try {
+          const url = await uploadAsset(asset);
+          if (url) uploaded.push(url);
+        } catch (e) {
+          console.error('[product-edit] one asset failed:', e);
+        }
+      }
+      if (uploaded.length > 0) setPhotos((prev) => [...prev, ...uploaded]);
+      if (uploaded.length < toUpload.length) toast.show(t('productEdit.uploadError'), 'danger');
+    } catch (e) {
+      toast.show(toToastMessage(e, t('productEdit.uploadError')), 'danger');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const removeAt = (i: number) => setPhotos((prev) => prev.filter((_, idx) => idx !== i));
+  const makeCover = (i: number) =>
+    setPhotos((prev) => (i === 0 ? prev : [prev[i], ...prev.filter((_, idx) => idx !== i)]));
 
   async function onSave() {
     if (!canSave || update.isPending || !product) return;
@@ -80,6 +184,7 @@ export default function ProductEditRoute() {
         price_minor: price,
         condition,
         city: city.trim(),
+        ...(photosDirty ? { photos } : {}),
       });
       toast.show(t('productEdit.successToast'), 'success');
       if (router.canGoBack()) router.back();
@@ -114,8 +219,123 @@ export default function ProductEditRoute() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('productEdit.topbar')} back />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
           <View style={{ gap: 12, marginTop: 12 }}>
+            {/* Photos — add / remove / set cover, in place (client 2026-07-22) */}
+            <View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
+                  {t('productEdit.photosLabel')}
+                </Text>
+                <Text variant="micro" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
+                  {photos.length} / {MAX_PHOTOS}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {photos.map((uri, i) => (
+                  <View
+                    key={`${uri}-${i}`}
+                    style={{
+                      width: '31%',
+                      aspectRatio: 1,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      backgroundColor: colors.bgSunken,
+                      position: 'relative',
+                    }}
+                  >
+                    <Image source={{ uri }} style={{ flex: 1 }} contentFit="cover" />
+                    {i === 0 ? (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: 6,
+                          left: 6,
+                          paddingHorizontal: 7,
+                          height: 20,
+                          borderRadius: 999,
+                          backgroundColor: colors.accent,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 3,
+                        }}
+                      >
+                        <Star size={9} color="#2A1A05" fill="#2A1A05" />
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: '#2A1A05' }}>
+                          {t('productEdit.coverBadge')}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={() => makeCover(i)}
+                        style={{
+                          position: 'absolute',
+                          top: 6,
+                          left: 6,
+                          width: 24,
+                          height: 24,
+                          borderRadius: 999,
+                          backgroundColor: 'rgba(0,0,0,0.55)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                        accessibilityLabel={t('productEdit.setCover')}
+                      >
+                        <Star size={12} color="#FFFFFF" strokeWidth={2} />
+                      </Pressable>
+                    )}
+                    <Pressable
+                      onPress={() => removeAt(i)}
+                      style={{
+                        position: 'absolute',
+                        top: 6,
+                        right: 6,
+                        width: 24,
+                        height: 24,
+                        borderRadius: 999,
+                        backgroundColor: 'rgba(0,0,0,0.55)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      accessibilityLabel={t('productEdit.removePhoto')}
+                    >
+                      <Trash2 size={12} color="#FFFFFF" strokeWidth={2} />
+                    </Pressable>
+                  </View>
+                ))}
+                {photos.length < MAX_PHOTOS && (
+                  <Pressable
+                    onPress={addPhotos}
+                    disabled={uploading}
+                    style={{
+                      width: '31%',
+                      aspectRatio: 1,
+                      borderRadius: 12,
+                      borderWidth: 2,
+                      borderColor: colors.border,
+                      borderStyle: 'dashed',
+                      backgroundColor: colors.card,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      opacity: uploading ? 0.6 : 1,
+                    }}
+                  >
+                    {uploading ? (
+                      <ActivityIndicator size="small" color={colors.text} />
+                    ) : (
+                      <>
+                        <Plus size={20} color={colors.text} strokeWidth={2} />
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }}>
+                          {t('productEdit.addPhoto')}
+                        </Text>
+                      </>
+                    )}
+                  </Pressable>
+                )}
+              </View>
+            </View>
+
             <Input label={t('productEdit.titleLabel')} value={title} onChangeText={setTitle} />
 
             <View>

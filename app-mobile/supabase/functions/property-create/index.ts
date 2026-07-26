@@ -34,6 +34,7 @@ interface Body {
   lat?: number;
   lng?: number;
   photos: PropertyPhotoBody[];
+  video_url?: string | null;
 }
 
 const URL_RE = /^https?:\/\/[^\s]{8,500}$/i;
@@ -83,6 +84,8 @@ function valid(b: unknown): b is Body {
   if (x.lng !== undefined && (typeof x.lng !== 'number' || x.lng < -180 || x.lng > 180)) return false;
   if (!Array.isArray(x.photos) || x.photos.length === 0 || x.photos.length > 12) return false;
   if (!x.photos.every(validPhoto)) return false;
+  if (x.video_url !== undefined && x.video_url !== null &&
+      (typeof x.video_url !== 'string' || !URL_RE.test(x.video_url))) return false;
   return true;
 }
 
@@ -185,6 +188,14 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
   if (rpcErr || !newId) {
     console.error('[property-create] RPC error:', rpcErr);
     throwApi('INTERNAL_ERROR', 500, 'Erreur création annonce');
+  }
+
+  // Optional listing video (client 2026-07-26). Best-effort: the listing is
+  // already created with its photos, so a video-write failure must NOT fail the
+  // whole publish — just log it.
+  if (body.video_url) {
+    const { error: eVid } = await sb.from('properties').update({ video_url: body.video_url }).eq('id', newId);
+    if (eVid) console.error('[property-create] video_url update error:', eVid);
   }
 
   // Read back via the view (cover + photo_count for free) plus all photo URLs in order
