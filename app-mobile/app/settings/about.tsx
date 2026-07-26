@@ -104,9 +104,13 @@ export default function AboutRoute() {
             sub={t('aboutScreen.shareSub')}
             onPress={() => {
               haptic.light();
+              // Append the site link so the share lands directly on the site,
+              // instead of plain text with no way through (client 2026-07-26).
+              const siteUrl = 'https://linkygroup.com';
               void Share.share({
                 title: 'Linky',
-                message: t('aboutScreen.shareMessage'),
+                message: `${t('aboutScreen.shareMessage')}\n${siteUrl}`,
+                url: siteUrl, // iOS attaches this as a real link; Android uses message.
               }).catch(() => {});
             }}
             last
