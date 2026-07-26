@@ -38,7 +38,9 @@ import { gnfToEur } from '../../src/lib/currency';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 import { useTranslation } from 'react-i18next';
 
-const { width: SW } = Dimensions.get('window');
+// Capped to the responsive content column (see APP_MAX_WIDTH) so the carousel
+// matches the centered column on big screens instead of overflowing it.
+const SW = Math.min(Dimensions.get('window').width, 500);
 
 export default function ProductDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();

@@ -10,7 +10,7 @@ const SPLASH_BG = '#F0E0CF';
 
 // Source video is 3840×2160 (16:9), 6s. Played centered, full width.
 const SPLASH_VIDEO = require('../../assets/videos/splash.mp4');
-const { width: SW } = Dimensions.get('window');
+const SW = Math.min(Dimensions.get('window').width, 500);
 const VIDEO_ASPECT = 16 / 9;
 const VIDEO_HEIGHT = SW / VIDEO_ASPECT;
 

@@ -11,7 +11,8 @@ import { Button } from '../../src/components/primitives/Button';
 import { PageDots } from '../../src/components/primitives/ProgressDots';
 import { welcomeHeroes } from '../../src/data/photos';
 
-const { width: SW, height: SH } = Dimensions.get('window');
+const SW = Math.min(Dimensions.get('window').width, 500);
+const { height: SH } = Dimensions.get('window');
 
 const HERO_RATIO = 0.55;
 const CURVE_HEIGHT = 36;

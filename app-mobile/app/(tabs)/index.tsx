@@ -61,7 +61,7 @@ import {
 // Popular-products / featured-shops swipe rows: two cards fully visible inside
 // the 20px page padding, with a sliver of the third peeking as the swipe
 // affordance.
-const POPULAR_CARD_WIDTH = Math.round((Dimensions.get('window').width - 2 * 20 - 12) / 2.12);
+const POPULAR_CARD_WIDTH = Math.round((Math.min(Dimensions.get('window').width, 500) - 2 * 20 - 12) / 2.12);
 
 export default function HomeRoute() {
   const roles = useAuth((s) => s.roles);

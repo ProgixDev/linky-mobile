@@ -29,7 +29,8 @@ import { useToggleFavorite } from '../../data/queries/products';
 import { useTogglePropertyFavorite } from '../../data/queries/properties';
 import type { DiscoverItem } from '../../data/types';
 
-const { width: SW, height: SH } = Dimensions.get('window');
+const SW = Math.min(Dimensions.get('window').width, 500);
+const { height: SH } = Dimensions.get('window');
 
 // Reserved width on the right side so bottom text doesn't run under the action rail.
 const RAIL_WIDTH = 72;

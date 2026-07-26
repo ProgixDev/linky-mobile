@@ -27,7 +27,9 @@ import { toToastMessage } from '../../../src/lib/api';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { haptic } from '../../../src/lib/haptics';
 
-const { width: SW } = Dimensions.get('window');
+// Capped to the responsive content column (see APP_MAX_WIDTH) so the carousel
+// matches the centered column on big screens instead of overflowing it.
+const SW = Math.min(Dimensions.get('window').width, 500);
 
 export default function PropertyDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();

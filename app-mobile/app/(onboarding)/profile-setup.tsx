@@ -324,7 +324,7 @@ function RoleCard({
   onToggle: () => void;
 }) {
   const { colors, radii } = useTheme();
-  const { width: screenW } = useWindowDimensions();
+  const screenW = Math.min(useWindowDimensions().width, 500);
   const Icon = I[role.icon];
 
   // Responsive sizing — scales with screen width but stays within sensible bounds.

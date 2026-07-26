@@ -12,6 +12,7 @@ import {
   easing,
 } from './tokens';
 import { storage, STORAGE_KEYS } from '../lib/storage';
+import { APP_MAX_WIDTH } from '../lib/layout';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -68,8 +69,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <View style={{ flex: 1, backgroundColor: value.colors.bg }} className={theme}>
-        {children}
+      <View style={{ flex: 1, backgroundColor: value.colors.bg, alignItems: 'center' }} className={theme}>
+        {/* Responsive: keep the app in a centered phone-width column on big
+            screens (tablets / unfolded foldables). No-op on phones whose width
+            is <= APP_MAX_WIDTH. Client 2026-07-26. */}
+        <View style={{ flex: 1, width: '100%', maxWidth: APP_MAX_WIDTH }}>
+          {children}
+        </View>
       </View>
     </ThemeContext.Provider>
   );
