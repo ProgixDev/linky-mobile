@@ -17,7 +17,6 @@ import {
   Shield,
   LogOut,
   Package,
-  CalendarDays,
   Wallet,
   Pencil,
   Store,
@@ -55,7 +54,9 @@ function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAc
   const out: QuickAction[] = [];
   if (isBuyer) {
     out.push({ Icon: Package, label: t('profil.qa.commandes'), href: '/orders' });
-    out.push({ Icon: CalendarDays, label: t('profil.qa.demandes'), href: '/buyer/requests' });
+    // « Mes demandes » (buyer visit requests) removed from the buyer profile
+    // (client 2026-07-26). The screen still exists and is reached via the
+    // deeplink after a visit request is submitted.
     // Booking flow — tenant's rental bookings (location par jour / par mois).
     out.push({ Icon: CalendarCheck, label: t('profil.qa.reservations'), href: '/bookings' });
     // Favoris moved to the Accueil / Marché header trio (client 2026-07-26).
