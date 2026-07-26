@@ -361,6 +361,25 @@ export default function ProductDetailRoute() {
           </View>
         </View>
 
+        {/* ===== Description ===== */}
+        {/* Moved above the specs (client 2026-07-26) to match the property
+            detail page — buyers read what the item is before the specs.
+            Heading hidden when empty (Phase Y.4). */}
+        {product.description.trim().length > 0 && (
+          <Section title={t('product.descriptionHeading')}>
+            <Text
+              style={{
+                fontSize: 14.5,
+                color: colors.text,
+                lineHeight: 22,
+                letterSpacing: 0,
+              }}
+            >
+              {product.description}
+            </Text>
+          </Section>
+        )}
+
         {/* ===== Trust strip ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 18 }}>
           <View
@@ -562,24 +581,6 @@ export default function ProductDetailRoute() {
             <SpecRow Icon={Truck} label={t('product.specShipping')} value={t('product.specShippingValue')} last />
           </View>
         </Section>
-
-        {/* ===== Description ===== */}
-        {/* Phase Y.4 — hide the heading entirely when no description, rather
-            than showing "Description" above an empty paragraph. */}
-        {product.description.trim().length > 0 && (
-          <Section title={t('product.descriptionHeading')}>
-            <Text
-              style={{
-                fontSize: 14.5,
-                color: colors.text,
-                lineHeight: 22,
-                letterSpacing: 0,
-              }}
-            >
-              {product.description}
-            </Text>
-          </Section>
-        )}
 
         {/* ===== Commentaires ===== */}
         <Section title="Commentaires">
