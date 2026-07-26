@@ -5,7 +5,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -43,7 +43,12 @@ export default function BoostNewRoute() {
   const wallet = useWallet();
   const create = useCreateBoost();
 
-  const [productId, setProductId] = useState<string | null>(null);
+  // Pre-select the product when arriving from its edit screen ("Booster cette
+  // annonce"). Falls back to the manual picker when no param is passed.
+  const { productId: preselectId } = useLocalSearchParams<{ productId?: string }>();
+  const [productId, setProductId] = useState<string | null>(
+    typeof preselectId === 'string' ? preselectId : null,
+  );
   const [days, setDays] = useState<number | null>(null);
   const selectedTier = tiers.find((x) => x.days === days) ?? null;
 

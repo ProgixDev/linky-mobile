@@ -989,7 +989,9 @@
     "setCover": "Set as cover",
     "coverBadge": "Cover",
     "photoPermission": "Allow photo access to continue.",
-    "uploadError": "Upload failed."
+    "uploadError": "Upload failed.",
+    "boostCta": "Boost this listing",
+    "boostHint": "Feature this listing for more visibility."
   },
   "propertyEdit": {
     "photosLabel": "Photos",

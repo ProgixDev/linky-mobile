@@ -989,7 +989,9 @@
     "setCover": "Définir en couverture",
     "coverBadge": "Couverture",
     "photoPermission": "Autorisez l'accès aux photos pour continuer.",
-    "uploadError": "Téléversement échoué."
+    "uploadError": "Téléversement échoué.",
+    "boostCta": "Booster cette annonce",
+    "boostHint": "Mettez cette annonce en avant pour plus de visibilité."
   },
   "propertyEdit": {
     "photosLabel": "Photos",

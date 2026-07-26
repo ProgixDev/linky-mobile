@@ -989,7 +989,9 @@
     "setCover": "Definir como portada",
     "coverBadge": "Portada",
     "photoPermission": "Permita el acceso a las fotos para continuar.",
-    "uploadError": "Error al subir el archivo."
+    "uploadError": "Error al subir el archivo.",
+    "boostCta": "Impulsar este anuncio",
+    "boostHint": "Destaque este anuncio para más visibilidad."
   },
   "propertyEdit": {
     "photosLabel": "Fotos",

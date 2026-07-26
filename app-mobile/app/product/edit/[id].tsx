@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Plus, Star, Trash2 } from 'lucide-react-native';
+import { Plus, Rocket, Star, Trash2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -370,6 +370,35 @@ export default function ProductEditRoute() {
             </View>
 
             <CitySelectField value={city} onChange={setCity} />
+
+            {/* Boost — paid visibility for this listing (products only). Kept
+                separate from Save; opens the boost flow with this product
+                pre-selected. push() so the edit state survives a cancel. */}
+            {product.status === 'active' && (
+              <View
+                style={{
+                  marginTop: 8,
+                  paddingTop: 16,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border,
+                  gap: 8,
+                }}
+              >
+                <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
+                  {t('productEdit.boostHint')}
+                </Text>
+                <Button
+                  variant="saffron"
+                  size="lg"
+                  block
+                  label={t('productEdit.boostCta')}
+                  leading={<Rocket size={18} color="#2A1A05" strokeWidth={2.25} />}
+                  onPress={() =>
+                    router.push({ pathname: '/pro/boost/new', params: { productId: product.id } })
+                  }
+                />
+              </View>
+            )}
           </View>
         </ScrollView>
 
