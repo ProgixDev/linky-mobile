@@ -155,7 +155,7 @@ export default function CommentsRoute() {
               <TextInput
                 value={text}
                 onChangeText={setText}
-                placeholder={replyingTo ? 'Écris ta réponse…' : 'Ajoute un commentaire…'}
+                placeholder={replyingTo ? 'Écrivez votre réponse…' : 'Ajoutez un commentaire…'}
                 placeholderTextColor={colors.textFaint}
                 multiline
                 maxLength={MAX_LENGTH}

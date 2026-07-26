@@ -73,7 +73,7 @@ export default function ReviewRoute() {
           <TextInput
             value={comment}
             onChangeText={setComment}
-            placeholder="Partage ton expérience…"
+            placeholder="Partagez votre expérience…"
             placeholderTextColor={colors.textMuted}
             multiline
             maxLength={1000}

@@ -67,7 +67,7 @@ export default function ScanRoute() {
       >
         <I.camera size={36} color="#FFFFFF" />
         <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600', textAlign: 'center' }}>
-          Autorise l&apos;appareil photo
+          Autorisez l&apos;appareil photo
         </Text>
         <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', lineHeight: 19 }}>
           Linky a besoin d&apos;accéder à la caméra pour scanner le QR code collé sur le colis.

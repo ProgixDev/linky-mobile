@@ -99,7 +99,7 @@ export default function PropertyPhotosRoute() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        toast.show('Autorise l’accès aux photos pour continuer', 'danger');
+        toast.show('Autorisez l’accès aux photos pour continuer', 'danger');
         return;
       }
       // Multi-select: the picker caps at `remaining` so we never exceed MAX_PHOTOS.

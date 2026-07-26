@@ -38,20 +38,20 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
     ],
     must: [
       'Confirme la réception uniquement quand tu as le produit en main',
-      'Ne partage jamais ton QR de réception avant la livraison',
+      'Ne partagez jamais votre QR de réception avant la livraison',
       "Paie toujours via l'application — jamais en dehors",
     ],
   },
   seller: {
     title: 'Devenir vendeur',
     can: [
-      'Créer ta boutique et publier des produits',
-      'Recevoir des commandes payées en escrow et suivre tes ventes',
-      'Retirer tes gains vers Orange Money / MTN',
+      'Créer votre boutique et publier des produits',
+      'Recevoir des commandes payées en escrow et suivre vos ventes',
+      'Retirer vos gains vers Orange Money / MTN',
     ],
     must: [
-      "Vérifier ton identité avant de publier ta première annonce",
-      'Publier des photos et descriptions honnêtes de tes produits',
+      "Vérifier votre identité avant de publier votre première annonce",
+      'Publier des photos et descriptions honnêtes de vos produits',
       "Préparer les commandes rapidement — l'argent n'est libéré qu'à la réception confirmée par l'acheteur",
       'Respecter les acheteurs dans les échanges et les délais',
     ],
@@ -61,7 +61,7 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
   livreur: {
     title: 'Devenir livreur',
     can: [
-      'Recevoir des livraisons assignées et suivre tes courses',
+      'Recevoir des livraisons assignées et suivre vos courses',
       "Valider les remises par scan du QR de l'acheteur",
     ],
     must: [
@@ -77,7 +77,7 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
       "Faire signer les contrats de location dans l'app et encaisser en escrow",
     ],
     must: [
-      "Vérifier ton identité avant de publier ta première annonce",
+      "Vérifier votre identité avant de publier votre première annonce",
       'Annoncer des biens réels et disponibles, avec des prix exacts',
       'Pour la vente : la visite est obligatoire avant toute transaction',
       'Honorer les visites planifiées et les réservations acceptées',

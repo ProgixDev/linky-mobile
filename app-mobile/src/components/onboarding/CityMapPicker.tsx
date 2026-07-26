@@ -307,7 +307,7 @@ export function CityMapPicker({
             <Text tone="muted" center style={{ letterSpacing: 0 }}>
               {Platform.OS === 'web'
                 ? "La carte n'est pas disponible sur le web."
-                : 'Sélectionne ta ville dans la liste ci-dessus.'}
+                : 'Choisissez votre région ci-dessus, puis touchez la carte.'}
             </Text>
           </View>
         ) : (
@@ -379,7 +379,7 @@ export function CityMapPicker({
       </View>
 
       <Text variant="caption" tone="muted" center style={{ letterSpacing: 0 }}>
-        Touche un point sur la carte ou un marqueur pour choisir ta ville.
+        Touchez un point sur la carte ou un marqueur pour choisir votre ville.
       </Text>
     </View>
   );

@@ -162,7 +162,7 @@ export default function BookPropertyRoute() {
           <TextInput
             value={note}
             onChangeText={(t) => setNote(t.slice(0, 500))}
-            placeholder="Présente-toi en quelques mots…"
+            placeholder="Présentez-vous en quelques mots…"
             placeholderTextColor={colors.textFaint}
             multiline
             style={{

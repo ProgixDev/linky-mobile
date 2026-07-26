@@ -119,7 +119,7 @@ export default function ProfilEditRoute() {
     if (uploadAvatar.isPending) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      toast.show("Autorise l'accès aux photos pour changer ta photo.", 'danger');
+      toast.show("Autorisez l'accès aux photos pour changer votre photo.", 'danger');
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({

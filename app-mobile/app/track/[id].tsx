@@ -102,9 +102,9 @@ export default function TrackRoute() {
   if (isDone) {
     statusLine = 'Ta commande a été livrée ✅';
   } else if (!delivery?.livreurId) {
-    statusLine = "Aucun livreur n'est encore assigné à ta commande.";
+    statusLine = "Aucun livreur n'est encore assigné à votre commande.";
   } else if (!driver) {
-    statusLine = `${delivery.livreurName ?? 'Ton livreur'} prépare ta livraison — sa position s'affichera dès qu'il prend la route.`;
+    statusLine = `${delivery.livreurName ?? 'Votre livreur'} prépare votre livraison — sa position s'affichera dès qu'il prend la route.`;
   } else {
     statusLine = `${delivery.livreurName ?? 'Ton livreur'} est en route vers toi.`;
   }

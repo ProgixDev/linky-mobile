@@ -122,7 +122,7 @@ export default function EnvoyerRoute() {
         onError: (e) => {
           // KYC gate — send it to the verification flow instead of a dead-end toast.
           if (e instanceof ApiError && e.code === 'KYC_REQUIRED') {
-            show(toToastMessage(e, "Vérifie ton identité pour envoyer de l'argent."), 'info');
+            show(toToastMessage(e, "Vérifiez votre identité pour envoyer de l'argent."), 'info');
             router.push('/kyc/intro');
             return;
           }
