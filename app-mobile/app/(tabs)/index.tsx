@@ -836,6 +836,20 @@ const TINTS: Record<string, { bg: string; fg: string }> = {
   sand: { bg: '#F2EBDD', fg: '#8C6E3A' },
 };
 
+// Dark-mode variants (client 2026-07-27): the light pastel tiles jarred on
+// black. Same hue coding, but dark tinted surfaces + brighter icons. Light
+// mode stays exactly as TINTS above.
+const DARK_TINTS: Record<string, { bg: string; fg: string }> = {
+  primary: { bg: '#12271F', fg: '#54D1A8' },
+  accent: { bg: '#2A2414', fg: '#E9BA5E' },
+  cream: { bg: '#242015', fg: '#CBB184' },
+  info: { bg: '#152134', fg: '#84A9F0' },
+  mint: { bg: '#122619', fg: '#4ACB8D' },
+  rose: { bg: '#2B1815', fg: '#EC8E80' },
+  lilac: { bg: '#1E1733', fg: '#AE97E3' },
+  sand: { bg: '#252013', fg: '#CBAC78' },
+};
+
 function CategoryGridTile({
   Icon,
   label,
@@ -847,8 +861,9 @@ function CategoryGridTile({
   tint: keyof typeof TINTS;
   onPress: () => void;
 }) {
-  const { colors } = useTheme();
-  const t = TINTS[tint] ?? TINTS.primary;
+  const { colors, theme } = useTheme();
+  const set = theme === 'dark' ? DARK_TINTS : TINTS;
+  const t = set[tint] ?? set.primary;
   return (
     <Pressable
       onPress={() => {
