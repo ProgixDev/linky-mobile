@@ -1264,7 +1264,10 @@
       "shopCta": "Ouvrir la boutique",
       "agentTitle": "Mes biens",
       "agentSub": "Annonces immobilières, visites, demandes.",
-      "agentCta": "Ouvrir l'espace agent"
+      "agentCta": "Ouvrir l'espace agent",
+      "proTitle": "Mon espace Pro",
+      "proSub": "Boutique, ventes, biens, visites — au même endroit.",
+      "proCta": "Ouvrir mon espace"
     },
     "section": {
       "reglages": "Réglages",

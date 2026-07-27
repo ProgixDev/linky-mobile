@@ -1264,7 +1264,10 @@
       "shopCta": "Open the shop",
       "agentTitle": "My properties",
       "agentSub": "Listings, visits, requests.",
-      "agentCta": "Open the agent workspace"
+      "agentCta": "Open the agent workspace",
+      "proTitle": "My Pro space",
+      "proSub": "Shop, sales, properties, visits — all in one place.",
+      "proCta": "Open my space"
     },
     "section": {
       "reglages": "Settings",

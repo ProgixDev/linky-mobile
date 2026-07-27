@@ -251,15 +251,24 @@ export default function ProfilRoute() {
             Home-header Boutique shortcut. */}
         {(roles.includes('seller') || roles.includes('agent')) && (
           <View style={{ paddingHorizontal: 24, paddingTop: 18, gap: 10 }}>
-            {roles.includes('seller') && (
+            {/* Dual-role users get ONE combined card → /(tabs)/boutique, which
+                already has the Boutique / Immobilier switcher. Single-role users
+                keep their specific card. (client 2026-07-27) */}
+            {roles.includes('seller') && roles.includes('agent') ? (
+              <BoutiqueHero
+                Icon={Store}
+                title={t('profil.boutiqueHero.proTitle')}
+                sub={t('profil.boutiqueHero.proSub')}
+                ctaLabel={t('profil.boutiqueHero.proCta')}
+              />
+            ) : roles.includes('seller') ? (
               <BoutiqueHero
                 Icon={Store}
                 title={t('profil.boutiqueHero.shopTitle')}
                 sub={t('profil.boutiqueHero.shopSub')}
                 ctaLabel={t('profil.boutiqueHero.shopCta')}
               />
-            )}
-            {roles.includes('agent') && (
+            ) : (
               <BoutiqueHero
                 Icon={Building2}
                 title={t('profil.boutiqueHero.agentTitle')}
