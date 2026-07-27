@@ -57,8 +57,11 @@ export function EmptyState({
         </Text>
       )}
       {ctaLabel && onCta && (
-        <View style={{ marginTop: 24 }}>
-          <Button label={ctaLabel} onPress={onCta} />
+        <View style={{ marginTop: 24, alignSelf: 'stretch', alignItems: 'center' }}>
+          {/* Constrained width + centered so the CTA isn't near-full-width and
+              its label stays centered (client 2026-07-27). Was auto-width,
+              which grabbed the full column and pushed the label off-center. */}
+          <Button label={ctaLabel} onPress={onCta} block style={{ maxWidth: 280 }} />
         </View>
       )}
     </View>
