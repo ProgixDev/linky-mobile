@@ -143,7 +143,9 @@ export function DiscoverCard({
   const enableVideo = !!videoUrl && !dataSaver;
   const player = useVideoPlayer(enableVideo ? (videoUrl as string) : '', (p) => {
     p.loop = true;
-    p.muted = true;
+    // Sound ON (client 2026-07-27) — hear the video's audio if it has any.
+    // Only the active reel plays (see effect below), so just one plays at a time.
+    p.muted = false;
   });
   useEffect(() => {
     if (!enableVideo) return;

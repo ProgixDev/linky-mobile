@@ -17,7 +17,6 @@ import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
 import { useFavorites } from '../../../src/stores/favorites';
-import { usePrefs } from '../../../src/stores/prefs';
 import { useAuth } from '../../../src/stores/auth';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
 import { useTranslation } from 'react-i18next';
@@ -42,11 +41,9 @@ export default function PropertyDetailRoute() {
   const isFav = useFavorites((s) => (id ? s.propertyIds.has(id) : false));
   const toggleFav = useFavorites((s) => s.toggleProperty);
   const [photoIdx, setPhotoIdx] = useState(0);
-  const { dataSaver } = usePrefs();
-  // Video-first hero (client 2026-07-22): a listing's video plays as the FIRST
-  // slide, photos follow. Muted + looping ; autoplays only while its slide is
-  // visible. Data-saver falls back to the photo carousel (no video loaded).
-  const videoSrc = prop?.videoUrl && !dataSaver ? prop.videoUrl : '';
+  // Detail page is IMAGES ONLY (client 2026-07-27) — a listing's video shows
+  // only in the Découvrir feed, never on the detail page.
+  const videoSrc = '';
   const player = useVideoPlayer(videoSrc, (p) => {
     p.loop = true;
     p.muted = true;
