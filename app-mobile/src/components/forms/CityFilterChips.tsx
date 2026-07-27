@@ -6,11 +6,6 @@
 // (same list the seller/agent picks from), so the value always filters exactly.
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
-// The horizontal chip row lives inside a @gorhom/bottom-sheet. A plain RN
-// ScrollView doesn't coordinate its pan with the sheet's gesture handler, so
-// the horizontal swipe was swallowed. react-native-gesture-handler's ScrollView
-// participates in the same gesture system and scrolls correctly.
-import { ScrollView } from 'react-native-gesture-handler';
 // BottomSheetTextInput (not RN's TextInput) so gorhom lifts the filter sheet
 // above the keyboard on focus. This component is only rendered inside the
 // Marché filter Sheet, which provides the required bottom-sheet context.
@@ -138,12 +133,16 @@ export function CityFilterChips({
         </View>
       )}
 
-      {/* Quick chips: Toute la Guinée + (searched selection) + 8 main cities */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+      {/* Quick chips: Toute la Guinée + (searched selection) + 8 main cities.
+          A WRAPPING row (not a horizontal scroll): every city stays visible
+          without a swipe. A horizontal ScrollView fought the bottom-sheet's
+          pan gesture and stayed stuck at the start; other cities are reached
+          via the search box above. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {chip('Toute la Guinée', value === null, () => onChange(null), '__all__')}
         {selectedExtra && chip(selectedExtra, true, () => onChange(null), '__selected__')}
         {MAIN_CITIES.map((c) => chip(c, value === c, () => onChange(value === c ? null : c), c))}
-      </ScrollView>
+      </View>
     </View>
   );
 }
