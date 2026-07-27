@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   TextInput,
   View,
 } from 'react-native';
+// keyboard-controller's KAV handles Expo edge-to-edge correctly — the plain RN
+// KeyboardAvoidingView (behavior undefined on Android) left the composer under
+// the keyboard. Same fix already applied to the comments thread.
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -113,7 +116,7 @@ export default function ChatRoute() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
       {pinned && (

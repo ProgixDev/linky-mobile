@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Edit2, Home, MapPin, Plus, Star, Trash2, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -472,7 +473,7 @@ function AddressSheet({
       }}
     >
       <Pressable style={{ flex: 1 }} onPress={onClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View
           style={{
             backgroundColor: colors.bg,
