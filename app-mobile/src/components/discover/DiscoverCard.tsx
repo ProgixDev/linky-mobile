@@ -661,15 +661,15 @@ export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
           height: 48,
           paddingHorizontal: 24,
           borderRadius: 999,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colors.text,
           flexDirection: 'row',
           gap: 8,
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <RotateCcw size={15} color="#0E1311" strokeWidth={2.25} />
-        <Text style={{ color: '#0E1311', fontWeight: '700', fontSize: 14 }}>{t('decouvrir.card.endCta')}</Text>
+        <RotateCcw size={15} color={colors.bg} strokeWidth={2.25} />
+        <Text style={{ color: colors.bg, fontWeight: '700', fontSize: 14 }}>{t('decouvrir.card.endCta')}</Text>
       </Pressable>
     </View>
   );
