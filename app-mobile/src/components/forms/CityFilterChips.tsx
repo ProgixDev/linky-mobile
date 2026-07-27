@@ -1,11 +1,13 @@
-// Location filter — a search box + a quick chip row.
-// The chips are "Toute la Guinée" + the 8 main cities (region capitals). The
-// search box (client 2026-07-27) lets the user reach ANY of the ~39 cities in
-// GUINEA_CITIES by typing, since the chips only surface the 8 capitals and the
-// per-region sub-list was removed. GUINEA_CITIES is the single source of truth
-// (same list the seller/agent picks from), so the value always filters exactly.
+// Location filter — a search box + a single horizontal, swipeable row of EVERY
+// Guinea city/prefecture (GUINEA_CITIES, the single source of truth the
+// seller/agent also picks from, so the value always filters exactly). The
+// search box just jumps to a city quickly (client 2026-07-27).
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
+// react-native-gesture-handler's ScrollView (not RN's) so the horizontal chip
+// row actually scrolls inside the @gorhom/bottom-sheet — a plain RN ScrollView's
+// pan is swallowed by the sheet's gesture handler.
+import { ScrollView } from 'react-native-gesture-handler';
 // BottomSheetTextInput (not RN's TextInput) so gorhom lifts the filter sheet
 // above the keyboard on focus. This component is only rendered inside the
 // Marché filter Sheet, which provides the required bottom-sheet context.
@@ -16,8 +18,6 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { haptic } from '../../lib/haptics';
 import { GUINEA_CITIES } from '../onboarding/CityMapPicker';
-
-const MAIN_CITIES = ['Conakry', 'Boké', 'Kindia', 'Labé', 'Mamou', 'Faranah', 'Kankan', 'Nzérékoré'] as const;
 
 // Accent- and case-insensitive so "labe" matches "Labé", "nzerekore" → "Nzérékoré".
 const norm = (s: string) =>
@@ -63,10 +63,6 @@ export function CityFilterChips({
       </Text>
     </Pressable>
   );
-
-  // A selected city that isn't one of the 8 quick chips (picked via search) —
-  // surface it as its own active chip so the user always sees & can clear it.
-  const selectedExtra = value && !(MAIN_CITIES as readonly string[]).includes(value) ? value : null;
 
   return (
     <View style={{ gap: 10 }}>
@@ -133,16 +129,15 @@ export function CityFilterChips({
         </View>
       )}
 
-      {/* Quick chips: Toute la Guinée + (searched selection) + 8 main cities.
-          A WRAPPING row (not a horizontal scroll): every city stays visible
-          without a swipe. A horizontal ScrollView fought the bottom-sheet's
-          pan gesture and stayed stuck at the start; other cities are reached
-          via the search box above. */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      {/* Single horizontal, swipeable row of ALL Guinea cities/prefectures
+          (client 2026-07-27). RNGH ScrollView so the swipe works inside the
+          bottom sheet; the search box above jumps to any city quickly. */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
         {chip('Toute la Guinée', value === null, () => onChange(null), '__all__')}
-        {selectedExtra && chip(selectedExtra, true, () => onChange(null), '__selected__')}
-        {MAIN_CITIES.map((c) => chip(c, value === c, () => onChange(value === c ? null : c), c))}
-      </View>
+        {GUINEA_CITIES.map((c) =>
+          chip(c.name, value === c.name, () => onChange(value === c.name ? null : c.name), c.name),
+        )}
+      </ScrollView>
     </View>
   );
 }
