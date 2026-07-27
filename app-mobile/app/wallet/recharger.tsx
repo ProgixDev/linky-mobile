@@ -3,7 +3,8 @@
 // -> wallet-topup-card (Stripe PaymentIntent) -> PaymentSheet -> the
 // stripe-webhook credits the wallet via confirm_topup a couple seconds later.
 import { useEffect, useState } from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { Platform, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
@@ -94,125 +95,127 @@ export default function RechargerRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('wallet.recharger.topbar')} back />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: 16, paddingBottom: 160 }}
-      >
-        {/* Balance anchor */}
-        <View
-          style={{
-            backgroundColor: colors.primarySoft,
-            borderRadius: 16,
-            paddingVertical: 16,
-            paddingHorizontal: 18,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
-            marginBottom: 20,
-          }}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 16, paddingBottom: 160 }}
         >
-          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
-            <CreditCard size={18} color={colors.primary} />
-          </View>
-          <View>
-            <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-              {t('wallet.recharger.balanceLabel')}
-            </Text>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
-              {formatGNF(balance)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Amount */}
-        <MicroLabel label={t('wallet.recharger.amountLabel')} />
-        <View
-          style={{
-            backgroundColor: colors.bgElev,
-            borderRadius: 16,
-            paddingVertical: 22,
-            paddingHorizontal: 20,
-            borderWidth: 1,
-            borderColor: tooLow ? colors.danger : colors.border,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <TextInput
-            value={amount > 0 ? new Intl.NumberFormat('fr-FR').format(amount) : ''}
-            onChangeText={(txt) => {
-              const n = Number(txt.replace(/\D/g, ''));
-              setAmount(Number.isFinite(n) ? n : 0);
-            }}
-            keyboardType="number-pad"
-            placeholder="0"
-            placeholderTextColor={colors.textFaint}
-            maxLength={11}
-            accessibilityLabel={t('wallet.recharger.accessAmount')}
+          {/* Balance anchor */}
+          <View
             style={{
-              fontSize: 36,
-              fontWeight: '700',
-              color: tooLow ? colors.danger : colors.text,
-              textAlign: 'center',
-              minWidth: 60,
-              paddingVertical: 0,
-              fontVariant: ['tabular-nums'],
+              backgroundColor: colors.primarySoft,
+              borderRadius: 16,
+              paddingVertical: 16,
+              paddingHorizontal: 18,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+              marginBottom: 20,
             }}
-          />
-          <Text style={{ marginLeft: 8, marginTop: 8, color: colors.textMuted, fontSize: 14, fontWeight: '600' }}>
-            GNF
-          </Text>
-        </View>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-          {QUICK_AMOUNTS.map((v) => (
-            <Chip key={v} label={new Intl.NumberFormat('fr-FR').format(v)} active={v === amount} onPress={() => setAmount(v)} />
-          ))}
-        </View>
-
-        <Text variant="caption" tone="muted" style={{ marginTop: 12, letterSpacing: 0, color: tooLow ? colors.danger : undefined }}>
-          {tooLow ? t('wallet.recharger.minimum', { amount: formatGNF(MIN_TOPUP) }) : t('wallet.recharger.securityNote')}
-        </Text>
-
-        {/* Mobile Money — honest "coming" note */}
-        <View
-          style={{
-            marginTop: 22,
-            flexDirection: 'row',
-            gap: 12,
-            padding: 14,
-            borderRadius: radii.md,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.card,
-            alignItems: 'center',
-          }}
-        >
-          <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
-            <Smartphone size={18} color={colors.textMuted} />
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
+              <CreditCard size={18} color={colors.primary} />
+            </View>
+            <View>
+              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                {t('wallet.recharger.balanceLabel')}
+              </Text>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
+                {formatGNF(balance)}
+              </Text>
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('wallet.recharger.mmTitle')}</Text>
-            <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}>
-              {t('wallet.recharger.mmSub')}
+
+          {/* Amount */}
+          <MicroLabel label={t('wallet.recharger.amountLabel')} />
+          <View
+            style={{
+              backgroundColor: colors.bgElev,
+              borderRadius: 16,
+              paddingVertical: 22,
+              paddingHorizontal: 20,
+              borderWidth: 1,
+              borderColor: tooLow ? colors.danger : colors.border,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <TextInput
+              value={amount > 0 ? new Intl.NumberFormat('fr-FR').format(amount) : ''}
+              onChangeText={(txt) => {
+                const n = Number(txt.replace(/\D/g, ''));
+                setAmount(Number.isFinite(n) ? n : 0);
+              }}
+              keyboardType="number-pad"
+              placeholder="0"
+              placeholderTextColor={colors.textFaint}
+              maxLength={11}
+              accessibilityLabel={t('wallet.recharger.accessAmount')}
+              style={{
+                fontSize: 36,
+                fontWeight: '700',
+                color: tooLow ? colors.danger : colors.text,
+                textAlign: 'center',
+                minWidth: 60,
+                paddingVertical: 0,
+                fontVariant: ['tabular-nums'],
+              }}
+            />
+            <Text style={{ marginLeft: 8, marginTop: 8, color: colors.textMuted, fontSize: 14, fontWeight: '600' }}>
+              GNF
             </Text>
           </View>
-        </View>
-      </ScrollView>
 
-      <StickyBottom>
-        <Button
-          size="lg"
-          block
-          loading={busy || topup.isPending}
-          disabled={!canPay}
-          leading={<CreditCard size={16} color={colors.bg} strokeWidth={2.25} />}
-          label={t('wallet.recharger.payCta', { amount: formatGNF(amount) })}
-          onPress={pay}
-        />
-      </StickyBottom>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+            {QUICK_AMOUNTS.map((v) => (
+              <Chip key={v} label={new Intl.NumberFormat('fr-FR').format(v)} active={v === amount} onPress={() => setAmount(v)} />
+            ))}
+          </View>
+
+          <Text variant="caption" tone="muted" style={{ marginTop: 12, letterSpacing: 0, color: tooLow ? colors.danger : undefined }}>
+            {tooLow ? t('wallet.recharger.minimum', { amount: formatGNF(MIN_TOPUP) }) : t('wallet.recharger.securityNote')}
+          </Text>
+
+          {/* Mobile Money — honest "coming" note */}
+          <View
+            style={{
+              marginTop: 22,
+              flexDirection: 'row',
+              gap: 12,
+              padding: 14,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.card,
+              alignItems: 'center',
+            }}
+          >
+            <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
+              <Smartphone size={18} color={colors.textMuted} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('wallet.recharger.mmTitle')}</Text>
+              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}>
+                {t('wallet.recharger.mmSub')}
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        <StickyBottom>
+          <Button
+            size="lg"
+            block
+            loading={busy || topup.isPending}
+            disabled={!canPay}
+            leading={<CreditCard size={16} color={colors.bg} strokeWidth={2.25} />}
+            label={t('wallet.recharger.payCta', { amount: formatGNF(amount) })}
+            onPress={pay}
+          />
+        </StickyBottom>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
