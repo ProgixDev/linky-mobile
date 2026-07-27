@@ -26,6 +26,7 @@ import { ProductCard } from '../../src/components/lists/ProductCard';
 import { PropertyCard } from '../../src/components/lists/PropertyCard';
 import { ProductCardSkeleton } from '../../src/components/primitives/Skeleton';
 import { Sheet } from '../../src/components/sheets/Sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { Switch } from '../../src/components/primitives/Switch';
 import { Button } from '../../src/components/primitives/Button';
@@ -625,7 +626,7 @@ export default function MarcheRoute() {
 
       {/* ===== Filter sheet ===== */}
       <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('marche.filterSheetTitle')} snapPoints={['80%']}>
-        <ScrollView style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        <BottomSheetScrollView style={{ paddingHorizontal: 16, paddingTop: 12 }}>
           {isArticles ? (
             <>
               {/* ===== ARTICLES filters — the sheet used to show immobilier
@@ -823,7 +824,7 @@ export default function MarcheRoute() {
               )}
             </>
           )}
-        </ScrollView>
+        </BottomSheetScrollView>
         <View
           style={{
             flexDirection: 'row',

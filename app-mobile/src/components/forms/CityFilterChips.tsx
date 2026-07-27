@@ -5,7 +5,11 @@
 // per-region sub-list was removed. GUINEA_CITIES is the single source of truth
 // (same list the seller/agent picks from), so the value always filters exactly.
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+// BottomSheetTextInput (not RN's TextInput) so gorhom lifts the filter sheet
+// above the keyboard on focus. This component is only rendered inside the
+// Marché filter Sheet, which provides the required bottom-sheet context.
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Search } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -81,7 +85,7 @@ export function CityFilterChips({
         }}
       >
         <Search size={16} color={colors.textMuted} />
-        <TextInput
+        <BottomSheetTextInput
           value={query}
           onChangeText={setQuery}
           placeholder={t('common.city.searchPlaceholder')}

@@ -42,6 +42,12 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
       ref={ref}
       snapPoints={snaps}
       enablePanDownToClose
+      // Keyboard handling for inputs inside the sheet (e.g. the city search):
+      // lift the sheet above the keyboard and restore on blur. Requires the
+      // input to be a BottomSheetTextInput and the content a BottomSheetScrollView.
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       onChange={handleChanges}
       backdropComponent={renderBackdrop}
       handleIndicatorStyle={{ backgroundColor: colors.borderStrong, width: 44 }}
