@@ -916,7 +916,10 @@ function CategoryGridTile({
 // ====================================================================
 
 function ProSummaryCard({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean }) {
-  const { colors } = useTheme();
+  // Card bg is colors.text (an INVERTING surface: near-black in light mode,
+  // cream in dark). Foreground must therefore be colors.bg (inverts the other
+  // way) — hardcoded white went invisible on the cream card in dark mode.
+  const { colors, theme } = useTheme();
   const { data: shops } = useMyShops();
   const { data: properties } = useMyProperties();
 
@@ -955,33 +958,33 @@ function ProSummaryCard({ isSeller, isAgent }: { isSeller: boolean; isAgent: boo
               paddingHorizontal: 8,
               paddingVertical: 4,
               borderRadius: 999,
-              backgroundColor: 'rgba(255,255,255,0.12)',
+              backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)',
             }}
           >
             {isSeller ? (
-              <Store size={11} color="#FFFFFF" strokeWidth={2} />
+              <Store size={11} color={colors.bg} strokeWidth={2} />
             ) : (
-              <Building2 size={11} color="#FFFFFF" strokeWidth={2} />
+              <Building2 size={11} color={colors.bg} strokeWidth={2} />
             )}
             <Text
               style={{
                 fontSize: 10.5,
                 fontWeight: '700',
-                color: '#FFFFFF',
+                color: colors.bg,
                 letterSpacing: 0.5,
               }}
             >
               {badgeLabel}
             </Text>
           </View>
-          <ChevronRight size={16} color="rgba(255,255,255,0.6)" strokeWidth={2} />
+          <ChevronRight size={16} color={theme === 'dark' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.6)'} strokeWidth={2} />
         </View>
 
         <Text
           style={{
             fontSize: 18,
             fontWeight: '700',
-            color: '#FFFFFF',
+            color: colors.bg,
             letterSpacing: -0.2,
             marginTop: 14,
           }}
@@ -992,7 +995,7 @@ function ProSummaryCard({ isSeller, isAgent }: { isSeller: boolean; isAgent: boo
           style={{
             fontSize: 12.5,
             fontWeight: '500',
-            color: 'rgba(255,255,255,0.65)',
+            color: theme === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.65)',
             letterSpacing: 0,
             marginTop: 4,
           }}

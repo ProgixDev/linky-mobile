@@ -43,8 +43,11 @@ export function Chip({ label, active, variant = 'default', onPress, leading, tra
     fg = colors.info;
     border = 'rgba(58, 124, 168, 0.12)';
   } else if (variant === 'inverse') {
+    // White pill (for use over dark/photo backgrounds). The bg is fixed, so
+    // the text must be a fixed dark ink — colors.text would invert to light
+    // and vanish on the white pill in dark mode.
     bg = 'rgba(255,255,255,0.95)';
-    fg = colors.text;
+    fg = '#0E1311';
     border = 'rgba(255,255,255,0.95)';
   }
   const inner = (

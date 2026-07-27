@@ -808,7 +808,7 @@ function ConditionChip({ condition }: { condition: 'neuf' | 'occasion' | 'recond
   const map: Record<typeof condition, { bg: string; fg: string; label: string }> = {
     neuf: { bg: colors.primarySoft, fg: colors.primaryDeep, label: 'Neuf' },
     occasion: { bg: colors.accentSoft, fg: colors.accentText, label: 'Occasion' },
-    reconditionné: { bg: '#E4ECF6', fg: '#2F5BBE', label: 'Reconditionné' },
+    reconditionné: { bg: 'rgba(58,124,168,0.14)', fg: colors.info, label: 'Reconditionné' },
   };
   const m = map[condition];
   return (
