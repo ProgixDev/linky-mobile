@@ -18,7 +18,7 @@ const { height: SH } = Dimensions.get('window');
 type FeedRow = { kind: 'item'; data: DiscoverItem; id: string } | { kind: 'end'; id: string };
 
 export default function DecouvrirRoute() {
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const roles = useAuth((s) => s.roles);
@@ -70,7 +70,7 @@ export default function DecouvrirRoute() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.discoverBg }}>
-      <StatusBar style="light" />
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       {/* Phase T.4 — distinct loading / error / empty states. Pre-T4 the
           loading was a bare text line and any failure rendered the
           end-of-feed card ("Tu as tout vu") immediately, which lies. */}
@@ -91,10 +91,10 @@ export default function DecouvrirRoute() {
             gap: 14,
           }}
         >
-          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
             {t('decouvrir.errorTitle')}
           </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
             {t('decouvrir.errorSub')}
           </Text>
           <Button
@@ -114,10 +114,10 @@ export default function DecouvrirRoute() {
             gap: 12,
           }}
         >
-          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
             {t('decouvrir.emptyTitle')}
           </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
             {t('decouvrir.emptySub')}
           </Text>
           <Button

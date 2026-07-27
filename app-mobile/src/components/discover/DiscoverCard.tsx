@@ -630,7 +630,7 @@ export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
       </View>
       <Text
         style={{
-          color: '#FFFFFF',
+          color: colors.text,
           fontSize: 24,
           fontWeight: '700',
           letterSpacing: -0.3,
@@ -643,7 +643,7 @@ export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
       </Text>
       <Text
         style={{
-          color: 'rgba(255,255,255,0.65)',
+          color: colors.textMuted,
           fontSize: 14,
           textAlign: 'center',
           marginTop: 12,
