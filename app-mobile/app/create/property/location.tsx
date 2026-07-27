@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, TextInput, View } from 'react-native';
+import { Platform, View } from 'react-native';
+// BottomSheetTextInput (not RN TextInput) so gorhom lifts the sheet above the
+// keyboard when the lat/lng fields are focused.
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Mapbox, { MapView, Camera, PointAnnotation, type ScreenPointPayload } from '@rnmapbox/maps';
@@ -235,7 +238,7 @@ export default function CreatePropertyLocationRoute() {
             <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
               {t('create.locationLat')}
             </Text>
-            <TextInput
+            <BottomSheetTextInput
               value={latInput}
               onChangeText={setLatInput}
               keyboardType="numbers-and-punctuation"
@@ -257,7 +260,7 @@ export default function CreatePropertyLocationRoute() {
             <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
               {t('create.locationLng')}
             </Text>
-            <TextInput
+            <BottomSheetTextInput
               value={lngInput}
               onChangeText={setLngInput}
               keyboardType="numbers-and-punctuation"
