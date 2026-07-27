@@ -200,7 +200,7 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
 // ====================================================================
 
 function BuyerHome() {
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const { t } = useTranslation();
   const user = useAuth((s) => s.user);
   const cartCount = useCart((s) => s.lines.length);
@@ -420,7 +420,11 @@ function BuyerHome() {
           <Pressable
             onPress={() => router.push('/(tabs)/decouvrir')}
             style={{
-              backgroundColor: '#0E1311',
+              // Theme-aware teaser (client 2026-07-27): dark feature card in
+              // dark mode, light card in light mode (was hard-locked dark).
+              backgroundColor: theme === 'dark' ? '#0E1311' : colors.card,
+              borderWidth: 1,
+              borderColor: theme === 'dark' ? 'transparent' : colors.border,
               borderRadius: 22,
               padding: 20,
               flexDirection: 'row',
@@ -455,13 +459,13 @@ function BuyerHome() {
                   {t('home.decouvrirBadge')}
                 </Text>
               </View>
-              <Text style={{ fontSize: 20, color: '#FFFFFF', fontWeight: '700', lineHeight: 24 }}>
+              <Text style={{ fontSize: 20, color: theme === 'dark' ? '#FFFFFF' : colors.text, fontWeight: '700', lineHeight: 24 }}>
                 {t('home.decouvrirTitle')}
               </Text>
               <Text
                 style={{
                   fontSize: 12.5,
-                  color: 'rgba(255,255,255,0.62)',
+                  color: theme === 'dark' ? 'rgba(255,255,255,0.62)' : colors.textMuted,
                   marginTop: 6,
                   letterSpacing: 0,
                 }}
@@ -503,7 +507,7 @@ function BuyerHome() {
                     top: 0,
                     transform: [{ rotate: '6deg' }],
                     borderWidth: 2,
-                    borderColor: '#0E1311',
+                    borderColor: theme === 'dark' ? '#0E1311' : colors.card,
                   }}
                   contentFit="cover"
                 />
@@ -514,12 +518,12 @@ function BuyerHome() {
                 width: 38,
                 height: 38,
                 borderRadius: 999,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme === 'dark' ? '#FFFFFF' : colors.primary,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <ChevronRight size={16} color="#0E1311" strokeWidth={2} />
+              <ChevronRight size={16} color={theme === 'dark' ? '#0E1311' : '#FFFFFF'} strokeWidth={2} />
             </View>
           </Pressable>
         </View>
