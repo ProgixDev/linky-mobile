@@ -13,6 +13,7 @@ import {
   MessageCircle,
   Sparkles as SparklesIcon,
   RotateCcw,
+  Play,
   Video as VideoIcon,
   CloudOff,
   MapPin,
@@ -116,12 +117,16 @@ export function DiscoverCard({
   // photoIdx is updated from onMomentumScrollEnd so the dot indicator stays
   // in lockstep with the active photo, regardless of who triggered the swipe.
   const [photoIdx, setPhotoIdx] = useState(0);
+  // User can pause the reel (video OR the auto-advancing photo slideshow) with
+  // a single tap ; double-tap still likes (see handleTap).
+  const [paused, setPaused] = useState(false);
   const photoListRef = useRef<FlatList<string>>(null);
   // When the reel scrolls off-screen and back, jump the pager to photo 0 so a
   // returning user always sees the cover, not whatever they last swiped to.
   useEffect(() => {
     if (!isActive) {
       setPhotoIdx(0);
+      setPaused(false);
       photoListRef.current?.scrollToOffset({ offset: 0, animated: false });
     }
   }, [isActive]);
@@ -142,9 +147,24 @@ export function DiscoverCard({
   });
   useEffect(() => {
     if (!enableVideo) return;
-    if (isActive) player.play();
+    if (isActive && !paused) player.play();
     else player.pause();
-  }, [isActive, player, enableVideo]);
+  }, [isActive, player, enableVideo, paused]);
+
+  // No video → the photos auto-advance like a story (client 2026-07-27): 4s per
+  // image, looping, only while the reel is active and not paused. Manual
+  // horizontal swipe still works and just moves the same pager.
+  useEffect(() => {
+    if (enableVideo || !isActive || paused || photos.length <= 1) return;
+    const timer = setInterval(() => {
+      setPhotoIdx((i) => {
+        const next = (i + 1) % photos.length;
+        photoListRef.current?.scrollToIndex({ index: next, animated: true });
+        return next;
+      });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [enableVideo, isActive, paused, photos.length]);
 
   // Heart pop on double-tap
   const heartScale = useSharedValue(0);
@@ -153,17 +173,36 @@ export function DiscoverCard({
     opacity: heartScale.value > 0 ? 1 : 0,
   }));
   const lastTap = useRef(0);
+  const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+    },
+    [],
+  );
   const handleTap = () => {
     const now = Date.now();
     if (now - lastTap.current < 280) {
-      // Double-tap : same as tapping the heart — fires the server toggle so
-      // the count persists. Only acts on the favorite path (no unfavorite via
-      // double-tap, matching IG/TikTok pattern : double-tap loves, doesn't toggle).
+      // Double-tap : like (server toggle so the count persists). Cancels the
+      // pending single-tap so a double-tap never also pauses. No unfavorite via
+      // double-tap (IG/TikTok pattern : double-tap loves, doesn't toggle).
+      if (singleTapTimer.current) {
+        clearTimeout(singleTapTimer.current);
+        singleTapTimer.current = null;
+      }
       if (!isFav) onLike();
       haptic.medium();
       heartScale.value = withSpring(1.4, { damping: 8 }, () => {
         heartScale.value = withSpring(0, { damping: 12 });
       });
+    } else {
+      // Single-tap (confirmed after the double-tap window) : pause / resume the
+      // video or the photo slideshow so the user can stop on one shot.
+      singleTapTimer.current = setTimeout(() => {
+        setPaused((p) => !p);
+        haptic.light();
+        singleTapTimer.current = null;
+      }, 280);
     }
     lastTap.current = now;
   };
@@ -225,6 +264,36 @@ export function DiscoverCard({
           locations={[0, 0.18, 0.45, 1]}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
+
+        {/* Pause overlay — single tap pauses the video / photo slideshow so the
+            user can stop on one shot ; the play glyph signals it's paused. */}
+        {paused && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 999,
+                backgroundColor: 'rgba(0,0,0,0.55)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Play size={28} color="#FFFFFF" fill="#FFFFFF" strokeWidth={1.5} />
+            </View>
+          </View>
+        )}
 
         {/* ===== Top filter pills (hidden for pure pros) ===== */}
         {!isPurePro && (
