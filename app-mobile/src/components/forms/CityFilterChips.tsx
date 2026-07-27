@@ -5,7 +5,12 @@
 // per-region sub-list was removed. GUINEA_CITIES is the single source of truth
 // (same list the seller/agent picks from), so the value always filters exactly.
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+// The horizontal chip row lives inside a @gorhom/bottom-sheet. A plain RN
+// ScrollView doesn't coordinate its pan with the sheet's gesture handler, so
+// the horizontal swipe was swallowed. react-native-gesture-handler's ScrollView
+// participates in the same gesture system and scrolls correctly.
+import { ScrollView } from 'react-native-gesture-handler';
 // BottomSheetTextInput (not RN's TextInput) so gorhom lifts the filter sheet
 // above the keyboard on focus. This component is only rendered inside the
 // Marché filter Sheet, which provides the required bottom-sheet context.

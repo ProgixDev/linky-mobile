@@ -51,6 +51,9 @@
         "NSCameraUsageDescription": "Linky a besoin de l'appareil photo pour scanner ta pièce d'identité et photographier tes annonces.",
         "NSPhotoLibraryUsageDescription": "Linky a besoin d'accéder à tes photos pour les ajouter à tes annonces.",
         "NSLocationWhenInUseUsageDescription": "Linky utilise ta position pour te montrer les annonces près de toi."
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
@@ -68,7 +71,8 @@
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "runtimeVersion": "1.0.0"
     },
     "plugins": [
       "expo-router",
@@ -136,6 +140,9 @@
         "projectId": "1a374f22-a608-457f-b6a8-8206e0de66d6"
       }
     },
-    "owner": "linkyorg"
+    "owner": "linkyorg",
+    "updates": {
+      "url": "https://u.expo.dev/1a374f22-a608-457f-b6a8-8206e0de66d6"
+    }
   }
 }
