@@ -22,6 +22,7 @@ export default function EmailRoute() {
   const setPendingEmail = useAuth((s) => s.setPendingEmail);
   const setPendingOtpId = useAuth((s) => s.setPendingOtpId);
   const setPendingDevCode = useAuth((s) => s.setPendingDevCode);
+  const setPendingDelivery = useAuth((s) => s.setPendingDelivery);
   const requestOtp = useRequestOtp();
   const toast = useToast();
   const trimmed = email.trim();
@@ -143,11 +144,22 @@ export default function EmailRoute() {
                   letterSpacing: 0,
                 }}
               >
+                {/* Client 2026-08-05 — these looked like links but had no
+                    onPress, so tapping them did nothing. Both legal screens are
+                    public (no auth guard), so they open fine mid-onboarding. */}
                 <Trans
                   i18nKey="onboarding.phone.legal"
                   components={[
-                    <Text key="0" style={{ color: colors.primaryDeep, fontWeight: '600' }} />,
-                    <Text key="1" style={{ color: colors.primaryDeep, fontWeight: '600' }} />,
+                    <Text
+                      key="0"
+                      style={{ color: colors.primaryDeep, fontWeight: '600' }}
+                      onPress={() => router.push('/settings/terms')}
+                    />,
+                    <Text
+                      key="1"
+                      style={{ color: colors.primaryDeep, fontWeight: '600' }}
+                      onPress={() => router.push('/settings/privacy-policy')}
+                    />,
                   ]}
                 />
               </Text>
@@ -163,11 +175,12 @@ export default function EmailRoute() {
               disabled={!valid || busy}
               onPress={async () => {
                 try {
-                  const { otp_id, dev_code } = await requestOtp.mutateAsync({ channel: 'email', target: trimmed });
+                  const { otp_id, dev_code, delivery } = await requestOtp.mutateAsync({ channel: 'email', target: trimmed });
                   setChannel('email');
                   setPendingEmail(trimmed);
                   setPendingOtpId(otp_id);
                   setPendingDevCode(dev_code ?? null);
+                  setPendingDelivery(delivery ?? null);
                   router.push('/(onboarding)/otp');
                 } catch (e: unknown) {
                   console.error('[otp-request:email] error:', e);
@@ -175,6 +188,24 @@ export default function EmailRoute() {
                 }
               }}
             />
+            {/* Opt-in fast path for anyone who set a password (client
+                2026-08-05) — a session that expires no longer always costs a
+                fresh OTP. No-op for accounts without one : email-signin just
+                fails with the same generic message as a wrong password. */}
+            <Pressable
+              onPress={() => {
+                setChannel('email');
+                setPendingEmail(trimmed);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
+                router.push({ pathname: '/(onboarding)/password-signin', params: { email: trimmed } } as any);
+              }}
+              hitSlop={8}
+              style={{ marginTop: 14, alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMuted, letterSpacing: 0 }}>
+                {t('onboarding.email.usePassword')}
+              </Text>
+            </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>

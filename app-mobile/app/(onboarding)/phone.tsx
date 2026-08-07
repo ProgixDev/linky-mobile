@@ -40,6 +40,7 @@ export default function PhoneRoute() {
   const setPendingPhone = useAuth((s) => s.setPendingPhone);
   const setPendingOtpId = useAuth((s) => s.setPendingOtpId);
   const setPendingDevCode = useAuth((s) => s.setPendingDevCode);
+  const setPendingDelivery = useAuth((s) => s.setPendingDelivery);
   const requestOtp = useRequestOtp();
   const toast = useToast();
   const valid = phone.replace(/\D/g, '').length >= 8;
@@ -182,11 +183,20 @@ export default function PhoneRoute() {
                   letterSpacing: 0,
                 }}
               >
+                {/* Same activation as the email screen (client 2026-08-05). */}
                 <Trans
                   i18nKey="onboarding.phone.legal"
                   components={[
-                    <Text key="0" style={{ color: colors.primaryDeep, fontWeight: '600' }} />,
-                    <Text key="1" style={{ color: colors.primaryDeep, fontWeight: '600' }} />,
+                    <Text
+                      key="0"
+                      style={{ color: colors.primaryDeep, fontWeight: '600' }}
+                      onPress={() => router.push('/settings/terms')}
+                    />,
+                    <Text
+                      key="1"
+                      style={{ color: colors.primaryDeep, fontWeight: '600' }}
+                      onPress={() => router.push('/settings/privacy-policy')}
+                    />,
                   ]}
                 />
               </Text>
@@ -203,11 +213,12 @@ export default function PhoneRoute() {
               onPress={async () => {
                 const target = `+224${phone.replace(/\D/g, '')}`;
                 try {
-                  const { otp_id, dev_code } = await requestOtp.mutateAsync({ channel: 'phone', target });
+                  const { otp_id, dev_code, delivery } = await requestOtp.mutateAsync({ channel: 'phone', target });
                   setChannel('phone');
                   setPendingPhone(`+224 ${phone}`);
                   setPendingOtpId(otp_id);
                   setPendingDevCode(dev_code ?? null);
+                  setPendingDelivery(delivery ?? null);
                   router.push('/(onboarding)/otp');
                 } catch (e: unknown) {
                   console.error('[otp-request] error:', e);

@@ -103,8 +103,13 @@ export default function OtpRoute() {
   const setPendingOtpId = useAuth((s) => s.setPendingOtpId);
   const pendingDevCode = useAuth((s) => s.pendingDevCode);
   const setPendingDevCode = useAuth((s) => s.setPendingDevCode);
+  const setPendingDelivery = useAuth((s) => s.setPendingDelivery);
+  const delivery = useAuth((s) => s.pendingDelivery);
+  const pendingResetIntent = useAuth((s) => s.pendingResetIntent);
+  const setPendingResetIntent = useAuth((s) => s.setPendingResetIntent);
   const setTokens = useAuth((s) => s.setTokens);
   const signIn = useAuth((s) => s.signIn);
+  const completeOnboarding = useAuth((s) => s.completeOnboarding);
   const verifyOtp = useVerifyOtp();
   const requestOtp = useRequestOtp();
   const toast = useToast();
@@ -145,12 +150,34 @@ export default function OtpRoute() {
         setPendingOtpId(null);
         signIn(user);
         haptic.success();
+        // "Mot de passe oublié ?" lands here too — the OTP just verified
+        // ownership of the account exactly like a normal signin, so send them
+        // straight to set a new password instead of the tabs (client
+        // 2026-08-05). Takes priority over the new-account branch below : a
+        // password reset always targets an EXISTING account.
+        if (pendingResetIntent) {
+          setPendingResetIntent(false);
+          // Existing account by definition — persist the flag here too (see
+          // the returning-user branch below for why this matters).
+          completeOnboarding();
+          router.replace('/settings/password' as never);
+          return;
+        }
         // Pre-prod cutover: returning users (was_created=false) skip
         // profile-setup entirely so update-profile doesn't overwrite their
         // existing display_name + roles. New users still hit profile-setup
         // as before. was_created omitted from the response means "unknown" —
         // treat as new for safety (existing email-signup path doesn't set it).
         if (was_created === false) {
+          // CRITICAL (client 2026-08-06): completeOnboarding() is what
+          // persists `auth.onboardingDone` to MMKV, and app/index.tsx routes
+          // on exactly that flag at every cold start. Only done.tsx (the END
+          // of the NEW-account flow) used to call it — so a RETURNING user
+          // was navigated into the tabs with the flag still false, and the
+          // next launch bounced them back to email + code. Every time.
+          // Their tokens were fine (90-day refresh) ; the router just never
+          // got far enough to use them.
+          completeOnboarding();
           toast.show(t('onboarding.otp.welcomeBack'), 'success');
           router.replace('/(tabs)');
         } else {
@@ -222,7 +249,13 @@ export default function OtpRoute() {
             tone="muted"
             style={{ marginTop: 10, fontSize: 15, lineHeight: 22, letterSpacing: 0 }}
           >
-            {channel === 'email' ? t('onboarding.otp.sentToEmail') : t('onboarding.otp.sentToPhone')}{' '}
+            {channel === 'email'
+              ? t('onboarding.otp.sentToEmail')
+              : delivery === 'whatsapp'
+                // Name WhatsApp explicitly — someone told "envoyé au 6xx…" goes
+                // hunting through their SMS while the code sits in WhatsApp.
+                ? t('onboarding.otp.sentToWhatsapp')
+                : t('onboarding.otp.sentToPhone')}{' '}
             <Text
               style={{
                 color: colors.text,
@@ -262,9 +295,10 @@ export default function OtpRoute() {
                   // Re-request OTP for the same target. Server-side: 1/min/target limit applies.
                   const target = channel === 'email' ? email.trim() : phone.replace(/\s+/g, '');
                   try {
-                    const { otp_id, dev_code } = await requestOtp.mutateAsync({ channel, target });
+                    const { otp_id, dev_code, delivery } = await requestOtp.mutateAsync({ channel, target });
                     setPendingOtpId(otp_id);
                     setPendingDevCode(dev_code ?? null);
+                    setPendingDelivery(delivery ?? null);
                     setSeconds(20);
                     haptic.light();
                   } catch (e: unknown) {
