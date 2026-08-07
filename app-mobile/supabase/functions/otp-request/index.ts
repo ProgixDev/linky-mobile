@@ -2,6 +2,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { hmacHex } from '@shared/hmac.ts';
 import { normalizePhone, normalizeEmail } from '@shared/validate.ts';
+import { sendCodeToPhone } from '@shared/phone-code.ts';
 
 interface Body { channel: 'phone' | 'email'; target: string; purpose: 'signin'; app?: 'driver' | 'marketplace' }
 
@@ -80,41 +81,16 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
   const landingUrl = Deno.env.get('LANDING_OTP_URL');
   const emailSecret = Deno.env.get('OTP_EMAIL_SECRET');
   const canDeliverEmail = !!landingUrl && !!emailSecret;
-  const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-  const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  const twilioFrom = Deno.env.get('TWILIO_FROM');
-  const canDeliverSms = !!twilioSid && !!twilioToken && !!twilioFrom;
 
-  if (body.channel === 'phone' && canDeliverSms) {
-    const params = new URLSearchParams({
-      To: target,
-      Body: `Linky : ton code de connexion est ${code}. Il expire dans 5 minutes.`,
-    });
-    // 'MG…' = Messaging Service SID ; anything else is treated as a From number.
-    if (/^MG[0-9a-f]{32}$/i.test(twilioFrom!)) params.set('MessagingServiceSid', twilioFrom!);
-    else params.set('From', twilioFrom!);
-    try {
-      const r = await fetch(
-        `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-        {
-          method: 'POST',
-          headers: {
-            authorization: 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
-            'content-type': 'application/x-www-form-urlencoded',
-          },
-          body: params.toString(),
-        },
-      );
-      if (!r.ok) {
-        const detail = await r.text().catch(() => '');
-        console.error('[otp-request] sms delivery failed:', r.status, detail.slice(0, 500));
-        throwApi('OTP_DELIVERY_FAILED', 502, 'Envoi du code par SMS impossible. Réessaie plus tard.');
-      }
-      return { body: { otp_id: inserted.id } }; // no dev_code in real delivery
-    } catch (e) {
-      console.error('[otp-request] sms fetch threw:', e);
-      throwApi('OTP_DELIVERY_FAILED', 502, 'Envoi du code par SMS impossible. Réessaie plus tard.');
-    }
+  // Phone: SMS first, then WhatsApp. Guinean carriers reject our SMS until the
+  // "LINKY" sender is registered with them, so WhatsApp is what actually
+  // delivers today — see @shared/phone-code.ts for the full reasoning and the
+  // two kill switches. `delivery` goes back to the app so the code screen can
+  // say WhatsApp instead of SMS ; otherwise people stare at their messages app
+  // waiting for something that arrived elsewhere.
+  if (body.channel === 'phone') {
+    const delivery = await sendCodeToPhone(target, code);
+    if (delivery) return { body: { otp_id: inserted.id, delivery } }; // no dev_code in real delivery
   }
 
   // Email via Resend — takes priority over the Gmail relay once BOTH
@@ -149,7 +125,7 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
         console.error('[otp-request] resend delivery failed:', r.status, detail.slice(0, 400));
         throwApi('OTP_DELIVERY_FAILED', 502, "Envoi du code par email impossible. Réessaie plus tard.");
       }
-      return { body: { otp_id: inserted.id } }; // no dev_code in real delivery
+      return { body: { otp_id: inserted.id, delivery: 'email' } }; // no dev_code in real delivery
     } catch (e) {
       console.error('[otp-request] resend fetch threw:', e);
       throwApi('OTP_DELIVERY_FAILED', 502, "Envoi du code par email impossible. Réessaie plus tard.");
@@ -172,7 +148,7 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
         throwApi('OTP_DELIVERY_FAILED', 502,
           "Envoi du code par email impossible. Réessaie plus tard.");
       }
-      return { body: { otp_id: inserted.id } }; // no dev_code in real delivery
+      return { body: { otp_id: inserted.id, delivery: 'email' } }; // no dev_code in real delivery
     } catch (e) {
       console.error('[otp-request] email fetch threw:', e);
       throwApi('OTP_DELIVERY_FAILED', 502,
@@ -180,9 +156,20 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
     }
   }
 
-  // Stub fallback: only for channels whose provider is NOT configured (phone
-  // without Twilio secrets / email without the landing relay). Returns the
-  // code in the response — test-phase only; dies as soon as secrets are set.
-  console.log(`[OTP STUB] channel=${body.channel} target=${target} code=${code} otp_id=${inserted.id}`);
-  return { body: { otp_id: inserted.id, dev_code: code } };
+  // Provider for this channel is NOT configured (phone without Twilio secrets /
+  // email without any relay). We must FAIL CLOSED: otp-request is a public,
+  // unauthenticated endpoint with no ownership check on `target`, so returning
+  // the code in the response would let anyone request an OTP for someone else's
+  // phone/email and read it straight back — full account takeover (audit
+  // AUTH-01 / SEC-01). The code is NEVER put in the response or the logs in
+  // production. A pre-prod echo is available ONLY when the deploy explicitly
+  // sets LINKY_DEV_OTP_ECHO=1 (which must stay unset in prod).
+  if (Deno.env.get('LINKY_DEV_OTP_ECHO') === '1') {
+    console.log(`[OTP DEV ECHO] channel=${body.channel} otp_id=${inserted.id}`);
+    return { body: { otp_id: inserted.id, dev_code: code } };
+  }
+  throwApi('OTP_DELIVERY_UNAVAILABLE', 503,
+    body.channel === 'phone'
+      ? "L'envoi de SMS n'est pas encore activé. Connecte-toi plutôt par email."
+      : "L'envoi du code par email est momentanément indisponible. Réessaie plus tard.");
 }));

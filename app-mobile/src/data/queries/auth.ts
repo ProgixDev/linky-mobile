@@ -21,6 +21,11 @@ export interface AuthUser {
   // on it without a separate get-me round-trip. Mobile users always see
   // is_admin = false; the mobile UI never reads it.
   is_admin?: boolean;
+  // Undefined until the account has visited Profil > Confidentialité and
+  // touched the toggle at least once ; treat as `true` (the DB default) until
+  // then — see settings/privacy.tsx.
+  profile_public?: boolean;
+  personalize_feed?: boolean;
 }
 
 export interface TokenBundle {
@@ -39,7 +44,11 @@ export interface AuthBundle extends TokenBundle {
 
 export function useRequestOtp() {
   return useMutation({
-    mutationFn: async (input: { channel: 'phone' | 'email'; target: string }): Promise<{ otp_id: string; dev_code?: string }> => {
+    // `delivery` says which rail actually carried the code. A phone request can
+    // come back as 'whatsapp' (Guinean carriers reject our SMS until the LINKY
+    // sender is registered), and the code screen must name the right app —
+    // otherwise people wait on their messages while the code sits in WhatsApp.
+    mutationFn: async (input: { channel: 'phone' | 'email'; target: string }): Promise<{ otp_id: string; dev_code?: string; delivery?: 'sms' | 'whatsapp' | 'email' }> => {
       return apiPost({
         path: '/otp-request',
         authed: false,
@@ -85,6 +94,33 @@ export function useEmailSignin() {
   });
 }
 
+// Lets an already-authed user set/change their password, so a future session
+// expiry can be resolved with email-signin instead of always needing a fresh
+// OTP (client 2026-08-05). A STALE session (>10 min old) gets an OTP_REQUIRED
+// error back — see usePasswordChangeRequest — a fresh one (just signed in,
+// including via "mot de passe oublié") goes straight through.
+export function useSetPassword() {
+  return useMutation({
+    mutationFn: async (input: { password: string; otpId?: string; code?: string }): Promise<{ ok: boolean }> => {
+      return apiPost({
+        path: '/set-password',
+        body: { password: input.password, otp_id: input.otpId, code: input.code },
+      });
+    },
+  });
+}
+
+// Step-up: sends a confirmation code to the caller's OWN verified email or
+// phone (server-resolved, never client-supplied) before a password change on
+// a stale session (client 2026-08-05).
+export function usePasswordChangeRequest() {
+  return useMutation({
+    mutationFn: async (channel: 'email' | 'phone'): Promise<{ otp_id: string; target_masked: string }> => {
+      return apiPost({ path: '/password-change-request', body: { channel } });
+    },
+  });
+}
+
 // Direct refresh helper for cases where the fetch wrapper's auto-refresh isn't appropriate
 // (e.g. app boot, where we want to validate the stored token before any UI renders).
 export async function refreshSession(refreshToken: string): Promise<TokenBundle> {
@@ -105,6 +141,12 @@ export interface UpdateProfileInput {
   // Public URL of an avatar already uploaded to the avatars bucket (see
   // useUploadAvatar). Empty string clears it.
   avatar_url?: string;
+  // false = comments/reviews show an anonymized name to OTHER users (client
+  // 2026-08-06). A shop's own listings stay visible either way.
+  profile_public?: boolean;
+  // false = Découvrir stays purely chronological ; true nudges it by the
+  // caller's own favorites (client 2026-08-06).
+  personalize_feed?: boolean;
 }
 export function useUpdateProfile() {
   return useMutation({
@@ -114,6 +156,16 @@ export function useUpdateProfile() {
         authed: true,
         body: input,
       });
+    },
+  });
+}
+
+// « Télécharger mes données » (client 2026-08-06) — real self-serve export,
+// emailed to the account's own registered address.
+export function useExportMyData() {
+  return useMutation({
+    mutationFn: async (): Promise<{ sent: boolean; to: string }> => {
+      return apiPost({ path: '/export-my-data', body: {} });
     },
   });
 }
