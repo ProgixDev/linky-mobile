@@ -7,11 +7,11 @@
 import { useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
-import { Camera, ImagePlus, Store } from 'lucide-react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Building2, Camera, ImagePlus, Store } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
@@ -24,7 +24,7 @@ import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { CitySelectField } from '../../src/components/forms/CitySelectField';
 import { LocationMapPicker } from '../../src/components/location/LocationMapPicker';
-import { useMyShops, useUpsertShop } from '../../src/data/queries';
+import { useMyShop, useUpsertShop } from '../../src/data/queries';
 import { useUploadAvatar } from '../../src/data/queries/auth';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
@@ -42,13 +42,20 @@ function resolveMime(asset: ImagePicker.ImagePickerAsset): ImgMime {
 export default function ShopEditRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
-  const shopsQuery = useMyShops();
+  // Which profile is being edited — boutique or agence immo (client 2026-08-07).
+  // They are separate rows with their own branding, so the caller says which one;
+  // omitted => boutique, which is what every pre-split entry point meant.
+  const params = useLocalSearchParams<{ kind?: string }>();
+  const profileKind: 'shop' | 'agency' = params.kind === 'agency' ? 'agency' : 'shop';
+  const isAgency = profileKind === 'agency';
+  const shopsQuery = useMyShop(profileKind);
   const upsert = useUpsertShop();
   const uploadLogo = useUploadAvatar();
   const uploadCover = useUploadAvatar();
 
-  const shop = shopsQuery.data?.[0];
+  const shop = shopsQuery.data;
 
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
@@ -87,6 +94,12 @@ export default function ShopEditRoute() {
     }
     setHydrated(true);
   }
+
+  // Same screen serves both profiles; the agence variant only swaps wording
+  // (« Ma boutique » → « Mon agence », etc.). Keys without an agency override
+  // fall through to the shared boutique string.
+  const tk = (key: string) =>
+    isAgency ? t(`shopEdit.agency${key[0].toUpperCase()}${key.slice(1)}`, { defaultValue: t(`shopEdit.${key}`) }) : t(`shopEdit.${key}`);
 
   const HM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
   const toggleDay = (d: string) =>
@@ -164,18 +177,18 @@ export default function ShopEditRoute() {
         opening_hours: hoursPayload,
         ...(lat != null && lng != null ? { lat, lng } : {}),
       });
-      toast.show(t('shopEdit.successToast'), 'success');
+      toast.show(tk('successToast'), 'success');
       if (router.canGoBack()) router.back();
       else router.replace('/(tabs)/boutique');
     } catch (e) {
-      toast.show(toToastMessage(e, t('shopEdit.errorToast')), 'danger');
+      toast.show(toToastMessage(e, tk('errorToast')), 'danger');
     }
   }
 
   if (shopsQuery.isLoading) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title={t('shopEdit.topbar')} back />
+        <TopBar title={tk('topbar')} back />
         <View style={{ padding: 16, gap: 14 }}>
           <Skeleton height={150} radius={16} />
           <Skeleton height={56} radius={12} />
@@ -187,7 +200,7 @@ export default function ShopEditRoute() {
   if (shopsQuery.isError) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <TopBar title={t('shopEdit.topbar')} back />
+        <TopBar title={tk('topbar')} back />
         <ErrorStateView onRetry={() => void shopsQuery.refetch()} />
       </SafeAreaView>
     );
@@ -217,7 +230,7 @@ export default function ShopEditRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title={t('shopEdit.topbar')} back />
+      <TopBar title={tk('topbar')} back />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}>
           {/* Cover + logo */}
@@ -245,13 +258,15 @@ export default function ShopEditRoute() {
               onPress={() => pick('logo')}
               disabled={uploadLogo.isPending}
               style={{ width: 76, height: 76, marginTop: -38, marginLeft: 12 }}
-              accessibilityLabel={t('shopEdit.changeLogoA11y')}
+              accessibilityLabel={tk('changeLogoA11y')}
             >
               {avatar ? (
                 <Image source={avatar} contentFit="cover" style={{ width: 76, height: 76, borderRadius: 18, borderWidth: 3, borderColor: colors.bg, backgroundColor: colors.bgSunken }} transition={120} />
               ) : (
                 <View style={{ width: 76, height: 76, borderRadius: 18, borderWidth: 3, borderColor: colors.bg, backgroundColor: colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
-                  <Store size={26} color={colors.textMuted} strokeWidth={1.75} />
+                  {isAgency
+                    ? <Building2 size={26} color={colors.textMuted} strokeWidth={1.75} />
+                    : <Store size={26} color={colors.textMuted} strokeWidth={1.75} />}
                 </View>
               )}
               <View style={{ position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, borderRadius: 999, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.bg }}>
@@ -260,8 +275,8 @@ export default function ShopEditRoute() {
             </Pressable>
           </View>
 
-          {label(t('shopEdit.nameLabel'))}
-          <TextInput value={name} onChangeText={setName} placeholder={t('shopEdit.namePlaceholder')} placeholderTextColor={colors.textFaint} maxLength={80} style={inputStyle} />
+          {label(tk('nameLabel'))}
+          <TextInput value={name} onChangeText={setName} placeholder={tk('namePlaceholder')} placeholderTextColor={colors.textFaint} maxLength={80} style={inputStyle} />
 
           {label(t('shopEdit.cityLabel'))}
           <CitySelectField label="" value={city} onChange={setCity} />
@@ -284,7 +299,7 @@ export default function ShopEditRoute() {
           <TextInput
             value={about}
             onChangeText={(txt) => setAbout(txt.slice(0, 800))}
-            placeholder={t('shopEdit.aboutPlaceholder')}
+            placeholder={tk('aboutPlaceholder')}
             placeholderTextColor={colors.textFaint}
             multiline
             style={{ ...inputStyle, height: 120, paddingTop: 14, textAlignVertical: 'top' }}
@@ -380,7 +395,15 @@ export default function ShopEditRoute() {
           )}
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 20, paddingVertical: 16 }}>
+        {/* Footer sits outside the top-only SafeAreaView, so pad by the real bottom
+            inset or the action hides behind the Android nav bar (client 2026-08-05). */}
+        <View
+          style={{
+            paddingHorizontal: 20,
+            paddingTop: 16,
+            paddingBottom: 16 + insets.bottom,
+          }}
+        >
           <Button variant="dark" size="lg" block label={t('shopEdit.save')} onPress={onSave} loading={upsert.isPending} disabled={!canSave} />
         </View>
       </KeyboardAvoidingView>

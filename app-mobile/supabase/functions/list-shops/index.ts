@@ -8,6 +8,10 @@ interface Body {
   verified_only?: boolean;
   limit?: number;
   cursor?: Cursor;
+  /** Which profiles to list (client 2026-08-07). Defaults to 'shop' so the
+   *  home « Boutiques » rail never starts showing real-estate agencies now
+   *  that they are separate rows. Pass 'agency' for an agencies rail. */
+  kind?: 'shop' | 'agency';
 }
 
 // Phase V.2 -- anchored. See discover-feed for the rationale.
@@ -27,6 +31,7 @@ function valid(b: unknown): b is Body {
   if (x.verified_only !== undefined && typeof x.verified_only !== 'boolean') return false;
   if (x.limit !== undefined && (typeof x.limit !== 'number' || x.limit < 1 || x.limit > 100)) return false;
   if (x.cursor !== undefined && !validCursor(x.cursor)) return false;
+  if (x.kind !== undefined && x.kind !== 'shop' && x.kind !== 'agency') return false;
   return true;
 }
 
@@ -35,7 +40,10 @@ Deno.serve(makePost<Body>('/v1/shops/list', valid, async ({ sb, body }) => {
   const limit = body.limit ?? 50;
   let q = sb
     .from('shops_with_counts')
-    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count, created_at, opening_hours');
+    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count, created_at, opening_hours, kind, property_count');
+
+  // Boutiques and agences are distinct profiles — never mix them in one list.
+  q = q.eq('kind', body.kind === 'agency' ? 'agency' : 'shop');
 
   if (verifiedOnly) q = q.eq('verified', true);
 

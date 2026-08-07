@@ -51,6 +51,10 @@ export interface ShopHours {
 export interface Shop {
   id: ID;
   ownerId: ID;
+  /** Boutique (articles) or agence immobilière (biens). A seller who does both
+   *  owns two separate profiles since 2026-08-07, each with its own name, logo,
+   *  cover and city. Older payloads without the field read as 'shop'. */
+  kind: 'shop' | 'agency';
   name: string;
   cover: string;
   avatar: string;
@@ -60,6 +64,8 @@ export interface Shop {
   reviewCount: number;
   followerCount: number;
   productCount: number;
+  /** Listings on an agency profile (the immobilier counterpart of productCount). */
+  propertyCount: number;
   responseTime: string;
   about: string;
   // null / undefined when the owner hasn't set a schedule — the storefront then
@@ -81,9 +87,14 @@ export interface Product {
   condition: Condition;
   status: ListingStatus;
   photos: string[];
+  videoUrl?: string;
   boosted: boolean;
   viewCount: number;
   favCount: number;
+  commentCount?: number;
+  /** Whether the CALLING user has hearted this listing (server truth, so the
+      heart and the count can never disagree). Absent for anonymous callers. */
+  favorited?: boolean;
   city: string;
   district?: string;
   createdAt: string;
@@ -112,6 +123,10 @@ export interface Property {
   createdAt: string;
   viewCount: number;
   favCount: number;
+  commentCount?: number;
+  /** Whether the CALLING user has hearted this listing (server truth, so the
+      heart and the count can never disagree). Absent for anonymous callers. */
+  favorited?: boolean;
 }
 
 export type DiscoverItem =
@@ -123,13 +138,17 @@ export type DiscoverItem =
 // create response, which returns the bare boost.
 export interface Boost {
   id: ID;
-  productId: ID;
+  kind?: 'product' | 'property';
+  productId?: ID;
+  propertyId?: ID;
   amountGnf: number;
   days: number;
   status: 'active' | 'expired' | 'cancelled';
   startsAt: string;
   endsAt: string;
   createdAt: string;
+  // Unified listing snapshot (product OR property). `product` kept for back-compat.
+  listing?: { title: string; photo: string | null; status: string };
   product?: { title: string; photo: string | null; status: string };
 }
 
@@ -155,6 +174,12 @@ export interface Order {
   amountGnf: number;
   feesGnf: number;
   totalGnf: number;
+  /** Mode de réception (2026-07-30). 'delivery' = Linky livre (frais forfaitaire
+   *  deliveryFeeGnf) ; 'pickup' = retrait boutique (gratuit). Défaut 'delivery'
+   *  pour les commandes historiques. */
+  deliveryMode?: 'pickup' | 'delivery';
+  /** Frais de livraison facturé (0 en retrait sur place). */
+  deliveryFeeGnf?: number;
   paymentMethod: PaymentMethod;
   currency: 'GNF' | 'EUR';
   status: OrderStatus;
@@ -170,6 +195,16 @@ export interface Order {
   delivery?: OrderDelivery | null;
   /** Whether the caller already reviewed this order (get-order) — gates the « Noter » CTA. */
   hasReviewed?: boolean;
+  /** Every article of the order (same shop). Present from get-order; the legacy
+      productSnapshot fields still describe the PRIMARY article. */
+  items?: {
+    productId: string;
+    title: string;
+    photo: string;
+    quantity: number;
+    unitPriceGnf: number;
+    amountGnf: number;
+  }[];
 }
 
 export interface Review {
@@ -197,6 +232,7 @@ export interface BookingContract {
   end_date: string | null;
   months: number | null;
   rent_minor: number;
+  deposit_minor?: number; // monthly caution (1 month); absent/0 for daily
   amount_minor: number;
   fees_minor: number;
   total_minor: number;

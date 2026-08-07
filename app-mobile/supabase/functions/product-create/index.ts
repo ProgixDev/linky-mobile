@@ -6,7 +6,7 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapProduct, type ProductRow } from '@shared/catalog.ts';
 import { isValidCategory, isValidCondition } from '@shared/categories.ts';
-import { diditConfig } from '@shared/didit.ts';
+import { diditConfig, kycRequiredToPublish } from '@shared/didit.ts';
 
 interface Body {
   shop_id?: string;
@@ -16,6 +16,7 @@ interface Body {
   category: string;
   condition: 'neuf' | 'occasion' | 'reconditionné';
   photos: string[];
+  video_url?: string;
   city: string;
   district?: string;
 }
@@ -37,6 +38,7 @@ function valid(b: unknown): b is Body {
   if (!isValidCondition(x.condition)) return false;
   if (!Array.isArray(x.photos) || x.photos.length > 8) return false;
   if (!x.photos.every((p) => typeof p === 'string' && URL_RE.test(p))) return false;
+  if (x.video_url !== undefined && (typeof x.video_url !== 'string' || !URL_RE.test(x.video_url))) return false;
   if (typeof x.city !== 'string' || x.city.trim().length < 2 || x.city.length > 80) return false;
   if (x.district !== undefined && (typeof x.district !== 'string' || x.district.length > 80)) return false;
   return true;
@@ -58,12 +60,10 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
   if (!roles.includes('seller')) {
     throwApi('ROLE_REQUIRED', 403, 'Active le rôle vendeur dans ton profil pour publier.');
   }
-  // Soft-gate : KYC is only enforced when Didit is configured (creds live).
-  // While Didit is dark NO user can reach 'approved', so a hard gate would
-  // block every publish in V1. diditConfig() flips this on the moment
-  // LINKY_DIDIT_API_KEY + LINKY_DIDIT_WORKFLOW_ID land — no code change
-  // needed at cutover.
-  if (diditConfig() && caller.kyc_status !== 'approved') {
+  // Publishing no longer requires ID verification by default (client
+  // 2026-08-05 — most sellers in Guinea have no ID document, which blocked
+  // them from listing at all). Re-enable with LINKY_KYC_REQUIRED_TO_PUBLISH=1.
+  if (kycRequiredToPublish() && diditConfig() && caller.kyc_status !== 'approved') {
     throwApi('KYC_REQUIRED', 403, "Vérifie ton identité pour publier — c'est rapide.");
   }
 
@@ -71,14 +71,17 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
   if (shopId) {
     // Verify ownership: the shop must belong to the caller.
     const { data: owned, error } = await sb
-      .from('shops').select('id').eq('id', shopId).eq('owner_id', userId).maybeSingle();
+      .from('shops').select('id').eq('id', shopId).eq('owner_id', userId)
+      .eq('kind', 'shop').maybeSingle();
     if (error) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
     if (!owned) throwApi('SHOP_NOT_FOUND', 404, 'Boutique introuvable.');
   } else {
-    // Auto-pick the caller's first shop; if none, create a default.
+    // The caller's BOUTIQUE specifically — boutique and agence are separate
+    // profiles since 2026-08-07 (shops.kind), so this must never fall back to
+    // their agency.
     const { data: existing, error: eList } = await sb
-      .from('shops').select('id').eq('owner_id', userId)
-      .order('created_at', { ascending: true }).limit(1).maybeSingle();
+      .from('shops').select('id').eq('owner_id', userId).eq('kind', 'shop')
+      .maybeSingle();
     if (eList) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
     if (existing) {
       shopId = existing.id as string;
@@ -90,7 +93,7 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
       const shopName = firstName ? `Boutique de ${firstName}` : 'Ma boutique';
       const { data: created, error: eIns } = await sb
         .from('shops')
-        .insert({ owner_id: userId, name: shopName, city: body.city.trim(), about: '' })
+        .insert({ owner_id: userId, name: shopName, city: body.city.trim(), about: '', kind: 'shop' })
         .select('id').single();
       if (eIns || !created) {
         console.error('[product-create] auto-shop insert error:', eIns);
@@ -108,6 +111,7 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     category: body.category,
     condition: body.condition,
     photos: body.photos,
+    video_url: body.video_url ?? null,
     city: body.city.trim(),
     district: body.district?.trim() || null,
     status: 'active',
@@ -115,7 +119,7 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
   const { data, error } = await sb
     .from('products')
     .insert(insert)
-    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, boosted, view_count, fav_count, city, district, created_at')
+    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, created_at')
     .single();
   if (error || !data) {
     console.error('[product-create] insert error:', error);

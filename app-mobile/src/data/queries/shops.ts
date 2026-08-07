@@ -63,6 +63,17 @@ export function useMyShops() {
   });
 }
 
+/** The caller's profile for one side of the business (client 2026-08-07).
+ *  Boutique and agence immo are separate rows, so every pro surface must pick
+ *  the one matching the mode it renders instead of "the first shop I own" —
+ *  which used to show the boutique's name and logo on the estate dashboard.
+ *  Falls back to a legacy kind-less shop so old cached payloads still resolve. */
+export function useMyShop(kind: 'shop' | 'agency') {
+  const q = useMyShops();
+  const mine = q.data?.find((s) => (s.kind ?? 'shop') === kind);
+  return { ...q, data: mine };
+}
+
 export function useUpsertShop() {
   const qc = useQueryClient();
   return useMutation({

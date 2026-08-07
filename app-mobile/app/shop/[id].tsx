@@ -18,22 +18,25 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { ProductCard } from '../../src/components/lists/ProductCard';
+import { PropertyCard } from '../../src/components/lists/PropertyCard';
 import {
   useShop,
   useProducts,
+  useShopProperties,
   useFindOrCreateConversation,
   useToggleShopFollow,
   useShopReviews,
 } from '../../src/data/queries';
 import { useAuth } from '../../src/stores/auth';
 import { haptic } from '../../src/lib/haptics';
+import { shareMessage } from '../../src/lib/share';
 import { shopOpenStatus } from '../../src/lib/shopHours';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 import { Stars } from '../../src/components/reviews/StarRating';
 
-type Tab = 'articles' | 'reviews' | 'about';
+type Tab = 'articles' | 'immobilier' | 'reviews' | 'about';
 
 const HERO_HEIGHT = 220;
 
@@ -43,8 +46,15 @@ export default function ShopRoute() {
   const { t } = useTranslation();
   const { data: shop, isLoading, isError, refetch } = useShop(id);
   const { data: products } = useProducts({ shopId: id });
+  const { data: shopProperties } = useShopProperties(id);
   const { data: reviews } = useShopReviews(id);
-  const [tab, setTab] = useState<Tab>('articles');
+  const hasProperties = !!shopProperties && shopProperties.length > 0;
+  // An agence immo page leads with its listings; a boutique leads with its
+  // articles. The two are separate profiles since 2026-08-07, so an agency no
+  // longer opens on a permanently-empty « Articles » tab.
+  const isAgency = shop?.kind === 'agency';
+  const [tab, setTab] = useState<Tab | null>(null);
+  const activeTab: Tab = tab ?? (isAgency ? 'immobilier' : 'articles');
   // Pre-prod: follow state is server-truth (get-shop returns is_following for
   // authed callers, follower_count is the denormalized cache). The toggle
   // mutation patches both in cache so the CTA and stat column flip together.
@@ -103,7 +113,12 @@ export default function ShopRoute() {
   const statusColor = status.is24h ? colors.accentText : status.isOpen ? colors.primaryDeep : colors.textMuted;
   const statusBg = status.is24h ? colors.accentSoft : status.isOpen ? colors.primarySoft : colors.bgSunken;
   // Phase Y.2 / I.3d — count/rating honesty + pluralization via i18next.
-  const articlesLabel = t('shop.article', { count: shop.productCount });
+  // An agence immo counts BIENS, not articles — the stat column showed a
+  // permanent « 0 Articles » on agency pages before the split.
+  const listingCount = isAgency ? shop.propertyCount ?? 0 : shop.productCount;
+  const articlesLabel = isAgency
+    ? t('shop.listing', { count: listingCount })
+    : t('shop.article', { count: listingCount });
   const isNewShop = shop.reviewCount === 0;
   const hasAbout = shop.about.trim().length > 0;
   const hasAvatar = typeof shop.avatar === 'string' && shop.avatar.length > 0;
@@ -154,7 +169,7 @@ export default function ShopRoute() {
               onPress={() => {
                 void Share.share({
                   title: shop.name,
-                  message: `${shop.name} sur Linky`,
+                  message: shareMessage(`${shop.name} sur Linky`, 'shop', shop.id),
                 }).catch(() => {});
               }}
               accessibilityLabel="Partager"
@@ -324,7 +339,7 @@ export default function ShopRoute() {
                 label={t('shop.follower', { count: shop.followerCount })}
               />
               <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 4 }} />
-              <StatColumn value={String(shop.productCount)} label={articlesLabel} />
+              <StatColumn value={String(listingCount)} label={articlesLabel} />
               <View style={{ width: 1, backgroundColor: colors.border, marginHorizontal: 4 }} />
               {isNewShop ? (
                 <StatColumn value={t('shop.newBadge')} label={t('shop.noReviewsYet')} />
@@ -346,10 +361,14 @@ export default function ShopRoute() {
                 <Button
                   variant="outline"
                   size="md"
-                  label={t('shop.manageMyShop')}
+                  label={isAgency ? t('shop.manageMyAgency') : t('shop.manageMyShop')}
                   leading={<Edit2 size={15} color={colors.text} strokeWidth={2} />}
                   style={{ flex: 1 }}
-                  onPress={() => router.push('/shop/edit')}
+                  onPress={() =>
+                    // Edit THIS profile — a user who owns both a boutique and an
+                    // agence immo would otherwise always land on the boutique.
+                    router.push(isAgency ? ('/shop/edit?kind=agency' as never) : '/shop/edit')
+                  }
                 />
               ) : (
                 <>
@@ -402,14 +421,20 @@ export default function ShopRoute() {
               backgroundColor: colors.bgSunken,
             }}
           >
-            {(['articles', 'reviews', 'about'] as const).map((tabId) => {
-              const active = tab === tabId;
+            {((isAgency
+              ? ['immobilier', 'reviews', 'about']
+              : hasProperties
+                ? ['articles', 'immobilier', 'reviews', 'about']
+                : ['articles', 'reviews', 'about']) as Tab[]).map((tabId) => {
+              const active = activeTab === tabId;
               const label =
                 tabId === 'articles'
                   ? t('shop.tabArticles')
-                  : tabId === 'reviews'
-                    ? t('shop.tabReviews')
-                    : t('shop.tabAbout');
+                  : tabId === 'immobilier'
+                    ? t('shop.tabImmobilier')
+                    : tabId === 'reviews'
+                      ? t('shop.tabReviews')
+                      : t('shop.tabAbout');
               return (
                 <Pressable
                   key={tabId}
@@ -445,7 +470,7 @@ export default function ShopRoute() {
         </View>
 
         {/* ===== Tab content ===== */}
-        {tab === 'articles' && (
+        {activeTab === 'articles' && (
           <View
             style={{
               padding: 20,
@@ -462,7 +487,17 @@ export default function ShopRoute() {
           </View>
         )}
 
-        {tab === 'reviews' && (
+        {/* Immobilier — the shop's active properties (agence immo). Client
+            2026-08-03 : an agent's page shows their listings, like a boutique. */}
+        {activeTab === 'immobilier' && (
+          <View style={{ padding: 20, gap: 14 }}>
+            {shopProperties?.map((p) => (
+              <PropertyCard key={p.id} property={p} />
+            ))}
+          </View>
+        )}
+
+        {activeTab === 'reviews' && (
           <View style={{ padding: 20 }}>
             <View
               style={{
@@ -582,7 +617,7 @@ export default function ShopRoute() {
           </View>
         )}
 
-        {tab === 'about' && (
+        {activeTab === 'about' && (
           <View style={{ padding: 20 }}>
             <View
               style={{

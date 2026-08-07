@@ -30,7 +30,9 @@ export default function StatsRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const myShops = useMyShops();
-  const firstShopId = myShops.data?.[0]?.id;
+  // The BOUTIQUE's id — products live there, not on the agence immo profile
+  // (separate rows since 2026-08-07). Properties are owner-scoped below.
+  const firstShopId = myShops.data?.find((s) => (s.kind ?? 'shop') === 'shop')?.id;
   const products = useProducts({ shopId: firstShopId });
   const properties = useMyProperties();
 

@@ -12,6 +12,7 @@ export interface ProductRow {
   condition: 'neuf' | 'occasion' | 'reconditionné';
   status: 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
   photos: string[] | null;
+  video_url?: string | null;
   boosted: boolean;
   view_count: number;
   fav_count: number;
@@ -41,7 +42,11 @@ export interface ShopRow {
   follower_count: number;
   response_time_text: string;
   opening_hours?: OpeningHoursRow | null;
-  product_count?: number; // present on shops_with_counts view only
+  product_count?: number;  // present on shops_with_counts view only
+  property_count?: number; // idem — meaningful for kind='agency'
+  // 'shop' = boutique (products) · 'agency' = agence immo (properties).
+  // Separate profiles per user since 2026-08-07.
+  kind?: 'shop' | 'agency';
   created_at: string;
 }
 
@@ -56,6 +61,7 @@ export function mapProduct(r: ProductRow) {
     condition: r.condition,
     status: r.status,
     photos: r.photos ?? [],
+    videoUrl: r.video_url ?? undefined,
     boosted: r.boosted,
     viewCount: r.view_count,
     favCount: r.fav_count,
@@ -87,6 +93,7 @@ export interface PropertyRow {
   status: 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
   view_count: number;
   fav_count: number;
+  boosted?: boolean;
   created_at: string;
 }
 
@@ -115,6 +122,7 @@ export function mapProperty(r: PropertyRow, photos: string[]) {
     status: r.status,
     viewCount: r.view_count,
     favCount: r.fav_count,
+    boosted: r.boosted ?? false,
     gps: { lat: r.lat ?? 0, lng: r.lng ?? 0 },
     createdAt: r.created_at,
   };
@@ -132,6 +140,11 @@ export interface OrderRow {
   amount_minor: number | string;
   fees_minor: number | string;
   total_minor: number | string;
+  // Reception mode (20260730_01). Optional here: only endpoints that SELECT it
+  // populate it ; mapOrder falls back to 'delivery' / 0 for the historic rows
+  // and the endpoints that don't ask for these columns.
+  delivery_mode?: string;
+  delivery_fee_minor?: number | string;
   payment_method: string;
   currency: 'GNF' | 'EUR';
   status: string;
@@ -195,6 +208,8 @@ export function mapOrder(
     amountGnf: Number(r.amount_minor),
     feesGnf: Number(r.fees_minor),
     totalGnf: Number(r.total_minor),
+    deliveryMode: (r.delivery_mode as 'pickup' | 'delivery' | undefined) ?? 'delivery',
+    deliveryFeeGnf: Number(r.delivery_fee_minor ?? 0),
     paymentMethod: r.payment_method,
     currency: r.currency,
     status: r.status,
@@ -283,6 +298,8 @@ export function mapShop(r: ShopRow) {
   return {
     id: r.id,
     ownerId: r.owner_id,
+    kind: r.kind ?? 'shop',
+    propertyCount: r.property_count ?? 0,
     name: r.name,
     cover: r.cover_url ?? '',
     avatar: r.avatar_url ?? '',
@@ -312,7 +329,8 @@ export function mapShop(r: ShopRow) {
 // the bare boosts row, so the embed is optional here.
 export interface BoostRow {
   id: string;
-  product_id: string;
+  product_id: string | null;
+  property_id?: string | null;
   seller_id: string;
   amount_minor: number | string;
   days: number;
@@ -321,24 +339,33 @@ export interface BoostRow {
   ends_at: string;
   created_at: string;
   products?: { title: string; photos: string[] | null; status: string } | null;
+  // properties has no photo column (covers live in property_photos) — title +
+  // status only ; the boost history shows a placeholder thumbnail for biens.
+  properties?: { title: string; status: string } | null;
 }
 
 export function mapBoost(r: BoostRow) {
+  const kind: 'product' | 'property' = r.property_id ? 'property' : 'product';
+  const listing = r.products
+    ? { title: r.products.title, photo: r.products.photos?.[0] ?? null, status: r.products.status }
+    : r.properties
+      ? { title: r.properties.title, photo: null as string | null, status: r.properties.status }
+      : undefined;
   return {
     id: r.id,
-    productId: r.product_id,
+    kind,
+    productId: r.product_id ?? undefined,
+    propertyId: r.property_id ?? undefined,
     amountGnf: Number(r.amount_minor),
     days: r.days,
     status: r.status,
     startsAt: r.starts_at,
     endsAt: r.ends_at,
     createdAt: r.created_at,
+    listing,
+    // back-compat: keep `product` populated for product boosts.
     product: r.products
-      ? {
-          title: r.products.title,
-          photo: r.products.photos?.[0] ?? null,
-          status: r.products.status,
-        }
+      ? { title: r.products.title, photo: r.products.photos?.[0] ?? null, status: r.products.status }
       : undefined,
   };
 }

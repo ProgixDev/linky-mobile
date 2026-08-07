@@ -1,7 +1,7 @@
-// Buy a boost — pick one of your active products, pick a duration tier, pay
-// from the wallet. Price is server-authoritative (create-boost re-derives it
-// from days); this screen only sends { productId, days }. Insufficient balance
-// routes to the recharge flow.
+// Buy a boost — pick one of your active listings (a product OR a property),
+// pick a duration tier, pay from the wallet. Price is server-authoritative
+// (create-boost re-derives it from days); this screen only sends
+// { productId | propertyId, days }. Insufficient balance surfaces a message.
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,10 +21,12 @@ import {
   useBoosts,
   useCreateBoost,
   useMyShops,
+  useMyProperties,
   useProducts,
   useWallet,
 } from '../../../src/data/queries';
-import type { Product } from '../../../src/data/types';
+
+type Selection = { kind: 'product' | 'property'; id: string };
 
 export default function BoostNewRoute() {
   const { colors } = useTheme();
@@ -32,37 +34,62 @@ export default function BoostNewRoute() {
   const toast = useToast();
 
   const { data: shops } = useMyShops();
-  const myShop = shops?.[0];
+  // Products hang off the BOUTIQUE. Since boutique and agence immo became
+  // separate rows (2026-08-07), shops[0] could be the agency — which returned
+  // zero products and made the boost picker look empty for sellers who also
+  // list real estate.
+  const myShop = shops?.find((s) => (s.kind ?? 'shop') === 'shop');
   const { data: products } = useProducts({ shopId: myShop?.id });
+  const { data: properties } = useMyProperties();
+  // Only the caller's OWN products are boostable. useProducts({ shopId }) returns
+  // EVERY marketplace product (minus own) while myShop.id is still undefined —
+  // surfacing other sellers' listings that then fail the RPC ownership check
+  // (« Cette annonce ne t'appartient pas »). Filter to the caller's shop ids so
+  // the picker can only ever show boostable listings (client 2026-07-31).
+  const myShopIds = useMemo(() => new Set((shops ?? []).map((s) => s.id)), [shops]);
   const activeProducts = useMemo(
-    () => (products ?? []).filter((p) => p.status === 'active'),
-    [products],
+    () => (products ?? []).filter((p) => p.status === 'active' && myShopIds.has(p.shopId)),
+    [products, myShopIds],
   );
+  const activeProperties = useMemo(
+    () => (properties ?? []).filter((p) => p.status === 'active'),
+    [properties],
+  );
+  const hasListings = activeProducts.length > 0 || activeProperties.length > 0;
+
   const { data: boostData } = useBoosts();
   const tiers = boostData?.tiers ?? [];
   const wallet = useWallet();
   const create = useCreateBoost();
 
-  // Pre-select the product when arriving from its edit screen ("Booster cette
-  // annonce"). Falls back to the manual picker when no param is passed.
-  const { productId: preselectId } = useLocalSearchParams<{ productId?: string }>();
-  const [productId, setProductId] = useState<string | null>(
-    typeof preselectId === 'string' ? preselectId : null,
+  // Pre-select when arriving from a listing's edit screen ("Booster cette
+  // annonce"). Either productId or propertyId is passed; falls back to the
+  // manual picker otherwise.
+  const { productId: preProduct, propertyId: preProperty } =
+    useLocalSearchParams<{ productId?: string; propertyId?: string }>();
+  const [selected, setSelected] = useState<Selection | null>(
+    typeof preProperty === 'string'
+      ? { kind: 'property', id: preProperty }
+      : typeof preProduct === 'string'
+        ? { kind: 'product', id: preProduct }
+        : null,
   );
   const [days, setDays] = useState<number | null>(null);
   const selectedTier = tiers.find((x) => x.days === days) ?? null;
 
   const onPay = async () => {
-    if (!productId || !selectedTier || create.isPending) return;
+    if (!selected || !selectedTier || create.isPending) return;
     try {
       haptic.medium();
-      await create.mutateAsync({ productId, days: selectedTier.days });
+      await create.mutateAsync(
+        selected.kind === 'property'
+          ? { propertyId: selected.id, days: selectedTier.days }
+          : { productId: selected.id, days: selectedTier.days },
+      );
       toast.show(t('pro.boostSuccessToast'), 'success');
       router.replace('/pro/boost');
     } catch (e) {
       if (e instanceof ApiError && e.code === 'INSUFFICIENT_FUNDS') {
-        // Top-up removed (wallet restructure) — the wallet is funded by sales
-        // earnings only, so there is no recharge screen to send the seller to.
         toast.show(t('pro.boostInsufficientBody'), 'danger');
         return;
       }
@@ -80,9 +107,9 @@ export default function BoostNewRoute() {
 
         <View style={{ gap: 10 }}>
           <Text variant="micro" tone="muted" style={{ letterSpacing: 0.5 }}>
-            {t('pro.boostPickProduct').toUpperCase()}
+            {t('pro.boostPickListing').toUpperCase()}
           </Text>
-          {activeProducts.length === 0 ? (
+          {!hasListings ? (
             <View
               style={{
                 padding: 20,
@@ -95,7 +122,7 @@ export default function BoostNewRoute() {
               }}
             >
               <Text tone="muted" center style={{ letterSpacing: 0, textTransform: 'none' }}>
-                {t('pro.boostNoProducts')}
+                {t('pro.boostNoListings')}
               </Text>
               <Button
                 label={t('pro.boostGoCreate')}
@@ -104,21 +131,40 @@ export default function BoostNewRoute() {
               />
             </View>
           ) : (
-            activeProducts.map((p) => (
-              <ProductOption
-                key={p.id}
-                product={p}
-                selected={p.id === productId}
-                onSelect={() => {
-                  haptic.light();
-                  setProductId(p.id);
-                }}
-              />
-            ))
+            <>
+              {activeProducts.map((p) => (
+                <ListingOption
+                  key={`prod-${p.id}`}
+                  title={p.title}
+                  subtitle={formatGNF(p.priceGnf)}
+                  kindLabel={t('proDashboard.kindProduct')}
+                  photo={p.photos?.[0]}
+                  selected={selected?.kind === 'product' && selected.id === p.id}
+                  onSelect={() => {
+                    haptic.light();
+                    setSelected({ kind: 'product', id: p.id });
+                  }}
+                />
+              ))}
+              {activeProperties.map((p) => (
+                <ListingOption
+                  key={`prop-${p.id}`}
+                  title={p.title}
+                  subtitle={formatGNF(p.priceGnf)}
+                  kindLabel={t('proDashboard.kindProperty')}
+                  photo={p.photos?.[0]}
+                  selected={selected?.kind === 'property' && selected.id === p.id}
+                  onSelect={() => {
+                    haptic.light();
+                    setSelected({ kind: 'property', id: p.id });
+                  }}
+                />
+              ))}
+            </>
           )}
         </View>
 
-        {activeProducts.length > 0 && (
+        {hasListings && (
           <View style={{ gap: 10 }}>
             <Text variant="micro" tone="muted" style={{ letterSpacing: 0.5 }}>
               {t('pro.boostPickDuration').toUpperCase()}
@@ -138,7 +184,7 @@ export default function BoostNewRoute() {
           </View>
         )}
 
-        {activeProducts.length > 0 && (
+        {hasListings && (
           <Button
             label={
               selectedTier
@@ -147,7 +193,7 @@ export default function BoostNewRoute() {
             }
             block
             variant="primary"
-            disabled={!productId || !selectedTier || create.isPending}
+            disabled={!selected || !selectedTier || create.isPending}
             loading={create.isPending}
             onPress={() => void onPay()}
           />
@@ -157,17 +203,22 @@ export default function BoostNewRoute() {
   );
 }
 
-function ProductOption({
-  product,
+function ListingOption({
+  title,
+  subtitle,
+  kindLabel,
+  photo,
   selected,
   onSelect,
 }: {
-  product: Product;
+  title: string;
+  subtitle: string;
+  kindLabel: string;
+  photo?: string;
   selected: boolean;
   onSelect: () => void;
 }) {
   const { colors } = useTheme();
-  const photo = product.photos?.[0];
   return (
     <Pressable
       onPress={onSelect}
@@ -192,14 +243,17 @@ function ProductOption({
         <View style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: colors.bgSunken }} />
       )}
       <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 9.5, fontWeight: '700', color: colors.textFaint, letterSpacing: 0.4 }}>
+          {kindLabel}
+        </Text>
         <Text
           numberOfLines={1}
-          style={{ fontSize: 14, fontWeight: '700', color: colors.text, letterSpacing: 0 }}
+          style={{ fontSize: 14, fontWeight: '700', color: colors.text, letterSpacing: 0, marginTop: 1 }}
         >
-          {product.title}
+          {title}
         </Text>
         <Text tone="muted" variant="micro" style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}>
-          {formatGNF(product.priceGnf)}
+          {subtitle}
         </Text>
       </View>
       <View
