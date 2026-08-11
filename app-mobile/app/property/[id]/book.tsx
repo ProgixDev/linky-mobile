@@ -43,17 +43,20 @@ export default function BookPropertyRoute() {
   const period: 'day' | 'month' = prop?.perMonth ? 'month' : 'day';
   const rent = prop?.priceGnf ?? 0;
 
-  const { nights, amount, fees, total, ready } = useMemo(() => {
+  const { nights, deposit, amount, fees, total, ready } = useMemo(() => {
     if (period === 'day') {
-      if (!startDate || !endDate) return { nights: 0, amount: 0, fees: 0, total: 0, ready: false };
+      if (!startDate || !endDate) return { nights: 0, deposit: 0, amount: 0, fees: 0, total: 0, ready: false };
       const n = nightsBetween(startDate, endDate);
       const a = n * rent;
       const f = Math.round(a * 0.03);
-      return { nights: n, amount: a, fees: f, total: a + f, ready: n >= 1 && n <= 90 };
+      return { nights: n, deposit: 0, amount: a, fees: f, total: a + f, ready: n >= 1 && n <= 90 };
     }
-    if (!startDate) return { nights: 0, amount: 0, fees: 0, total: 0, ready: false };
-    const f = Math.round(rent * 0.03);
-    return { nights: 0, amount: rent, fees: f, total: rent + f, ready: true };
+    if (!startDate) return { nights: 0, deposit: 0, amount: 0, fees: 0, total: 0, ready: false };
+    // Monthly: 1st month + a 1-month caution, held in escrow (client 2026-07-29).
+    const dep = rent;
+    const a = rent + dep;
+    const f = Math.round(a * 0.03);
+    return { nights: 0, deposit: dep, amount: a, fees: f, total: a + f, ready: true };
   }, [period, startDate, endDate, rent]);
 
   if (isLoading || isError || !prop) {
@@ -76,9 +79,15 @@ export default function BookPropertyRoute() {
         note,
       },
       {
-        onSuccess: () => {
-          show('Demande envoyée au propriétaire ✅', 'success');
-          router.replace('/bookings' as never);
+        onSuccess: ({ booking_id, instant }) => {
+          if (instant) {
+            // Daily = instant-book: go straight to the booking to pay + sign.
+            show('Réservation confirmée — règle le paiement pour la valider ✅', 'success');
+            router.replace(`/bookings/${booking_id}` as never);
+          } else {
+            show('Demande envoyée au propriétaire ✅', 'success');
+            router.replace('/bookings' as never);
+          }
         },
         onError: (e) => show(toToastMessage(e, "Impossible d'envoyer la demande."), 'danger'),
       },
@@ -153,7 +162,7 @@ export default function BookPropertyRoute() {
                 </Pressable>
               </View>
               <Text variant="micro" tone="muted" style={{ marginTop: 6, letterSpacing: 0, textTransform: 'none' }}>
-                Le 1er mois se paie dans l'app à la signature ; les mois suivants directement au propriétaire.
+                1er mois + caution (1 mois) payés dans l'app ; les mois suivants et la restitution de la caution se règlent directement avec le propriétaire.
               </Text>
             </View>
           )}
@@ -184,7 +193,14 @@ export default function BookPropertyRoute() {
           {/* Price recap */}
           {ready && (
             <View style={{ padding: 14, borderRadius: radii.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, gap: 8 }}>
-              <RecapRow label={period === 'day' ? `${formatGNF(rent)} × ${nights} nuit${nights > 1 ? 's' : ''}` : 'Premier mois de loyer'} value={formatGNF(amount)} />
+              {period === 'day' ? (
+                <RecapRow label={`${formatGNF(rent)} × ${nights} nuit${nights > 1 ? 's' : ''}`} value={formatGNF(amount)} />
+              ) : (
+                <>
+                  <RecapRow label="Premier mois de loyer" value={formatGNF(rent)} />
+                  <RecapRow label="Caution (1 mois)" value={formatGNF(deposit)} />
+                </>
+              )}
               <RecapRow label="Frais de service (3%)" value={formatGNF(fees)} />
               <View style={{ height: 1, backgroundColor: colors.border }} />
               <RecapRow label="Total à payer à la signature" value={formatGNF(total)} bold />

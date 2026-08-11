@@ -1,13 +1,26 @@
 import { sendEmail } from '@/lib/email';
+import { timingSafeEqual } from 'node:crypto';
 
 // Nodemailer uses Node's net/tls/dns — force the Node.js runtime (the Edge runtime lacks them).
 export const runtime = 'nodejs';
 
+// Constant-time compare of the shared secret — a plain !== leaks OTP_EMAIL_SECRET
+// byte-by-byte via response timing. Length check first (timingSafeEqual throws on
+// unequal lengths).
+function secretOk(provided: string | null, expected: string | undefined): boolean {
+  if (!expected || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+// Exactly one well-formed recipient — reject comma/semicolon/whitespace so a
+// single string can't fan out to multiple recipients via nodemailer.
+const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+
 export async function POST(request: Request) {
   // Only callers holding the shared secret (e.g. Linky's otp-request edge function) may send.
-  const provided = request.headers.get('x-otp-secret');
-  const expected = process.env.OTP_EMAIL_SECRET;
-  if (!expected || provided !== expected) {
+  if (!secretOk(request.headers.get('x-otp-secret'), process.env.OTP_EMAIL_SECRET)) {
     return Response.json({ ok: false, detail: 'unauthorized' }, { status: 401 });
   }
 
@@ -18,7 +31,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, detail: 'invalid_json' }, { status: 400 });
   }
   const { to, code } = (parsed ?? {}) as { to?: unknown; code?: unknown };
-  if (typeof to !== 'string' || typeof code !== 'string' || !/^\d{4,8}$/.test(code)) {
+  if (typeof to !== 'string' || to.length > 254 || !EMAIL_RE.test(to) || typeof code !== 'string' || !/^\d{4,8}$/.test(code)) {
     return Response.json({ ok: false, detail: 'invalid_to_or_code' }, { status: 400 });
   }
 
@@ -36,7 +49,8 @@ export async function POST(request: Request) {
     });
     return Response.json({ ok: true });
   } catch (e) {
-    const detail = e instanceof Error ? e.message : String(e);
-    return Response.json({ ok: false, detail }, { status: 502 });
+    // Log detail server-side only — never reflect SMTP/infra strings to the caller.
+    console.error('[send-otp] send failed:', e instanceof Error ? e.message : String(e));
+    return Response.json({ ok: false, detail: 'send_failed' }, { status: 502 });
   }
 }

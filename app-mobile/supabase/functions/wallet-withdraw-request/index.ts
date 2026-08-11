@@ -9,7 +9,8 @@ function valid(b: unknown): b is Body {
   const x = b as Body;
   return (x.currency === 'GNF' || x.currency === 'EUR')
     && typeof x.amount_minor === 'number' && Number.isInteger(x.amount_minor) && x.amount_minor > 0
-    && (x.destination === undefined || typeof x.destination === 'string');
+    && x.amount_minor <= 100_000_000_000
+    && (x.destination === undefined || (typeof x.destination === 'string' && x.destination.length <= 128));
 }
 
 // Records a PENDING withdrawal request after a read-only balance check. No debit happens here -

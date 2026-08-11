@@ -179,7 +179,10 @@ export default function ProfileSetupRoute() {
             )}
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 8, paddingTop: 12 }}>
+          {/* flexShrink:0 — the action row must never be squeezed by a tall
+              step (the map step pushed it off-screen entirely, client
+              2026-08-06). Belt-and-braces with the map's own maxHeight. */}
+          <View style={{ flexDirection: 'row', gap: 8, paddingTop: 12, flexShrink: 0 }}>
             <Button
               variant="outline"
               size="lg"

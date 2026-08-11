@@ -22,7 +22,6 @@ import {
   Store,
   Building2,
   CalendarCheck,
-  Banknote,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +33,7 @@ import { registerPushToken, unregisterPushToken } from '../../src/lib/push';
 import { useAuth, type UserRole } from '../../src/stores/auth';
 import { usePrefs } from '../../src/stores/prefs';
 import { useKycStatus } from '../../src/data/queries';
+import { useMyAddresses } from '../../src/data/queries/addresses';
 
 interface QuickAction {
   Icon: LucideIcon;
@@ -49,8 +49,6 @@ interface QuickAction {
 // Phase I.3c — takes t so labels translate.
 function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAction[] {
   const isBuyer = roles.includes('buyer');
-  const isSeller = roles.includes('seller');
-  const isAgent = roles.includes('agent');
   const out: QuickAction[] = [];
   if (isBuyer) {
     out.push({ Icon: Package, label: t('profil.qa.commandes'), href: '/orders' });
@@ -61,18 +59,10 @@ function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAc
     out.push({ Icon: CalendarCheck, label: t('profil.qa.reservations'), href: '/bookings' });
     // Favoris moved to the Accueil / Marché header trio (client 2026-07-26).
   }
-  if (isSeller) {
-    out.push({ Icon: Store, label: t('profil.qa.ventes'), href: '/seller/orders' });
-  }
-  if (isAgent) {
-    out.push({ Icon: CalendarCheck, label: t('profil.qa.visites'), href: '/pro/visites' });
-  }
-  out.push({ Icon: Wallet, label: t('profil.qa.wallet'), href: '/wallet' });
-  // Retirer moved off the Home tiles (client 2026-07-06). Universal —
-  // refunds credit any wallet, not just sellers'.
-  out.push({ Icon: Banknote, label: t('profil.qa.retraits'), href: '/wallet/retirer' });
-  // Scan chip removed (client 2026-07-07) — receipt-confirmation scanning is
-  // reached from the order screen itself, not a global shortcut.
+  // « Ventes »/« Visites »/« Retraits » removed 2026-07-30 (already in the pro
+  // workspace). « Wallet » moved into the RÉGLAGES list (client 2026-07-30) so
+  // it isn't a lone pill on pure-pro accounts. This row now holds ONLY the
+  // buyer shortcuts → empty for pure pros, so the whole strip hides.
   // KYC lives in « Modifier mon profil » (client 2026-07-06).
   return out;
 }
@@ -90,6 +80,13 @@ export default function ProfilRoute() {
   const user = useAuth((s) => s.user);
   const roles = useAuth((s) => s.roles);
   const signOut = useAuth((s) => s.signOut);
+  // Ville affichée sous le nom : elle vient désormais de l'adresse de livraison
+  // (par défaut, sinon la première) — le champ « Ville » du profil faisait
+  // doublon et a été retiré (client 2026-08-05). Repli sur l'ancienne valeur
+  // enregistrée pour les comptes qui n'ont pas encore d'adresse.
+  const { data: addresses } = useMyAddresses();
+  const displayCity =
+    addresses?.find((a) => a.is_default)?.city ?? addresses?.[0]?.city ?? user?.city ?? '';
   const { dataSaver, setDataSaver, notifications, setNotifications, language } = usePrefs();
 
   // Notifications toggle must also (un)register the device's push token,
@@ -192,7 +189,7 @@ export default function ProfilRoute() {
               >
                 {user?.display_name ?? t('profil.fallbackName')}
               </Text>
-              {user?.city ? (
+              {displayCity ? (
                 <View
                   style={{
                     flexDirection: 'row',
@@ -210,7 +207,7 @@ export default function ProfilRoute() {
                     }}
                     numberOfLines={1}
                   >
-                    {user.city}
+                    {displayCity}
                   </Text>
                 </View>
               ) : null}
@@ -279,7 +276,10 @@ export default function ProfilRoute() {
           </View>
         )}
 
-        {/* ===== Quick actions ===== */}
+        {/* ===== Quick actions — buyer shortcuts only ; the whole strip hides
+            when empty (pure-pro accounts have none now that Wallet lives in
+            Réglages) so there's no orphaned padding. ===== */}
+        {quickActions.length > 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -349,6 +349,7 @@ export default function ProfilRoute() {
             </Pressable>
           ))}
         </ScrollView>
+        )}
 
         {/* ===== Réglages section ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 28 }}>
@@ -356,6 +357,13 @@ export default function ProfilRoute() {
           <SettingsCard>
             {/* Phones / Addresses / Roles / KYC rows moved to
                 « Modifier mon profil » (client ask 2026-07-06). */}
+            {/* Wallet — moved here from the quick-actions pills (client
+                2026-07-30) so it isn't a lone button on pure-pro profiles. */}
+            <Row
+              Icon={Wallet}
+              label={t('profil.qa.wallet')}
+              onPress={() => router.push('/wallet')}
+            />
             <Row
               Icon={Bell}
               label={t('profil.row.notifications')}

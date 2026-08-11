@@ -37,7 +37,7 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
 
   const { data: row, error } = await sb
     .from('orders')
-    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at, scan_token')
+    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, delivery_mode, delivery_fee_minor, payment_method, currency, status, events, release_at, created_at, scan_token')
     .eq('id', body.id)
     .maybeSingle();
   if (error) {
@@ -148,13 +148,38 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
     .eq('reviewer_id', userId)
     .maybeSingle();
 
+  // Every article of the order (client 2026-08-05 — an order may now hold
+  // several articles from the same shop). orders.product_snapshot still holds
+  // the PRIMARY article for backward compatibility, so a caller that ignores
+  // this field keeps working; the detail screen uses it to list them all.
+  const { data: itemRows, error: itemsErr } = await sb
+    .from('order_items')
+    .select('product_id, product_snapshot, quantity, unit_price_minor, amount_minor')
+    .eq('order_id', body.id)
+    .order('created_at', { ascending: true });
+  if (itemsErr) console.error('[get-order] order_items error:', itemsErr);
+  const items = ((itemRows as {
+    product_id: string;
+    product_snapshot: { title?: string; photo?: string; priceGnf?: number };
+    quantity: number;
+    unit_price_minor: number;
+    amount_minor: number;
+  }[] | null) ?? []).map((i) => ({
+    productId: i.product_id,
+    title: i.product_snapshot?.title ?? '',
+    photo: i.product_snapshot?.photo ?? '',
+    quantity: i.quantity,
+    unitPriceGnf: Number(i.unit_price_minor),
+    amountGnf: Number(i.amount_minor),
+  }));
+
   return {
     body: {
       // PII opt-in (Phase LIVREUR) : both buyer and seller receive scan_token.
       // Buyer needs it to render their own on-screen QR for livreur handoff ;
       // seller still gets it for the legacy printed-QR path. Non-participants
       // never reach this branch (FORBIDDEN above).
-      order:  { ...mapOrder(r, { includeScanToken: isParticipant }), delivery, hasReviewed: !!myReview },
+      order:  { ...mapOrder(r, { includeScanToken: isParticipant }), delivery, hasReviewed: !!myReview, items },
       intent: intentRow ? mapPaymentIntent(intentRow as PaymentIntentRow) : null,
     },
   };

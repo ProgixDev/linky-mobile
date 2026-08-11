@@ -61,7 +61,10 @@ export default function CommentsRoute() {
   const canSend = !!text.trim() && !add.isPending;
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
+    // edges include 'bottom' so the composer sits ABOVE the Android nav bar
+    // (was 'top' only → the input overlapped the system nav buttons and was hard
+    // to tap ; same fix as the Messages screen — client 2026-08-03).
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <View
         style={{
           paddingHorizontal: 16,

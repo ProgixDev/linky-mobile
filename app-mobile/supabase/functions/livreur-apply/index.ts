@@ -53,7 +53,13 @@ function valid(b: unknown): b is Body {
   if (typeof x.full_name !== 'string' || x.full_name.trim().length < 1 || x.full_name.length > 120) return false;
   if (typeof x.city !== 'string' || x.city.trim().length < 1 || x.city.length > 80) return false;
   if (typeof x.vehicle_type !== 'string' || !VEHICLES.has(x.vehicle_type)) return false;
-  if (x.id_photo_url !== undefined && (typeof x.id_photo_url !== 'string' || x.id_photo_url.length > 2048)) return false;
+  if (x.id_photo_url !== undefined) {
+    if (typeof x.id_photo_url !== 'string' || x.id_photo_url.length > 2048) return false;
+    // MUST be an https URL — it is later rendered as an <a href> in the admin
+    // vetting UI, so a javascript:/data:/http: value would be a stored XSS that
+    // steals the admin session on click. Only https URLs are ever accepted.
+    if (!/^https:\/\/[^\s"'<>]+$/i.test(x.id_photo_url)) return false;
+  }
   if (!validAnswers(x.answers)) return false;
   return true;
 }

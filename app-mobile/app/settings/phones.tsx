@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Phone, Plus, ShieldCheck, ShieldAlert, Star, Trash2, X } from 'lucide-react-native';
@@ -419,7 +419,10 @@ function AddPhoneSheet({ open, onClose }: { open: boolean; onClose: () => void }
       }}
     >
       <Pressable style={{ flex: 1 }} onPress={onClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      {/* Bottom-anchored sheet : « padding » (both platforms) lifts it above the
+          keyboard. « height » only works for full-screen flex:1 KAVs — here it
+          left the phone input hidden behind the keyboard (client 2026-08-03). */}
+      <KeyboardAvoidingView behavior="padding">
         <View
           style={{
             backgroundColor: colors.bg,

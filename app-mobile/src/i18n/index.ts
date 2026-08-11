@@ -40,13 +40,19 @@ function resolveInitialLocale(): Locale {
   return 'fr';
 }
 
+// The locale i18n actually boots with — exported so usePrefs seeds its default
+// from the SAME value. Otherwise the store defaulted to 'fr' while i18n ran in
+// the device locale (e.g. English), so the Réglages « Langue » row showed
+// « Français » while the whole UI rendered in English (client 2026-07-30).
+export const INITIAL_LOCALE: Locale = resolveInitialLocale();
+
 void i18n.use(initReactI18next).init({
   resources: {
     fr: { translation: fr },
     en: { translation: en },
     es: { translation: es },
   },
-  lng: resolveInitialLocale(),
+  lng: INITIAL_LOCALE,
   fallbackLng: 'fr',
   interpolation: { escapeValue: false },
   // i18next v23+ uses CLDR plural categories by default ; explicit v4 keeps

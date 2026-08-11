@@ -17,7 +17,7 @@ import type { AppNotification } from '../src/data/types';
 import { EmptyState, ErrorStateView } from '../src/components/feedback/EmptyState';
 import { Skeleton } from '../src/components/primitives/Skeleton';
 
-type Tab = 'all' | 'order' | 'message' | 'visit' | 'promo';
+type Tab = 'all' | 'order' | 'message' | 'visit' | 'booking' | 'promo';
 
 // Filter tabs are role-aware (client 2026-07-07): a seller's alerts aren't an
 // agent's or a buyer's. 'order' (product orders) is hidden from a PURE agent;
@@ -30,6 +30,10 @@ const TAB_DEFS: { key: Tab; labelKey: string; show: (r: { buyer: boolean; seller
   { key: 'order', labelKey: 'notifications.filterOrder', show: (r) => r.buyer || r.seller },
   { key: 'message', labelKey: 'notifications.filterMessage', show: () => true },
   { key: 'visit', labelKey: 'notifications.filterVisit', show: (r) => r.buyer || r.agent },
+  // 'booking' (rental reservations) existed as a notification category on the
+  // server but had no chip, so those alerts were only reachable from « Toutes »
+  // (client 2026-08-05). Same audience as 'visit': the tenant and the landlord.
+  { key: 'booking', labelKey: 'notifications.filterBooking', show: (r) => r.buyer || r.agent },
   { key: 'promo', labelKey: 'notifications.filterPromo', show: () => true },
 ];
 

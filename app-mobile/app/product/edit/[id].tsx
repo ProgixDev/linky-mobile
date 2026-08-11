@@ -6,11 +6,11 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Plus, Rocket, Star, Trash2 } from 'lucide-react-native';
+import { Film, Plus, Rocket, Star, Trash2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -63,6 +63,7 @@ function extForMime(m: AllowedMime): string {
 }
 
 export default function ProductEditRoute() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -84,6 +85,8 @@ export default function ProductEditRoute() {
   const [condition, setCondition] = useState<(typeof CONDITIONS)[number]>('occasion');
   const [city, setCity] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  const [videoUrl, setVideoUrl] = useState<string | undefined>(undefined);
+  const [videoUploading, setVideoUploading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -94,11 +97,14 @@ export default function ProductEditRoute() {
     setCondition(product.condition as (typeof CONDITIONS)[number]);
     setCity(product.city ?? '');
     setPhotos(product.photos ?? []);
+    setVideoUrl(product.videoUrl);
     setHydrated(true);
   }
 
   const photosDirty =
     hydrated && !!product && JSON.stringify(photos) !== JSON.stringify(product.photos ?? []);
+  const videoDirty =
+    hydrated && !!product && (videoUrl ?? null) !== (product.videoUrl ?? null);
   const dirty =
     hydrated &&
     !!product &&
@@ -107,7 +113,8 @@ export default function ProductEditRoute() {
       price !== product.priceGnf ||
       condition !== product.condition ||
       city.trim() !== (product.city ?? '') ||
-      photosDirty);
+      photosDirty ||
+      videoDirty);
   const canSave = dirty && !!title.trim() && price > 0 && !!city.trim() && photos.length >= 1;
 
   // Optimize + upload one asset -> its public URL, or null on failure.
@@ -175,6 +182,63 @@ export default function ProductEditRoute() {
   const makeCover = (i: number) =>
     setPhotos((prev) => (i === 0 ? prev : [prev[i], ...prev.filter((_, idx) => idx !== i)]));
 
+  // ── Optional product video (client 2026-08-03) ──
+  const MAX_VIDEO_SEC = 60;
+  const resolveVideoMime = (asset: ImagePicker.ImagePickerAsset): string => {
+    const m = asset.mimeType?.toLowerCase();
+    if (m === 'video/mp4' || m === 'video/quicktime' || m === 'video/webm') return m;
+    const ext = (asset.fileName || asset.uri).toLowerCase().split('.').pop() ?? '';
+    if (ext === 'mov') return 'video/quicktime';
+    if (ext === 'webm') return 'video/webm';
+    return 'video/mp4';
+  };
+  const videoExt = (mime: string): string =>
+    mime === 'video/quicktime' ? 'mov' : mime === 'video/webm' ? 'webm' : 'mp4';
+
+  async function pickVideo() {
+    if (videoUploading) return;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        toast.show(t('productEdit.photoPermission'), 'danger');
+        return;
+      }
+      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'videos', quality: 0.7 });
+      if (picked.canceled || picked.assets.length === 0) return;
+      const asset = picked.assets[0];
+      if (typeof asset.duration === 'number' && asset.duration > (MAX_VIDEO_SEC + 5) * 1000) {
+        toast.show(t('create.videoTooLong'), 'danger');
+        return;
+      }
+      setVideoUploading(true);
+      const contentType = resolveVideoMime(asset);
+      const filename = `video.${videoExt(contentType)}`;
+      const { upload_url, public_url } = await requestUploadUrl.mutateAsync({
+        kind: 'product-video',
+        filename,
+        content_type: contentType,
+      });
+      const blob = await (await fetch(asset.uri)).blob();
+      const putRes = await fetch(upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+        body: blob,
+      });
+      if (!putRes.ok) {
+        const raw = await putRes.text().catch(() => '');
+        console.error('[product-edit-video] storage PUT failed', putRes.status, raw);
+        toast.show(t('create.videoUploadError'), 'danger');
+        return;
+      }
+      setVideoUrl(public_url);
+    } catch (e) {
+      toast.show(toToastMessage(e, t('create.videoUploadError')), 'danger');
+    } finally {
+      setVideoUploading(false);
+    }
+  }
+  const removeVideo = () => setVideoUrl(undefined);
+
   async function onSave() {
     if (!canSave || update.isPending || !product) return;
     try {
@@ -186,6 +250,7 @@ export default function ProductEditRoute() {
         condition,
         city: city.trim(),
         ...(photosDirty ? { photos } : {}),
+        ...(videoDirty ? { video_url: videoUrl ?? null } : {}),
       });
       toast.show(t('productEdit.successToast'), 'success');
       if (router.canGoBack()) router.back();
@@ -337,6 +402,78 @@ export default function ProductEditRoute() {
               </View>
             </View>
 
+            {/* Vidéo produit (optionnel) — client 2026-08-03, parité immo */}
+            <View>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+                {t('create.videoLabel')}
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17, marginBottom: 10 }}>
+                {t('create.videoHint')}
+              </Text>
+              {videoUrl ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: 12,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.card,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      backgroundColor: colors.primarySoft,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Film size={18} color={colors.primary} strokeWidth={2} />
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>
+                    {t('create.videoAdded')}
+                  </Text>
+                  <Pressable onPress={removeVideo} hitSlop={8} accessibilityLabel={t('create.videoRemove')}>
+                    <Trash2 size={18} color={colors.danger} strokeWidth={2} />
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={pickVideo}
+                  disabled={videoUploading}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    height: 50,
+                    borderRadius: 14,
+                    borderWidth: 2,
+                    borderStyle: 'dashed',
+                    borderColor: colors.border,
+                    backgroundColor: colors.card,
+                    opacity: videoUploading ? 0.6 : 1,
+                  }}
+                >
+                  {videoUploading ? (
+                    <ActivityIndicator size="small" color={colors.text} />
+                  ) : (
+                    <>
+                      <Film size={18} color={colors.text} strokeWidth={2} />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                        {t('create.videoAdd')}
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
+            </View>
+
             <Input label={t('productEdit.titleLabel')} value={title} onChangeText={setTitle} />
 
             <View>
@@ -403,7 +540,15 @@ export default function ProductEditRoute() {
           </View>
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
+        {/* Footer sits outside the top-only SafeAreaView, so pad by the real bottom
+            inset or the action hides behind the Android nav bar (client 2026-08-05). */}
+        <View
+          style={{
+            paddingHorizontal: 16,
+            paddingTop: 16,
+            paddingBottom: 16 + insets.bottom,
+          }}
+        >
           <Button variant="dark" size="lg" block label={t('productEdit.save')} onPress={onSave} loading={update.isPending} disabled={!canSave} />
         </View>
       </KeyboardAvoidingView>

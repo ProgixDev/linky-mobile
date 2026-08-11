@@ -77,14 +77,20 @@ export default function BoostDetailRoute() {
           </Text>
         </View>
 
-        {boost.product ? (
+        {boost.listing ?? boost.product ? (
           <Pressable
-            onPress={() => router.push(`/product/${boost.productId}`)}
+            onPress={() =>
+              router.push(
+                boost.kind === 'property'
+                  ? `/property/${boost.propertyId}`
+                  : `/product/${boost.productId}`,
+              )
+            }
             style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}
           >
-            {boost.product.photo ? (
+            {(boost.listing ?? boost.product)?.photo ? (
               <Image
-                source={{ uri: boost.product.photo }}
+                source={{ uri: (boost.listing ?? boost.product)!.photo! }}
                 style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.bgSunken }}
                 contentFit="cover"
               />
@@ -98,7 +104,7 @@ export default function BoostDetailRoute() {
                 numberOfLines={2}
                 style={{ fontSize: 15, fontWeight: '700', color: colors.text, letterSpacing: 0 }}
               >
-                {boost.product.title}
+                {(boost.listing ?? boost.product)?.title}
               </Text>
               <Text
                 tone="muted"

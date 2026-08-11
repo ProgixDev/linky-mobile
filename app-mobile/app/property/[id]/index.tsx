@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Dimensions, ScrollView, Share, View } from 'react-native';
+import { Pressable, ScrollView, Share, View, useWindowDimensions } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -16,6 +17,7 @@ import { ListingComments } from '../../../src/components/comments/ListingComment
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
+import { useShop } from '../../../src/data/queries/shops';
 import { useFavorites } from '../../../src/stores/favorites';
 import { useAuth } from '../../../src/stores/auth';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
@@ -25,14 +27,16 @@ import { formatDistance } from '../../../src/lib/format';
 import { toToastMessage } from '../../../src/lib/api';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { haptic } from '../../../src/lib/haptics';
-
-// Capped to the responsive content column (see APP_MAX_WIDTH) so the carousel
-// matches the centered column on big screens instead of overflowing it.
-const SW = Math.min(Dimensions.get('window').width, 500);
+import { shareMessage } from '../../../src/lib/share';
 
 export default function PropertyDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
+  // LIVE carousel width (capped to the 500 content column). A static module
+  // Dimensions.get() didn't follow Android screen zoom → the item was narrower
+  // than the screen and the next photo peeked in (client 2026-07-30).
+  const { width: winW } = useWindowDimensions();
+  const SW = Math.min(winW, 500);
   const { t } = useTranslation();
   const { data: prop, isLoading, isError, refetch } = useProperty(id);
   const trackView = useTrackView();
@@ -59,6 +63,9 @@ export default function PropertyDetailRoute() {
   // (find-or-create-conversation, request-visit) so offering them is misleading.
   const authUserId = useAuth((s) => s.authUserId);
   const isOwnProperty = !!authUserId && !!prop?.ownerId && authUserId === prop.ownerId;
+  // Agency (= the shop the property belongs to) — shown as a card linking to the
+  // agency page, like the boutique card on a product (client 2026-08-03).
+  const { data: agency } = useShop(prop?.shopId);
 
   // Fire-and-forget view bump on mount / when id changes. Failures don't block render.
   useEffect(() => {
@@ -181,7 +188,7 @@ export default function PropertyDetailRoute() {
                     haptic.light();
                     void Share.share({
                       title: prop.title,
-                      message: `${prop.title} — sur Linky`,
+                      message: shareMessage(`${prop.title} — sur Linky`, 'property', prop.id),
                     }).catch(() => {});
                   }}
                   style={{ backgroundColor: 'rgba(255,255,255,0.95)', borderColor: 'transparent' }}
@@ -391,6 +398,41 @@ export default function PropertyDetailRoute() {
                   </Text>
                 </TrustStrip>
               )}
+            </View>
+          )}
+
+          {/* ===== Agence card — links to the agency page (client 2026-08-03) ===== */}
+          {agency && (
+            <View style={{ marginTop: 18 }}>
+              <MicroLabel label={t('property.agencyHeading')} />
+              <Pressable
+                onPress={() => router.push(`/shop/${agency.id}`)}
+                style={{
+                  padding: 14,
+                  borderRadius: 16,
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  flexDirection: 'row',
+                  gap: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Image
+                  source={agency.avatar}
+                  style={{ width: 44, height: 44, borderRadius: 999, backgroundColor: colors.bgSunken }}
+                  contentFit="cover"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }} numberOfLines={1}>
+                    {agency.name}
+                  </Text>
+                  <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                    {t('property.agencyView')}
+                  </Text>
+                </View>
+                <ChevronRight size={18} color={colors.textMuted} strokeWidth={2} />
+              </Pressable>
             </View>
           )}
 

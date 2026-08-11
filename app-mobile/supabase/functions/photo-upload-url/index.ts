@@ -14,7 +14,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 
-type Kind = 'product' | 'property' | 'avatar' | 'property-video';
+type Kind = 'product' | 'property' | 'avatar' | 'property-video' | 'product-video';
 interface Body { kind: Kind; filename: string; content_type: string }
 
 const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -26,6 +26,7 @@ const KINDS: Record<Kind, { bucket: string; folder: string; mimes: string[] }> =
   property:         { bucket: 'property-photos',  folder: 'properties',      mimes: IMAGE_MIMES },
   avatar:           { bucket: 'avatars',          folder: 'avatars',         mimes: IMAGE_MIMES },
   'property-video': { bucket: 'property-videos',  folder: 'property-videos', mimes: VIDEO_MIMES },
+  'product-video':  { bucket: 'product-videos',   folder: 'product-videos',  mimes: VIDEO_MIMES },
 };
 
 function valid(b: unknown): b is Body {

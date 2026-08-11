@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Linky — Rapport d'avancement — 14 juin 2026</title>
+<style>
+  :root {
+    --navy: #1F4E7A;
+    --navy-deep: #14304D;
+    --navy-soft: #E8EFF6;
+    --saffron: #E8A33D;
+    --saffron-soft: #FBF1E0;
+    --ink: #1C2733;
+    --muted: #5A6B7C;
+    --line: #DCE5EE;
+    --ok: #1F7A54;
+    --ok-soft: #E6F4ED;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, Roboto, sans-serif;
+    color: var(--ink);
+    background: #FFFFFF;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .page { max-width: 860px; margin: 0 auto; padding: 0 48px 56px; }
+
+  .hero {
+    background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 70%);
+    color: #FFFFFF;
+    padding: 44px 48px 36px;
+    margin: 0 -48px 36px;
+  }
+  .hero .brand {
+    font-size: 13px; letter-spacing: 4px; font-weight: 700;
+    color: var(--saffron); text-transform: uppercase; margin-bottom: 14px;
+  }
+  .hero h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 10px; }
+  .hero .sub { font-size: 14.5px; color: rgba(255,255,255,0.85); max-width: 640px; }
+  .hero .meta {
+    display: flex; gap: 28px; margin-top: 26px; padding-top: 18px;
+    border-top: 1px solid rgba(255,255,255,0.18);
+    font-size: 12px; color: rgba(255,255,255,0.75);
+  }
+  .hero .meta b { display:block; color:#FFFFFF; font-size: 13px; margin-top: 2px; }
+
+  .strip { display: flex; gap: 14px; margin-bottom: 38px; }
+  .strip .cell {
+    flex: 1; background: var(--navy-soft); border-radius: 12px;
+    padding: 16px 18px; border: 1px solid var(--line);
+  }
+  .strip .cell .num { font-size: 21px; font-weight: 800; color: var(--navy); }
+  .strip .cell .lbl { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+  h2 {
+    font-size: 17px; color: var(--navy-deep); margin: 34px 0 6px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--saffron);
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .chip { font-size: 16px; background: var(--saffron-soft); border-radius: 8px; padding: 3px 8px; }
+  .lead { color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
+
+  .feature { display: flex; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .feature:last-of-type { border-bottom: none; }
+  .feature .ico {
+    flex: 0 0 38px; height: 38px; border-radius: 10px;
+    background: var(--navy-soft); display: flex; align-items: center;
+    justify-content: center; font-size: 18px;
+  }
+  .feature .body b { font-size: 14px; color: var(--navy-deep); }
+  .feature .body p { color: var(--ink); margin-top: 3px; font-size: 13px; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12.5px; }
+  th { text-align: left; background: var(--navy); color: #FFFFFF; padding: 9px 12px; font-weight: 600; font-size: 12px; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: #F7FAFD; }
+  .badge { display: inline-block; background: var(--ok-soft); color: var(--ok); font-weight: 700; font-size: 10.5px; border-radius: 999px; padding: 2px 9px; letter-spacing: 0.4px; }
+  .badge.wait { background: var(--saffron-soft); color: #9A6A1B; }
+
+  .foot { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; color: var(--muted); font-size: 11.5px; }
+
+  @media print {
+    .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h2 { page-break-after: avoid; }
+    .feature, tr { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <div class="brand">Linky</div>
+    <h1>Rapport d'avancement</h1>
+    <div class="sub">Linky est désormais entièrement bilingue (français / anglais), avec la photo de profil, la recharge du portefeuille par carte, et des espaces vendeur et agent immobilier plus complets. L'application Android mise à jour vous est livrée avec ce rapport.</div>
+    <div class="meta">
+      <div>Date<b>14 juin 2026</b></div>
+      <div>Préparé par<b>Achraf Benamrane</b></div>
+      <div>Livraison<b>Application Android (lien d'installation)</b></div>
+      <div>Statut<b>✅ V1 complète &amp; bilingue</b></div>
+    </div>
+  </div>
+
+  <div class="strip">
+    <div class="cell"><div class="num">FR · EN</div><div class="lbl">application désormais bilingue, changement de langue instantané</div></div>
+    <div class="cell"><div class="num">100%</div><div class="lbl">des parcours fonctionnels de bout en bout</div></div>
+    <div class="cell"><div class="num">7</div><div class="lbl">nouveautés livrées dans cette itération</div></div>
+    <div class="cell"><div class="num">0</div><div class="lbl">bouton inactif ou donnée fictive dans l'application</div></div>
+  </div>
+
+  <h2><span class="chip">🆕</span>Nouveautés de cette itération</h2>
+  <div class="lead">Tout ce qui a été ajouté depuis le rapport du 12 juin.</div>
+
+  <div class="feature">
+    <div class="ico">🌍</div>
+    <div class="body">
+      <b>Application bilingue — français &amp; anglais</b>
+      <p>L'intégralité de l'application est traduite : chaque écran, chaque bouton, chaque message. L'utilisateur bascule entre le français et l'anglais à tout moment, et l'application s'adapte instantanément. Le pular et le soussou sont préparés : il suffira de remettre les traductions à vos traducteurs (aucun développement supplémentaire).</p>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="ico">📷</div>
+    <div class="body">
+      <b>Photo de profil</b>
+      <p>L'utilisateur peut ajouter et changer sa photo de profil directement depuis son profil (recadrage carré, envoi sécurisé). La photo s'affiche dans l'application et dans la console d'administration.</p>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="ico">💳</div>
+    <div class="body">
+      <b>Recharge du portefeuille par carte</b>
+      <p>L'utilisateur peut désormais recharger son solde Linky par carte bancaire — montant libre, paiement sécurisé, le solde est crédité automatiquement. Fonctionnel en mode test ; le passage aux paiements réels est un simple changement de clés. La recharge par Orange Money / MTN Mobile Money s'activera dès la signature du contrat Lengopay.</p>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="ico">🏪</div>
+    <div class="body">
+      <b>Boutique et annonces entièrement modifiables</b>
+      <p>Le vendeur personnalise sa boutique (nom, logo, photo de couverture, description) et modifie ses annonces déjà publiées (titre, prix, description, état…). L'agent immobilier peut maintenant publier des <b>locations, des ventes ET des terrains</b> — chacun avec son type et sa localisation — et corriger une annonce après publication.</p>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="ico">📊</div>
+    <div class="body">
+      <b>Statistiques vendeur &amp; agent</b>
+      <p>Le tableau des vues réelles couvre désormais à la fois les produits et les biens immobiliers, classés par nombre de vues — un agent immobilier voit enfin l'audience de ses annonces.</p>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="ico">🛒</div>
+    <div class="body">
+      <b>Fiabilité du catalogue et des retraits</b>
+      <p>Chaque annonce comporte désormais une ville sélectionnée dans une liste — les filtres par ville fonctionnent réellement. La navigation par catégorie depuis l'accueil mène aux bons résultats. Le retrait des gains du vendeur se fait vers un numéro Mobile Money saisi explicitement, prêt pour le paiement.</p>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="ico">✨</div>
+    <div class="body">
+      <b>Qualité, sécurité et fiabilité</b>
+      <p>Revues de sécurité indépendantes sur les paiements, les photos et la recharge (validation des montants, contrôle des URL d'images). Nettoyage du code, corrections d'affichage, et finalisation des états de chargement / d'erreur sur l'ensemble des écrans professionnels.</p>
+    </div>
+  </div>
+
+  <h2><span class="chip">🧪</span>Tests effectués</h2>
+  <table>
+    <tr><th>Parcours testé</th><th>Résultat</th></tr>
+    <tr><td>Recharge du portefeuille par carte bancaire → solde crédité automatiquement (mode test)</td><td><span class="badge">VALIDÉ</span></td></tr>
+    <tr><td>Photo de profil : ajout depuis le profil → affichage dans l'application et dans l'administration</td><td><span class="badge">VALIDÉ</span></td></tr>
+    <tr><td>Modification d'une boutique et d'une annonce (produit et bien immobilier) après publication</td><td><span class="badge">VALIDÉ</span></td></tr>
+    <tr><td>Publication d'un bien à la vente et d'un terrain (en plus des locations)</td><td><span class="badge">VALIDÉ</span></td></tr>
+    <tr><td>Bascule de langue français ↔ anglais sur l'ensemble de l'application</td><td><span class="badge">VALIDÉ</span></td></tr>
+    <tr><td>Achat complet avec séquestre (paiement → expédition → confirmation QR → libération des fonds) — rappel</td><td><span class="badge">VALIDÉ</span></td></tr>
+  </table>
+
+  <h2><span class="chip">🔑</span>Activations à venir — de votre côté</h2>
+  <div class="lead">Chaque élément ci-dessous s'active le jour même de sa réception. Aucun développement supplémentaire n'est nécessaire.</div>
+  <table>
+    <tr><th>Élément à fournir</th><th>Ce qui s'active</th><th>Statut</th></tr>
+    <tr><td>Contrat Lengopay</td><td>Paiements et recharges Orange Money / MTN Mobile Money</td><td><span class="badge wait">EN ATTENTE</span></td></tr>
+    <tr><td>Société US (LLC) + clés Stripe « live »</td><td>Paiements et recharges par carte réels (le mode test fonctionne déjà)</td><td><span class="badge wait">EN ATTENTE</span></td></tr>
+    <tr><td>Compte Apple Developer</td><td>Version iPhone de l'application</td><td><span class="badge wait">EN ATTENTE</span></td></tr>
+    <tr><td>Projet Firebase (Android) / clé APNS (iOS)</td><td>Livraison des notifications push sur les téléphones (déjà actives dans l'application)</td><td><span class="badge wait">EN ATTENTE</span></td></tr>
+    <tr><td>Compte SMS expéditeur</td><td>Codes de connexion par SMS (recommandation transmise : Orange SMS API)</td><td><span class="badge wait">EN ATTENTE</span></td></tr>
+    <tr><td>Éléments de marque (logo, charte)</td><td>Identité visuelle finale de l'application</td><td><span class="badge wait">EN ATTENTE</span></td></tr>
+  </table>
+
+  <div class="foot">
+    <div>Linky V1 — Rapport d'avancement · 14 juin 2026</div>
+    <div>Préparé par <b>Achraf Benamrane</b></div>
+  </div>
+
+</div>
+</body>
+</html>

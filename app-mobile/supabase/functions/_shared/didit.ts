@@ -51,6 +51,22 @@ export function diditConfig(): { apiKey: string; workflowId: string } | null {
   return { apiKey, workflowId };
 }
 
+/**
+ * Is ID verification REQUIRED to publish a listing?
+ *
+ * Client 2026-08-05 : most Guinean sellers simply do not hold an ID document,
+ * so a hard gate at publish time blocked real sellers from ever listing
+ * anything (« ma sœur voulait publier ses articles mais le KYC bloque »).
+ * Identity checks now default to OPTIONAL for publishing — KYC stays available
+ * and the « Vérifié » badge still rewards those who complete it.
+ *
+ * OFF by default. Set the secret LINKY_KYC_REQUIRED_TO_PUBLISH=1 to turn the
+ * gate back on later — no code change or redeploy of the callers needed.
+ */
+export function kycRequiredToPublish(): boolean {
+  return Deno.env.get('LINKY_KYC_REQUIRED_TO_PUBLISH') === '1';
+}
+
 export async function createDiditSession(vendorData: string, callbackUrl: string): Promise<DiditCreateSessionResponse> {
   const cfg = diditConfig();
   if (!cfg) throw new Error('didit_not_configured');

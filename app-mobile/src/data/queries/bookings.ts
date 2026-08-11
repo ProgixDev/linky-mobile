@@ -43,7 +43,7 @@ export function useRequestBooking() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: RequestBookingInput) => {
-      return apiPost<{ booking_id: string }>({
+      return apiPost<{ booking_id: string; instant: boolean }>({
         path: '/booking-request',
         body: {
           property_id: input.propertyId,
@@ -76,12 +76,14 @@ export function useRespondBooking() {
   });
 }
 
-// Tenant signature + payment bootstrap: returns the Stripe client_secret for
-// the PaymentSheet. The webhook flips the booking to 'paid' on success.
+// Tenant signature + payment bootstrap: stamps the tenant signature and returns
+// the Lengopay hosted-page URL (Orange/MTN — the same rail as product orders).
+// The app opens that URL in the in-app WebView; the cron flips the booking to
+// 'paid' once the rail confirms. (Was Stripe — dropped in Guinea.)
 export function useBookingSignPay() {
   return useMutation({
     mutationFn: async (bookingId: string) => {
-      return apiPost<{ booking_id: string; client_secret: string; publishable_key: string }>({
+      return apiPost<{ booking_id: string; payment_url: string }>({
         path: '/booking-sign-pay',
         body: { booking_id: bookingId },
       });

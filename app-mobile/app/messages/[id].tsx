@@ -206,12 +206,15 @@ export default function ChatRoute() {
                   borderRadius: 14,
                   borderBottomRightRadius: isMine ? 4 : 14,
                   borderBottomLeftRadius: isMine ? 14 : 4,
-                  backgroundColor: isMine ? colors.primarySoft : colors.card,
+                  backgroundColor: isMine ? colors.primary : colors.card,
                   borderWidth: isMine ? 0 : 1,
                   borderColor: colors.border,
                 }}
               >
-                <Text style={{ fontSize: 13, color: isMine ? colors.primaryDeep : colors.text }}>{m.body}</Text>
+                {/* Sent bubble : white on solid green (was primaryDeep on
+                    primarySoft = dark green on dark green, unreadable in dark
+                    mode — client 2026-08-03). */}
+                <Text style={{ fontSize: 13, color: isMine ? '#FFFFFF' : colors.text }}>{m.body}</Text>
               </View>
               <Text
                 variant="micro"

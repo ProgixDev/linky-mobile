@@ -101,10 +101,14 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
   });
   if (overlaps) throwApi('DATES_UNAVAILABLE', 409, 'Ces dates ne sont plus disponibles.');
 
-  // Money snapshot — buyer pays the 3% fee on top; the landlord receives the
-  // full rent amount (fee model verified 2026-06-10).
+  // Money snapshot — buyer pays the 3% fee on top. Daily: rent × nights.
+  // Monthly: 1st month + a 1-month CAUTION (deposit) held in escrow (client
+  // 2026-07-29). The landlord receives 1st month + caution at move-in; the
+  // end-of-lease return of the caution is settled off-app between the parties
+  // (like the following months). Fee model verified 2026-06-10.
   const rent = Number(prop.price_minor);
-  const amount = body.period === 'day' ? rent * nights : rent;
+  const deposit = body.period === 'month' ? rent : 0;
+  const amount = body.period === 'day' ? rent * nights : rent + deposit;
   const fees = Math.round(amount * 0.03);
   const total = amount + fees;
 
@@ -127,19 +131,31 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
     end_date: endStr,
     months: body.period === 'month' ? body.months : null,
     rent_minor: rent,
+    deposit_minor: deposit,
     amount_minor: amount,
     fees_minor: fees,
     total_minor: total,
     clauses: [
       "Le locataire verse via Linky le montant indiqué ; les fonds sont conservés en séquestre jusqu'à la confirmation de l'emménagement.",
       "À la remise des clés, le locataire confirme l'emménagement dans l'application et le loyer est versé au propriétaire.",
-      body.period === 'month'
-        ? 'Les loyers des mois suivants sont réglés directement entre les parties, aux échéances convenues au présent contrat.'
-        : 'Le présent contrat couvre la totalité du séjour indiqué.',
+      ...(body.period === 'month'
+        ? [
+            'Le montant à la signature comprend le premier mois de loyer et une caution équivalente à un mois de loyer.',
+            'Les loyers des mois suivants et la restitution de la caution en fin de bail sont réglés directement entre les parties.',
+          ]
+        : ['Le présent contrat couvre la totalité du séjour indiqué.']),
       'En cas de désaccord, les parties peuvent ouvrir un litige via Linky ; une médiation est proposée sous 48 heures.',
       'Le présent contrat est régi par le droit guinéen.',
     ],
   };
+
+  // Daily = INSTANT-BOOK (client 2026-07-29): the landlord's active daily
+  // listing IS the acceptance, so the booking is created already 'accepted' +
+  // landlord-signed and the tenant pays immediately (no accept step). Monthly
+  // still starts 'requested' — the landlord accepts/refuses via booking-respond
+  // before the tenant pays.
+  const instant = body.period === 'day';
+  const nowIso = new Date().toISOString();
 
   const { data: created, error: eIns } = await sb
     .from('bookings')
@@ -158,7 +174,9 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
       property_snapshot: snapshot,
       note: body.note?.trim() ?? '',
       contract,
-      events: [{ at: new Date().toISOString(), label: 'Demande de réservation envoyée' }],
+      status: instant ? 'accepted' : 'requested',
+      landlord_signed_at: instant ? nowIso : null,
+      events: [{ at: nowIso, label: instant ? 'Réservation confirmée — en attente du paiement' : 'Demande de réservation envoyée' }],
     })
     .select('id')
     .single();
@@ -170,8 +188,10 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
   notifyDetached(sb, {
     userIds: [prop.owner_id as string],
     category: 'booking',
-    title: 'Nouvelle demande de réservation',
-    body: `${tenantName} veut louer « ${prop.title} » (${formatGNF(total)}).`,
+    title: instant ? 'Nouvelle réservation' : 'Nouvelle demande de réservation',
+    body: instant
+      ? `${tenantName} a réservé « ${prop.title} » (${formatGNF(total)}) — paiement en cours.`
+      : `${tenantName} veut louer « ${prop.title} » (${formatGNF(total)}).`,
     iconHint: 'check',
     deeplink: `/agent/leases/${created.id}`,
     refType: 'booking',
@@ -179,5 +199,7 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
     app: 'marketplace',
   });
 
-  return { body: { booking_id: created.id } };
+  // instant (daily) → the client routes straight to the booking to pay;
+  // monthly → it lands on the list and waits for the landlord.
+  return { body: { booking_id: created.id, instant } };
 }));

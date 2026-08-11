@@ -20,6 +20,13 @@ interface Body {
   // /photo-upload-url. Empty string clears the avatar. The handler enforces it
   // points at OUR storage so a client can't set an arbitrary external URL.
   avatar_url?: string;
+  // « Profil public » (client 2026-08-06). false = list-comments /
+  // list-shop-reviews return an anonymized name + no avatar to OTHER users.
+  // A shop's listings stay visible either way — that isn't what this controls.
+  profile_public?: boolean;
+  // « Recommandations personnalisées » (client 2026-08-06). false = discover-feed
+  // stays purely chronological ; true nudges it by the caller's own favorites.
+  personalize_feed?: boolean;
 }
 
 const V1_ROLES = new Set(['buyer', 'seller', 'agent', 'livreur']);
@@ -49,13 +56,17 @@ function valid(b: unknown): b is Body {
       if (typeof r !== 'string' || !V1_ROLES.has(r)) return false;
     }
   }
+  if (x.profile_public !== undefined && typeof x.profile_public !== 'boolean') return false;
+  if (x.personalize_feed !== undefined && typeof x.personalize_feed !== 'boolean') return false;
   // At least one updatable field must be present — otherwise this is a no-op
   // that wastes an idempotency key.
   if (
     x.display_name === undefined &&
     x.city === undefined &&
     x.roles === undefined &&
-    x.avatar_url === undefined
+    x.avatar_url === undefined &&
+    x.profile_public === undefined &&
+    x.personalize_feed === undefined
   ) {
     return false;
   }
@@ -114,6 +125,12 @@ Deno.serve(makePost<Body>('/v1/profile/update', valid, async ({ sb, body, req })
     const deduped = Array.from(new Set(body.roles)).sort();
     patch.roles = deduped;
   }
+  if (body.profile_public !== undefined) {
+    patch.profile_public = body.profile_public;
+  }
+  if (body.personalize_feed !== undefined) {
+    patch.personalize_feed = body.personalize_feed;
+  }
 
   const { error: eUpd } = await sb
     .from('users')
@@ -130,7 +147,7 @@ Deno.serve(makePost<Body>('/v1/profile/update', valid, async ({ sb, body, req })
 
   const { data: user, error: eSel } = await sb
     .from('users')
-    .select('id, display_name, avatar_url, locale, kyc_status, city, roles, is_admin')
+    .select('id, display_name, avatar_url, locale, kyc_status, city, roles, is_admin, profile_public, personalize_feed')
     .eq('id', userId)
     .single();
   if (eSel || !user) {

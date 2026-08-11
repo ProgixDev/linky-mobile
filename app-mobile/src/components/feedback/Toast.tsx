@@ -53,8 +53,14 @@ function ToastItem({ item, onDismiss }: { item: ToastMsg; onDismiss: () => void 
     const t = setTimeout(onDismiss, 3000);
     return () => clearTimeout(t);
   }, [onDismiss]);
+  // success/danger = saturated bg → white text. info = colors.text as bg, which
+  // INVERTS per theme (near-black in light, near-white in dark); its text must
+  // therefore be colors.bg (the opposite) so it stays readable in both themes.
+  // Previously the text was hardcoded #FFFFFF → white-on-white = the invisible
+  // "barre vide" the client saw in dark mode (client 2026-07-29).
   const bg =
     item.tone === 'success' ? colors.success : item.tone === 'danger' ? colors.danger : colors.text;
+  const fg = item.tone === 'info' ? colors.bg : '#FFFFFF';
   return (
     <Animated.View
       entering={SlideInDown.springify().damping(15)}
@@ -66,7 +72,7 @@ function ToastItem({ item, onDismiss }: { item: ToastMsg; onDismiss: () => void 
         borderRadius: 14,
       }}
     >
-      <Text style={{ color: '#FFFFFF', fontSize: 13 }}>{item.message}</Text>
+      <Text style={{ color: fg, fontSize: 13 }}>{item.message}</Text>
     </Animated.View>
   );
 }

@@ -1,8 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
-// BottomSheetTextInput (not RN TextInput) so gorhom lifts the sheet above the
-// keyboard when the lat/lng fields are focused.
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Mapbox, { MapView, Camera, PointAnnotation, type ScreenPointPayload } from '@rnmapbox/maps';
@@ -14,7 +11,6 @@ import { Button } from '../../../src/components/primitives/Button';
 import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
 import { TopBar } from '../../../src/components/nav/TopBar';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
-import { Sheet } from '../../../src/components/sheets/Sheet';
 import { I } from '../../../src/icons/Icon';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useCreateListing } from '../../../src/stores/createListing';
@@ -25,11 +21,6 @@ Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? null);
 
 const CONAKRY: [number, number] = [-13.5784, 9.6412]; // [lng, lat]
 
-// Formats e.g. (9.5092, 'N', 'S') -> "9.5092° N"; negative latitudes flip to S.
-function formatCoord(n: number, posLabel: string, negLabel: string): string {
-  return `${Math.abs(n).toFixed(4)}° ${n >= 0 ? posLabel : negLabel}`;
-}
-
 export default function CreatePropertyLocationRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -39,9 +30,6 @@ export default function CreatePropertyLocationRoute() {
   const setVal = useCreateListing((s) => s.set);
   const propertyType = useCreateListing((s) => s.propertyType);
   const [busy, setBusy] = useState(false);
-  const [manualOpen, setManualOpen] = useState(false);
-  const [latInput, setLatInput] = useState(lat != null ? String(lat) : '');
-  const [lngInput, setLngInput] = useState(lng != null ? String(lng) : '');
   const cameraRef = useRef<Camera>(null);
 
   // Phase R.2 — tap the real map to drop the pin. Mapbox onPress delivers a
@@ -57,7 +45,7 @@ export default function CreatePropertyLocationRoute() {
     setVal('lng', tappedLng);
   }
 
-  // Recenter when coords change from ANY source (tap, GPS, manual entry).
+  // Recenter when coords change from ANY source (tap on map, GPS).
   useEffect(() => {
     if (lat == null || lng == null || !cameraRef.current) return;
     cameraRef.current.setCamera({
@@ -84,9 +72,6 @@ export default function CreatePropertyLocationRoute() {
       setVal('lng', pos.coords.longitude);
     } catch (e: unknown) {
       console.error('[location] error:', e);
-      // The dev client built before expo-location was installed leaves the native module
-      // stubbed — calls throw either "Cannot find native module 'ExpoLocation'" at import
-      // time, or a "is not a function" TypeError at call time. Both mean: rebuild needed.
       const msg = e instanceof Error
         && (/ExpoLocation/.test(e.message) || /is not a function/.test(e.message))
         ? t('create.locationGpsUnavailable')
@@ -97,26 +82,10 @@ export default function CreatePropertyLocationRoute() {
     }
   }
 
-  function handleManualSave() {
-    const la = parseFloat(latInput);
-    const ln = parseFloat(lngInput);
-    if (!Number.isFinite(la) || la < -90 || la > 90) {
-      show(t('create.locationLatErr'), 'danger');
-      return;
-    }
-    if (!Number.isFinite(ln) || ln < -180 || ln > 180) {
-      show(t('create.locationLngErr'), 'danger');
-      return;
-    }
-    setVal('lat', la);
-    setVal('lng', ln);
-    setManualOpen(false);
-  }
-
   const hasCoords = lat != null && lng != null;
-  const coordsLabel = hasCoords
-    ? `${formatCoord(lat, 'N', 'S')} · ${formatCoord(lng, 'E', 'W')}`
-    : t('create.locationNoPosition');
+  // Simple users don't read raw lat/lng (client 2026-08-03) — the pin ON the map
+  // IS the confirmation. Show a plain-language status, not coordinates.
+  const statusLabel = hasCoords ? t('create.locationPinSet') : t('create.locationNoPosition');
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -126,8 +95,13 @@ export default function CreatePropertyLocationRoute() {
         <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
           {t('create.stepDotsWith', { current: 5, total: 6, label: t('create.stepLocationLabel') })}
         </Text>
-        <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 16 }}>
+        <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 4 }}>
           {t('create.locationStepTitle')}
+        </Text>
+        {/* Plain-language instruction — replaces the technical « saisir les
+            coordonnées » path (client 2026-08-03). */}
+        <Text variant="bodyM" tone="muted" style={{ marginBottom: 14 }}>
+          {t('create.locationHelp')}
         </Text>
 
         <View style={{ aspectRatio: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.bgSunken, position: 'relative' }}>
@@ -182,33 +156,25 @@ export default function CreatePropertyLocationRoute() {
               left: 12,
               paddingHorizontal: 10,
               paddingVertical: 5,
-              backgroundColor: 'rgba(255,255,255,0.92)',
+              backgroundColor: hasCoords ? colors.primary : 'rgba(255,255,255,0.92)',
               borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '600', color: '#13251C', fontVariant: ['tabular-nums'] }}>{coordsLabel}</Text>
+            {hasCoords && <I.check size={12} color="#FFFFFF" />}
+            <Text style={{ fontSize: 11, fontWeight: '700', color: hasCoords ? '#FFFFFF' : '#13251C' }}>{statusLabel}</Text>
           </View>
         </View>
 
-        <View style={{ marginTop: 14, flexDirection: 'row', gap: 8 }}>
+        <View style={{ marginTop: 14 }}>
           <Button
             variant="secondary"
-            style={{ flex: 1 }}
             label={busy ? t('create.locationMyPositionBusy') : t('create.locationMyPosition')}
             disabled={busy}
             onPress={handleMyPosition}
             leading={<I.pin size={14} color={colors.text} />}
-          />
-          <Button
-            variant="secondary"
-            style={{ flex: 1 }}
-            label={t('create.locationManualCta')}
-            onPress={() => {
-              setLatInput(lat != null ? String(lat) : '');
-              setLngInput(lng != null ? String(lng) : '');
-              setManualOpen(true);
-            }}
-            leading={<I.edit size={14} color={colors.text} />}
           />
         </View>
       </View>
@@ -228,62 +194,6 @@ export default function CreatePropertyLocationRoute() {
           }
         />
       </StickyBottom>
-
-      <Sheet open={manualOpen} onClose={() => setManualOpen(false)} title={t('create.locationSheetTitle')} snapPoints={['50%']}>
-        <View style={{ padding: 16, gap: 14 }}>
-          <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
-            {t('create.locationSheetSub')}
-          </Text>
-          <View style={{ gap: 6 }}>
-            <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
-              {t('create.locationLat')}
-            </Text>
-            <BottomSheetTextInput
-              value={latInput}
-              onChangeText={setLatInput}
-              keyboardType="numbers-and-punctuation"
-              placeholder="9.5092"
-              placeholderTextColor={colors.textFaint}
-              style={{
-                fontSize: 16,
-                color: colors.text,
-                padding: 14,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.card,
-                fontVariant: ['tabular-nums'],
-              }}
-            />
-          </View>
-          <View style={{ gap: 6 }}>
-            <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
-              {t('create.locationLng')}
-            </Text>
-            <BottomSheetTextInput
-              value={lngInput}
-              onChangeText={setLngInput}
-              keyboardType="numbers-and-punctuation"
-              placeholder="-13.7122"
-              placeholderTextColor={colors.textFaint}
-              style={{
-                fontSize: 16,
-                color: colors.text,
-                padding: 14,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.card,
-                fontVariant: ['tabular-nums'],
-              }}
-            />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-            <Button variant="secondary" label={t('create.locationCancel')} onPress={() => setManualOpen(false)} style={{ flex: 1 }} />
-            <Button label={t('create.locationSave')} onPress={handleManualSave} style={{ flex: 1 }} />
-          </View>
-        </View>
-      </Sheet>
     </SafeAreaView>
   );
 }

@@ -237,7 +237,11 @@ function ReviewDrawer({ application, onClose }: { application: Row; onClose: () 
               <BoolField label="Accepte le processus QR" value={ans.accepts_qr_process} />
               <BoolField label="Accepte les conditions Linky" value={ans.accepts_linky_terms} />
             </div>
-            {a.idPhotoUrl && (
+            {/* Only render a clickable link for an https URL. A stored
+                javascript:/data: value would execute in the admin origin on
+                click (stored XSS → admin session theft), so anything else is
+                shown as inert text. Server also rejects non-https (livreur-apply). */}
+            {a.idPhotoUrl && /^https:\/\//i.test(a.idPhotoUrl) ? (
               <a
                 href={a.idPhotoUrl}
                 target="_blank"
@@ -246,7 +250,11 @@ function ReviewDrawer({ application, onClose }: { application: Row; onClose: () 
               >
                 <ShieldCheck size={13} /> Voir la pièce d’identité
               </a>
-            )}
+            ) : a.idPhotoUrl ? (
+              <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-muted">
+                <ShieldCheck size={13} /> Pièce d’identité (lien non valide)
+              </span>
+            ) : null}
           </Section>
 
           {a.status === 'rejected' && a.rejectReason && (

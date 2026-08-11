@@ -15,13 +15,32 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 
+// Security (audit MOB-WEBVIEW-DEEPLINK): this screen is deep-linkable
+// (linky://checkout/pay?url=...), so the `url` param is attacker-controllable.
+// Only load it if it is an https:// page on a Lengopay host (the hosted
+// Orange Money / MTN payment page). Otherwise an attacker could render a
+// look-alike page inside Linky's trusted "Paiement" chrome to phish the
+// buyer's mobile-money PIN/OTP. Anything else is rejected (treated as missing).
+function isTrustedPaymentUrl(raw?: string): boolean {
+  if (!raw || typeof raw !== 'string') return false;
+  return /^https:\/\/([a-z0-9-]+\.)*lengopay\.com(\/|$|\?|#)/i.test(raw);
+}
+
 export default function CheckoutPayRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const { url, orderId } = useLocalSearchParams<{ url?: string; orderId?: string }>();
+  const { url, orderId, bookingId } = useLocalSearchParams<{ url?: string; orderId?: string; bookingId?: string }>();
+  const safeUrl = isTrustedPaymentUrl(url) ? url : undefined;
   const [loading, setLoading] = useState(true);
 
   const goConfirm = () => {
+    // Booking payment (Orange/MTN): return to the booking detail, which refetches
+    // and shows 'paid' once the cron confirms the rail.
+    if (bookingId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+      router.replace(`/bookings/${bookingId}` as any);
+      return;
+    }
     if (!orderId) {
       if (router.canGoBack()) router.back();
       else router.replace('/(tabs)');
@@ -67,20 +86,39 @@ export default function CheckoutPayRoute() {
       </View>
 
       <View style={{ flex: 1 }}>
-        {url ? (
+        {safeUrl ? (
           <WebView
-            source={{ uri: url }}
+            source={{ uri: safeUrl }}
             onLoadEnd={() => setLoading(false)}
             startInLoadingState
             javaScriptEnabled
             domStorageEnabled
+            // Keep the WHOLE payment flow INSIDE the app (client 2026-07-30:
+            // wants zero external browser / app switch). Three settings:
+            //  - setSupportMultipleWindows=false + javaScriptCanOpenWindowsAutomatically:
+            //    window.open / target=_blank load in THIS WebView, not Chrome.
+            //  - onShouldStartLoadWithRequest: allow only http(s) (they render
+            //    in-app); refuse any other scheme (intent://, custom app links,
+            //    tel:) so nothing can hand off to an external app. The Orange
+            //    Money / MTN flow confirms via a USSD code on the SIM (a system
+            //    prompt, not an app), so this never blocks a real payment.
+            //  - third-party / shared cookies: the hosted payment session needs
+            //    them to persist across its redirects.
+            setSupportMultipleWindows={false}
+            javaScriptCanOpenWindowsAutomatically
+            // Security (2026-07-31 audit): only https navigations inside the
+            // payment flow — never plaintext http:// (PIN/OTP over cleartext on
+            // Guinea 3G / public wifi). Legit operator/bank redirects are https.
+            onShouldStartLoadWithRequest={(r) => r.url.startsWith('https://')}
+            thirdPartyCookiesEnabled
+            sharedCookiesEnabled
           />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
             <Text tone="muted" style={{ textAlign: 'center' }}>{t('checkout.pay.missing')}</Text>
           </View>
         )}
-        {url && loading && (
+        {safeUrl && loading && (
           <View
             style={{
               position: 'absolute',

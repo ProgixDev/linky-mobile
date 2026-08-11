@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import i18n from '../i18n';
+import i18n, { INITIAL_LOCALE } from '../i18n';
 
 export type Language = 'fr' | 'en' | 'es';
 
@@ -25,7 +25,12 @@ interface PrefsState {
 export const usePrefs = create<PrefsState>((set) => ({
   dataSaver: storage.getBoolean(STORAGE_KEYS.dataSaver) ?? false,
   notifications: storage.getBoolean(STORAGE_KEYS.notificationsEnabled) ?? true,
-  language: (storage.getString(STORAGE_KEYS.language) as Language) ?? 'fr',
+  // Seed from the SAME validated locale i18n booted with, so the « Langue » row
+  // never claims a language different from the one rendering. INITIAL_LOCALE
+  // (resolveInitialLocale) already prefers a SUPPORTED persisted code, then
+  // device, then fr — a raw storage cast would leak a stale unsupported code
+  // (e.g. an old 'pular') that i18n rejects, re-desyncing the row.
+  language: INITIAL_LOCALE,
   privacyPersonalize: storage.getBoolean(STORAGE_KEYS.privacyPersonalize) ?? true,
   privacyAnalytics: storage.getBoolean(STORAGE_KEYS.privacyAnalytics) ?? true,
   privacyAdTracking: storage.getBoolean(STORAGE_KEYS.privacyAdTracking) ?? false,

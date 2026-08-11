@@ -7,7 +7,7 @@
 // the switch only flips after the user confirms.
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Check, ChevronLeft, ShoppingBag, Store, Building2, ShieldCheck } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -87,6 +87,7 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
 
 export default function RolesRoute() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const roles = useAuth((s) => s.roles);
   const setRoles = useAuth((s) => s.setRoles);
   const signIn = useAuth((s) => s.signIn);
@@ -277,7 +278,15 @@ export default function RolesRoute() {
         )}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 20, paddingVertical: 16 }}>
+      {/* Same fix as profil/edit : SafeAreaView only claims the top edge, so
+          « Enregistrer » was hidden behind the Android nav bar. */}
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 16,
+          paddingBottom: 16 + insets.bottom,
+        }}
+      >
         <Button
           variant="dark"
           size="lg"

@@ -20,9 +20,11 @@ export interface SendEmailInput {
   subject: string;
   text: string;
   html: string;
+  // « Télécharger mes données » (client 2026-08-06) attaches a JSON export.
+  attachments?: { filename: string; contentBase64: string }[];
 }
 
-export async function sendEmail({ to, subject, text, html }: SendEmailInput): Promise<void> {
+export async function sendEmail({ to, subject, text, html, attachments }: SendEmailInput): Promise<void> {
   try {
     await transporter.sendMail({
       from: `${FROM_NAME} <${SMTP_USER}>`,
@@ -30,6 +32,11 @@ export async function sendEmail({ to, subject, text, html }: SendEmailInput): Pr
       subject,
       text,
       html,
+      attachments: attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.contentBase64,
+        encoding: 'base64' as const,
+      })),
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

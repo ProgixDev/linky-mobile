@@ -1,10 +1,18 @@
-// Seller assigns a livreur to one of their orders. Authed (requireUser →
-// caller_id). The assign_delivery RPC enforces seller-only + livreur-role
-// gates + delivery-not-already-completed ; this fn just maps RPC errors to
-// the public API surface.
+// Delivery assignment is ADMIN-ONLY (seller made read-only 2026-06-24 — admins
+// assign centrally via admin-assign-delivery). This legacy seller-callable
+// endpoint stayed deployed-but-dormant and was therefore still directly
+// callable: a malicious seller could POST it to assign an accomplice livreur to
+// their OWN paid order, then release escrow via livreur-confirm-handoff without
+// any real delivery (2026-07-31 security audit). The self variant (seller as
+// their own livreur) was already blocked by assign_delivery's
+// LIVREUR_IS_COUNTERPARTY guard (2026-07-29) ; the ACCOMPLICE variant was not.
+// Gated behind assertAdmin so no seller can reach the assignment path (an admin
+// isn't the order's seller, so the RPC's seller check makes this effectively
+// disabled — real assignment goes through admin-assign-delivery).
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { assertAdmin } from '@shared/admin.ts';
 
 interface Body {
   order_id: string;
@@ -23,6 +31,7 @@ function valid(b: unknown): b is Body {
 
 Deno.serve(makePost<Body>('/v1/deliveries/assign', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
+  await assertAdmin(sb, userId);
 
   const { error: rpcErr } = await sb.rpc('assign_delivery', {
     p_order_id:   body.order_id,

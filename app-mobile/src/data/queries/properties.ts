@@ -27,6 +27,9 @@ export interface PropertyFilters {
   // Rental billing period ('month' ⇒ per_month=true, 'day' ⇒ false, 'all'/undefined ⇒ both).
   rentalPeriod?: 'all' | 'month' | 'day';
   query?: string;
+  /** Keep the caller's OWN listings in the result (see useProperties). Used by
+      Favoris so a hearted own-listing isn't filtered out. */
+  includeOwn?: boolean;
 }
 
 // 'all'/undefined sends nothing; 'month'/'day' map to the per_month boolean.
@@ -144,9 +147,11 @@ export function useProperties(filters: PropertyFilters = {}) {
       return properties;
     },
   });
+  // includeOwn keeps the caller's own listings in — required by Favoris, where a
+  // hearted listing must show even if the user published it (client 2026-08-05).
   const data = useMemo(
-    () => (meId ? query.data?.filter((p) => p.ownerId !== meId) : query.data),
-    [query.data, meId],
+    () => (meId && !filters.includeOwn ? query.data?.filter((p) => p.ownerId !== meId) : query.data),
+    [query.data, meId, filters.includeOwn],
   );
   return { ...query, data };
 }
@@ -168,6 +173,11 @@ export function useTogglePropertyFavorite() {
     onSuccess: ({ propertyId }) => {
       qc.invalidateQueries({ queryKey: ['property', propertyId] });
       qc.invalidateQueries({ queryKey: ['properties'] });
+      // See useToggleFavorite (products.ts) for why this matters : without it
+      // a virtualized Découvrir card that unmounts+remounts can reseed from a
+      // stale cached `favorited` and silently undo the local truth.
+      qc.invalidateQueries({ queryKey: ['discover-feed'] });
+      qc.invalidateQueries({ queryKey: ['discover-infinite'] });
     },
   });
 }
@@ -183,6 +193,24 @@ export function useProperty(id: string | undefined) {
         body: { id },
       });
       return property;
+    },
+  });
+}
+
+// Active properties of ONE shop/agency — public, active-only, NO hide-own (an
+// agent viewing their own agency page should still see their listings). Powers
+// the immobilier tab of the shop/agency page (client 2026-08-03).
+export function useShopProperties(shopId: string | undefined) {
+  return useQuery({
+    queryKey: ['shop-properties', shopId],
+    enabled: !!shopId,
+    queryFn: async (): Promise<Property[]> => {
+      const { properties } = await apiPost<{ properties: Property[]; next_cursor: Cursor | null }>({
+        path: '/list-properties',
+        authed: false,
+        body: { shop_id: shopId },
+      });
+      return properties;
     },
   });
 }
@@ -214,7 +242,6 @@ export function useMyProperties() {
 // hook: rooms-string → bedrooms_min/bedrooms_max, prices/distances stripped to
 // undefined when 0. Returns flat `properties` across all pages.
 export function useInfiniteProperties(filters: PropertyFilters = {}) {
-  const meId = useMeId();
   const { min: bedrooms_min, max: bedrooms_max } = roomsToBedrooms(filters.rooms);
   const query = useInfiniteQuery({
     queryKey: ['properties-infinite', filters],
@@ -240,12 +267,14 @@ export function useInfiniteProperties(filters: PropertyFilters = {}) {
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   });
 
-  // Filter the AGGREGATE so own-listings never appear even if they were in
-  // an earlier page. V1.1: push the filter server-side into list-properties.
-  const properties = useMemo(() => {
-    const all = query.data?.pages.flatMap((p) => p.properties) ?? [];
-    return meId ? all.filter((p) => p.ownerId !== meId) : all;
-  }, [query.data, meId]);
+  // Client 2026-08-03 — own listings MUST appear in the Marché feed (parity with
+  // Découvrir : owners want to SEE their published listings). Renting/buying your
+  // OWN property is already blocked on the detail screen (isOwn → « Modifier »
+  // only), so we no longer hide-own here.
+  const properties = useMemo(
+    () => query.data?.pages.flatMap((p) => p.properties) ?? [],
+    [query.data],
+  );
   return { ...query, properties };
 }
 
@@ -282,6 +311,7 @@ export function useCreateProperty() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['properties'] });
       qc.invalidateQueries({ queryKey: ['properties-nearby'] });
+      qc.invalidateQueries({ queryKey: ['my-properties'] });
       qc.invalidateQueries({ queryKey: ['my-shops'] });
     },
   });
@@ -298,6 +328,7 @@ export function useUpdateProperty() {
       qc.invalidateQueries({ queryKey: ['property', property.id] });
       qc.invalidateQueries({ queryKey: ['properties'] });
       qc.invalidateQueries({ queryKey: ['properties-nearby'] });
+      qc.invalidateQueries({ queryKey: ['my-properties'] });
     },
   });
 }
@@ -312,6 +343,7 @@ export function useDeleteProperty() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['properties'] });
       qc.invalidateQueries({ queryKey: ['properties-nearby'] });
+      qc.invalidateQueries({ queryKey: ['my-properties'] });
       qc.invalidateQueries({ queryKey: ['my-shops'] });
     },
   });

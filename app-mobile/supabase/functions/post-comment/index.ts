@@ -110,13 +110,17 @@ Deno.serve(makePost<Body>('/v1/comments/create', valid, async ({ sb, body, req }
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
 
-  // Author identity for the response (single query, name + avatar). authorName
-  // is returned RAW (null when unset) to match list-comments — the client
-  // (CommentRow) renders the neutral fallback; only the notification copy
-  // substitutes a fallback name.
-  const { data: me } = await sb.from('users').select('display_name, avatar_url').eq('id', userId).maybeSingle();
-  const displayName = ((me as { display_name?: string | null } | null)?.display_name) ?? null;
-  const authorAvatarUrl = ((me as { avatar_url?: string | null } | null)?.avatar_url) ?? null;
+  // Author identity for the response (single query, name + avatar). « Profil
+  // public » (client 2026-08-06) : an author who turned it off is shown to
+  // everyone else — including here, in the OPTIMISTIC response the app
+  // prepends immediately, and in the notification text below — exactly as
+  // list-comments already anonymizes on every later fetch. Getting this one
+  // wrong would leak the real name via push notification even with the
+  // toggle off.
+  const { data: me } = await sb.from('users').select('display_name, avatar_url, profile_public').eq('id', userId).maybeSingle();
+  const meRow = me as { display_name: string | null; avatar_url: string | null; profile_public: boolean } | null;
+  const displayName = meRow?.profile_public === false ? 'Utilisateur' : (meRow?.display_name ?? null);
+  const authorAvatarUrl = meRow?.profile_public === false ? null : (meRow?.avatar_url ?? null);
 
   // Notifications (best-effort, dedup, never self-notify):
   //  - a REPLY pings the parent comment's author ("… a répondu")

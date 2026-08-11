@@ -205,7 +205,6 @@ function BuyerHome() {
   const user = useAuth((s) => s.user);
   const cartCount = useCart((s) => s.lines.length);
   const roles = useAuth((s) => s.roles);
-  const hasPro = roles.includes('seller') || roles.includes('agent');
   const { data: shops, isLoading: shopsLoading } = useShops(3);
   const { data: products, isLoading: prodLoading } = usePopularProducts(4);
   const { data: properties, isLoading: propLoading } = useNearbyProperties(3);
@@ -290,15 +289,10 @@ function BuyerHome() {
           </CircleAction>
         </View>
 
-        {/* Pro summary — only when user has buyer + a pro role */}
-        {hasPro && (
-          <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
-            <ProSummaryCard
-              isSeller={roles.includes('seller')}
-              isAgent={roles.includes('agent')}
-            />
-          </View>
-        )}
+        {/* Pro summary card removed from the Home (client 2026-07-30): it
+            duplicated the pro workspace, which is already reachable from the
+            Profil tab (combined "Espace pro" card). Frees space above the
+            wallet. */}
 
         {/* Wallet hero */}
         <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
@@ -368,7 +362,14 @@ function BuyerHome() {
         {/* Featured shops — same swipe row as popular products : two cards
             visible, a peek of the third, snap per card. */}
         <View style={{ marginTop: 28 }}>
-          <SectionHeader title={t('home.shopsSection')} action={t('home.seeAll')} onAction={() => router.push('/(tabs)/marche')} />
+          <SectionHeader
+            title={t('home.shopsSection')}
+            action={t('home.seeAll')}
+            onAction={() => {
+              useFilters.getState().setMarcheTab('articles');
+              router.push('/(tabs)/marche');
+            }}
+          />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -391,7 +392,10 @@ function BuyerHome() {
             <SectionHeader
               title={t('home.popularSection')}
               action={t('home.seeAll')}
-              onAction={() => router.push('/(tabs)/marche')}
+              onAction={() => {
+                useFilters.getState().setMarcheTab('articles');
+                router.push('/(tabs)/marche');
+              }}
             />
           </View>
           <ScrollView
@@ -533,7 +537,13 @@ function BuyerHome() {
           <SectionHeader
             title={t('home.nearbyPropertiesSection')}
             action={t('home.seeAll')}
-            onAction={() => router.push('/(tabs)/marche')}
+            onAction={() => {
+              // Marché reads its tab from the filters store and remembers the
+              // last one used, so a « voir tout » that doesn't set it lands on
+              // whatever the user browsed before (client 2026-08-05).
+              useFilters.getState().setMarcheTab('immobilier');
+              router.push('/(tabs)/marche');
+            }}
           />
           <ScrollView
             horizontal
@@ -910,99 +920,6 @@ function CategoryGridTile({
   );
 }
 
-// ====================================================================
-// ProSummaryCard — shown on BuyerHome when user has pro role(s).
-// Quick link into the Boutique tab dashboard.
-// ====================================================================
-
-function ProSummaryCard({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean }) {
-  // Card bg is colors.text (an INVERTING surface: near-black in light mode,
-  // cream in dark). Foreground must therefore be colors.bg (inverts the other
-  // way) — hardcoded white went invisible on the cream card in dark mode.
-  const { colors, theme } = useTheme();
-  const { data: shops } = useMyShops();
-  const { data: properties } = useMyProperties();
-
-  const shopCount = shops?.length ?? 0;
-  const propertyCount = properties?.length ?? 0;
-  const productAndPropertyCount = propertyCount; // products counted via shop scope on the Pro tab
-
-  // No shop AND no properties → hide the whole CTA. Showing "0 GNF" or
-  // "0 commandes" would burn the first impression for a fresh multi-role user.
-  // We wait until the user has at least one listing before promoting the Pro tab.
-  if (shopCount === 0 && propertyCount === 0) return null;
-
-  const badgeLabel = isSeller && isAgent ? 'MODE PRO' : isSeller ? 'BOUTIQUE' : 'AGENCE IMMO';
-  const sublabel = shopCount > 0 && propertyCount > 0
-    ? `${shopCount} boutique${shopCount > 1 ? 's' : ''} · ${propertyCount} bien${propertyCount > 1 ? 's' : ''}`
-    : shopCount > 0
-      ? `${shopCount} boutique${shopCount > 1 ? 's' : ''}`
-      : `${productAndPropertyCount} bien${productAndPropertyCount > 1 ? 's' : ''}`;
-
-  return (
-    <Pressable
-      onPress={() => router.push('/(tabs)/boutique')}
-      style={{
-        borderRadius: 20,
-        overflow: 'hidden',
-        backgroundColor: colors.text,
-      }}
-    >
-      <View style={{ padding: 18 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderRadius: 999,
-              backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)',
-            }}
-          >
-            {isSeller ? (
-              <Store size={11} color={colors.bg} strokeWidth={2} />
-            ) : (
-              <Building2 size={11} color={colors.bg} strokeWidth={2} />
-            )}
-            <Text
-              style={{
-                fontSize: 10.5,
-                fontWeight: '700',
-                color: colors.bg,
-                letterSpacing: 0.5,
-              }}
-            >
-              {badgeLabel}
-            </Text>
-          </View>
-          <ChevronRight size={16} color={theme === 'dark' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.6)'} strokeWidth={2} />
-        </View>
-
-        <Text
-          style={{
-            fontSize: 18,
-            fontWeight: '700',
-            color: colors.bg,
-            letterSpacing: -0.2,
-            marginTop: 14,
-          }}
-        >
-          Tableau de bord
-        </Text>
-        <Text
-          style={{
-            fontSize: 12.5,
-            fontWeight: '500',
-            color: theme === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.65)',
-            letterSpacing: 0,
-            marginTop: 4,
-          }}
-        >
-          {sublabel}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
+// ProSummaryCard removed 2026-07-30 — the Home no longer shows a pro dashboard
+// teaser (duplicated the Profil "Espace pro" card). Pure-pro users still land
+// on their dashboard directly; buyers-with-a-pro-role reach it from Profil.

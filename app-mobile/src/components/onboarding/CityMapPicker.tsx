@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import Mapbox, { MapView, Camera, PointAnnotation, type ScreenPointPayload } from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import type { Feature, Point } from 'geojson';
@@ -87,6 +87,15 @@ export const GUINEA_CITIES: GuineaCity[] = [
 const GUINEA_CENTER: [number, number] = [-11.0, 10.0]; // [lng, lat] — Mapbox uses lng-first
 const GUINEA_ZOOM = 5.5;
 
+// Rough Guinea bounding box (padded). Linky is Guinea-only : if the phone's GPS
+// is OUTSIDE this box (e.g. the dev testing from abroad, or a user near a
+// border), we must NOT strand the map on a foreign view — every tap there would
+// resolve to the same nearest Guinea city (client 2026-07-30 : map showed
+// Constantine/Algeria and every tap picked Siguiri).
+function isInGuinea(lat: number, lng: number): boolean {
+  return lat >= 6.5 && lat <= 13.2 && lng >= -15.5 && lng <= -7.0;
+}
+
 function planarDistance(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const dLat = a.lat - b.lat;
   const dLng = a.lng - b.lng;
@@ -106,11 +115,26 @@ function nearestCity(lat: number, lng: number): GuineaCity {
 export function CityMapPicker({
   value,
   onChange,
+  onMapInteraction,
 }: {
   value: string;
   onChange: (city: string) => void;
+  /** Fired true when a touch starts on the map, false when it ends/cancels.
+   *  A parent ScrollView should set scrollEnabled={!active} so panning the map
+   *  explores the map instead of scrolling the page (client 2026-07-30). */
+  onMapInteraction?: (active: boolean) => void;
 }) {
   const { colors, radii } = useTheme();
+  // HARD CAP on the map height (client 2026-08-06). The map container is
+  // flex:1, which should have let it shrink — but the NATIVE Mapbox view
+  // reports a large intrinsic size that flex-shrink doesn't get under, so the
+  // map grew until it pushed the « Retour / Continuer » buttons off-screen on
+  // the onboarding city step. maxHeight is a hard Yoga constraint applied
+  // after flex sizing, so it wins over that intrinsic size. Proportional to
+  // the window so small phones keep room for the buttons and big screens
+  // still get a generous map.
+  const { height: winH } = useWindowDimensions();
+  const mapMaxH = Math.max(200, Math.min(380, winH * 0.38));
   const initialRegion = (GUINEA_CITIES.find((c) => c.name === value)?.region ??
     'Conakry') as Region;
   const [activeRegion, setActiveRegion] = useState<Region>(initialRegion);
@@ -169,6 +193,17 @@ export function CityMapPicker({
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const { latitude, longitude } = pos.coords;
       if (!latitude && !longitude) return;
+      // Phone outside Guinea → don't center on the foreign location (would make
+      // every map tap resolve to the same nearest border city). Keep the map on
+      // Guinea / the selected city and let the user pick manually.
+      if (!isInGuinea(latitude, longitude)) {
+        cameraRef.current?.setCamera({
+          centerCoordinate: selectedCity ? [selectedCity.lng, selectedCity.lat] : GUINEA_CENTER,
+          zoomLevel: selectedCity ? 8 : GUINEA_ZOOM,
+          animationDuration: 600,
+        });
+        return;
+      }
       cameraRef.current?.setCamera({
         centerCoordinate: [longitude, latitude],
         zoomLevel: 9,
@@ -292,8 +327,15 @@ export function CityMapPicker({
 
       {/* Map */}
       <View
+        // While a finger is on the map, tell the parent to freeze its ScrollView
+        // so the drag pans/zooms the MAP instead of scrolling the page
+        // (client 2026-07-30). Released on touch end/cancel.
+        onTouchStart={() => onMapInteraction?.(true)}
+        onTouchEnd={() => onMapInteraction?.(false)}
+        onTouchCancel={() => onMapInteraction?.(false)}
         style={{
           flex: 1,
+          maxHeight: mapMaxH,
           borderRadius: radii.lg,
           overflow: 'hidden',
           borderWidth: 1,

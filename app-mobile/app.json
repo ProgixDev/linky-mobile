@@ -2,7 +2,7 @@
   "expo": {
     "name": "Linky",
     "slug": "linky",
-    "version": "0.1.2",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "linky",
@@ -57,7 +57,7 @@
       }
     },
     "android": {
-      "package": "com.linky.app",
+      "package": "com.linkygroup.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#F7F3EC"

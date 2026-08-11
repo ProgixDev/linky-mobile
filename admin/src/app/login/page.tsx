@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ShieldCheck, Lock, Mail, ArrowRight } from 'lucide-react';
+import { Lock, Mail, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth, type AdminSession } from '@/stores/auth';
+import { useAuth } from '@/stores/auth';
 import { apiFetch, SERVER_ACCESS_TTL_SEC } from '@/lib/api';
 
 interface SigninResponse {
@@ -27,14 +27,9 @@ export default function LoginPage() {
   const hydrated = useAuth((s) => s.hydrated);
   const hydrate = useAuth((s) => s.hydrate);
 
-  const [step, setStep] = useState<'creds' | '2fa'>('creds');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // Credentials we've already validated server-side, held in memory between
-  // the creds step and the 2fa step. Discarded if user changes email.
-  const pendingSessionRef = useRef<AdminSession | null>(null);
 
   useEffect(() => {
     hydrate();
@@ -74,11 +69,11 @@ export default function LoginPage() {
         setSubmitting(false);
         return;
       }
-      // Stage the session for the 2FA step. We don't persist it yet because
-      // the pseudo-2FA UI may auto-advance + we want a single setSession call
-      // when the gate "passes" so the Shell mount has a coherent session in
-      // one tick.
-      pendingSessionRef.current = {
+      // is_admin gate passed → commit the session + enter the dashboard. The V1
+      // « 2FA » screen accepted any/no code and auto-committed after 800ms, so it
+      // was removed as deceptive theatre (client 2026-08-04). Real TOTP is a V1.1
+      // item ; until then email + password + is_admin is the honest barrier.
+      setSession({
         accessToken: access_token,
         refreshToken: refresh_token,
         accessTokenExpiresAt: Math.floor(Date.now() / 1000) + SERVER_ACCESS_TTL_SEC,
@@ -86,40 +81,13 @@ export default function LoginPage() {
         email,
         isAdmin: true,
         displayName: user.display_name,
-      };
-      setStep('2fa');
-      setSubmitting(false);
+      });
+      router.replace('/');
     } catch (e) {
       console.error('[login] signin error:', e);
       toast.error('Erreur réseau, réessaie.');
       setSubmitting(false);
     }
-  };
-
-  // V1 single-admin: the 2FA step is a visual pass-through. The is_admin check
-  // post-password is the only auth gate that matters for V1.
-  // TODO V1.1 (K.4.1 rollover): wire real TOTP verification here. The pending
-  // session must NOT be committed until the TOTP code verifies server-side.
-  useEffect(() => {
-    if (step !== '2fa') return;
-    const t = window.setTimeout(() => {
-      const staged = pendingSessionRef.current;
-      if (!staged) {
-        // Defensive — shouldn't happen, but if it does, bounce back to creds.
-        setStep('creds');
-        return;
-      }
-      setSession(staged);
-      pendingSessionRef.current = null;
-      router.replace('/');
-    }, 800);
-    return () => window.clearTimeout(t);
-  }, [step, setSession, router]);
-
-  const handle2faSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // No-op: the useEffect above auto-advances. We accept the form submit
-    // visually so users hitting Enter don't feel ignored.
   };
 
   return (
@@ -143,7 +111,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-12">
-            {step === 'creds' ? (
+            {(
               <>
                 <div className="inline-flex items-center rounded-full bg-primary-soft px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-deep">
                   Connexion sécurisée
@@ -187,49 +155,6 @@ export default function LoginPage() {
                   </button>
                 </form>
               </>
-            ) : (
-              <>
-                <div className="inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-deep">
-                  <ShieldCheck size={12} />
-                  Étape 2 sur 2
-                </div>
-                <h1 className="font-display mt-5 text-4xl font-bold leading-tight tracking-tight">
-                  Code à 6 chiffres
-                </h1>
-                <p className="mt-3 text-muted">
-                  Saisis le code envoyé à <strong>{email}</strong>.
-                </p>
-
-                <form onSubmit={handle2faSubmit} className="mt-10 space-y-4">
-                  <input
-                    autoFocus
-                    inputMode="numeric"
-                    value={code}
-                    onChange={(e) =>
-                      setCode(e.target.value.replace(/\D/g, '').slice(0, 6))
-                    }
-                    placeholder="••••••"
-                    className="h-20 w-full rounded-2xl border border-line bg-surface text-center text-3xl font-bold tracking-[12px] outline-none focus:border-primary"
-                  />
-                  <button
-                    type="submit"
-                    disabled
-                    className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-black text-base font-bold text-white opacity-60"
-                  >
-                    Connexion en cours…
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      pendingSessionRef.current = null;
-                      setStep('creds');
-                    }}
-                    className="flex h-12 w-full items-center justify-center text-sm font-semibold text-muted"
-                  >
-                    ← Changer d&apos;email
-                  </button>
-                </form>
-              </>
             )}
           </div>
 
@@ -258,9 +183,9 @@ export default function LoginPage() {
               </p>
               <div className="mt-10 grid grid-cols-3 gap-6">
                 {[
-                  { n: '18k+', l: 'Utilisateurs' },
-                  { n: '4 200', l: 'Annonces' },
-                  { n: '184M', l: 'GMV mensuel' },
+                  { n: 'KYC', l: 'Identités vérifiées' },
+                  { n: 'Escrow', l: 'Paiements protégés' },
+                  { n: 'Litiges', l: 'Médiation humaine' },
                 ].map((s) => (
                   <div key={s.l}>
                     <div className="font-display text-3xl font-bold">{s.n}</div>

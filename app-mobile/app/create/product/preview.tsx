@@ -83,6 +83,7 @@ export default function CreatePreviewRoute() {
                 category: state.category,
                 condition: state.condition,
                 photos: state.photos,
+                video_url: state.videoUrl,
                 city: state.city,
                 // Geography simplified per 2026-05-29 client meeting: cities only, no districts.
               };

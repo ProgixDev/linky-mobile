@@ -7,11 +7,11 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Film, Plus, Star, Trash2 } from 'lucide-react-native';
+import { Film, Plus, Rocket, Star, Trash2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -71,6 +71,7 @@ function pathFromUrl(url: string): string {
 }
 
 export default function PropertyEditRoute() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
   const { t } = useTranslation();
@@ -570,10 +571,40 @@ export default function PropertyEditRoute() {
                 <Switch value={furnished} onChange={setFurnished} />
               </View>
             )}
+
+            {/* Boost — paid visibility for this property (client 2026-07-29:
+                boost extended from Boutique to Immobilier). Opens the boost flow
+                with this listing pre-selected. push() so edit state survives a
+                cancel. Only an active listing can be boosted. */}
+            {prop && prop.status === 'active' && (
+              <View style={{ marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border, gap: 8 }}>
+                <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
+                  {t('productEdit.boostHint')}
+                </Text>
+                <Button
+                  variant="saffron"
+                  size="lg"
+                  block
+                  label={t('productEdit.boostCta')}
+                  leading={<Rocket size={18} color="#2A1A05" strokeWidth={2.25} />}
+                  onPress={() =>
+                    router.push({ pathname: '/pro/boost/new', params: { propertyId: prop.id } })
+                  }
+                />
+              </View>
+            )}
           </View>
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
+        {/* Footer sits outside the top-only SafeAreaView, so pad by the real bottom
+            inset or the action hides behind the Android nav bar (client 2026-08-05). */}
+        <View
+          style={{
+            paddingHorizontal: 16,
+            paddingTop: 16,
+            paddingBottom: 16 + insets.bottom,
+          }}
+        >
           <Button variant="dark" size="lg" block label={t('propertyEdit.save')} onPress={onSave} loading={update.isPending} disabled={!canSave} />
         </View>
       </KeyboardAvoidingView>

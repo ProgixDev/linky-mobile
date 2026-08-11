@@ -796,3 +796,15 @@ verify_jwt = false
 
 [functions.get-boost]
 verify_jwt = false
+
+[functions.twilio-status]
+verify_jwt = false
+
+[functions.set-password]
+verify_jwt = false
+
+[functions.password-change-request]
+verify_jwt = false
+
+[functions.export-my-data]
+verify_jwt = false

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, FlatList, View, type ViewToken } from 'react-native';
+import { FlatList, View, useWindowDimensions, type ViewToken } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
@@ -11,9 +11,6 @@ import { Button } from '../../src/components/primitives/Button';
 import { PageDots } from '../../src/components/primitives/ProgressDots';
 import { welcomeHeroes } from '../../src/data/photos';
 
-const SW = Math.min(Dimensions.get('window').width, 500);
-const { height: SH } = Dimensions.get('window');
-
 const HERO_RATIO = 0.55;
 const CURVE_HEIGHT = 36;
 const AUTO_ADVANCE_MS = 4000;
@@ -21,6 +18,11 @@ const AUTO_ADVANCE_MS = 4000;
 export default function WelcomeRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  // LIVE dimensions so the onboarding carousel fills the screen at any Android
+  // screen-zoom / display size (was a stale module Dimensions.get()).
+  const { width: winW, height: SH } = useWindowDimensions();
+  const SW = Math.min(winW, 500);
   const [idx, setIdx] = useState(0);
   const listRef = useRef<FlatList>(null);
   const userPaused = useRef(false);
@@ -168,7 +170,10 @@ export default function WelcomeRoute() {
           right: 0,
           bottom: 0,
           paddingHorizontal: 28,
-          paddingBottom: 28,
+          // The window draws BEHIND the Android nav bar (navigationBarColor is
+          // transparent), so a flat 28 left the CTAs partly under a 3-button
+          // nav bar (~48dp). Take whichever is larger (client 2026-08-05).
+          paddingBottom: Math.max(28, insets.bottom + 16),
           paddingTop: 12,
           backgroundColor: colors.bg,
         }}

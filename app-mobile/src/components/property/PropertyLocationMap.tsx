@@ -5,6 +5,7 @@
 // streaming while the user scrolls the page). « Itinéraire » hands off to the
 // device's maps app — native turn-by-turn beats anything we'd embed, costs
 // zero Mapbox quota, and works offline once the OS app has cached the area.
+import { useState } from 'react';
 import { Linking, Platform, Pressable, View } from 'react-native';
 import Mapbox, { MapView, Camera, PointAnnotation } from '@rnmapbox/maps';
 import { Navigation } from 'lucide-react-native';
@@ -41,10 +42,20 @@ export function PropertyLocationMap({
 }) {
   const { colors } = useTheme();
   const hasGps = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+  // @rnmapbox on Android under-measures inside an aspectRatio+flex box (renders
+  // pinned left with a dead gap on the right → looks off-centre). Fix : measure
+  // the real width and hand the MapView explicit pixel dimensions.
+  const [w, setW] = useState(0);
+  const h = Math.round((w * 9) / 16);
 
   return (
     <View
+      onLayout={(e) => {
+        const next = Math.round(e.nativeEvent.layout.width);
+        if (next !== w) setW(next);
+      }}
       style={{
+        width: '100%',
         aspectRatio: 16 / 9,
         borderRadius: 10,
         overflow: 'hidden',
@@ -58,10 +69,10 @@ export function PropertyLocationMap({
             {!hasGps ? 'Position GPS non renseignée pour cette annonce.' : "La carte n'est pas disponible sur le web."}
           </Text>
         </View>
-      ) : (
+      ) : w > 0 ? (
         <>
           <MapView
-            style={{ flex: 1 }}
+            style={{ width: w, height: h }}
             styleURL="mapbox://styles/mapbox/streets-v12"
             compassEnabled={false}
             scaleBarEnabled={false}
@@ -97,6 +108,17 @@ export function PropertyLocationMap({
               />
             </PointAnnotation>
           </MapView>
+          {/* Tap ANYWHERE on the map opens the itinerary — the whole card is
+              the tap target, not just the pill (client 2026-07-30). Static
+              preview (gestures off), so a transparent full-size overlay is
+              safe; the Itinéraire pill is rendered after → stays on top and
+              keeps its own tap. */}
+          <Pressable
+            onPress={() => openDirections(lat, lng, label)}
+            accessibilityRole="button"
+            accessibilityLabel="Ouvrir l'itinéraire vers le logement"
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          />
           <Pressable
             onPress={() => openDirections(lat, lng, label)}
             style={{
@@ -121,7 +143,7 @@ export function PropertyLocationMap({
             <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.bg }}>Itinéraire</Text>
           </Pressable>
         </>
-      )}
+      ) : null}
     </View>
   );
 }

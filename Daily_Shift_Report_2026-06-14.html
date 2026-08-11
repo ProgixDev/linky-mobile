@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Linky — Work Report — 14 June 2026</title>
+<style>
+  :root {
+    --navy: #1F4E7A; --navy-deep: #14304D; --navy-soft: #EAF1F8;
+    --saffron: #E8A33D; --ink: #1C2733; --muted: #5A6B7C; --line: #DCE5EE;
+    --ok: #1F7A54; --code-bg: #14304D;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', -apple-system, Roboto, sans-serif; color: var(--ink); background: #fff; font-size: 13px; line-height: 1.55; }
+  .page { max-width: 880px; margin: 0 auto; padding: 0 46px 52px; }
+  .hero { background: linear-gradient(135deg, var(--navy-deep), var(--navy) 72%); color: #fff; padding: 38px 46px 30px; margin: 0 -46px 30px; }
+  .hero .brand { font-size: 12px; letter-spacing: 4px; font-weight: 700; color: var(--saffron); text-transform: uppercase; margin-bottom: 12px; }
+  .hero h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.4px; }
+  .hero .meta { display: flex; flex-wrap: wrap; gap: 22px 34px; margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.18); font-size: 11.5px; color: rgba(255,255,255,0.72); }
+  .hero .meta b { display: block; color: #fff; font-size: 12.5px; margin-top: 2px; }
+  .summary { background: var(--navy-soft); border: 1px solid var(--line); border-left: 4px solid var(--saffron); border-radius: 10px; padding: 16px 18px; font-size: 12.5px; color: var(--ink); margin-bottom: 30px; }
+  h2 { font-size: 15.5px; color: var(--navy-deep); margin: 28px 0 10px; padding-bottom: 7px; border-bottom: 2px solid var(--saffron); }
+  .item { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: none; }
+  .item b { color: var(--navy-deep); font-size: 13px; }
+  .item p { margin-top: 3px; color: var(--ink); font-size: 12.5px; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; color: var(--ok); background: #E6F4ED; border-radius: 5px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; }
+  .tag.dep { color: #9A6A1B; background: #FBF1E0; }
+  ul { margin: 4px 0 0 18px; }
+  li { margin: 2px 0; font-size: 12.5px; }
+  pre { background: var(--code-bg); color: #D6E4F0; border-radius: 10px; padding: 16px 18px; font-size: 11px; line-height: 1.7; overflow-x: auto; font-family: 'Cascadia Code', Consolas, monospace; margin-top: 6px; }
+  pre .h { color: var(--saffron); }
+  .foot { margin-top: 38px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
+  @media print { body, .hero, pre, .summary { -webkit-print-color-adjust: exact; print-color-adjust: exact; } h2 { page-break-after: avoid; } .item, li { page-break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <div class="brand">Linky</div>
+    <h1>Work Report</h1>
+    <div class="meta">
+      <div>Developer<b>Achraf Benamrane</b></div>
+      <div>Date<b>14 June 2026</b></div>
+      <div>Project<b>Linky — marketplace + real-estate app (Guinea)</b></div>
+      <div>Stack<b>Expo / React Native · Supabase · Stripe · escrow wallet</b></div>
+      <div>Status<b>✅ V1 complete &amp; fully bilingual (FR/EN)</b></div>
+    </div>
+  </div>
+
+  <div class="summary">
+    Major feature + reliability day on top of the V1 base. Delivered the client APK on the landing page, fixed two data-integrity blockers that were corrupting every new listing, shipped profile photos (mobile + backend + admin), card-funded wallet recharge (Stripe), and a seller/agent editing pass (shop, listings, stats). Closed it out by taking the whole app fully bilingual (French / English, ~1275 keys, live switching). Four independent adversarial reviews were run across the new money/identity surfaces; every confirmed finding was fixed and the backend functions were redeployed and probed healthy. Everything committed on <b>main</b>.
+  </div>
+
+  <h2>What was delivered</h2>
+
+  <div class="item">
+    <b>🌍 Full internationalization — French / English</b>
+    <p>The entire app is now bilingual: every buyer, seller and agent screen, settings, and the legal documents. ~1275 translation keys, live language switching, with module-scope "frozen string" arrays correctly resolved at render. Pular &amp; Soussou are scaffolded as complete skeletons with a CSV round-trip so the client's translators can fill them in with zero code changes. (Phases I.1 → I.3j, ~20 commits.)</p>
+  </div>
+
+  <div class="item">
+    <b>🔴 Create-flow data-integrity blockers fixed <span class="tag">BLOCKER</span></b>
+    <p>Two bugs were corrupting every new listing: (1) the product wizard never collected a <b>city</b> — every product shipped with an empty city, invisible to the marketplace city filter; (2) the property wizard had no <b>type selector</b> — every listing defaulted to a rental, so agents could not list sales or land at all. Built a reusable curated city picker (over the canonical Guinea city list) and added the location/vente/terrain selector. Hardened after an adversarial review (terrain clears stale fields, preview gates on city, etc.).</p>
+  </div>
+
+  <div class="item">
+    <b>📷 Profile photos — mobile + backend + admin</b>
+    <p>Users can set a profile photo from edit-profile (pick → square crop → upload). New backend: a public <code>avatars</code> storage bucket, an <code>avatar</code> kind on the signed-upload endpoint, and <code>update-profile</code> accepting a validated <code>avatar_url</code> (must resolve to our own storage). The admin Users table renders the avatar. Security-reviewed and hardened — also closed a pre-existing gap where shop cover/logo URLs were unvalidated.</p>
+  </div>
+
+  <div class="item">
+    <b>💳 Card-funded wallet recharge (Stripe top-up)</b>
+    <p>The "Recharge" screen now works end to end: enter an amount → Stripe payment sheet → the wallet is credited via the webhook → ledger. New <code>wallet-topup-card</code> function + a top-up branch in the Stripe webhook that reuses the idempotent <code>confirm_topup</code> RPC. A money/abuse review caught a missing settled-amount check (the order rail has it, the top-up branch didn't) — added. Works in Stripe test mode; real money is a live-key swap. Orange/MTN recharge stays blocked on the Lengopay contract.</p>
+  </div>
+
+  <div class="item">
+    <b>🏪 Seller / agent editing pass</b>
+    <p>Audited the seller/agent surfaces (money flows, visits and growth tools were already real). Closed the editing gaps: a new <b>shop-edit</b> screen (name, city, logo, cover, about) wired to the previously dead identity pill; <b>listing edit</b> for products and properties (was status-only); a "waiting for payment" message on unpaid orders; and the <b>stats</b> screen now counts properties too — an agent previously saw "0" despite having viewed listings.</p>
+  </div>
+
+  <div class="item">
+    <b>💸 Withdrawal screen rebuilt</b>
+    <p>The payout was un-actionable — it recorded a destination of "Orange Money" with no phone number, so an admin had nothing to pay out to. Rebuilt with a mobile-money number field, an editable amount, branded operator rows, balance validation, and proper empty/loading/error states.</p>
+  </div>
+
+  <div class="item">
+    <b>🧭 Catalogue reliability</b>
+    <p>Home category tiles now land on the correct filtered products — the tile codes were misaligned with how products are actually stored; aligned them and added the missing "Services" filter. Removed the top home search box per request.</p>
+  </div>
+
+  <div class="item">
+    <b>📲 Landing page — client APK delivery</b>
+    <p>Added a working Android APK download button on the landing page (stable hosting, clean <code>/linky.apk</code> filename), App/Play Store "coming soon" badges, a responsive pass, and a branded URL — so the client can install directly from the landing.</p>
+  </div>
+
+  <div class="item">
+    <b>🧹 Cleanup &amp; backend ops</b>
+    <p>Deleted 5 orphaned mock data files (774 lines) and fixed the stale README. Deployed the updated edge functions (<code>photo-upload-url</code>, <code>update-profile</code>, <code>shop-upsert</code>, <code>wallet-topup-card</code>, <code>stripe-webhook</code>), all verified healthy with the garbage-bearer probe; provisioned the avatars storage bucket.</p>
+  </div>
+
+  <div class="item">
+    <b>🔍 Adversarial reviews</b>
+    <p>Ran four independent multi-agent reviews — create-flow fixes, the avatar feature, the seller/agent audit, and the card top-up (money/abuse). Folded in the real findings (e.g. the top-up amount validation, terrain stale-field clearing, the shop-upsert URL gap) and rejected the false positives after verifying against the code.</p>
+  </div>
+
+  <h2>Commits (highlights)</h2>
+  <pre><span class="h">fix(wallet):</span>    rebuild the Retirer screen + make payouts actionable
+<span class="h">fix(create):</span>    collect product city + property type (data-integrity blockers)
+<span class="h">fix(create):</span>    harden create-flow fixes after adversarial review
+<span class="h">feat(profile):</span>  let users set a profile photo (mobile + backend + admin)
+<span class="h">fix(profile):</span>   harden avatar URL validation + remove-photo affordance
+<span class="h">feat(seller):</span>   editable boutique + wire dead IdentityPill + order wait state
+<span class="h">feat(seller/agent):</span> edit a published listing (product + property)
+<span class="h">fix(stats):</span>     include properties, not just products
+<span class="h">fix(browse):</span>    category tiles now match stored product codes
+<span class="h">feat(wallet):</span>   card-funded recharge (Stripe top-up) — frontend + backend
+<span class="h">fix(wallet):</span>    validate settled amount in topup webhook (review follow-up)
+<span class="h">chore:</span>          delete orphaned mock data files + fix stale README
+<span class="h">feat(phase-I*):</span> full FR/EN internationalization — setup → seller/agent sweep (~20 commits, ~1275 keys)</pre>
+
+  <h2>Status &amp; next steps</h2>
+  <ul>
+    <li>✅ <b>V1 is feature-complete and fully bilingual</b> — every flow works end to end; the app now switches FR ↔ EN live on every screen.</li>
+    <li>⏳ <b>Pending on the client side</b> (each a same-day activation): Lengopay contract → Orange/MTN payments; US LLC + live Stripe keys → real card payments &amp; recharge; Apple Developer account → iOS; Firebase / APNS credentials → push delivery on devices; brand assets → final identity.</li>
+    <li>🚀 <b>Pre-launch cutover</b> (right before release): drop the demo-seed wallet trigger, gate the dev OTP echo, then produce the signed production APK.</li>
+  </ul>
+
+  <div class="foot">
+    <div>Linky — Work Report · 14 June 2026</div>
+    <div>Prepared by <b>Achraf Benamrane</b></div>
+  </div>
+
+</div>
+</body>
+</html>

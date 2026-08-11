@@ -6,9 +6,15 @@ import { bcryptHash } from '@shared/bcrypt.ts';
 
 interface Body { email: string; password: string }
 
+// AUTH-05: minimum 8 chars (was 6). Upper bound 128 keeps us well under bcrypt's
+// 72-BYTE input limit's abuse surface while allowing passphrases.
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 128;
+
 function valid(b: unknown): b is Body {
   const x = b as Body;
-  return !!x && typeof x.email === 'string' && typeof x.password === 'string' && x.password.length >= 6;
+  return !!x && typeof x.email === 'string' && typeof x.password === 'string'
+    && x.password.length >= PASSWORD_MIN && x.password.length <= PASSWORD_MAX;
 }
 
 const REFRESH_TTL_DAYS = 90;
@@ -16,7 +22,8 @@ const REFRESH_TTL_DAYS = 90;
 Deno.serve(makePost<Body>('/v1/auth/email/signup', valid, async ({ sb, body, req }) => {
   const email = normalizeEmail(body.email);
   if (!email) throwApi('INVALID_TARGET', 400, 'Email invalide');
-  if (body.password.length < 6) throwApi('PASSWORD_TOO_SHORT', 400, 'Mot de passe trop court (min. 6 caractères)');
+  if (body.password.length < PASSWORD_MIN) throwApi('PASSWORD_TOO_SHORT', 400, 'Mot de passe trop court (min. 8 caractères)');
+  if (body.password.length > PASSWORD_MAX) throwApi('PASSWORD_TOO_LONG', 400, 'Mot de passe trop long (max. 128 caractères)');
 
   const password_hash = await bcryptHash(body.password);
 

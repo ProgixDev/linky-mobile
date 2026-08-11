@@ -122,7 +122,11 @@ export function ContractView({ booking }: { booking: Booking }) {
       <ContractRow k="Adresse" v={c.property_location} />
       <ContractRow k="Période" v={c.period === 'day' ? `Du ${formatBookingDate(c.start_date)} au ${formatBookingDate(c.end_date ?? c.start_date)}` : `${c.months} mois à partir du ${formatBookingDate(c.start_date)}`} />
       <ContractRow k={c.period === 'day' ? 'Loyer / jour' : 'Loyer / mois'} v={formatGNF(c.rent_minor)} />
-      <ContractRow k="Montant" v={formatGNF(c.amount_minor)} />
+      {c.period === 'day' ? (
+        <ContractRow k="Montant" v={formatGNF(c.amount_minor)} />
+      ) : c.deposit_minor ? (
+        <ContractRow k="Caution (1 mois)" v={formatGNF(c.deposit_minor)} />
+      ) : null}
       <ContractRow k="Frais de service (3%)" v={formatGNF(c.fees_minor)} />
       <ContractRow k="Total à la signature" v={formatGNF(c.total_minor)} bold />
       <View style={{ height: 1, backgroundColor: colors.border }} />
@@ -132,9 +136,19 @@ export function ContractView({ booking }: { booking: Booking }) {
         </Text>
       ))}
       <View style={{ height: 1, backgroundColor: colors.border }} />
+      {/* Daily = instant-book : the landlord never signs manually — their active
+          « au jour » listing IS the acceptance. Showing « ✔ [date] » read as a
+          signature the owner never gave (client 2026-08-03). Show the honest
+          auto-acceptance instead ; monthly keeps the real signature date. */}
       <ContractRow
         k="Signature propriétaire"
-        v={booking.landlordSignedAt ? `✔ ${new Date(booking.landlordSignedAt).toLocaleDateString('fr-FR')}` : 'En attente'}
+        v={
+          c.period === 'day'
+            ? 'Offre au jour · pré-acceptée'
+            : booking.landlordSignedAt
+              ? `✔ ${new Date(booking.landlordSignedAt).toLocaleDateString('fr-FR')}`
+              : 'En attente'
+        }
       />
       <ContractRow
         k="Signature locataire"

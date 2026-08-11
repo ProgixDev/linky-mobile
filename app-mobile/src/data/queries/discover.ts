@@ -15,7 +15,8 @@ export function useDiscoverFeed(filter: DiscoverFilter = 'all') {
     queryFn: async (): Promise<DiscoverItem[]> => {
       const { items } = await apiPost<{ items: DiscoverItem[]; next_cursor: DiscoverCursor | null }>({
         path: '/discover-feed',
-        authed: false,
+        // Authed so the server can return the caller's own heart state per item
+        // (the endpoint stays public: a visitor simply gets favorited=false).
         body: { limit: 50 },
       });
       if (filter === 'products') return items.filter((i) => i.kind === 'product');
@@ -36,7 +37,7 @@ export function useDiscoverInfinite(filter: DiscoverFilter = 'all') {
     queryFn: async ({ pageParam }: { pageParam: DiscoverCursor | undefined }) => {
       return apiPost<{ items: DiscoverItem[]; next_cursor: DiscoverCursor | null }>({
         path: '/discover-feed',
-        authed: false,
+        // Authed — see useDiscoverFeed above.
         body: { limit: 20, cursor: pageParam },
       });
     },

@@ -85,28 +85,76 @@ export default function OrderRoute() {
         {(isBuyer || isSeller) && (
           <OrderResolutionBanner order={order} viewerRole={isBuyer ? 'buyer' : 'seller'} />
         )}
+        {/* An order can hold SEVERAL articles from the same shop (client
+            2026-08-05). `items` carries them all ; older orders have none, so
+            we fall back to the legacy single-article snapshot. */}
         <Card padding={12}>
-          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-            <Image
-              source={order.productSnapshot.photo}
-              style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: colors.bgSunken }}
-              contentFit="cover"
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600' }} numberOfLines={2}>
-                {order.productSnapshot.title}
-              </Text>
-              <Text
-                variant="micro"
-                tone="muted"
-                style={{ letterSpacing: 0, textTransform: 'none' }}
-              >
-                {t('order.qty', { count: order.quantity })}
+          {(order.items && order.items.length > 0
+            ? order.items
+            : [{
+                productId: order.productId,
+                title: order.productSnapshot.title,
+                photo: order.productSnapshot.photo,
+                quantity: order.quantity,
+                unitPriceGnf: order.productSnapshot.priceGnf,
+                amountGnf: order.productSnapshot.priceGnf * order.quantity,
+              }]
+          ).map((it, idx) => (
+            <View
+              key={it.productId}
+              style={{
+                flexDirection: 'row',
+                gap: 10,
+                alignItems: 'center',
+                marginTop: idx === 0 ? 0 : 12,
+                paddingTop: idx === 0 ? 0 : 12,
+                borderTopWidth: idx === 0 ? 0 : 1,
+                borderTopColor: colors.border,
+              }}
+            >
+              <Image
+                source={it.photo}
+                style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: colors.bgSunken }}
+                contentFit="cover"
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600' }} numberOfLines={2}>
+                  {it.title}
+                </Text>
+                <Text
+                  variant="micro"
+                  tone="muted"
+                  style={{ letterSpacing: 0, textTransform: 'none' }}
+                >
+                  {t('order.qty', { count: it.quantity })}
+                </Text>
+              </View>
+              <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
+                {formatGNF(it.unitPriceGnf)}
               </Text>
             </View>
-            <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
-              {formatGNF(order.productSnapshot.priceGnf)}
-            </Text>
+          ))}
+        </Card>
+
+        {/* Mode de réception (client 2026-07-30). 'delivery' par défaut pour les
+            commandes historiques sans le champ. */}
+        <Card padding={12} style={{ marginTop: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            {order.deliveryMode === 'pickup' ? (
+              <I.store size={16} color={colors.primary} />
+            ) : (
+              <I.truck size={16} color={colors.primary} />
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600' }}>
+                {order.deliveryMode === 'pickup' ? 'Retrait sur place' : 'Livraison à domicile'}
+              </Text>
+              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                {order.deliveryMode === 'pickup'
+                  ? 'À récupérer à la boutique'
+                  : `Livraison assurée par Linky${order.deliveryFeeGnf ? ` — ${formatGNF(order.deliveryFeeGnf)}` : ''}`}
+              </Text>
+            </View>
           </View>
         </Card>
 
