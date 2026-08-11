@@ -11,7 +11,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { hmacHex, timingSafeEqual } from '@shared/hmac.ts';
+import { matchesOtpCode } from '@shared/phone-code.ts';
 import { detectCarrier } from '@shared/validate.ts';
 
 interface Body { otp_id: string; code: string }
@@ -51,8 +51,9 @@ Deno.serve(makePost<Body>('/v1/phones/add-confirm', valid, async ({ sb, body, re
 
   const hmacSecret = Deno.env.get('LINKY_OTP_HMAC_SECRET');
   if (!hmacSecret) throwApi('INTERNAL_ERROR', 500, 'Configuration manquante');
-  const expected = await hmacHex(hmacSecret, `${otp.target}:${body.code}`);
-  if (!timingSafeEqual(expected, otp.code_hash)) {
+  // Local HMAC compare, or a round-trip to Prelude when it generated the code.
+  const ok = await matchesOtpCode({ storedHash: otp.code_hash, target: otp.target, code: body.code, hmacSecret });
+  if (!ok) {
     await sb.rpc('increment_otp_attempts', { p_otp_id: otp.id });
     throwApi('OTP_INVALID', 401, 'Code incorrect');
   }

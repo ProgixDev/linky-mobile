@@ -2,7 +2,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { hmacHex } from '@shared/hmac.ts';
 import { normalizePhone, normalizeEmail } from '@shared/validate.ts';
-import { sendCodeToPhone } from '@shared/phone-code.ts';
+import { sendCodeToPhone, PRELUDE_CODE_SENTINEL } from '@shared/phone-code.ts';
 
 interface Body { channel: 'phone' | 'email'; target: string; purpose: 'signin'; app?: 'driver' | 'marketplace' }
 
@@ -89,8 +89,24 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
   // say WhatsApp instead of SMS ; otherwise people stare at their messages app
   // waiting for something that arrived elsewhere.
   if (body.channel === 'phone') {
-    const delivery = await sendCodeToPhone(target, code);
-    if (delivery) return { body: { otp_id: inserted.id, delivery } }; // no dev_code in real delivery
+    const sent = await sendCodeToPhone(target, code);
+    if (sent) {
+      if (sent.verifier === 'prelude') {
+        // Prelude generated this code, so our HMAC is meaningless for it —
+        // stamp the row so the confirm step knows to ask Prelude instead. Fail
+        // the request if the stamp cannot be written: the alternative is a user
+        // holding a valid code against a row that will never accept it.
+        const { error: eMark } = await sb
+          .from('otp_codes')
+          .update({ code_hash: PRELUDE_CODE_SENTINEL })
+          .eq('id', inserted.id);
+        if (eMark) {
+          console.error('[otp-request] could not mark otp as prelude-verified:', eMark);
+          throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+        }
+      }
+      return { body: { otp_id: inserted.id, delivery: sent.delivery } }; // no dev_code in real delivery
+    }
   }
 
   // Email via Resend — takes priority over the Gmail relay once BOTH

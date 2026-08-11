@@ -16,7 +16,7 @@
 // insert time anyway.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
-import { sendCodeToPhone } from '@shared/phone-code.ts';
+import { sendCodeToPhone, PRELUDE_CODE_SENTINEL } from '@shared/phone-code.ts';
 import { requireUser } from '@shared/auth.ts';
 import { normalizePhone } from '@shared/validate.ts';
 import { hmacHex } from '@shared/hmac.ts';
@@ -102,8 +102,24 @@ Deno.serve(makePost<Body>('/v1/phones/add-request', valid, async ({ sb, body, re
   // Rails live in @shared/phone-code.ts: SMS first, then WhatsApp. Guinean
   // carriers reject our SMS until the "LINKY" sender is registered with them,
   // so WhatsApp is what actually delivers today.
-  const delivery = await sendCodeToPhone(target, code, 'verification');
-  if (delivery) return { body: { otp_id: inserted.id, delivery } };
+  const sent = await sendCodeToPhone(target, code, 'verification');
+  if (sent) {
+    if (sent.verifier === 'prelude') {
+      // Prelude generated this code, so our HMAC is meaningless for it —
+      // stamp the row so the confirm step knows to ask Prelude instead. Fail
+      // the request if the stamp cannot be written: the alternative is a user
+      // holding a valid code against a row that will never accept it.
+      const { error: eMark } = await sb
+        .from('otp_codes')
+        .update({ code_hash: PRELUDE_CODE_SENTINEL })
+        .eq('id', inserted.id);
+      if (eMark) {
+        console.error('[phone-add-request] could not mark otp as prelude-verified:', eMark);
+        throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+      }
+    }
+    return { body: { otp_id: inserted.id, delivery: sent.delivery } };
+  }
 
   if (Deno.env.get('LINKY_DEV_OTP_ECHO') === '1') {
     console.log(`[OTP DEV ECHO add_phone] otp_id=${inserted.id}`);
