@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
   Star,
-  MessageSquare,
   BarChart3,
   ArrowUpRight,
   Package,
@@ -904,10 +903,16 @@ export function EstateDashboard() {
             label="Baux"
             onPress={() => router.push('/agent/leases' as never)}
           />
+          {/* Was « Demandes », which opened a second view of the SAME visit
+              requests as « Visites » — the client spotted the duplication
+              (2026-08-07). Visites is the one kept: it counts pending/accepted,
+              groups by day, and carries the Accepter / Refuser actions inline.
+              Boost takes the freed slot, which also retires the banner that
+              used to sit under this row. */}
           <QuickAction
-            Icon={MessageSquare}
-            label={t('proDashboard.qaRequests')}
-            onPress={() => router.push('/pro/demandes')}
+            Icon={Zap}
+            label={t('proDashboard.qaBoost')}
+            onPress={() => router.push('/pro/boost')}
           />
           <QuickAction
             Icon={ArrowUpRight}
@@ -923,47 +928,6 @@ export function EstateDashboard() {
             onPress={() => router.push('/pro/stats')}
           />
         </View>
-      </View>
-
-      {/* Boost — paid visibility for real-estate listings, same wired flow as
-          the Boutique dashboard (client 2026-07-29: boost was only in Boutique). */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
-        <Pressable
-          onPress={() => {
-            haptic.light();
-            router.push('/pro/boost');
-          }}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-            padding: 14,
-            borderRadius: 16,
-            backgroundColor: colors.accentSoft,
-          }}
-        >
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              backgroundColor: colors.card,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Zap size={20} color={colors.accentText} strokeWidth={2.25} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accentText, letterSpacing: 0 }}>
-              {t('pro.boostBannerTitle')}
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.accentText, opacity: 0.85, letterSpacing: 0, marginTop: 1 }}>
-              {t('pro.boostBannerSub')}
-            </Text>
-          </View>
-          <ChevronRight size={18} color={colors.accentText} strokeWidth={2} />
-        </Pressable>
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 22, flexDirection: 'row', gap: 10 }}>
