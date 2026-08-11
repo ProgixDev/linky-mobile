@@ -251,7 +251,14 @@ export function ShopDashboard() {
             onPress={() => router.push('/seller/orders')}
           />
           {/* « Demandes » removed from the Boutique quick actions (client
-              2026-07-30). */}
+              2026-07-30). Boost moved UP into this row (client 2026-08-07,
+              same change as Immobilier): it was a full-width banner below,
+              which cost a whole line to say what a 4th icon says. */}
+          <QuickAction
+            Icon={Zap}
+            label={t('proDashboard.qaBoost')}
+            onPress={() => router.push('/pro/boost')}
+          />
           <QuickAction
             Icon={ArrowUpRight}
             label={t('proDashboard.qaPayouts')}
@@ -263,48 +270,6 @@ export function ShopDashboard() {
             onPress={() => router.push('/pro/stats')}
           />
         </View>
-      </View>
-
-      {/* Boost — paid product visibility (Phase T.3 removed the fake entry; this
-          is the wired one). Standalone banner rather than a 5th quick action so
-          the 4-grid layout stays intact and the revenue feature stands out. */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
-        <Pressable
-          onPress={() => {
-            haptic.light();
-            router.push('/pro/boost');
-          }}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-            padding: 14,
-            borderRadius: 16,
-            backgroundColor: colors.accentSoft,
-          }}
-        >
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              backgroundColor: colors.card,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Zap size={20} color={colors.accentText} strokeWidth={2.25} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accentText, letterSpacing: 0 }}>
-              {t('pro.boostBannerTitle')}
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.accentText, opacity: 0.85, letterSpacing: 0, marginTop: 1 }}>
-              {t('pro.boostBannerSub')}
-            </Text>
-          </View>
-          <ChevronRight size={18} color={colors.accentText} strokeWidth={2} />
-        </Pressable>
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 22, flexDirection: 'row', gap: 10 }}>
@@ -639,24 +604,36 @@ function ManagementRow({
           >
             {price}
           </Text>
+          {/* Reads as a dropdown, not a label (client 2026-08-07): sellers
+              were not realizing the status could be changed at all. Taller,
+              legible type, an outline and a chevron — the affordance is the
+              point, the behaviour (a sheet of choices) is unchanged. */}
           <Pressable
             onPress={(e) => {
               e.stopPropagation?.();
               onStatus();
             }}
-            hitSlop={6}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('proDashboard.a11yChangeStatus', { status: statusLabel })}
             style={{
-              paddingHorizontal: 8,
-              height: 22,
-              borderRadius: 999,
-              backgroundColor: statusTone,
+              flexDirection: 'row',
               alignItems: 'center',
+              gap: 4,
+              paddingLeft: 10,
+              paddingRight: 6,
+              height: 28,
+              borderRadius: 8,
+              backgroundColor: statusTone,
+              borderWidth: 1,
+              borderColor: statusFg,
               justifyContent: 'center',
             }}
           >
-            <Text style={{ fontSize: 10, fontWeight: '700', color: statusFg, letterSpacing: 0.3 }}>
+            <Text style={{ fontSize: 11.5, fontWeight: '700', color: statusFg, letterSpacing: 0.2 }}>
               {statusLabel.toUpperCase()}
             </Text>
+            <ChevronDown size={13} color={statusFg} strokeWidth={2.5} />
           </Pressable>
         </View>
       </View>
@@ -1408,35 +1385,41 @@ function PropertyRow({
               </Text>
             </View>
           )}
+          {/* Same dropdown affordance as the Boutique row (client 2026-08-07):
+              outlined, taller, chevron instead of a 9px pencil that nobody
+              read as "you can change this". */}
           <Pressable
             onPress={(e) => {
               e.stopPropagation?.();
               onStatus?.();
             }}
             disabled={!onStatus}
-            hitSlop={6}
+            hitSlop={8}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 3,
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              borderRadius: 999,
+              gap: 4,
+              paddingLeft: 10,
+              paddingRight: onStatus ? 6 : 10,
+              height: 28,
+              borderRadius: 8,
               backgroundColor: inactive ? colors.accentSoft : colors.primarySoft,
+              borderWidth: 1,
+              borderColor: inactive ? colors.accentText : colors.primaryDeep,
             }}
           >
             <Text
               style={{
-                fontSize: 10.5,
+                fontSize: 11.5,
                 fontWeight: '700',
                 color: inactive ? colors.accentText : colors.primaryDeep,
-                letterSpacing: 0.3,
+                letterSpacing: 0.2,
               }}
             >
               {statusLabel}
             </Text>
             {onStatus && (
-              <Pencil size={9} color={inactive ? colors.accentText : colors.primaryDeep} strokeWidth={2.25} />
+              <ChevronDown size={13} color={inactive ? colors.accentText : colors.primaryDeep} strokeWidth={2.5} />
             )}
           </Pressable>
         </View>
