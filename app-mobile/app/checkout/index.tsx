@@ -56,10 +56,7 @@ const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').
 const METHOD_DEFS: { id: PaymentMethod; nameKey: string; hintKey: string; badge: string; badgeColor: string; badgeFg?: string; logo?: number; comingSoon?: boolean }[] = [
   // Brand colours are the official ones: Orange #FF7900 (white mark), MTN
   // #FFCB05 with a BLACK wordmark — MTN is never written in white.
-  // Orange still on the lettered badge: the file supplied is a 16×16 favicon,
-  // which would render visibly blurry at 40pt on any modern screen — worse than
-  // the clean badge. Swap in `logo` once a ≥120px version exists.
-  { id: 'orange-money', nameKey: 'checkout.rails.orangeMoney', hintKey: 'checkout.rails.orangeMoneyHint', badge: 'OM', badgeColor: '#FF7900' },
+  { id: 'orange-money', nameKey: 'checkout.rails.orangeMoney', hintKey: 'checkout.rails.orangeMoneyHint', badge: 'OM', badgeColor: '#FF7900', logo: require('../../assets/images/pay-orange-money.png') },
   { id: 'mtn-money', nameKey: 'checkout.rails.mtnMoney', hintKey: 'checkout.rails.mtnMoneyHint', badge: 'MTN', badgeColor: '#FFCB05', badgeFg: '#000000', logo: require('../../assets/images/pay-mtn-momo.png') },
 ];
 
