@@ -56,8 +56,11 @@ const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').
 const METHOD_DEFS: { id: PaymentMethod; nameKey: string; hintKey: string; badge: string; badgeColor: string; badgeFg?: string; logo?: number; comingSoon?: boolean }[] = [
   // Brand colours are the official ones: Orange #FF7900 (white mark), MTN
   // #FFCB05 with a BLACK wordmark — MTN is never written in white.
+  // Orange still on the lettered badge: the file supplied is a 16×16 favicon,
+  // which would render visibly blurry at 40pt on any modern screen — worse than
+  // the clean badge. Swap in `logo` once a ≥120px version exists.
   { id: 'orange-money', nameKey: 'checkout.rails.orangeMoney', hintKey: 'checkout.rails.orangeMoneyHint', badge: 'OM', badgeColor: '#FF7900' },
-  { id: 'mtn-money', nameKey: 'checkout.rails.mtnMoney', hintKey: 'checkout.rails.mtnMoneyHint', badge: 'MTN', badgeColor: '#FFCB05', badgeFg: '#000000' },
+  { id: 'mtn-money', nameKey: 'checkout.rails.mtnMoney', hintKey: 'checkout.rails.mtnMoneyHint', badge: 'MTN', badgeColor: '#FFCB05', badgeFg: '#000000', logo: require('../../assets/images/pay-mtn-momo.png') },
 ];
 
 export default function CheckoutRoute() {
@@ -328,11 +331,27 @@ export default function CheckoutRoute() {
                 }}
               >
                 {m.logo ? (
-                  <Image
-                    source={m.logo}
-                    style={{ width: 40, height: 40, borderRadius: 10 }}
-                    contentFit="contain"
-                  />
+                  // White tile behind the artwork (client 2026-08-07). Operator
+                  // logos are drawn for light backgrounds — the Orange mark is
+                  // largely white and would vanish against the dark theme.
+                  // Padding keeps it from touching the rounded corners.
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      backgroundColor: '#FFFFFF',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 4,
+                    }}
+                  >
+                    <Image
+                      source={m.logo}
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit="contain"
+                    />
+                  </View>
                 ) : (
                   <View
                     style={{
