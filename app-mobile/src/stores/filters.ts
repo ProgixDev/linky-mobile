@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 
 export type MarcheTab = 'articles' | 'immobilier';
-export type PropertyTypeFilter = 'location' | 'vente' | 'terrain';
+/** 'all' added 2026-08-07 (client): the row had no way back to "every type",
+ *  so landing on Immobilier only ever showed rentals. It is also the default
+ *  now — every other filter row on this screen starts at « Tout ». */
+export type PropertyTypeFilter = 'all' | 'location' | 'vente' | 'terrain';
 
 // Rental billing-period filter — 'all' = both, 'month' = /mois, 'day' = /jour.
 // Splitting the period keeps the price buckets meaningful (a 500k/jour stay
@@ -45,7 +48,7 @@ const DEFAULTS = {
   productSort: 'recent' as 'recent' | 'popular',
   productPriceMaxGnf: 0,
   productCondition: null as string | null,
-  propertyType: 'location' as PropertyTypeFilter,
+  propertyType: 'all' as PropertyTypeFilter,
   rentalPeriod: 'all' as RentalPeriodFilter,
   city: null as string | null,
   rooms: null as string | null,

@@ -112,7 +112,10 @@
     "walletSubLoading": "Cargando…",
     "walletSubError": "Error — toque Reintentar",
     "walletRetry": "Reintentar",
-    "perMonth": " /mes"
+    "perMonth": " /mes",
+    "identityCreateAgency": "Crea tu agencia",
+    "qaBoost": "Impulsar",
+    "a11yChangeStatus": "Estado: {{status}}. Pulsa para cambiar"
   },
   "decouvrir": {
     "errorTitle": "No se pudo cargar el feed",
@@ -188,7 +191,8 @@
     "see_one": "Ver {{count}} artículo",
     "see_other": "Ver {{count}} artículos",
     "seeProp_one": "Ver {{count}} propiedad",
-    "seeProp_other": "Ver {{count}} propiedades"
+    "seeProp_other": "Ver {{count}} propiedades",
+    "propAll": "Todo"
   },
   "home": {
     "favorites": "Favoritos",
@@ -353,6 +357,7 @@
     "filterOrder": "Pedidos",
     "filterMessage": "Mensajes",
     "filterVisit": "Visitas",
+    "filterBooking": "Reservas",
     "filterPromo": "Promos",
     "markAllRead": "Marcar todo como leído"
   },
@@ -589,6 +594,8 @@
     "locationStepTitle": "Coloque el marcador en su mapa",
     "locationWebUnsupported": "El mapa no está disponible en la web — use «Introducir manualmente».",
     "locationNoPosition": "Ninguna posición",
+    "locationHelp": "Toca el mapa donde está el inmueble, o usa « Mi posición ».",
+    "locationPinSet": "Ubicación definida",
     "locationMyPosition": "Mi posición",
     "locationMyPositionBusy": "Localizando…",
     "locationManualCta": "Introducir manualmente",
@@ -825,7 +832,9 @@
     "boostEndsToday": "Termina hoy",
     "boostNewTitle": "Impulsar un anuncio",
     "boostPickProduct": "Elija un producto",
+    "boostPickListing": "Elija un anuncio",
     "boostNoProducts": "Todavía no tiene ningún producto activo para impulsar.",
+    "boostNoListings": "Todavía no tiene ningún anuncio activo para impulsar.",
     "boostGoCreate": "Publicar un producto",
     "boostPickDuration": "Elija una duración",
     "boostDays_one": "{{count}} día",
@@ -922,6 +931,7 @@
   },
   "shop": {
     "tabArticles": "Artículos",
+    "tabImmobilier": "Inmobiliaria",
     "tabReviews": "Opiniones",
     "tabAbout": "Acerca de",
     "fallbackTitle": "Tienda",
@@ -948,7 +958,10 @@
     "infoResponseTime": "Tiempo de respuesta",
     "infoHours": "Horario",
     "infoVerified": "Verificado",
-    "infoVerifiedValue": "Vendedor identificado por Linky"
+    "infoVerifiedValue": "Vendedor identificado por Linky",
+    "listing_one": "Inmueble",
+    "listing_other": "Inmuebles",
+    "manageMyAgency": "Gestionar mi agencia"
   },
   "shopEdit": {
     "topbar": "Mi tienda",
@@ -969,7 +982,14 @@
     "successToast": "Tienda actualizada.",
     "errorToast": "No se pudo actualizar la tienda.",
     "uploadError": "Error al subir el archivo.",
-    "photoPermission": "Permita el acceso a las fotos para continuar."
+    "photoPermission": "Permita el acceso a las fotos para continuar.",
+    "agencyTopbar": "Mi agencia",
+    "agencyNameLabel": "NOMBRE DE LA AGENCIA",
+    "agencyNamePlaceholder": "Ej: Agencia Kaloum Immo",
+    "agencyAboutPlaceholder": "Describe tu agencia en pocas palabras…",
+    "agencyChangeLogoA11y": "Cambiar el logo de la agencia",
+    "agencySuccessToast": "Agencia actualizada.",
+    "agencyErrorToast": "No se pudo actualizar la agencia."
   },
   "productEdit": {
     "topbar": "Editar el anuncio",
@@ -1065,6 +1085,8 @@
     "bookVisit": "Reservar una visita",
     "contactAgent": "Contactar al agente",
     "manageListing": "Modificar el anuncio",
+    "agencyHeading": "Agencia",
+    "agencyView": "Ver la agencia",
     "agentSection": "Agente",
     "visitFallbackTitle": "Visita",
     "visitTitle": "Solicitar una visita",
@@ -1097,7 +1119,9 @@
     "subtotal": "Subtotal",
     "feesLabel": "Comisión Linky",
     "total": "Total",
-    "pay": "Ir al pago"
+    "pay": "Ir al pago",
+    "singleShopNotice": "Un pedido por tienda: puedes añadir varios artículos de la misma tienda, pero no de dos tiendas distintas.",
+    "browseShop": "Ver todos los artículos de esta tienda"
   },
   "checkout": {
     "pay": {
@@ -1261,13 +1285,13 @@
     "boutiqueHero": {
       "shopTitle": "Mi tienda",
       "shopSub": "Anuncios, ventas, estadísticas.",
-      "shopCta": "Abrir la tienda",
+      "shopCta": "Gestionar mi tienda",
       "agentTitle": "Mis inmuebles",
       "agentSub": "Anuncios inmobiliarios, visitas, solicitudes.",
-      "agentCta": "Abrir el espacio agente",
+      "agentCta": "Gestionar mi espacio agente",
       "proTitle": "Mi espacio Pro",
       "proSub": "Tienda, ventas, inmuebles, visitas — en un solo lugar.",
-      "proCta": "Abrir mi espacio"
+      "proCta": "Gestionar mi espacio"
     },
     "section": {
       "reglages": "Ajustes",
@@ -1275,7 +1299,8 @@
     },
     "row": {
       "phones": "Números de teléfono",
-      "addresses": "Direcciones",
+      "addresses": "Direcciones de entrega",
+      "addressesSub": "Donde Linky entrega tus pedidos",
       "roles": "Mis roles",
       "roleCount_one": "1 rol",
       "roleCount_other": "{{count}} roles",
@@ -1290,7 +1315,9 @@
       "aboutLinky": "Acerca de Linky",
       "help": "Ayuda y soporte",
       "terms": "Términos y condiciones",
-      "privacyPolicy": "Política de privacidad"
+      "privacyPolicy": "Política de privacidad",
+      "password": "Contraseña",
+      "passwordSub": "Inicia sesión sin código cada vez"
     },
     "logout": "Cerrar sesión",
     "theme": {
@@ -1338,7 +1365,8 @@
       "subtitle": "Le enviamos un código de 6 cifras para confirmar.",
       "label": "DIRECCIÓN DE EMAIL",
       "placeholder": "su@ejemplo.com",
-      "errorSend": "No se pudo enviar el código"
+      "errorSend": "No se pudo enviar el código",
+      "usePassword": "Iniciar sesión con una contraseña"
     },
     "otp": {
       "badge": "VERIFICACIÓN",
@@ -1353,7 +1381,8 @@
       "verifying": "Verificando…",
       "errorSessionMissing": "Sesión OTP no encontrada — vuelva a empezar",
       "errorInvalid": "Código inválido",
-      "welcomeBack": "Bienvenido de nuevo 👋"
+      "welcomeBack": "Bienvenido de nuevo 👋",
+      "sentToWhatsapp": "Enviado por WhatsApp al"
     },
     "profile": {
       "stepBadge": "PASO {{current}} / {{total}} · {{label}}",
@@ -1382,6 +1411,16 @@
       "discover": "Descubrir Linky",
       "kyc": "Verificar mi identidad ahora",
       "fallbackName": "usted"
+    },
+    "passwordSignin": {
+      "title": "Tu contraseña.",
+      "subtitle": "Inicia sesión directamente, sin esperar un código por correo.",
+      "passwordLabel": "CONTRASEÑA",
+      "useCode": "Recibir un código por correo en su lugar",
+      "cta": "Iniciar sesión",
+      "ctaBusy": "Iniciando sesión…",
+      "error": "Correo o contraseña incorrectos.",
+      "forgot": "¿Olvidaste tu contraseña?"
     }
   },
   "auth": {
@@ -1522,16 +1561,38 @@
       "toggleAds": "Publicidad personalizada",
       "toggleAdsSub": "Reciba promociones más relevantes.",
       "toggleProfilePublic": "Perfil público",
-      "toggleProfilePublicSub": "Otros usuarios pueden ver su nombre y sus anuncios.",
+      "toggleProfilePublicSub": "Otros usuarios ven tu nombre real en tus comentarios y reseñas (tu tienda sigue siendo visible).",
       "downloadLabel": "Descargar mis datos",
-      "downloadSub": "Próximamente — por ahora, escríbanos a support@linkygroup.com.",
+      "downloadSub": "Recibe todos tus datos por correo, en formato JSON.",
       "deleteLabel": "Eliminar mi cuenta",
       "deleteSub": "Elimina definitivamente su cuenta y libera su número / correo electrónico.",
       "deleteConfirmTitle": "Eliminar mi cuenta",
       "deleteConfirmBody": "Su cuenta se desactivará de inmediato: perfil anonimizado, anuncios retirados, número y correo liberados. Su monedero debe estar vacío y sus pedidos completados. Esta acción es definitiva.",
       "deleteContinue": "Eliminar definitivamente",
       "deleteMailError": "No se pudo eliminar por ahora. Inténtelo de nuevo.",
-      "bientotBadge": "PRÓXIMAMENTE"
+      "bientotBadge": "PRÓXIMAMENTE",
+      "exportSuccess": "Exportación enviada a {{email}}.",
+      "exportError": "No se pudo enviar la exportación."
+    },
+    "password": {
+      "title": "Contraseña",
+      "subtitle": "Una vez definida, puedes iniciar sesión sin esperar un código por correo.",
+      "newLabel": "NUEVA CONTRASEÑA",
+      "confirmLabel": "CONFIRMAR CONTRASEÑA",
+      "tooShort": "Mínimo {{min}} caracteres.",
+      "mismatch": "Las contraseñas no coinciden.",
+      "cta": "Guardar",
+      "ctaBusy": "Guardando…",
+      "success": "Contraseña guardada.",
+      "error": "No se pudo guardar la contraseña.",
+      "otpSendError": "No se pudo enviar el código.",
+      "otpInvalid": "Código incorrecto.",
+      "otpTitle": "Confirma que eres tú",
+      "otpSubtitle": "Tu sesión tiene más de 10 minutos — recibe un código para confirmar.",
+      "byEmail": "Por correo",
+      "bySms": "Por SMS",
+      "otpSentTo": "Código enviado a {{target}}.",
+      "otpConfirm": "Confirmar"
     }
   },
   "aboutScreen": {
@@ -1705,5 +1766,9 @@
       "benefit3Title": "Panel dedicado",
       "benefit3Desc": "Todas sus visitas, solicitudes y propiedades reunidas en un solo lugar."
     }
+  },
+  "update": {
+    "ready": "Nueva versión disponible",
+    "cta": "Actualizar"
   }
 }

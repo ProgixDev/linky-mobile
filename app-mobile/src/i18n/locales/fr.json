@@ -112,7 +112,10 @@
     "walletSubLoading": "Chargement…",
     "walletSubError": "Erreur — touchez Réessayer",
     "walletRetry": "Réessayer",
-    "perMonth": " /mois"
+    "perMonth": " /mois",
+    "identityCreateAgency": "Créez votre agence",
+    "qaBoost": "Booster",
+    "a11yChangeStatus": "Statut : {{status}}. Appuyer pour changer"
   },
   "decouvrir": {
     "errorTitle": "Impossible de charger le feed",
@@ -188,7 +191,8 @@
     "see_one": "Voir {{count}} article",
     "see_other": "Voir {{count}} articles",
     "seeProp_one": "Voir {{count}} bien",
-    "seeProp_other": "Voir {{count}} biens"
+    "seeProp_other": "Voir {{count}} biens",
+    "propAll": "Tout"
   },
   "home": {
     "favorites": "Favoris",
@@ -353,6 +357,7 @@
     "filterOrder": "Commandes",
     "filterMessage": "Messages",
     "filterVisit": "Visites",
+    "filterBooking": "Réservations",
     "filterPromo": "Promos",
     "markAllRead": "Tout marquer comme lu"
   },
@@ -589,6 +594,8 @@
     "locationStepTitle": "Placez l'épingle sur votre carte",
     "locationWebUnsupported": "La carte n'est pas disponible sur le web — utilisez « Saisir manuellement ».",
     "locationNoPosition": "Aucune position",
+    "locationHelp": "Touchez la carte à l'emplacement du bien, ou utilisez « Ma position ».",
+    "locationPinSet": "Position définie",
     "locationMyPosition": "Ma position",
     "locationMyPositionBusy": "Localisation…",
     "locationManualCta": "Saisir manuellement",
@@ -825,7 +832,9 @@
     "boostEndsToday": "Se termine aujourd'hui",
     "boostNewTitle": "Booster une annonce",
     "boostPickProduct": "Choisissez un produit",
+    "boostPickListing": "Choisissez une annonce",
     "boostNoProducts": "Vous n'avez pas encore de produit actif à booster.",
+    "boostNoListings": "Vous n'avez pas encore d'annonce active à booster.",
     "boostGoCreate": "Publier un produit",
     "boostPickDuration": "Choisissez une durée",
     "boostDays_one": "{{count}} jour",
@@ -922,6 +931,7 @@
   },
   "shop": {
     "tabArticles": "Articles",
+    "tabImmobilier": "Immobilier",
     "tabReviews": "Avis",
     "tabAbout": "À propos",
     "fallbackTitle": "Boutique",
@@ -948,7 +958,10 @@
     "infoResponseTime": "Temps de réponse",
     "infoHours": "Horaires",
     "infoVerified": "Vérifié",
-    "infoVerifiedValue": "Vendeur identifié par Linky"
+    "infoVerifiedValue": "Vendeur identifié par Linky",
+    "listing_one": "Bien",
+    "listing_other": "Biens",
+    "manageMyAgency": "Gérer mon agence"
   },
   "shopEdit": {
     "topbar": "Ma boutique",
@@ -969,7 +982,14 @@
     "successToast": "Boutique mise à jour.",
     "errorToast": "Impossible de mettre à jour la boutique.",
     "uploadError": "Téléversement échoué.",
-    "photoPermission": "Autorisez l'accès aux photos pour continuer."
+    "photoPermission": "Autorisez l'accès aux photos pour continuer.",
+    "agencyTopbar": "Mon agence",
+    "agencyNameLabel": "NOM DE L'AGENCE",
+    "agencyNamePlaceholder": "Ex: Agence Kaloum Immo",
+    "agencyAboutPlaceholder": "Décrivez votre agence en quelques mots…",
+    "agencyChangeLogoA11y": "Changer le logo de l'agence",
+    "agencySuccessToast": "Agence mise à jour.",
+    "agencyErrorToast": "Impossible de mettre à jour l'agence."
   },
   "productEdit": {
     "topbar": "Modifier l'annonce",
@@ -1065,6 +1085,8 @@
     "bookVisit": "Réserver une visite",
     "contactAgent": "Contacter l'agent",
     "manageListing": "Modifier l'annonce",
+    "agencyHeading": "Agence",
+    "agencyView": "Voir l'agence",
     "agentSection": "Agent",
     "visitFallbackTitle": "Visite",
     "visitTitle": "Demander une visite",
@@ -1097,7 +1119,9 @@
     "subtotal": "Sous-total",
     "feesLabel": "Frais Linky",
     "total": "Total",
-    "pay": "Passer au paiement"
+    "pay": "Passer au paiement",
+    "singleShopNotice": "Une commande par boutique : tu peux ajouter plusieurs articles d'une même boutique, mais pas de deux boutiques différentes.",
+    "browseShop": "Voir tous les articles de cette boutique"
   },
   "checkout": {
     "pay": {
@@ -1261,13 +1285,13 @@
     "boutiqueHero": {
       "shopTitle": "Ma boutique",
       "shopSub": "Annonces, ventes, statistiques.",
-      "shopCta": "Ouvrir la boutique",
+      "shopCta": "Gérer ma boutique",
       "agentTitle": "Mes biens",
       "agentSub": "Annonces immobilières, visites, demandes.",
-      "agentCta": "Ouvrir l'espace agent",
+      "agentCta": "Gérer mon espace agent",
       "proTitle": "Mon espace Pro",
       "proSub": "Boutique, ventes, biens, visites — au même endroit.",
-      "proCta": "Ouvrir mon espace"
+      "proCta": "Gérer mon espace"
     },
     "section": {
       "reglages": "Réglages",
@@ -1275,7 +1299,8 @@
     },
     "row": {
       "phones": "Numéros de téléphone",
-      "addresses": "Adresses",
+      "addresses": "Adresses de livraison",
+      "addressesSub": "Où Linky livre tes commandes",
       "roles": "Mes rôles",
       "roleCount_one": "1 rôle",
       "roleCount_other": "{{count}} rôles",
@@ -1290,7 +1315,9 @@
       "aboutLinky": "À propos de Linky",
       "help": "Aide & support",
       "terms": "Conditions générales",
-      "privacyPolicy": "Politique de confidentialité"
+      "privacyPolicy": "Politique de confidentialité",
+      "password": "Mot de passe",
+      "passwordSub": "Se connecter sans code à chaque fois"
     },
     "logout": "Déconnexion",
     "theme": {
@@ -1338,7 +1365,8 @@
       "subtitle": "On vous envoie un code à 6 chiffres pour confirmer.",
       "label": "ADRESSE EMAIL",
       "placeholder": "vous@exemple.com",
-      "errorSend": "Échec de l'envoi du code"
+      "errorSend": "Échec de l'envoi du code",
+      "usePassword": "Se connecter avec un mot de passe"
     },
     "otp": {
       "badge": "VÉRIFICATION",
@@ -1353,7 +1381,8 @@
       "verifying": "Vérification…",
       "errorSessionMissing": "Session OTP introuvable — recommencez",
       "errorInvalid": "Code invalide",
-      "welcomeBack": "Bon retour 👋"
+      "welcomeBack": "Bon retour 👋",
+      "sentToWhatsapp": "Envoyé sur WhatsApp au"
     },
     "profile": {
       "stepBadge": "ÉTAPE {{current}} / {{total}} · {{label}}",
@@ -1382,6 +1411,16 @@
       "discover": "Découvrir Linky",
       "kyc": "Vérifier mon identité maintenant",
       "fallbackName": "vous"
+    },
+    "passwordSignin": {
+      "title": "Ton mot de passe.",
+      "subtitle": "Connecte-toi directement, sans code à recevoir par email.",
+      "passwordLabel": "MOT DE PASSE",
+      "useCode": "Recevoir un code par email à la place",
+      "cta": "Se connecter",
+      "ctaBusy": "Connexion…",
+      "error": "Email ou mot de passe incorrect.",
+      "forgot": "Mot de passe oublié ?"
     }
   },
   "auth": {
@@ -1522,16 +1561,38 @@
       "toggleAds": "Pub personnalisée",
       "toggleAdsSub": "Recevez des promos plus pertinentes.",
       "toggleProfilePublic": "Profil public",
-      "toggleProfilePublicSub": "Les autres utilisateurs peuvent voir votre nom et vos annonces.",
+      "toggleProfilePublicSub": "Les autres utilisateurs voient ton vrai nom dans tes commentaires et avis (ta boutique reste toujours visible).",
       "downloadLabel": "Télécharger mes données",
-      "downloadSub": "Bientôt — pour l'instant, écrivez-nous à support@linkygroup.com.",
+      "downloadSub": "Reçois toutes tes données par email, au format JSON.",
       "deleteLabel": "Supprimer mon compte",
       "deleteSub": "Supprime définitivement votre compte et libère votre numéro / e-mail.",
       "deleteConfirmTitle": "Supprimer mon compte",
       "deleteConfirmBody": "Votre compte sera désactivé immédiatement : profil anonymisé, annonces retirées, numéro et e-mail libérés. Votre portefeuille doit être vide et vos commandes terminées. Cette action est définitive.",
       "deleteContinue": "Supprimer définitivement",
       "deleteMailError": "Suppression impossible pour le moment. Réessayez.",
-      "bientotBadge": "BIENTÔT"
+      "bientotBadge": "BIENTÔT",
+      "exportSuccess": "Export envoyé à {{email}}.",
+      "exportError": "Impossible d'envoyer l'export."
+    },
+    "password": {
+      "title": "Mot de passe",
+      "subtitle": "Une fois défini, tu peux te connecter sans attendre un code par email.",
+      "newLabel": "NOUVEAU MOT DE PASSE",
+      "confirmLabel": "CONFIRMER LE MOT DE PASSE",
+      "tooShort": "Minimum {{min}} caractères.",
+      "mismatch": "Les mots de passe ne correspondent pas.",
+      "cta": "Enregistrer",
+      "ctaBusy": "Enregistrement…",
+      "success": "Mot de passe enregistré.",
+      "error": "Impossible d'enregistrer le mot de passe.",
+      "otpSendError": "Impossible d'envoyer le code.",
+      "otpInvalid": "Code incorrect.",
+      "otpTitle": "Confirme que c’est bien toi",
+      "otpSubtitle": "Ta session date de plus de 10 minutes — reçois un code pour confirmer.",
+      "byEmail": "Par email",
+      "bySms": "Par SMS",
+      "otpSentTo": "Code envoyé à {{target}}.",
+      "otpConfirm": "Confirmer"
     }
   },
   "aboutScreen": {
@@ -1705,5 +1766,9 @@
       "benefit3Title": "Tableau dédié",
       "benefit3Desc": "Toutes vos visites, demandes et biens regroupés dans un seul espace."
     }
+  },
+  "update": {
+    "ready": "Nouvelle version disponible",
+    "cta": "Mettre à jour"
   }
 }
