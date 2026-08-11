@@ -41,6 +41,19 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
     <BottomSheet
       ref={ref}
       snapPoints={snaps}
+      // @gorhom/bottom-sheet v5 turns dynamic sizing ON by default, which makes
+      // the sheet measure its CONTENT and size itself to it — quietly competing
+      // with the snapPoints we just declared. On the Immobilier filter (type +
+      // période + prix + ville + pièces + goudron + meublé) the measured height
+      // won, the sheet grew past the screen, and « Voir les résultats » ended up
+      // below the fold with no way to scroll to it (client 2026-08-05, still
+      // reported 2026-08-07 after the flex:1 fix on the scroll view — that fix
+      // was necessary but not sufficient).
+      //
+      // Every caller of this component passes explicit snap points, so dynamic
+      // sizing was never the intended mode here. Off = the sheet is exactly as
+      // tall as declared, and a flex:1 body with a pinned footer lays out.
+      enableDynamicSizing={false}
       enablePanDownToClose
       // Keyboard handling for inputs inside the sheet (e.g. the city search).
       // fillParent = the sheet expands to the space above the keyboard on focus,
