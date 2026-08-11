@@ -328,25 +328,26 @@ export default function CheckoutRoute() {
                 }}
               >
                 {m.logo ? (
-                  // White tile behind the artwork (client 2026-08-07). Operator
-                  // logos are drawn for light backgrounds — the Orange mark is
-                  // largely white and would vanish against the dark theme.
-                  // Padding keeps it from touching the rounded corners.
+                  // Artwork fills the tile edge to edge (client 2026-08-07) —
+                  // no inner padding, `cover` rather than `contain`. Both files
+                  // are square, so cover crops nothing. `overflow: hidden` is
+                  // what keeps the corners rounded once the image bleeds out.
+                  // The white ground still shows through any transparency:
+                  // operator logos are drawn for light backgrounds and the
+                  // Orange mark would otherwise vanish on the dark theme.
                   <View
                     style={{
                       width: 40,
                       height: 40,
                       borderRadius: 10,
                       backgroundColor: '#FFFFFF',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 4,
+                      overflow: 'hidden',
                     }}
                   >
                     <Image
                       source={m.logo}
                       style={{ width: '100%', height: '100%' }}
-                      contentFit="contain"
+                      contentFit="cover"
                     />
                   </View>
                 ) : (
