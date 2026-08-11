@@ -8,7 +8,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapProperty, type PropertyRow } from '@shared/catalog.ts';
-import { diditConfig } from '@shared/didit.ts';
+import { diditConfig, kycRequiredToPublish } from '@shared/didit.ts';
 
 interface PropertyPhotoBody {
   url: string;
@@ -34,6 +34,7 @@ interface Body {
   lat?: number;
   lng?: number;
   photos: PropertyPhotoBody[];
+  video_url?: string | null;
 }
 
 const URL_RE = /^https?:\/\/[^\s]{8,500}$/i;
@@ -83,6 +84,8 @@ function valid(b: unknown): b is Body {
   if (x.lng !== undefined && (typeof x.lng !== 'number' || x.lng < -180 || x.lng > 180)) return false;
   if (!Array.isArray(x.photos) || x.photos.length === 0 || x.photos.length > 12) return false;
   if (!x.photos.every(validPhoto)) return false;
+  if (x.video_url !== undefined && x.video_url !== null &&
+      (typeof x.video_url !== 'string' || !URL_RE.test(x.video_url))) return false;
   return true;
 }
 
@@ -102,27 +105,28 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
   if (!roles.includes('agent')) {
     throwApi('ROLE_REQUIRED', 403, 'Active le rôle agent dans ton profil pour publier.');
   }
-  // Soft-gate : KYC is only enforced when Didit is configured (creds live).
-  // While Didit is dark NO user can reach 'approved', so a hard gate would
-  // block every publish in V1. diditConfig() flips this on the moment
-  // LINKY_DIDIT_API_KEY + LINKY_DIDIT_WORKFLOW_ID land — no code change
-  // needed at cutover.
-  if (diditConfig() && caller.kyc_status !== 'approved') {
+  // Publishing no longer requires ID verification by default (client
+  // 2026-08-05 — most sellers in Guinea have no ID document, which blocked
+  // them from listing at all). Re-enable with LINKY_KYC_REQUIRED_TO_PUBLISH=1.
+  if (kycRequiredToPublish() && diditConfig() && caller.kyc_status !== 'approved') {
     throwApi('KYC_REQUIRED', 403, "Vérifie ton identité pour publier — c'est rapide.");
   }
 
-  // Resolve or create the seller's shop. V1 ties products + properties to a single shop
-  // per user; if "Ma boutique" already exists from a product publish, reuse it.
+  // Resolve or create the caller's AGENCY (client 2026-08-07). Boutique and
+  // agence are now separate profiles (shops.kind), each with its own branding.
+  // This used to grab the caller's OLDEST shop, which is exactly how properties
+  // ended up published under a boutique.
   let shopId = body.shop_id;
   if (shopId) {
     const { data: owned, error } = await sb
-      .from('shops').select('id').eq('id', shopId).eq('owner_id', userId).maybeSingle();
+      .from('shops').select('id').eq('id', shopId).eq('owner_id', userId)
+      .eq('kind', 'agency').maybeSingle();
     if (error) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
-    if (!owned) throwApi('SHOP_NOT_FOUND', 404, 'Boutique introuvable.');
+    if (!owned) throwApi('SHOP_NOT_FOUND', 404, 'Agence introuvable.');
   } else {
     const { data: existing, error: eList } = await sb
-      .from('shops').select('id').eq('owner_id', userId)
-      .order('created_at', { ascending: true }).limit(1).maybeSingle();
+      .from('shops').select('id').eq('owner_id', userId).eq('kind', 'agency')
+      .maybeSingle();
     if (eList) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
     if (existing) {
       shopId = existing.id as string;
@@ -133,7 +137,7 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
       const shopName = firstName ? `Agence de ${firstName}` : 'Mon agence';
       const { data: created, error: eIns } = await sb
         .from('shops')
-        .insert({ owner_id: userId, name: shopName, city: body.city.trim(), about: '' })
+        .insert({ owner_id: userId, name: shopName, city: body.city.trim(), about: '', kind: 'agency' })
         .select('id').single();
       if (eIns || !created) {
         console.error('[property-create] auto-shop insert error:', eIns);
@@ -185,6 +189,14 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
   if (rpcErr || !newId) {
     console.error('[property-create] RPC error:', rpcErr);
     throwApi('INTERNAL_ERROR', 500, 'Erreur création annonce');
+  }
+
+  // Optional listing video (client 2026-07-26). Best-effort: the listing is
+  // already created with its photos, so a video-write failure must NOT fail the
+  // whole publish — just log it.
+  if (body.video_url) {
+    const { error: eVid } = await sb.from('properties').update({ video_url: body.video_url }).eq('id', newId);
+    if (eVid) console.error('[property-create] video_url update error:', eVid);
   }
 
   // Read back via the view (cover + photo_count for free) plus all photo URLs in order

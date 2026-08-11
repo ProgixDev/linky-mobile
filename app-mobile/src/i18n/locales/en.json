@@ -112,7 +112,10 @@
     "walletSubLoading": "Loading…",
     "walletSubError": "Error — tap Retry",
     "walletRetry": "Retry",
-    "perMonth": " /mo"
+    "perMonth": " /mo",
+    "identityCreateAgency": "Create your agency",
+    "qaBoost": "Boost",
+    "a11yChangeStatus": "Status: {{status}}. Tap to change"
   },
   "decouvrir": {
     "errorTitle": "Couldn't load the feed",
@@ -188,9 +191,11 @@
     "see_one": "See {{count}} item",
     "see_other": "See {{count}} items",
     "seeProp_one": "See {{count}} property",
-    "seeProp_other": "See {{count}} properties"
+    "seeProp_other": "See {{count}} properties",
+    "propAll": "All"
   },
   "home": {
+    "favorites": "Favorites",
     "greeting": "Hi,",
     "fallbackName": "You",
     "notifications": "Notifications",
@@ -352,6 +357,7 @@
     "filterOrder": "Orders",
     "filterMessage": "Messages",
     "filterVisit": "Visits",
+    "filterBooking": "Bookings",
     "filterPromo": "Promos",
     "markAllRead": "Mark all read"
   },
@@ -443,6 +449,13 @@
     "errorRetry": "Try again"
   },
   "create": {
+    "videoLabel": "Video (optional)",
+    "videoHint": "A short video (60s max) reassures buyers. Film holding the phone horizontally, in daylight.",
+    "videoAdd": "Add a video",
+    "videoAdded": "Video added",
+    "videoRemove": "Remove video",
+    "videoTooLong": "Video too long (60s maximum).",
+    "videoUploadError": "Video upload failed.",
     "selectKindTitle": "What do you want to publish?",
     "kindProductTitle": "An item",
     "kindProductDesc": "Fashion, electronics, beauty…",
@@ -568,6 +581,8 @@
     "locationStepTitle": "Drop the pin on the map",
     "locationWebUnsupported": "The map isn't available on web — use « Enter manually ».",
     "locationNoPosition": "No position",
+    "locationHelp": "Tap the map where the property is, or use « My position ».",
+    "locationPinSet": "Location set",
     "locationMyPosition": "My location",
     "locationMyPositionBusy": "Locating…",
     "locationManualCta": "Enter manually",
@@ -851,7 +866,9 @@
     "boostEndsToday": "Ends today",
     "boostNewTitle": "Boost a listing",
     "boostPickProduct": "Pick a product",
+    "boostPickListing": "Pick a listing",
     "boostNoProducts": "You don't have an active product to boost yet.",
+    "boostNoListings": "You don't have an active listing to boost yet.",
     "boostGoCreate": "Publish a product",
     "boostPickDuration": "Pick a duration",
     "boostDays_one": "{{count}} day",
@@ -914,6 +931,7 @@
   },
   "shop": {
     "tabArticles": "Items",
+    "tabImmobilier": "Real estate",
     "tabReviews": "Reviews",
     "tabAbout": "About",
     "fallbackTitle": "Shop",
@@ -940,7 +958,10 @@
     "infoResponseTime": "Response time",
     "infoVerified": "Verified",
     "infoVerifiedValue": "Identified by Linky",
-    "infoHours": "Hours"
+    "infoHours": "Hours",
+    "listing_one": "Listing",
+    "listing_other": "Listings",
+    "manageMyAgency": "Manage my agency"
   },
   "shopEdit": {
     "topbar": "My shop",
@@ -961,7 +982,14 @@
     "hours24": "Open 24/7",
     "hoursDays": "Opening days",
     "hoursOpen": "Opens",
-    "hoursClose": "Closes"
+    "hoursClose": "Closes",
+    "agencyTopbar": "My agency",
+    "agencyNameLabel": "AGENCY NAME",
+    "agencyNamePlaceholder": "E.g. Kaloum Immo Agency",
+    "agencyAboutPlaceholder": "Describe your agency in a few words…",
+    "agencyChangeLogoA11y": "Change the agency logo",
+    "agencySuccessToast": "Agency updated.",
+    "agencyErrorToast": "Could not update the agency."
   },
   "productEdit": {
     "topbar": "Edit listing",
@@ -974,9 +1002,25 @@
     "condReconditionne": "Refurbished",
     "save": "Save",
     "successToast": "Listing updated.",
-    "errorToast": "Couldn't update the listing."
+    "errorToast": "Couldn't update the listing.",
+    "photosLabel": "Photos",
+    "addPhoto": "Add",
+    "removePhoto": "Remove photo",
+    "setCover": "Set as cover",
+    "coverBadge": "Cover",
+    "photoPermission": "Allow photo access to continue.",
+    "uploadError": "Upload failed.",
+    "boostCta": "Boost this listing",
+    "boostHint": "Feature this listing for more visibility."
   },
   "propertyEdit": {
+    "photosLabel": "Photos",
+    "addPhoto": "Add",
+    "removePhoto": "Remove photo",
+    "setCover": "Set as cover",
+    "coverBadge": "Cover",
+    "photoPermission": "Allow photo access to continue.",
+    "uploadError": "Upload failed.",
     "topbar": "Edit property",
     "typeLabel": "Property type",
     "typeLocation": "Rental",
@@ -1041,6 +1085,8 @@
     "bookVisit": "Book a visit",
     "contactAgent": "Contact the agent",
     "manageListing": "Edit listing",
+    "agencyHeading": "Agency",
+    "agencyView": "View agency",
     "agentSection": "Agent",
     "visitFallbackTitle": "Visit",
     "visitTitle": "Request a visit",
@@ -1073,9 +1119,18 @@
     "subtotal": "Subtotal",
     "feesLabel": "Linky fees",
     "total": "Total",
-    "pay": "Continue to payment"
+    "pay": "Continue to payment",
+    "singleShopNotice": "One order per shop: you can add several articles from the same shop, but not from two different shops.",
+    "browseShop": "Browse all articles from this shop"
   },
   "checkout": {
+    "pay": {
+      "title": "Payment",
+      "close": "Close",
+      "hint": "Complete the payment above, then tap \"I've paid\".",
+      "done": "I've paid",
+      "missing": "Payment link not found."
+    },
     "title": "Payment method",
     "sectionMobileMoney": "Mobile Money",
     "sectionOther": "Other options",
@@ -1230,10 +1285,13 @@
     "boutiqueHero": {
       "shopTitle": "My shop",
       "shopSub": "Listings, sales, stats.",
-      "shopCta": "Open the shop",
+      "shopCta": "Manage my shop",
       "agentTitle": "My properties",
       "agentSub": "Listings, visits, requests.",
-      "agentCta": "Open the agent workspace"
+      "agentCta": "Manage my agent workspace",
+      "proTitle": "My Pro space",
+      "proSub": "Shop, sales, properties, visits — all in one place.",
+      "proCta": "Manage my space"
     },
     "section": {
       "reglages": "Settings",
@@ -1241,7 +1299,8 @@
     },
     "row": {
       "phones": "Phone numbers",
-      "addresses": "Addresses",
+      "addresses": "Delivery addresses",
+      "addressesSub": "Where Linky delivers your orders",
       "roles": "My roles",
       "roleCount_one": "1 role",
       "roleCount_other": "{{count}} roles",
@@ -1256,7 +1315,9 @@
       "aboutLinky": "About Linky",
       "help": "Help & support",
       "terms": "Terms",
-      "privacyPolicy": "Privacy policy"
+      "privacyPolicy": "Privacy policy",
+      "password": "Password",
+      "passwordSub": "Sign in without a code every time"
     },
     "logout": "Sign out",
     "theme": {
@@ -1304,7 +1365,8 @@
       "subtitle": "We'll send you a 6-digit code to confirm.",
       "label": "EMAIL ADDRESS",
       "placeholder": "you@example.com",
-      "errorSend": "Couldn't send the code"
+      "errorSend": "Couldn't send the code",
+      "usePassword": "Sign in with a password"
     },
     "otp": {
       "badge": "VERIFICATION",
@@ -1319,7 +1381,8 @@
       "verifying": "Verifying…",
       "errorSessionMissing": "OTP session missing — start over",
       "errorInvalid": "Invalid code",
-      "welcomeBack": "Welcome back 👋"
+      "welcomeBack": "Welcome back 👋",
+      "sentToWhatsapp": "Sent on WhatsApp to"
     },
     "profile": {
       "stepBadge": "STEP {{current}} / {{total}} · {{label}}",
@@ -1348,6 +1411,16 @@
       "discover": "Explore Linky",
       "kyc": "Verify my ID now",
       "fallbackName": "friend"
+    },
+    "passwordSignin": {
+      "title": "Your password.",
+      "subtitle": "Sign in directly, no code to wait for by email.",
+      "passwordLabel": "PASSWORD",
+      "useCode": "Get a code by email instead",
+      "cta": "Sign in",
+      "ctaBusy": "Signing in…",
+      "error": "Wrong email or password.",
+      "forgot": "Forgot password?"
     }
   },
   "auth": {
@@ -1488,16 +1561,38 @@
       "toggleAds": "Personalized ads",
       "toggleAdsSub": "See more relevant promotions.",
       "toggleProfilePublic": "Public profile",
-      "toggleProfilePublicSub": "Other users can see your name and listings.",
+      "toggleProfilePublicSub": "Other users see your real name in your comments and reviews (your shop stays visible either way).",
       "downloadLabel": "Download my data",
-      "downloadSub": "Coming soon — for now, email us at support@linkygroup.com.",
+      "downloadSub": "Get all your data by email, in JSON format.",
       "deleteLabel": "Delete my account",
       "deleteSub": "Permanently delete your account and free your number / email.",
       "deleteConfirmTitle": "Delete my account",
       "deleteConfirmBody": "Your account will be deactivated immediately: profile anonymised, listings removed, phone and email freed. Your wallet must be empty and your orders completed. This is permanent.",
       "deleteContinue": "Delete permanently",
       "deleteMailError": "Deletion is not possible right now. Try again.",
-      "bientotBadge": "SOON"
+      "bientotBadge": "SOON",
+      "exportSuccess": "Export sent to {{email}}.",
+      "exportError": "Could not send the export."
+    },
+    "password": {
+      "title": "Password",
+      "subtitle": "Once set, you can sign in without waiting for a code by email.",
+      "newLabel": "NEW PASSWORD",
+      "confirmLabel": "CONFIRM PASSWORD",
+      "tooShort": "Minimum {{min}} characters.",
+      "mismatch": "Passwords don't match.",
+      "cta": "Save",
+      "ctaBusy": "Saving…",
+      "success": "Password saved.",
+      "error": "Could not save the password.",
+      "otpSendError": "Could not send the code.",
+      "otpInvalid": "Wrong code.",
+      "otpTitle": "Confirm it's you",
+      "otpSubtitle": "Your session is over 10 minutes old — get a code to confirm.",
+      "byEmail": "By email",
+      "bySms": "By SMS",
+      "otpSentTo": "Code sent to {{target}}.",
+      "otpConfirm": "Confirm"
     }
   },
   "aboutScreen": {
@@ -1671,5 +1766,9 @@
       "benefit3Title": "Dedicated dashboard",
       "benefit3Desc": "All your visits, requests and properties in one workspace."
     }
+  },
+  "update": {
+    "ready": "New version available",
+    "cta": "Update"
   }
 }

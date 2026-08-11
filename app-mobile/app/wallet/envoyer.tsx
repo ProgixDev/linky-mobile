@@ -2,7 +2,8 @@
 // See supabase/functions/wallet-send/index.ts for the open security questions
 // (daily limits, KYC gating, recipient consent, reversal posture).
 import { useEffect, useState } from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { Platform, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -122,7 +123,7 @@ export default function EnvoyerRoute() {
         onError: (e) => {
           // KYC gate — send it to the verification flow instead of a dead-end toast.
           if (e instanceof ApiError && e.code === 'KYC_REQUIRED') {
-            show(toToastMessage(e, "Vérifie ton identité pour envoyer de l'argent."), 'info');
+            show(toToastMessage(e, "Vérifiez votre identité pour envoyer de l'argent."), 'info');
             router.push('/kyc/intro');
             return;
           }
@@ -136,173 +137,175 @@ export default function EnvoyerRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('wallet.envoyer.topbar')} back />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
-      >
-        {/* Bêta banner — required UX honesty while the V1.1 review is open. */}
-        <View
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: radii.md,
-            borderWidth: 1,
-            borderColor: colors.accentSoft,
-            backgroundColor: colors.accentSoft,
-            flexDirection: 'row',
-            gap: 10,
-            alignItems: 'flex-start',
-          }}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
         >
-          <I.shield size={14} color={colors.accentText} />
-          <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 17, color: colors.accentText }}>
-            {t('wallet.envoyer.betaNote')}
-          </Text>
-        </View>
-
-        {/* Balance anchor */}
-        <View
-          style={{
-            backgroundColor: colors.primarySoft,
-            borderRadius: 16,
-            paddingVertical: 16,
-            paddingHorizontal: 18,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
-            marginBottom: 20,
-          }}
-        >
-          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
-            <I.wallet size={18} color={colors.primary} />
-          </View>
-          <View>
-            <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-              {t('wallet.envoyer.balanceLabel')}
-            </Text>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
-              {formatGNF(balance)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Recipient */}
-        <MicroLabel label={t('wallet.envoyer.recipientLabel')} />
-        <Input
-          label={t('wallet.envoyer.phoneInputLabel')}
-          leadingIcon="phone"
-          keyboardType="phone-pad"
-          placeholder={t('wallet.envoyer.phonePlaceholder')}
-          value={formatGnPhone(phone)}
-          onChangeText={(txt) => setPhone(normalizeGnPhone(txt))}
-          errorText={
-            phone.length > 0 && !phoneValid ? t('wallet.envoyer.phoneInvalid') : undefined
-          }
-          helperText={phone.length === 0 ? t('wallet.envoyer.phoneHint') : undefined}
-        />
-
-        {/* Amount */}
-        <View style={{ marginTop: 22 }}>
-          <MicroLabel label={t('wallet.envoyer.amountLabel')} />
+          {/* Bêta banner — required UX honesty while the V1.1 review is open. */}
           <View
             style={{
-              backgroundColor: colors.bgElev,
-              borderRadius: 16,
-              paddingVertical: 22,
-              paddingHorizontal: 20,
+              marginBottom: 16,
+              padding: 12,
+              borderRadius: radii.md,
               borderWidth: 1,
-              borderColor: exceedsBalance || (amount > 0 && !belowMax) ? colors.danger : colors.border,
+              borderColor: colors.accentSoft,
+              backgroundColor: colors.accentSoft,
               flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
+              gap: 10,
+              alignItems: 'flex-start',
             }}
           >
-            <TextInput
-              value={amount > 0 ? new Intl.NumberFormat('fr-FR').format(amount) : ''}
-              onChangeText={(txt) => {
-                const n = Number(txt.replace(/\D/g, ''));
-                setAmount(Number.isFinite(n) ? n : 0);
-              }}
-              keyboardType="number-pad"
-              placeholder="0"
-              placeholderTextColor={colors.textFaint}
-              maxLength={11}
-              style={{
-                fontSize: 36,
-                fontWeight: '700',
-                color: exceedsBalance || (amount > 0 && !belowMax) ? colors.danger : colors.text,
-                textAlign: 'center',
-                minWidth: 60,
-                paddingVertical: 0,
-                fontVariant: ['tabular-nums'],
-              }}
-            />
-            <Text style={{ marginLeft: 8, marginTop: 8, color: colors.textMuted, fontSize: 14, fontWeight: '600' }}>
-              GNF
+            <I.shield size={14} color={colors.accentText} />
+            <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 17, color: colors.accentText }}>
+              {t('wallet.envoyer.betaNote')}
             </Text>
           </View>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-            {QUICK_AMOUNTS.filter((v) => v <= balance && v <= MAX_SEND_MINOR).map((v) => (
-              <Chip
-                key={v}
-                label={new Intl.NumberFormat('fr-FR').format(v)}
-                active={v === amount}
-                onPress={() => setAmount(v)}
-              />
-            ))}
-          </View>
-
-          <Text
-            variant="caption"
-            tone="muted"
+          {/* Balance anchor */}
+          <View
             style={{
-              marginTop: 12,
-              letterSpacing: 0,
-              color: exceedsBalance || (amount > 0 && !belowMax) ? colors.danger : undefined,
+              backgroundColor: colors.primarySoft,
+              borderRadius: 16,
+              paddingVertical: 16,
+              paddingHorizontal: 18,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+              marginBottom: 20,
             }}
           >
-            {exceedsBalance
-              ? t('wallet.envoyer.insufficient', { balance: formatGNF(balance) })
-              : amount > 0 && !belowMax
-                ? t('wallet.envoyer.aboveCap', { cap: formatGNF(MAX_SEND_MINOR) })
-                : t('wallet.envoyer.cap', { cap: formatGNF(MAX_SEND_MINOR) })}
-          </Text>
-        </View>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>
+              <I.wallet size={18} color={colors.primary} />
+            </View>
+            <View>
+              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                {t('wallet.envoyer.balanceLabel')}
+              </Text>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
+                {formatGNF(balance)}
+              </Text>
+            </View>
+          </View>
 
-        {/* Final reminder — sends are irreversible on a wallet rail. */}
-        <View
-          style={{
-            marginTop: 18,
-            flexDirection: 'row',
-            gap: 10,
-            padding: 12,
-            borderRadius: radii.md,
-            backgroundColor: colors.bgSunken,
-          }}
-        >
-          <I.info size={16} color={colors.textMuted} />
-          <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 18 }}>
-            {t('wallet.envoyer.irreversibleNote')}
-          </Text>
-        </View>
-      </ScrollView>
+          {/* Recipient */}
+          <MicroLabel label={t('wallet.envoyer.recipientLabel')} />
+          <Input
+            label={t('wallet.envoyer.phoneInputLabel')}
+            leadingIcon="phone"
+            keyboardType="phone-pad"
+            placeholder={t('wallet.envoyer.phonePlaceholder')}
+            value={formatGnPhone(phone)}
+            onChangeText={(txt) => setPhone(normalizeGnPhone(txt))}
+            errorText={
+              phone.length > 0 && !phoneValid ? t('wallet.envoyer.phoneInvalid') : undefined
+            }
+            helperText={phone.length === 0 ? t('wallet.envoyer.phoneHint') : undefined}
+          />
 
-      <StickyBottom>
-        <Button
-          size="lg"
-          block
-          loading={send.isPending}
-          disabled={!canSubmit}
-          label={
-            amount > 0
-              ? t('wallet.envoyer.ctaWithAmount', { amount: formatGNF(amount) })
-              : t('wallet.envoyer.cta')
-          }
-          onPress={submit}
-        />
-      </StickyBottom>
+          {/* Amount */}
+          <View style={{ marginTop: 22 }}>
+            <MicroLabel label={t('wallet.envoyer.amountLabel')} />
+            <View
+              style={{
+                backgroundColor: colors.bgElev,
+                borderRadius: 16,
+                paddingVertical: 22,
+                paddingHorizontal: 20,
+                borderWidth: 1,
+                borderColor: exceedsBalance || (amount > 0 && !belowMax) ? colors.danger : colors.border,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <TextInput
+                value={amount > 0 ? new Intl.NumberFormat('fr-FR').format(amount) : ''}
+                onChangeText={(txt) => {
+                  const n = Number(txt.replace(/\D/g, ''));
+                  setAmount(Number.isFinite(n) ? n : 0);
+                }}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor={colors.textFaint}
+                maxLength={11}
+                style={{
+                  fontSize: 36,
+                  fontWeight: '700',
+                  color: exceedsBalance || (amount > 0 && !belowMax) ? colors.danger : colors.text,
+                  textAlign: 'center',
+                  minWidth: 60,
+                  paddingVertical: 0,
+                  fontVariant: ['tabular-nums'],
+                }}
+              />
+              <Text style={{ marginLeft: 8, marginTop: 8, color: colors.textMuted, fontSize: 14, fontWeight: '600' }}>
+                GNF
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+              {QUICK_AMOUNTS.filter((v) => v <= balance && v <= MAX_SEND_MINOR).map((v) => (
+                <Chip
+                  key={v}
+                  label={new Intl.NumberFormat('fr-FR').format(v)}
+                  active={v === amount}
+                  onPress={() => setAmount(v)}
+                />
+              ))}
+            </View>
+
+            <Text
+              variant="caption"
+              tone="muted"
+              style={{
+                marginTop: 12,
+                letterSpacing: 0,
+                color: exceedsBalance || (amount > 0 && !belowMax) ? colors.danger : undefined,
+              }}
+            >
+              {exceedsBalance
+                ? t('wallet.envoyer.insufficient', { balance: formatGNF(balance) })
+                : amount > 0 && !belowMax
+                  ? t('wallet.envoyer.aboveCap', { cap: formatGNF(MAX_SEND_MINOR) })
+                  : t('wallet.envoyer.cap', { cap: formatGNF(MAX_SEND_MINOR) })}
+            </Text>
+          </View>
+
+          {/* Final reminder — sends are irreversible on a wallet rail. */}
+          <View
+            style={{
+              marginTop: 18,
+              flexDirection: 'row',
+              gap: 10,
+              padding: 12,
+              borderRadius: radii.md,
+              backgroundColor: colors.bgSunken,
+            }}
+          >
+            <I.info size={16} color={colors.textMuted} />
+            <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 18 }}>
+              {t('wallet.envoyer.irreversibleNote')}
+            </Text>
+          </View>
+        </ScrollView>
+
+        <StickyBottom>
+          <Button
+            size="lg"
+            block
+            loading={send.isPending}
+            disabled={!canSubmit}
+            label={
+              amount > 0
+                ? t('wallet.envoyer.ctaWithAmount', { amount: formatGNF(amount) })
+                : t('wallet.envoyer.cta')
+            }
+            onPress={submit}
+          />
+        </StickyBottom>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

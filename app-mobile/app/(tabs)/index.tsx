@@ -9,6 +9,7 @@ import { NoiseOverlay } from '../../src/components/visuals/NoiseOverlay';
 import { WALLET_TOPUP_ENABLED } from '../../src/lib/flags';
 import {
   Bell,
+  Heart,
   ShoppingBag,
   Plus,
   Store,
@@ -60,7 +61,7 @@ import {
 // Popular-products / featured-shops swipe rows: two cards fully visible inside
 // the 20px page padding, with a sliver of the third peeking as the swipe
 // affordance.
-const POPULAR_CARD_WIDTH = Math.round((Dimensions.get('window').width - 2 * 20 - 12) / 2.12);
+const POPULAR_CARD_WIDTH = Math.round((Math.min(Dimensions.get('window').width, 500) - 2 * 20 - 12) / 2.12);
 
 export default function HomeRoute() {
   const roles = useAuth((s) => s.roles);
@@ -199,12 +200,11 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
 // ====================================================================
 
 function BuyerHome() {
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const { t } = useTranslation();
   const user = useAuth((s) => s.user);
   const cartCount = useCart((s) => s.lines.length);
   const roles = useAuth((s) => s.roles);
-  const hasPro = roles.includes('seller') || roles.includes('agent');
   const { data: shops, isLoading: shopsLoading } = useShops(3);
   const { data: products, isLoading: prodLoading } = usePopularProducts(4);
   const { data: properties, isLoading: propLoading } = useNearbyProperties(3);
@@ -260,8 +260,15 @@ function BuyerHome() {
               {firstName} 👋
             </Text>
           </View>
-          {/* Vendre removed from the header (client 2026-07-06) — publishing
-              is reached via the pro dashboard / Profil rôles. */}
+          {/* Favoris / notifications / panier — the trio, kept consistent with
+              the Marché header (client 2026-07-26). Favoris was moved here off
+              the Profil screen. */}
+          <CircleAction
+            onPress={() => router.push('/favorites')}
+            accessibilityLabel={t('home.favorites')}
+          >
+            <Heart size={18} color={colors.text} strokeWidth={1.75} />
+          </CircleAction>
           <CircleAction
             onPress={() => router.push('/notifications')}
             accessibilityLabel={t('home.notifications')}
@@ -282,15 +289,10 @@ function BuyerHome() {
           </CircleAction>
         </View>
 
-        {/* Pro summary — only when user has buyer + a pro role */}
-        {hasPro && (
-          <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
-            <ProSummaryCard
-              isSeller={roles.includes('seller')}
-              isAgent={roles.includes('agent')}
-            />
-          </View>
-        )}
+        {/* Pro summary card removed from the Home (client 2026-07-30): it
+            duplicated the pro workspace, which is already reachable from the
+            Profil tab (combined "Espace pro" card). Frees space above the
+            wallet. */}
 
         {/* Wallet hero */}
         <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
@@ -360,7 +362,14 @@ function BuyerHome() {
         {/* Featured shops — same swipe row as popular products : two cards
             visible, a peek of the third, snap per card. */}
         <View style={{ marginTop: 28 }}>
-          <SectionHeader title={t('home.shopsSection')} action={t('home.seeAll')} onAction={() => router.push('/(tabs)/marche')} />
+          <SectionHeader
+            title={t('home.shopsSection')}
+            action={t('home.seeAll')}
+            onAction={() => {
+              useFilters.getState().setMarcheTab('articles');
+              router.push('/(tabs)/marche');
+            }}
+          />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -383,7 +392,10 @@ function BuyerHome() {
             <SectionHeader
               title={t('home.popularSection')}
               action={t('home.seeAll')}
-              onAction={() => router.push('/(tabs)/marche')}
+              onAction={() => {
+                useFilters.getState().setMarcheTab('articles');
+                router.push('/(tabs)/marche');
+              }}
             />
           </View>
           <ScrollView
@@ -412,7 +424,11 @@ function BuyerHome() {
           <Pressable
             onPress={() => router.push('/(tabs)/decouvrir')}
             style={{
-              backgroundColor: '#0E1311',
+              // Theme-aware teaser (client 2026-07-27): dark feature card in
+              // dark mode, light card in light mode (was hard-locked dark).
+              backgroundColor: theme === 'dark' ? '#0E1311' : colors.card,
+              borderWidth: 1,
+              borderColor: theme === 'dark' ? 'transparent' : colors.border,
               borderRadius: 22,
               padding: 20,
               flexDirection: 'row',
@@ -447,13 +463,13 @@ function BuyerHome() {
                   {t('home.decouvrirBadge')}
                 </Text>
               </View>
-              <Text style={{ fontSize: 20, color: '#FFFFFF', fontWeight: '700', lineHeight: 24 }}>
+              <Text style={{ fontSize: 20, color: theme === 'dark' ? '#FFFFFF' : colors.text, fontWeight: '700', lineHeight: 24 }}>
                 {t('home.decouvrirTitle')}
               </Text>
               <Text
                 style={{
                   fontSize: 12.5,
-                  color: 'rgba(255,255,255,0.62)',
+                  color: theme === 'dark' ? 'rgba(255,255,255,0.62)' : colors.textMuted,
                   marginTop: 6,
                   letterSpacing: 0,
                 }}
@@ -495,7 +511,7 @@ function BuyerHome() {
                     top: 0,
                     transform: [{ rotate: '6deg' }],
                     borderWidth: 2,
-                    borderColor: '#0E1311',
+                    borderColor: theme === 'dark' ? '#0E1311' : colors.card,
                   }}
                   contentFit="cover"
                 />
@@ -506,12 +522,12 @@ function BuyerHome() {
                 width: 38,
                 height: 38,
                 borderRadius: 999,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme === 'dark' ? '#FFFFFF' : colors.primary,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <ChevronRight size={16} color="#0E1311" strokeWidth={2} />
+              <ChevronRight size={16} color={theme === 'dark' ? '#0E1311' : '#FFFFFF'} strokeWidth={2} />
             </View>
           </Pressable>
         </View>
@@ -521,7 +537,13 @@ function BuyerHome() {
           <SectionHeader
             title={t('home.nearbyPropertiesSection')}
             action={t('home.seeAll')}
-            onAction={() => router.push('/(tabs)/marche')}
+            onAction={() => {
+              // Marché reads its tab from the filters store and remembers the
+              // last one used, so a « voir tout » that doesn't set it lands on
+              // whatever the user browsed before (client 2026-08-05).
+              useFilters.getState().setMarcheTab('immobilier');
+              router.push('/(tabs)/marche');
+            }}
           />
           <ScrollView
             horizontal
@@ -828,6 +850,20 @@ const TINTS: Record<string, { bg: string; fg: string }> = {
   sand: { bg: '#F2EBDD', fg: '#8C6E3A' },
 };
 
+// Dark-mode variants (client 2026-07-27): the light pastel tiles jarred on
+// black. Same hue coding, but dark tinted surfaces + brighter icons. Light
+// mode stays exactly as TINTS above.
+const DARK_TINTS: Record<string, { bg: string; fg: string }> = {
+  primary: { bg: '#12271F', fg: '#54D1A8' },
+  accent: { bg: '#2A2414', fg: '#E9BA5E' },
+  cream: { bg: '#242015', fg: '#CBB184' },
+  info: { bg: '#152134', fg: '#84A9F0' },
+  mint: { bg: '#122619', fg: '#4ACB8D' },
+  rose: { bg: '#2B1815', fg: '#EC8E80' },
+  lilac: { bg: '#1E1733', fg: '#AE97E3' },
+  sand: { bg: '#252013', fg: '#CBAC78' },
+};
+
 function CategoryGridTile({
   Icon,
   label,
@@ -839,8 +875,9 @@ function CategoryGridTile({
   tint: keyof typeof TINTS;
   onPress: () => void;
 }) {
-  const { colors } = useTheme();
-  const t = TINTS[tint] ?? TINTS.primary;
+  const { colors, theme } = useTheme();
+  const set = theme === 'dark' ? DARK_TINTS : TINTS;
+  const t = set[tint] ?? set.primary;
   return (
     <Pressable
       onPress={() => {
@@ -883,96 +920,6 @@ function CategoryGridTile({
   );
 }
 
-// ====================================================================
-// ProSummaryCard — shown on BuyerHome when user has pro role(s).
-// Quick link into the Boutique tab dashboard.
-// ====================================================================
-
-function ProSummaryCard({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean }) {
-  const { colors } = useTheme();
-  const { data: shops } = useMyShops();
-  const { data: properties } = useMyProperties();
-
-  const shopCount = shops?.length ?? 0;
-  const propertyCount = properties?.length ?? 0;
-  const productAndPropertyCount = propertyCount; // products counted via shop scope on the Pro tab
-
-  // No shop AND no properties → hide the whole CTA. Showing "0 GNF" or
-  // "0 commandes" would burn the first impression for a fresh multi-role user.
-  // We wait until the user has at least one listing before promoting the Pro tab.
-  if (shopCount === 0 && propertyCount === 0) return null;
-
-  const badgeLabel = isSeller && isAgent ? 'MODE PRO' : isSeller ? 'BOUTIQUE' : 'AGENCE IMMO';
-  const sublabel = shopCount > 0 && propertyCount > 0
-    ? `${shopCount} boutique${shopCount > 1 ? 's' : ''} · ${propertyCount} bien${propertyCount > 1 ? 's' : ''}`
-    : shopCount > 0
-      ? `${shopCount} boutique${shopCount > 1 ? 's' : ''}`
-      : `${productAndPropertyCount} bien${productAndPropertyCount > 1 ? 's' : ''}`;
-
-  return (
-    <Pressable
-      onPress={() => router.push('/(tabs)/boutique')}
-      style={{
-        borderRadius: 20,
-        overflow: 'hidden',
-        backgroundColor: colors.text,
-      }}
-    >
-      <View style={{ padding: 18 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderRadius: 999,
-              backgroundColor: 'rgba(255,255,255,0.12)',
-            }}
-          >
-            {isSeller ? (
-              <Store size={11} color="#FFFFFF" strokeWidth={2} />
-            ) : (
-              <Building2 size={11} color="#FFFFFF" strokeWidth={2} />
-            )}
-            <Text
-              style={{
-                fontSize: 10.5,
-                fontWeight: '700',
-                color: '#FFFFFF',
-                letterSpacing: 0.5,
-              }}
-            >
-              {badgeLabel}
-            </Text>
-          </View>
-          <ChevronRight size={16} color="rgba(255,255,255,0.6)" strokeWidth={2} />
-        </View>
-
-        <Text
-          style={{
-            fontSize: 18,
-            fontWeight: '700',
-            color: '#FFFFFF',
-            letterSpacing: -0.2,
-            marginTop: 14,
-          }}
-        >
-          Tableau de bord
-        </Text>
-        <Text
-          style={{
-            fontSize: 12.5,
-            fontWeight: '500',
-            color: 'rgba(255,255,255,0.65)',
-            letterSpacing: 0,
-            marginTop: 4,
-          }}
-        >
-          {sublabel}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
+// ProSummaryCard removed 2026-07-30 — the Home no longer shows a pro dashboard
+// teaser (duplicated the Profil "Espace pro" card). Pure-pro users still land
+// on their dashboard directly; buyers-with-a-pro-role reach it from Profil.

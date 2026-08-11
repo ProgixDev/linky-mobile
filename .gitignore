@@ -49,3 +49,5 @@ landing-hero*.png
 features-bento.png
 hero-with-bg.png
 **/.playwright-mcp/
+.vercel
+.env*

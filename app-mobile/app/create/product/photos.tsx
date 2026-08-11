@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { Film, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -56,6 +57,10 @@ export default function CreatePhotosRoute() {
   const requestUploadUrl = useRequestPhotoUploadUrl();
   const { show } = useToast();
   const [uploading, setUploading] = useState(false);
+  // Optional product video (client 2026-08-03 — parity with immo). Shares the
+  // createListing store's videoUrl field.
+  const videoUrl = useCreateListing((s) => s.videoUrl);
+  const [videoUploading, setVideoUploading] = useState(false);
 
   const remaining = MAX_PHOTOS - photos.length;
   const canAdd = remaining > 0 && !uploading;
@@ -135,6 +140,63 @@ export default function CreatePhotosRoute() {
     const next = photos.filter((_, i) => i !== index);
     setVal('photos', next);
   }
+
+  // ── Optional product video (client 2026-08-03) ──────────────────────────
+  const MAX_VIDEO_SEC = 60;
+  const resolveVideoMime = (asset: ImagePicker.ImagePickerAsset): string => {
+    const m = asset.mimeType?.toLowerCase();
+    if (m === 'video/mp4' || m === 'video/quicktime' || m === 'video/webm') return m;
+    const ext = (asset.fileName || asset.uri).toLowerCase().split('.').pop() ?? '';
+    if (ext === 'mov') return 'video/quicktime';
+    if (ext === 'webm') return 'video/webm';
+    return 'video/mp4';
+  };
+  const videoExt = (mime: string): string =>
+    mime === 'video/quicktime' ? 'mov' : mime === 'video/webm' ? 'webm' : 'mp4';
+
+  async function pickVideo() {
+    if (videoUploading) return;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        show(t('create.photosPermDenied'), 'danger');
+        return;
+      }
+      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'videos', quality: 0.7 });
+      if (picked.canceled || picked.assets.length === 0) return;
+      const asset = picked.assets[0];
+      if (typeof asset.duration === 'number' && asset.duration > (MAX_VIDEO_SEC + 5) * 1000) {
+        show(t('create.videoTooLong'), 'danger');
+        return;
+      }
+      setVideoUploading(true);
+      const contentType = resolveVideoMime(asset);
+      const filename = `video.${videoExt(contentType)}`;
+      const { upload_url, public_url } = await requestUploadUrl.mutateAsync({
+        kind: 'product-video',
+        filename,
+        content_type: contentType,
+      });
+      const blob = await (await fetch(asset.uri)).blob();
+      const putRes = await fetch(upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+        body: blob,
+      });
+      if (!putRes.ok) {
+        const raw = await putRes.text().catch(() => '');
+        console.error('[product-video] storage PUT failed', putRes.status, raw);
+        show(t('create.videoUploadError'), 'danger');
+        return;
+      }
+      setVal('videoUrl', public_url);
+    } catch (e) {
+      show(toToastMessage(e, t('create.videoUploadError')), 'danger');
+    } finally {
+      setVideoUploading(false);
+    }
+  }
+  const removeVideo = () => setVal('videoUrl', undefined);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -235,9 +297,81 @@ export default function CreatePhotosRoute() {
             </Text>
           </TrustStrip>
         </View>
+
+        {/* Vidéo produit (optionnel) — client 2026-08-03, parité immo */}
+        <View style={{ marginTop: 24 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+            {t('create.videoLabel')}
+          </Text>
+          <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17, marginBottom: 10 }}>
+            {t('create.videoHint')}
+          </Text>
+          {videoUrl ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                padding: 12,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  backgroundColor: colors.primarySoft,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Film size={18} color={colors.primary} strokeWidth={2} />
+              </View>
+              <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>
+                {t('create.videoAdded')}
+              </Text>
+              <Pressable onPress={removeVideo} hitSlop={8} accessibilityLabel={t('create.videoRemove')}>
+                <Trash2 size={18} color={colors.danger} strokeWidth={2} />
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={pickVideo}
+              disabled={videoUploading}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                height: 50,
+                borderRadius: 14,
+                borderWidth: 2,
+                borderStyle: 'dashed',
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                opacity: videoUploading ? 0.6 : 1,
+              }}
+            >
+              {videoUploading ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : (
+                <>
+                  <Film size={18} color={colors.text} strokeWidth={2} />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                    {t('create.videoAdd')}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          )}
+        </View>
       </View>
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
-        <Button variant="secondary" label={t('create.back')} onPress={() => router.back()} disabled={uploading} />
+        <Button variant="secondary" label={t('create.back')} onPress={() => router.back()} disabled={uploading || videoUploading} />
         <Button
           label={t('create.continue')}
           style={{ flex: 1 }}

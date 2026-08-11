@@ -7,7 +7,7 @@
 // the switch only flips after the user confirms.
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Check, ChevronLeft, ShoppingBag, Store, Building2, ShieldCheck } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -38,20 +38,20 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
     ],
     must: [
       'Confirme la réception uniquement quand tu as le produit en main',
-      'Ne partage jamais ton QR de réception avant la livraison',
+      'Ne partagez jamais votre QR de réception avant la livraison',
       "Paie toujours via l'application — jamais en dehors",
     ],
   },
   seller: {
     title: 'Devenir vendeur',
     can: [
-      'Créer ta boutique et publier des produits',
-      'Recevoir des commandes payées en escrow et suivre tes ventes',
-      'Retirer tes gains vers Orange Money / MTN',
+      'Créer votre boutique et publier des produits',
+      'Recevoir des commandes payées en escrow et suivre vos ventes',
+      'Retirer vos gains vers Orange Money / MTN',
     ],
     must: [
-      "Vérifier ton identité avant de publier ta première annonce",
-      'Publier des photos et descriptions honnêtes de tes produits',
+      "Vérifier votre identité avant de publier votre première annonce",
+      'Publier des photos et descriptions honnêtes de vos produits',
       "Préparer les commandes rapidement — l'argent n'est libéré qu'à la réception confirmée par l'acheteur",
       'Respecter les acheteurs dans les échanges et les délais',
     ],
@@ -61,7 +61,7 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
   livreur: {
     title: 'Devenir livreur',
     can: [
-      'Recevoir des livraisons assignées et suivre tes courses',
+      'Recevoir des livraisons assignées et suivre vos courses',
       "Valider les remises par scan du QR de l'acheteur",
     ],
     must: [
@@ -77,7 +77,7 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
       "Faire signer les contrats de location dans l'app et encaisser en escrow",
     ],
     must: [
-      "Vérifier ton identité avant de publier ta première annonce",
+      "Vérifier votre identité avant de publier votre première annonce",
       'Annoncer des biens réels et disponibles, avec des prix exacts',
       'Pour la vente : la visite est obligatoire avant toute transaction',
       'Honorer les visites planifiées et les réservations acceptées',
@@ -87,6 +87,7 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
 
 export default function RolesRoute() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const roles = useAuth((s) => s.roles);
   const setRoles = useAuth((s) => s.setRoles);
   const signIn = useAuth((s) => s.signIn);
@@ -277,7 +278,15 @@ export default function RolesRoute() {
         )}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 20, paddingVertical: 16 }}>
+      {/* Same fix as profil/edit : SafeAreaView only claims the top edge, so
+          « Enregistrer » was hidden behind the Android nav bar. */}
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 16,
+          paddingBottom: 16 + insets.bottom,
+        }}
+      >
         <Button
           variant="dark"
           size="lg"

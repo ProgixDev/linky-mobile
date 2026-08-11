@@ -9,7 +9,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Search,
   SlidersHorizontal,
@@ -26,11 +26,13 @@ import { ProductCard } from '../../src/components/lists/ProductCard';
 import { PropertyCard } from '../../src/components/lists/PropertyCard';
 import { ProductCardSkeleton } from '../../src/components/primitives/Skeleton';
 import { Sheet } from '../../src/components/sheets/Sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { Switch } from '../../src/components/primitives/Switch';
 import { Button } from '../../src/components/primitives/Button';
 import { Chip } from '../../src/components/primitives/Chip';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
+import { HeaderActions } from '../../src/components/nav/HeaderActions';
 import { haptic } from '../../src/lib/haptics';
 import { useFilters, hasActiveFilters } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
@@ -59,7 +61,8 @@ const PRODUCT_CATEGORY_DEFS = [
   { code: 'Auto & Moto', labelKey: 'create.catAutoMoto' },
   { code: 'Autres', labelKey: 'create.catAutres' },
 ] as const;
-const PROPERTY_TYPE_DEFS: { value: 'location' | 'vente' | 'terrain'; labelKey: string }[] = [
+const PROPERTY_TYPE_DEFS: { value: 'all' | 'location' | 'vente' | 'terrain'; labelKey: string }[] = [
+  { value: 'all', labelKey: 'marche.propAll' },
   { value: 'location', labelKey: 'marche.propLocation' },
   { value: 'vente', labelKey: 'marche.propVente' },
   { value: 'terrain', labelKey: 'marche.propTerrain' },
@@ -68,6 +71,7 @@ const PROPERTY_TYPE_DEFS: { value: 'location' | 'vente' | 'terrain'; labelKey: s
 export default function MarcheRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const filters = useFilters();
   // Resolve the static def lists into actual i18n labels at render so they
   // re-translate when the user switches language.
@@ -156,7 +160,7 @@ export default function MarcheRoute() {
     sort: filters.productSort,
   });
   const propertiesQuery = useInfiniteProperties({
-    type: filters.propertyType,
+    type: filters.propertyType === 'all' ? undefined : filters.propertyType,
     city: filters.city ?? undefined,
     rooms: filters.rooms,
     priceMaxGnf: filters.priceMaxGnf,
@@ -217,17 +221,27 @@ export default function MarcheRoute() {
       >
         {/* ===== Header ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
-          <Text
-            style={{
-              fontSize: 32,
-              fontWeight: '700',
-              color: colors.text,
-              letterSpacing: -0.5,
-              lineHeight: 38,
-            }}
-          >
-            {isPurePro ? t('marche.titleConcurrence') : t('marche.titleMarche')}
-          </Text>
+          {/* Title on the SAME row as the Favoris / notifications / panier trio
+              (like the Accueil header) — frees a row for the listings below
+              (client 2026-07-29). Was: icons on their own row above the title.
+              Subtitle stays full-width on the line below (it's too long to sit
+              beside the 3-icon group). */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <Text
+              numberOfLines={1}
+              style={{
+                flexShrink: 1,
+                fontSize: 32,
+                fontWeight: '700',
+                color: colors.text,
+                letterSpacing: -0.5,
+                lineHeight: 38,
+              }}
+            >
+              {isPurePro ? t('marche.titleConcurrence') : t('marche.titleMarche')}
+            </Text>
+            <HeaderActions />
+          </View>
           <Text
             style={{
               fontSize: 14,
@@ -619,12 +633,25 @@ export default function MarcheRoute() {
 
       {/* ===== Filter sheet ===== */}
       <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('marche.filterSheetTitle')} snapPoints={['80%']}>
-        <ScrollView style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        {/* flex:1 is REQUIRED — without it the ScrollView sizes itself to its
+            content inside the sheet's flex column, so the taller Immobilier
+            filter set (type + période + prix + ville + pièces + distance +
+            meublé) overflowed and pushed the footer (« Voir les résultats »)
+            off-screen with no way to scroll to it (client 2026-08-05). */}
+        <BottomSheetScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 }}
+        >
           {isArticles ? (
             <>
               {/* ===== ARTICLES filters — the sheet used to show immobilier
                   filters on this tab (type/pièces/goudron/meublé did nothing
                   for products). Now: price + condition + city, all wired. */}
+              {/* No price ceiling under « Tout » : a bucket cannot span a
+                  100k/jour rental and a 500M sale — any value we offered would
+                  silently exclude one of the two. Pick a type to filter price. */}
+              {filters.propertyType !== 'all' && (
+                <>
               <MicroLabel label={t('marche.filterMaxPrice')} />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
                 {[
@@ -661,6 +688,8 @@ export default function MarcheRoute() {
                   />
                 ))}
               </View>
+                </>
+              )}
 
               <MicroLabel label={t('marche.filterCity')} />
               <View style={{ marginBottom: 18 }}>
@@ -817,12 +846,14 @@ export default function MarcheRoute() {
               )}
             </>
           )}
-        </ScrollView>
+        </BottomSheetScrollView>
         <View
           style={{
             flexDirection: 'row',
             gap: 8,
             padding: 16,
+            // Keep the action row clear of the Android gesture/nav bar.
+            paddingBottom: 16 + insets.bottom,
             borderTopWidth: 1,
             borderTopColor: colors.border,
           }}

@@ -15,7 +15,7 @@ import { I } from '../../icons/Icon';
 const HOLD_MS = 5000;
 
 export function HoldToConfirmButton({
-  label = 'Maintiens pour confirmer la réception',
+  label = 'Maintenez pour confirmer la réception',
   onConfirm,
   disabled,
   holdMs,

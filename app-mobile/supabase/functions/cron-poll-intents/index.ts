@@ -137,6 +137,51 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const { data: expiredCount } = await sb.rpc('expire_stale_intents');
 
+  // ── Booking intents (Lengopay) — ISOLATED from the order path above. Same
+  //    poll → outcome pattern, but process_booking_intent_outcome delegates to
+  //    confirm_booking_payment on success and leaves the booking 'accepted' on
+  //    failure so the tenant can retry (client 2026-07-29: rentals moved off the
+  //    dropped Stripe rail onto Orange/MTN, same rail as product orders).
+  let bkPolled = 0, bkCompleted = 0, bkFailed = 0, bkCancelled = 0, bkPending = 0, bkErrors = 0;
+  const { data: bookingIntents, error: bkPickErr } = await sb.rpc('pick_booking_intents_to_poll', { p_limit: 200 });
+  if (bkPickErr) {
+    console.error('[cron-poll-intents] booking intent pick error:', bkPickErr);
+  } else {
+    for (const intent of (bookingIntents ?? []) as PendingIntent[]) {
+      bkPolled++;
+      try {
+        const status = await getPaymentStatus(intent.rail_intent_id);
+        if (status.status === 'success') {
+          const { error: oErr } = await sb.rpc('process_booking_intent_outcome', {
+            p_intent_id: intent.id, p_terminal_status: 'completed', p_rail_status: status.status,
+            p_error_code: null, p_error_message: null,
+          });
+          if (oErr) throw new Error(`process_booking_intent_outcome failed: ${oErr.message}`);
+          bkCompleted++;
+        } else if (status.status === 'failed' || status.status === 'cancelled') {
+          await sb.rpc('process_booking_intent_outcome', {
+            p_intent_id: intent.id, p_terminal_status: status.status, p_rail_status: status.status,
+            p_error_code: status.error_code ?? null, p_error_message: status.message ?? null,
+          });
+          if (status.status === 'failed') bkFailed++; else bkCancelled++;
+        } else {
+          await sb.rpc('bump_intent_poll', {
+            p_intent_id: intent.id, p_rail_status: status.status, p_error_code: null, p_error_message: null,
+          });
+          bkPending++;
+        }
+      } catch (e) {
+        console.error(`[cron-poll-intents] booking transient on intent ${intent.id}:`, e);
+        await sb.rpc('bump_intent_poll', {
+          p_intent_id: intent.id, p_rail_status: intent.rail_status,
+          p_error_code: 'RAIL_TRANSIENT', p_error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
+        });
+        bkErrors++;
+      }
+    }
+  }
+  const { data: bkExpired } = await sb.rpc('expire_stale_booking_intents');
+
   // Phase V.6 — stale Stripe PI sweep. Cancel-first / local-flip-second.
   // The picker (FOR UPDATE SKIP LOCKED) guarantees two overlapping cron ticks
   // never act on the same row.
@@ -264,6 +309,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   return new Response(JSON.stringify({
     polled, completed, failed, cancelled, stillPending, errors, expired: expiredCount ?? 0,
+    bkPolled, bkCompleted, bkFailed, bkCancelled, bkPending, bkErrors, bkExpired: bkExpired ?? 0,
     stripeSwept, stripeCancelled, stripeAlreadyTerminal, stripeSkipped,
     bookingSwept, bookingCancelled, bookingAlreadyTerminal, bookingSkipped,
   }), { status: 200, headers: { 'content-type': 'application/json' } });

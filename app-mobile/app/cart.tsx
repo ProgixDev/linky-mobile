@@ -16,6 +16,7 @@ import { I } from '../src/icons/Icon';
 import { formatGNF, formatEUR } from '../src/lib/format';
 import { gnfToEur } from '../src/lib/currency';
 import { useCart } from '../src/stores/cart';
+import { useFilters } from '../src/stores/filters';
 import { apiPost } from '../src/lib/api';
 import type { Product } from '../src/data/types';
 import { haptic } from '../src/lib/haptics';
@@ -84,7 +85,12 @@ export default function CartRoute() {
           title={t('cart.emptyTitle')}
           description={t('cart.emptySub')}
           ctaLabel={t('cart.emptyCta')}
-          onCta={() => router.push('/(tabs)/marche')}
+          onCta={() => {
+            // Cart is products-only → make sure Marché opens on Articles and
+            // not on whatever tab the user last browsed.
+            useFilters.getState().setMarcheTab('articles');
+            router.push('/(tabs)/marche');
+          }}
         />
       </SafeAreaView>
     );
@@ -101,6 +107,41 @@ export default function CartRoute() {
         })}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 10 }}>
+        {/* Tells the buyer the rule BEFORE they hit it (client 2026-08-05).
+            One order = one escrow = one seller = one delivery = one QR, so a
+            cart can hold many articles but only from a single shop. */}
+        <View
+          style={{
+            gap: 10,
+            padding: 12,
+            borderRadius: 14,
+            backgroundColor: colors.bgSunken,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+            <I.store size={15} color={colors.primary} />
+            <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 17 }}>
+              {t('cart.singleShopNotice')}
+            </Text>
+          </View>
+          {/* Since a cart is locked to one shop, give the buyer a direct way to
+              keep shopping THERE instead of hitting the "other shop" wall
+              (client 2026-08-05). The shop page lists all its articles. */}
+          <Pressable
+            onPress={() => {
+              haptic.light();
+              router.push(`/shop/${items[0].product.shopId}`);
+            }}
+            hitSlop={6}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary, letterSpacing: 0 }}>
+              {t('cart.browseShop')}
+            </Text>
+            <I.chevronR size={14} color={colors.primary} />
+          </Pressable>
+        </View>
+
         {items.map(({ line, product }) => (
           <Card key={product.id} padding={10}>
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -123,9 +164,13 @@ export default function CartRoute() {
                       alignItems: 'center',
                       backgroundColor: colors.bgSunken,
                       borderRadius: 999,
-                      padding: 2,
+                      padding: 3,
+                      gap: 2,
                     }}
                   >
+                    {/* Decrement / delete — now a VISIBLE circle like the +
+                        (client 2026-08-03 : the bare « − » was hard to see). At
+                        qty 1 it becomes a trash icon to remove the line. */}
                     <Pressable
                       onPress={() => {
                         haptic.light();
@@ -133,11 +178,22 @@ export default function CartRoute() {
                         else setQuantity(product.id, line.quantity - 1);
                       }}
                       hitSlop={6}
-                      style={{ width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: colors.card,
+                        borderRadius: 999,
+                      }}
                     >
-                      <I.minus size={13} color={colors.textMuted} />
+                      {line.quantity === 1 ? (
+                        <I.trash size={15} color={colors.text} />
+                      ) : (
+                        <I.minus size={15} color={colors.text} />
+                      )}
                     </Pressable>
-                    <Text style={{ minWidth: 22, textAlign: 'center', fontWeight: '600', fontSize: 13 }}>
+                    <Text style={{ minWidth: 24, textAlign: 'center', fontWeight: '700', fontSize: 14, fontVariant: ['tabular-nums'] }}>
                       {line.quantity}
                     </Text>
                     <Pressable
@@ -147,15 +203,15 @@ export default function CartRoute() {
                       }}
                       hitSlop={6}
                       style={{
-                        width: 26,
-                        height: 26,
+                        width: 30,
+                        height: 30,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: colors.card,
+                        backgroundColor: colors.primary,
                         borderRadius: 999,
                       }}
                     >
-                      <I.plus size={13} color={colors.text} />
+                      <I.plus size={15} color="#FFFFFF" />
                     </Pressable>
                   </View>
                 </View>

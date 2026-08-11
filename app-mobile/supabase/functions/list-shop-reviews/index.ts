@@ -47,12 +47,13 @@ Deno.serve(makePost<Body>('/v1/reviews/list-shop', valid, async ({ sb, body, req
   }
   const rows = (data as ReviewRow[] | null) ?? [];
 
+  // « Profil public » (client 2026-08-06) : anonymize a reviewer who turned it off.
   const nameById = new Map<string, string | null>();
   if (rows.length > 0) {
     const ids = [...new Set(rows.map((r) => r.reviewer_id))];
-    const { data: users } = await sb.from('users').select('id, display_name').in('id', ids);
-    for (const u of (users as { id: string; display_name: string | null }[] | null) ?? []) {
-      nameById.set(u.id, u.display_name);
+    const { data: users } = await sb.from('users').select('id, display_name, profile_public').in('id', ids);
+    for (const u of (users as { id: string; display_name: string | null; profile_public: boolean }[] | null) ?? []) {
+      nameById.set(u.id, u.profile_public ? u.display_name : 'Utilisateur');
     }
   }
 

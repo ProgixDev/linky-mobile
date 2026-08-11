@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Edit2, Home, MapPin, Plus, Star, Trash2, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -472,19 +473,18 @@ function AddressSheet({
       }}
     >
       <Pressable style={{ flex: 1 }} onPress={onClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View
-          style={{
-            backgroundColor: colors.bg,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            paddingHorizontal: 20,
-            paddingTop: 16,
-            paddingBottom: 32,
-            gap: 14,
-            maxHeight: '92%',
-          }}
-        >
+      <View
+        style={{
+          backgroundColor: colors.bg,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          paddingHorizontal: 20,
+          paddingTop: 16,
+          paddingBottom: 32,
+          gap: 14,
+          maxHeight: '92%',
+        }}
+      >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>
               {editing ? t('settings.addresses.editSheetTitle') : t('settings.addresses.addSheetTitle')}
@@ -505,9 +505,10 @@ function AddressSheet({
             </Pressable>
           </View>
 
-          <ScrollView
+          <KeyboardAwareScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            bottomOffset={24}
             contentContainerStyle={{ gap: 14, paddingBottom: 4 }}
           >
             <FieldLabel text={t('settings.addresses.labelLabel')} />
@@ -567,7 +568,7 @@ function AddressSheet({
                 <Switch value={isDefault} onChange={setIsDefault} />
               </View>
             )}
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
           <Button
             variant="dark"
@@ -579,7 +580,6 @@ function AddressSheet({
             onPress={onSave}
           />
         </View>
-      </KeyboardAvoidingView>
     </View>
   );
 }

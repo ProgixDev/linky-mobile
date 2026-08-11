@@ -11,6 +11,7 @@ import { ProductCard } from '../src/components/lists/ProductCard';
 import { PropertyCard } from '../src/components/lists/PropertyCard';
 import { haptic } from '../src/lib/haptics';
 import { useFavorites } from '../src/stores/favorites';
+import { useFilters } from '../src/stores/filters';
 import { useProducts, useProperties } from '../src/data/queries';
 
 type Tab = 'products' | 'properties';
@@ -21,13 +22,25 @@ export default function FavoritesRoute() {
   const [tab, setTab] = useState<Tab>('products');
   const favProductIds = useFavorites((s) => s.productIds);
   const favPropertyIds = useFavorites((s) => s.propertyIds);
+  // Client 2026-08-05 — both empty-state CTAs pushed to /marche with no tab,
+  // so « Voir immobilier » landed on Articles. Marché reads its active tab from
+  // the filters store, so preselect it before navigating and each CTA opens the
+  // matching page.
+  const setMarcheTab = useFilters((s) => s.setMarcheTab);
+  const goToMarche = (marcheTab: 'articles' | 'immobilier') => {
+    setMarcheTab(marcheTab);
+    router.push('/(tabs)/marche');
+  };
 
   // Pull from the live catalog and filter by fav ids. Cheap query: the user's
   // fav set is small, but the catalog list is bounded by /list-products' limit
   // (50 by default) so this handles the common case. For larger user fav sets,
   // V1.1 would add a server-side /list-favorites endpoint that joins fav ids.
-  const { data: allProducts = [] } = useProducts();
-  const { data: allProperties = [] } = useProperties();
+  // includeOwn: a listing the user explicitly hearted must appear here even if
+  // they published it — the buyer-feed hide-own filter made the client's own
+  // favorites vanish, leaving both tabs stuck at 0 (client 2026-08-05).
+  const { data: allProducts = [] } = useProducts({ includeOwn: true });
+  const { data: allProperties = [] } = useProperties({ includeOwn: true });
   const favProducts = allProducts.filter((p) => favProductIds.has(p.id));
   const favProperties = allProperties.filter((p) => favPropertyIds.has(p.id));
 
@@ -72,7 +85,7 @@ export default function FavoritesRoute() {
               title={t('favoritesScreen.emptyProductsTitle')}
               sub={t('favoritesScreen.emptyProductsSub')}
               cta={t('favoritesScreen.emptyProductsCta')}
-              onPress={() => router.push('/(tabs)/marche')}
+              onPress={() => goToMarche('articles')}
             />
           ) : (
             <View
@@ -95,7 +108,7 @@ export default function FavoritesRoute() {
             title={t('favoritesScreen.emptyPropertiesTitle')}
             sub={t('favoritesScreen.emptyPropertiesSub')}
             cta={t('favoritesScreen.emptyPropertiesCta')}
-            onPress={() => router.push('/(tabs)/marche')}
+            onPress={() => goToMarche('immobilier')}
           />
         ) : (
           <View style={{ paddingHorizontal: 24, gap: 14 }}>

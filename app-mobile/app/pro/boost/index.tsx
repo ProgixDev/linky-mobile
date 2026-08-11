@@ -155,7 +155,7 @@ function BoostRow({ boost }: { boost: Boost }) {
           numberOfLines={1}
           style={{ fontSize: 14, fontWeight: '700', color: colors.text, letterSpacing: 0 }}
         >
-          {boost.product?.title ?? '—'}
+          {boost.listing?.title ?? boost.product?.title ?? '—'}
         </Text>
         <Text
           tone="muted"

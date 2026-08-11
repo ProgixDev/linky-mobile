@@ -205,7 +205,7 @@ export function LocationMapPicker({
         <View style={{ position: 'absolute', top: 10, left: 10, right: 10, alignItems: 'flex-start' }}>
           <View style={{ backgroundColor: 'rgba(255,255,255,0.92)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
             <Text style={{ fontSize: 11, fontWeight: '600', color: '#13251C', fontVariant: ['tabular-nums'] }}>
-              {hasCoords ? coordLabel(lat, lng) : 'Touche la carte pour placer le point exact'}
+              {hasCoords ? coordLabel(lat, lng) : 'Touchez la carte pour placer le point exact'}
             </Text>
           </View>
         </View>

@@ -9,7 +9,7 @@
 // Keep light (3G-friendly): no hero photo, just iconography and three benefits.
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, ShieldCheck, BadgeCheck, Wallet as WalletIcon, Store, Building2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +23,7 @@ import { toToastMessage } from '../../src/lib/api';
 import { useKycStatus } from '../../src/data/queries';
 
 export default function DevenirRoute() {
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ role?: string }>();
@@ -227,7 +228,16 @@ export default function DevenirRoute() {
         )}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 24, paddingVertical: 16, gap: 8 }}>
+      {/* Footer sits outside the top-only SafeAreaView, so pad by the real bottom
+          inset or the action hides behind the Android nav bar (client 2026-08-05). */}
+      <View
+        style={{
+          paddingHorizontal: 24,
+          gap: 8,
+          paddingTop: 16,
+          paddingBottom: 16 + insets.bottom,
+        }}
+      >
         <Button
           variant="dark"
           size="lg"

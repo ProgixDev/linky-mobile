@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS, secure, SECURE_KEYS } from '../lib/storage';
 import { useCart } from './cart';
+import { useFavorites } from './favorites';
+import { useHiddenListings } from './hiddenListings';
+import { queryClient } from '../lib/queryClient';
 import type { AuthUser } from '../data/queries/auth';
 
 type AuthChannel = 'phone' | 'email';
@@ -26,12 +29,25 @@ interface AuthState {
   // DEV-ONLY: the OTP code echoed by otp-request in stub mode, so otp.tsx can auto-fill
   // and the tester never reads server logs. Never populated when a real provider is wired.
   pendingDevCode: string | null;
+  // Which rail actually carried the last code. A phone request can be delivered
+  // over WhatsApp instead of SMS (Guinean carriers reject our SMS until the
+  // LINKY sender is registered), and the code screen has to name the right app.
+  pendingDelivery: 'sms' | 'whatsapp' | 'email' | null;
+  // Set right before entering the email/OTP flow from "Mot de passe oublié ?"
+  // (client 2026-08-05). Verifying the code proves ownership of the account
+  // exactly like a normal signin ; this flag just tells otp.tsx to land on
+  // /settings/password afterwards instead of the tabs, so "forgot password"
+  // reuses the SAME hardened OTP path (rate limits, enumeration-safety) rather
+  // than a second one.
+  pendingResetIntent: boolean;
   roles: UserRole[];
   setChannel: (c: AuthChannel) => void;
   setPendingPhone: (p: string) => void;
   setPendingEmail: (e: string) => void;
   setPendingOtpId: (id: string | null) => void;
   setPendingDevCode: (code: string | null) => void;
+  setPendingDelivery: (d: 'sms' | 'whatsapp' | 'email' | null) => void;
+  setPendingResetIntent: (v: boolean) => void;
   setRoles: (r: UserRole[]) => void;
   setTokens: (access: string, refresh: string) => Promise<void>;
   signIn: (user: AuthUser) => void;
@@ -86,12 +102,16 @@ export const useAuth = create<AuthState>((set) => ({
   pendingEmail: '',
   pendingOtpId: null,
   pendingDevCode: null,
+  pendingDelivery: null,
+  pendingResetIntent: false,
   roles: loadRoles(),
   setChannel: (channel) => set({ channel }),
   setPendingPhone: (pendingPhone) => set({ pendingPhone }),
   setPendingEmail: (pendingEmail) => set({ pendingEmail }),
   setPendingOtpId: (pendingOtpId) => set({ pendingOtpId }),
   setPendingDevCode: (pendingDevCode) => set({ pendingDevCode }),
+  setPendingDelivery: (pendingDelivery) => set({ pendingDelivery }),
+  setPendingResetIntent: (pendingResetIntent) => set({ pendingResetIntent }),
   setRoles: (roles) => {
     // T.1.fix — also patch the persisted AuthUser snapshot so an app boot
     // reads matching roles from BOTH MMKV slots (auth.roles AND
@@ -112,6 +132,18 @@ export const useAuth = create<AuthState>((set) => ({
   },
   signIn: (user) => {
     // Real auth only — caller (otp-verify / email-signin) passes the backend AuthUser.
+    // Account-switch guard: if a DIFFERENT user signs in, wipe the cache so no
+    // data from the previous account leaks (defensive — signOut already clears,
+    // this also covers a switch that somehow skips it).
+    const prevUserId = storage.getString(STORAGE_KEYS.currentUserId);
+    if (prevUserId && prevUserId !== user.id) {
+      queryClient.clear();
+      // Also drop the per-account device stores — this is the safety net for
+      // any path that reaches a NEW account without a clean signOut.
+      useCart.getState().clear();
+      useFavorites.getState().clear();
+      useHiddenListings.getState().clear();
+    }
     storage.set(STORAGE_KEYS.currentUserId, user.id);
     saveAuthUser(user);
     // Phase T.1 — server wins on roles. The auth payloads carry the
@@ -138,12 +170,26 @@ export const useAuth = create<AuthState>((set) => ({
     storage.remove(STORAGE_KEYS.roles);
     storage.set(STORAGE_KEYS.onboardingDone, false);
     useCart.getState().clear();
+    // Per-ACCOUNT data that happens to live in per-DEVICE stores. Without this
+    // a brand-new account inherits the previous user's hearts and hidden
+    // listings (client 2026-08-07: a fresh account already showed 3 articles +
+    // 2 logements in Favoris). Same class of leak as the cart/query-cache one
+    // below, just in stores that were missed.
+    useFavorites.getState().clear();
+    useHiddenListings.getState().clear();
+    // Wipe ALL cached server data so the NEXT account never inherits the
+    // previous account's listings / wallet / orders / counts (client 2026-07-30:
+    // a fresh account showed "8 annonces actives" — that count was the prior
+    // account's, still in the React Query cache).
+    queryClient.clear();
     set({
       user: null,
       authUserId: null,
       isOnboarded: false,
       pendingOtpId: null,
       pendingDevCode: null,
+      pendingDelivery: null,
+      pendingResetIntent: false,
       pendingPhone: '+224 622 55 12 88',
       pendingEmail: '',
       roles: ['buyer'],

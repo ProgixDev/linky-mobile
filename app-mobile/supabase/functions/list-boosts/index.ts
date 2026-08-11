@@ -17,7 +17,7 @@ Deno.serve(makePost<Record<string, unknown>>(
     const { data, error } = await sb
       .from('boosts')
       .select(
-        'id, product_id, seller_id, amount_minor, days, status, starts_at, ends_at, created_at, products(title, photos, status)',
+        'id, product_id, property_id, seller_id, amount_minor, days, status, starts_at, ends_at, created_at, products(title, photos, status), properties(title, status)',
       )
       .eq('seller_id', userId)
       .order('created_at', { ascending: false })

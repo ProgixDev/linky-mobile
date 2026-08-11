@@ -24,6 +24,10 @@ interface Body {
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const UUID_RE = /^[0-9a-f-]{36}$/i;
+// Anchor the cursor timestamp exactly like every other paginated endpoint
+// (list-conversations + 13 others). Without it, before.created_at was spliced
+// raw into a PostgREST .or() filter — a filter-injection / DoS sink.
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -32,7 +36,7 @@ function valid(b: unknown): b is Body {
   if (x.before !== undefined && x.before !== null) {
     if (typeof x.before !== 'object') return false;
     const c = x.before as Record<string, unknown>;
-    if (typeof c.created_at !== 'string') return false;
+    if (typeof c.created_at !== 'string' || !ISO_RE.test(c.created_at)) return false;
     if (typeof c.id !== 'string' || !UUID_RE.test(c.id)) return false;
   }
   if (x.limit !== undefined && (typeof x.limit !== 'number' || x.limit < 1)) return false;

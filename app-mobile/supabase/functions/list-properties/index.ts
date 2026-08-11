@@ -14,6 +14,7 @@ interface Body {
   type?: 'location' | 'vente' | 'terrain';
   city?: string;
   owner_id?: string;
+  shop_id?: string;
   bedrooms_min?: number;
   bedrooms_max?: number;
   price_min?: number;
@@ -50,6 +51,7 @@ function valid(b: unknown): b is Body {
   if (x.type !== undefined && (typeof x.type !== 'string' || !TYPES.has(x.type as string))) return false;
   if (x.city !== undefined && (typeof x.city !== 'string' || x.city.length > 80)) return false;
   if (x.owner_id !== undefined && (typeof x.owner_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.owner_id))) return false;
+  if (x.shop_id !== undefined && (typeof x.shop_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.shop_id))) return false;
   if (x.bedrooms_min !== undefined && (typeof x.bedrooms_min !== 'number' || !Number.isInteger(x.bedrooms_min) || x.bedrooms_min < 0 || x.bedrooms_min > 50)) return false;
   if (x.bedrooms_max !== undefined && (typeof x.bedrooms_max !== 'number' || !Number.isInteger(x.bedrooms_max) || x.bedrooms_max < 0 || x.bedrooms_max > 50)) return false;
   if (x.price_min !== undefined && (typeof x.price_min !== 'number' || !Number.isInteger(x.price_min) || x.price_min < 0)) return false;
@@ -67,7 +69,7 @@ Deno.serve(makePost<Body>('/v1/properties/list', valid, async ({ sb, body }) => 
   const limit = body.limit ?? 50;
   let q = sb
     .from('properties_with_cover')
-    .select('id, owner_id, shop_id, type, title, description, price_minor, per_month, bedrooms, area_sqm, furnished, amenities, city, district, distance_to_road_m, lat, lng, video_url, status, view_count, fav_count, created_at, cover_url');
+    .select('id, owner_id, shop_id, type, title, description, price_minor, per_month, bedrooms, area_sqm, furnished, amenities, city, district, distance_to_road_m, lat, lng, video_url, status, view_count, fav_count, boosted, created_at, cover_url');
 
   // When the caller asks for their own listings, surface every status so they can
   // manage paused/reserved/sold. Public reads (no owner_id) stay active-only.
@@ -76,6 +78,7 @@ Deno.serve(makePost<Body>('/v1/properties/list', valid, async ({ sb, body }) => 
   if (body.type)                       q = q.eq('type', body.type);
   if (body.city)                       q = q.eq('city', body.city);
   if (body.owner_id)                   q = q.eq('owner_id', body.owner_id);
+  if (body.shop_id)                    q = q.eq('shop_id', body.shop_id);
   if (body.bedrooms_min !== undefined) q = q.gte('bedrooms', body.bedrooms_min);
   if (body.bedrooms_max !== undefined) q = q.lte('bedrooms', body.bedrooms_max);
   if (body.price_min !== undefined)    q = q.gte('price_minor', body.price_min);
@@ -91,6 +94,12 @@ Deno.serve(makePost<Body>('/v1/properties/list', valid, async ({ sb, body }) => 
     q = q.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
   }
 
+  // Boosted properties float to the top of the FIRST public page only. On deep
+  // (cursored) pages exclude boosted rows so a boosted listing with an old
+  // created_at doesn't re-appear on every page (mirrors list-products). Owner
+  // views (managing own listings) are unaffected.
+  if (body.cursor && !body.owner_id) q = q.eq('boosted', false);
+
   // Keyset cursor: in descending order, the next page contains rows whose
   // (created_at, id) lexicographically precedes the cursor's. Composed via PostgREST
   // .or() with a nested .and() for the same-millisecond tiebreaker.
@@ -98,6 +107,9 @@ Deno.serve(makePost<Body>('/v1/properties/list', valid, async ({ sb, body }) => 
     const { created_at, id } = body.cursor;
     q = q.or(`created_at.lt.${created_at},and(created_at.eq.${created_at},id.lt.${id})`);
   }
+
+  // Page 1 of a public browse: boosted first, then the created_at keyset.
+  if (!body.owner_id && !body.cursor) q = q.order('boosted', { ascending: false });
 
   const { data, error } = await q
     .order('created_at', { ascending: false })

@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
-import { ScrollView, Share, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, Share, View, useWindowDimensions } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -15,6 +17,7 @@ import { ListingComments } from '../../../src/components/comments/ListingComment
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
+import { useShop } from '../../../src/data/queries/shops';
 import { useFavorites } from '../../../src/stores/favorites';
 import { useAuth } from '../../../src/stores/auth';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
@@ -24,10 +27,16 @@ import { formatDistance } from '../../../src/lib/format';
 import { toToastMessage } from '../../../src/lib/api';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { haptic } from '../../../src/lib/haptics';
+import { shareMessage } from '../../../src/lib/share';
 
 export default function PropertyDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
+  // LIVE carousel width (capped to the 500 content column). A static module
+  // Dimensions.get() didn't follow Android screen zoom → the item was narrower
+  // than the screen and the next photo peeked in (client 2026-07-30).
+  const { width: winW } = useWindowDimensions();
+  const SW = Math.min(winW, 500);
   const { t } = useTranslation();
   const { data: prop, isLoading, isError, refetch } = useProperty(id);
   const trackView = useTrackView();
@@ -35,12 +44,28 @@ export default function PropertyDetailRoute() {
   const { show } = useToast();
   const isFav = useFavorites((s) => (id ? s.propertyIds.has(id) : false));
   const toggleFav = useFavorites((s) => s.toggleProperty);
+  const [photoIdx, setPhotoIdx] = useState(0);
+  // Detail page is IMAGES ONLY (client 2026-07-27) — a listing's video shows
+  // only in the Découvrir feed, never on the detail page.
+  const videoSrc = '';
+  const player = useVideoPlayer(videoSrc, (p) => {
+    p.loop = true;
+    p.muted = true;
+  });
+  useEffect(() => {
+    if (!videoSrc) return;
+    if (photoIdx === 0) player.play();
+    else player.pause();
+  }, [photoIdx, player, videoSrc]);
   // Self-action guard : the property's ownerId is the agent's user_id. When
   // the viewer owns this listing, the counterparty actions (Contacter +
   // Visiter) are replaced with a manage CTA — both backends 403 self-targets
   // (find-or-create-conversation, request-visit) so offering them is misleading.
   const authUserId = useAuth((s) => s.authUserId);
   const isOwnProperty = !!authUserId && !!prop?.ownerId && authUserId === prop.ownerId;
+  // Agency (= the shop the property belongs to) — shown as a card linking to the
+  // agency page, like the boutique card on a product (client 2026-08-03).
+  const { data: agency } = useShop(prop?.shopId);
 
   // Fire-and-forget view bump on mount / when id changes. Failures don't block render.
   useEffect(() => {
@@ -109,7 +134,36 @@ export default function PropertyDetailRoute() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={{ aspectRatio: 1, position: 'relative', backgroundColor: colors.bgSunken }}>
-          <Image source={prop.photos[0]} style={{ flex: 1 }} contentFit="cover" />
+          {/* Swipeable photo carousel (client 2026-07-22) — was a single static
+              image ; multi-photo property listings now page + animate like the
+              product page. */}
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / SW);
+              if (idx !== photoIdx) setPhotoIdx(idx);
+            }}
+            scrollEventThrottle={16}
+          >
+            {videoSrc ? (
+              <VideoView
+                player={player}
+                style={{ width: SW, height: SW, backgroundColor: '#000000' }}
+                contentFit="cover"
+                nativeControls={false}
+              />
+            ) : null}
+            {prop.photos.map((photo, i) => (
+              <Image
+                key={i}
+                source={photo}
+                style={{ width: SW, height: SW, backgroundColor: colors.bgSunken }}
+                contentFit="cover"
+              />
+            ))}
+          </ScrollView>
           {/* Top action row — SafeAreaView adds padding for the status bar notch */}
           <SafeAreaView
             edges={['top']}
@@ -134,7 +188,7 @@ export default function PropertyDetailRoute() {
                     haptic.light();
                     void Share.share({
                       title: prop.title,
-                      message: `${prop.title} — sur Linky`,
+                      message: shareMessage(`${prop.title} — sur Linky`, 'property', prop.id),
                     }).catch(() => {});
                   }}
                   style={{ backgroundColor: 'rgba(255,255,255,0.95)', borderColor: 'transparent' }}
@@ -172,6 +226,33 @@ export default function PropertyDetailRoute() {
             >
               <I.video size={12} color="#FFFFFF" />
               <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>Visite vidéo</Text>
+            </View>
+          )}
+
+          {/* Carousel dots — counts the video slide (if any) + photos. */}
+          {(videoSrc ? 1 : 0) + prop.photos.length > 1 && (
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 14,
+                left: 0,
+                right: 0,
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 5,
+              }}
+            >
+              {Array.from({ length: (videoSrc ? 1 : 0) + prop.photos.length }).map((_, i) => (
+                <View
+                  key={i}
+                  style={{
+                    width: i === photoIdx ? 22 : 6,
+                    height: 6,
+                    borderRadius: 999,
+                    backgroundColor: i === photoIdx ? '#FFFFFF' : 'rgba(255,255,255,0.45)',
+                  }}
+                />
+              ))}
             </View>
           )}
         </View>
@@ -217,6 +298,15 @@ export default function PropertyDetailRoute() {
                   ne traite ni le paiement, ni les documents notariés.
                 </Text>
               </TrustStrip>
+            </View>
+          )}
+
+          {/* Description — moved up (client 2026-07-22) so buyers read what the
+              place is before the details / map, instead of at the very bottom. */}
+          {prop.description.trim().length > 0 && (
+            <View style={{ marginTop: 18 }}>
+              <MicroLabel label={t('property.descriptionHeading')} />
+              <Text variant="bodyM">{prop.description}</Text>
             </View>
           )}
 
@@ -311,12 +401,38 @@ export default function PropertyDetailRoute() {
             </View>
           )}
 
-          {/* Phase Y.4 — hide the section heading when no description, rather
-              than showing the label above an empty paragraph. */}
-          {prop.description.trim().length > 0 && (
+          {/* ===== Agence card — links to the agency page (client 2026-08-03) ===== */}
+          {agency && (
             <View style={{ marginTop: 18 }}>
-              <MicroLabel label={t('property.descriptionHeading')} />
-              <Text variant="bodyM">{prop.description}</Text>
+              <MicroLabel label={t('property.agencyHeading')} />
+              <Pressable
+                onPress={() => router.push(`/shop/${agency.id}`)}
+                style={{
+                  padding: 14,
+                  borderRadius: 16,
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  flexDirection: 'row',
+                  gap: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Image
+                  source={agency.avatar}
+                  style={{ width: 44, height: 44, borderRadius: 999, backgroundColor: colors.bgSunken }}
+                  contentFit="cover"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }} numberOfLines={1}>
+                    {agency.name}
+                  </Text>
+                  <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                    {t('property.agencyView')}
+                  </Text>
+                </View>
+                <ChevronRight size={18} color={colors.textMuted} strokeWidth={2} />
+              </Pressable>
             </View>
           )}
 

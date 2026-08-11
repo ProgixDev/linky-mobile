@@ -1,13 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
+  "redirects": [
     {
       "source": "/linky.apk",
-      "destination": "https://njii6olstwjlpvas.public.blob.vercel-storage.com/linky.apk"
+      "destination": "https://expo.dev/artifacts/eas/tyzvwYv7L2gHNtLLa1iUeJJWwsgeCj2l3JaApO3GM-k.apk",
+      "permanent": false
     },
     {
       "source": "/linky-driver.apk",
-      "destination": "https://njii6olstwjlpvas.public.blob.vercel-storage.com/linky-driver.apk"
+      "destination": "https://njii6olstwjlpvas.public.blob.vercel-storage.com/linky-driver.apk",
+      "permanent": false
     }
   ],
   "headers": [

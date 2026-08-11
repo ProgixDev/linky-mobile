@@ -269,6 +269,7 @@ export default function PreviewRoute() {
                 lat: state.lat,
                 lng: state.lng,
                 photos: state.propertyPhotos,
+                video_url: state.videoUrl ?? null,
               });
               show(t('create.publishedSuccess'), 'success');
               reset();

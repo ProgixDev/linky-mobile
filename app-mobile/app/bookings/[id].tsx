@@ -6,7 +6,6 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useStripe } from '@stripe/stripe-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -29,7 +28,6 @@ export default function BookingDetailRoute() {
   const signPay = useBookingSignPay();
   const cancel = useCancelBooking();
   const checkin = useConfirmCheckin();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [payBusy, setPayBusy] = useState(false);
 
   const booking = (q.data ?? []).find((b) => b.id === id);
@@ -42,23 +40,12 @@ export default function BookingDetailRoute() {
     if (payBusy) return;
     setPayBusy(true);
     try {
-      const { client_secret } = await signPay.mutateAsync(booking.id);
-      const { error: initErr } = await initPaymentSheet({
-        merchantDisplayName: 'Linky',
-        paymentIntentClientSecret: client_secret,
-        returnURL: 'linky://stripe-redirect',
-      });
-      if (initErr) { show('Impossible de préparer le paiement.', 'danger'); return; }
-      const { error: payErr } = await presentPaymentSheet();
-      if (payErr) {
-        // Cancelled or failed — the booking simply stays 'accepted', retry any time.
-        show('Paiement non finalisé — tu peux réessayer.', 'info');
-        return;
-      }
-      show('Contrat signé — paiement confirmé 🎉', 'success');
-      // The webhook flips the status server-side a moment later.
-      setTimeout(() => void q.refetch(), 2500);
-      void q.refetch();
+      // Stamp the signature + get the Lengopay hosted page (Orange/MTN), then
+      // open it in the in-app WebView. On return we land back here; the cron
+      // flips the booking to 'paid' once the rail confirms, so we refetch.
+      const { payment_url } = await signPay.mutateAsync(booking.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`; /checkout/pay exists on disk (same cast as checkout/index + confirm).
+      router.push({ pathname: '/checkout/pay', params: { url: payment_url, bookingId: booking.id } } as any);
     } catch (e) {
       show(toToastMessage(e, 'Le paiement a échoué.'), 'danger');
     } finally {

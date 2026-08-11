@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -206,173 +207,175 @@ export default function RetirerRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('wallet.retirer.topbar')} back />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
-      >
-        {/* Balance anchor */}
-        <View
-          style={{
-            backgroundColor: colors.primarySoft,
-            borderRadius: 16,
-            paddingVertical: 16,
-            paddingHorizontal: 18,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
-            marginBottom: 20,
-          }}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
         >
+          {/* Balance anchor */}
           <View
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              backgroundColor: colors.card,
+              backgroundColor: colors.primarySoft,
+              borderRadius: 16,
+              paddingVertical: 16,
+              paddingHorizontal: 18,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+              marginBottom: 20,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                backgroundColor: colors.card,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <I.wallet size={18} color={colors.primary} />
+            </View>
+            <View>
+              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                {t('wallet.retirer.balanceLabel')}
+              </Text>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
+                {formatGNF(balance)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Amount — editable, not just 3 fixed chips */}
+          <MicroLabel label={t('wallet.retirer.amountLabel')} />
+          <View
+            style={{
+              backgroundColor: colors.bgElev,
+              borderRadius: 16,
+              paddingVertical: 22,
+              paddingHorizontal: 20,
+              borderWidth: 1,
+              borderColor: exceedsBalance ? colors.danger : colors.border,
+              flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <I.wallet size={18} color={colors.primary} />
-          </View>
-          <View>
-            <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-              {t('wallet.retirer.balanceLabel')}
-            </Text>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
-              {formatGNF(balance)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Amount — editable, not just 3 fixed chips */}
-        <MicroLabel label={t('wallet.retirer.amountLabel')} />
-        <View
-          style={{
-            backgroundColor: colors.bgElev,
-            borderRadius: 16,
-            paddingVertical: 22,
-            paddingHorizontal: 20,
-            borderWidth: 1,
-            borderColor: exceedsBalance ? colors.danger : colors.border,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <TextInput
-            value={amount > 0 ? new Intl.NumberFormat('fr-FR').format(amount) : ''}
-            onChangeText={(txt) => {
-              const n = Number(txt.replace(/\D/g, ''));
-              setAmount(Number.isFinite(n) ? n : 0);
-            }}
-            keyboardType="number-pad"
-            placeholder="0"
-            placeholderTextColor={colors.textFaint}
-            maxLength={11}
-            accessibilityLabel={t('wallet.retirer.accessAmount')}
-            style={{
-              fontSize: 36,
-              fontWeight: '700',
-              color: exceedsBalance ? colors.danger : colors.text,
-              textAlign: 'center',
-              minWidth: 60,
-              paddingVertical: 0,
-              fontVariant: ['tabular-nums'],
-            }}
-          />
-          <Text style={{ marginLeft: 8, marginTop: 8, color: colors.textMuted, fontSize: 14, fontWeight: '600' }}>
-            GNF
-          </Text>
-        </View>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-          {quick.map((v) => (
-            <Chip
-              key={v}
-              label={new Intl.NumberFormat('fr-FR').format(v)}
-              active={v === amount}
-              onPress={() => setAmount(v)}
+            <TextInput
+              value={amount > 0 ? new Intl.NumberFormat('fr-FR').format(amount) : ''}
+              onChangeText={(txt) => {
+                const n = Number(txt.replace(/\D/g, ''));
+                setAmount(Number.isFinite(n) ? n : 0);
+              }}
+              keyboardType="number-pad"
+              placeholder="0"
+              placeholderTextColor={colors.textFaint}
+              maxLength={11}
+              accessibilityLabel={t('wallet.retirer.accessAmount')}
+              style={{
+                fontSize: 36,
+                fontWeight: '700',
+                color: exceedsBalance ? colors.danger : colors.text,
+                textAlign: 'center',
+                minWidth: 60,
+                paddingVertical: 0,
+                fontVariant: ['tabular-nums'],
+              }}
             />
-          ))}
-          <Chip label={t('wallet.retirer.allChip')} variant="soft" active={amount === balance} onPress={() => setAmount(balance)} />
-        </View>
+            <Text style={{ marginLeft: 8, marginTop: 8, color: colors.textMuted, fontSize: 14, fontWeight: '600' }}>
+              GNF
+            </Text>
+          </View>
 
-        <Text
-          variant="caption"
-          tone="muted"
-          style={{ marginTop: 12, letterSpacing: 0, color: exceedsBalance ? colors.danger : undefined }}
-        >
-          {exceedsBalance
-            ? t('wallet.retirer.insufficient', { balance: formatGNF(balance) })
-            : t('wallet.retirer.remainingAfter', { remaining: formatGNF(balance - amount) })}
-        </Text>
-
-        {/* Destination — operator + the number money is actually sent to */}
-        <View style={{ marginTop: 22 }}>
-          <MicroLabel label={t('wallet.retirer.destLabel')} />
-          <View style={{ borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
-            {OPERATORS.map((op, i) => (
-              <OperatorRow
-                key={op.id}
-                op={op}
-                active={operator === op.id}
-                onPress={() => setOperator(op.id)}
-                divider={i < OPERATORS.length - 1}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+            {quick.map((v) => (
+              <Chip
+                key={v}
+                label={new Intl.NumberFormat('fr-FR').format(v)}
+                active={v === amount}
+                onPress={() => setAmount(v)}
               />
             ))}
+            <Chip label={t('wallet.retirer.allChip')} variant="soft" active={amount === balance} onPress={() => setAmount(balance)} />
           </View>
 
-          <View style={{ marginTop: 12 }}>
-            <Input
-              label={t('wallet.retirer.phoneInputLabel', { operator: operator === 'Orange Money' ? 'Orange Money' : 'MTN' })}
-              leadingIcon="phone"
-              keyboardType="phone-pad"
-              placeholder={t('wallet.retirer.phonePlaceholder')}
-              value={formatGnPhone(phone)}
-              onChangeText={(txt) => setPhone(normalizeGnPhone(txt))}
-              errorText={
-                phone.length > 0 && !phoneValid ? t('wallet.retirer.phoneInvalid') : undefined
-              }
-              helperText={phone.length === 0 ? t('wallet.retirer.phoneHint') : undefined}
-            />
+          <Text
+            variant="caption"
+            tone="muted"
+            style={{ marginTop: 12, letterSpacing: 0, color: exceedsBalance ? colors.danger : undefined }}
+          >
+            {exceedsBalance
+              ? t('wallet.retirer.insufficient', { balance: formatGNF(balance) })
+              : t('wallet.retirer.remainingAfter', { remaining: formatGNF(balance - amount) })}
+          </Text>
+
+          {/* Destination — operator + the number money is actually sent to */}
+          <View style={{ marginTop: 22 }}>
+            <MicroLabel label={t('wallet.retirer.destLabel')} />
+            <View style={{ borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+              {OPERATORS.map((op, i) => (
+                <OperatorRow
+                  key={op.id}
+                  op={op}
+                  active={operator === op.id}
+                  onPress={() => setOperator(op.id)}
+                  divider={i < OPERATORS.length - 1}
+                />
+              ))}
+            </View>
+
+            <View style={{ marginTop: 12 }}>
+              <Input
+                label={t('wallet.retirer.phoneInputLabel', { operator: operator === 'Orange Money' ? 'Orange Money' : 'MTN' })}
+                leadingIcon="phone"
+                keyboardType="phone-pad"
+                placeholder={t('wallet.retirer.phonePlaceholder')}
+                value={formatGnPhone(phone)}
+                onChangeText={(txt) => setPhone(normalizeGnPhone(txt))}
+                errorText={
+                  phone.length > 0 && !phoneValid ? t('wallet.retirer.phoneInvalid') : undefined
+                }
+                helperText={phone.length === 0 ? t('wallet.retirer.phoneHint') : undefined}
+              />
+            </View>
           </View>
-        </View>
 
-        {/* Expectation-setting — V1 payout is manual, ~24h. Honest framing. */}
-        <View
-          style={{
-            marginTop: 18,
-            flexDirection: 'row',
-            gap: 10,
-            padding: 12,
-            borderRadius: radii.md,
-            backgroundColor: colors.bgSunken,
-          }}
-        >
-          <I.shield size={16} color={colors.textMuted} />
-          <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 18 }}>
-            {t('wallet.retirer.infoNote')}
-          </Text>
-        </View>
-      </ScrollView>
+          {/* Expectation-setting — V1 payout is manual, ~24h. Honest framing. */}
+          <View
+            style={{
+              marginTop: 18,
+              flexDirection: 'row',
+              gap: 10,
+              padding: 12,
+              borderRadius: radii.md,
+              backgroundColor: colors.bgSunken,
+            }}
+          >
+            <I.shield size={16} color={colors.textMuted} />
+            <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 18 }}>
+              {t('wallet.retirer.infoNote')}
+            </Text>
+          </View>
+        </ScrollView>
 
-      <StickyBottom>
-        {canSubmit && (
-          <Text variant="caption" tone="muted" style={{ textAlign: 'center', marginBottom: 8, letterSpacing: 0 }}>
-            {t('wallet.retirer.summary', { operator, phone: formatGnPhone(phone) })}
-          </Text>
-        )}
-        <Button
-          size="lg"
-          block
-          loading={withdraw.isPending}
-          disabled={!canSubmit}
-          label={amount > 0 ? t('wallet.retirer.ctaWithAmount', { amount: formatGNF(amount) }) : t('wallet.retirer.cta')}
-          onPress={submit}
-        />
-      </StickyBottom>
+        <StickyBottom>
+          {canSubmit && (
+            <Text variant="caption" tone="muted" style={{ textAlign: 'center', marginBottom: 8, letterSpacing: 0 }}>
+              {t('wallet.retirer.summary', { operator, phone: formatGnPhone(phone) })}
+            </Text>
+          )}
+          <Button
+            size="lg"
+            block
+            loading={withdraw.isPending}
+            disabled={!canSubmit}
+            label={amount > 0 ? t('wallet.retirer.ctaWithAmount', { amount: formatGNF(amount) }) : t('wallet.retirer.cta')}
+            onPress={submit}
+          />
+        </StickyBottom>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

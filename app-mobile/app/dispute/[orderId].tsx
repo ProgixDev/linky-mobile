@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -46,100 +47,102 @@ export default function DisputeRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('dispute.topbar')} back subtitle={t('dispute.orderRef', { ref: orderId })} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
-        <ProgressDots total={4} current={0} />
-        <Text variant="dispL" style={{ fontSize: 20, marginTop: 14, marginBottom: 14 }}>
-          {t('dispute.title')}
-        </Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
+          <ProgressDots total={4} current={0} />
+          <Text variant="dispL" style={{ fontSize: 20, marginTop: 14, marginBottom: 14 }}>
+            {t('dispute.title')}
+          </Text>
 
-        {ISSUES.map((o) => {
-          const sel = issue === o.id;
-          const Icon = I[o.icon];
-          return (
-            <Pressable
-              key={o.id}
-              onPress={() => setIssue(o.id)}
-              style={{
-                padding: 14,
-                borderRadius: radii.lg,
-                borderWidth: sel ? 2 : 1,
-                borderColor: sel ? colors.danger : colors.border,
-                backgroundColor: colors.card,
-                marginBottom: 8,
-                flexDirection: 'row',
-                gap: 12,
-                alignItems: 'center',
-              }}
-            >
-              <View
+          {ISSUES.map((o) => {
+            const sel = issue === o.id;
+            const Icon = I[o.icon];
+            return (
+              <Pressable
+                key={o.id}
+                onPress={() => setIssue(o.id)}
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  backgroundColor: sel ? 'rgba(209,79,60,0.1)' : colors.bgSunken,
+                  padding: 14,
+                  borderRadius: radii.lg,
+                  borderWidth: sel ? 2 : 1,
+                  borderColor: sel ? colors.danger : colors.border,
+                  backgroundColor: colors.card,
+                  marginBottom: 8,
+                  flexDirection: 'row',
+                  gap: 12,
                   alignItems: 'center',
-                  justifyContent: 'center',
                 }}
               >
-                <Icon size={17} color={sel ? colors.danger : colors.text} />
-              </View>
-              <Text style={{ flex: 1, fontSize: 13, fontWeight: '500' }}>{o.label}</Text>
-              <View
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 999,
-                  backgroundColor: sel ? colors.danger : 'transparent',
-                  borderWidth: sel ? 0 : 1.5,
-                  borderColor: colors.borderStrong,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {sel && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
-              </View>
-            </Pressable>
-          );
-        })}
-
-        <View style={{ marginTop: 16 }}>
-          <Input
-            label={t('dispute.descLabel')}
-            multiline
-            maxLength={500}
-            value={description}
-            onChangeText={setDescription}
-            placeholder={t('dispute.descPlaceholder')}
-          />
-        </View>
-
-        {/* Phase Finish #6 — the "Photos (optionnel)" label + add-photo box
-            never had an onPress / picker / upload : it was a dead control
-            promising an attachment that couldn't be sent. Removed for V1.
-            When the dispute photo flow lands (V1.1), it ships behind the
-            same photo-upload-url path the create wizards use. */}
-      </ScrollView>
-      <StickyBottom>
-        <Button
-          variant="destructive"
-          size="lg"
-          block
-          disabled={!canSubmit}
-          label={t('dispute.submit')}
-          onPress={() => {
-            if (!issue || !order) return;
-            dispute.mutate(
-              { orderId: order.id, reason: issue, note: description.trim() || undefined },
-              {
-                onSuccess: () => {
-                  show(t('dispute.signaled'), 'success');
-                  router.replace('/orders');
-                },
-              },
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    backgroundColor: sel ? 'rgba(209,79,60,0.1)' : colors.bgSunken,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Icon size={17} color={sel ? colors.danger : colors.text} />
+                </View>
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: '500' }}>{o.label}</Text>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 999,
+                    backgroundColor: sel ? colors.danger : 'transparent',
+                    borderWidth: sel ? 0 : 1.5,
+                    borderColor: colors.borderStrong,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {sel && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
+                </View>
+              </Pressable>
             );
-          }}
-        />
-      </StickyBottom>
+          })}
+
+          <View style={{ marginTop: 16 }}>
+            <Input
+              label={t('dispute.descLabel')}
+              multiline
+              maxLength={500}
+              value={description}
+              onChangeText={setDescription}
+              placeholder={t('dispute.descPlaceholder')}
+            />
+          </View>
+
+          {/* Phase Finish #6 — the "Photos (optionnel)" label + add-photo box
+              never had an onPress / picker / upload : it was a dead control
+              promising an attachment that couldn't be sent. Removed for V1.
+              When the dispute photo flow lands (V1.1), it ships behind the
+              same photo-upload-url path the create wizards use. */}
+        </ScrollView>
+        <StickyBottom>
+          <Button
+            variant="destructive"
+            size="lg"
+            block
+            disabled={!canSubmit}
+            label={t('dispute.submit')}
+            onPress={() => {
+              if (!issue || !order) return;
+              dispute.mutate(
+                { orderId: order.id, reason: issue, note: description.trim() || undefined },
+                {
+                  onSuccess: () => {
+                    show(t('dispute.signaled'), 'success');
+                    router.replace('/orders');
+                  },
+                },
+              );
+            }}
+          />
+        </StickyBottom>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

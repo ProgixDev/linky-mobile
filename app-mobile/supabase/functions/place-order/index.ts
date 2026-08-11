@@ -21,24 +21,50 @@ import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from
 import { initPayment } from '@shared/lengopay.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
+import { DELIVERY_FEE_MINOR } from '@shared/delivery.ts';
+
+interface OrderItemInput { product_id: string; quantity: number }
 
 interface Body {
-  product_id: string;
-  quantity: number;
+  /** Multi-article order, ALL from the same shop (client 2026-08-05). When
+   *  present it wins over product_id/quantity, which stay accepted so older
+   *  installs keep working after an OTA-less update. */
+  items?: OrderItemInput[];
+  product_id?: string;
+  quantity?: number;
   payment_method: 'orange-money' | 'mtn-money' | 'card' | 'wallet';
+  /** Mode de réception (client 2026-07-30). 'delivery' = Linky livre (frais
+   *  forfaitaire) ; 'pickup' = retrait boutique (gratuit). Absent → 'delivery'
+   *  (rétro-compat : toutes les commandes historiques étaient en livraison). */
+  delivery_mode?: 'pickup' | 'delivery';
   /** Optional Q6 override. If absent, edge fn looks up primary phone from public.phones. */
   payer_phone?: string;
 }
 
 const METHODS = new Set(['orange-money', 'mtn-money', 'card', 'wallet']);
+const DELIVERY_MODES = new Set(['pickup', 'delivery']);
 const PHONE_RE = /^\+224\d{9}$/;
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
   const x = b as Record<string, unknown>;
-  if (typeof x.product_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.product_id)) return false;
-  if (typeof x.quantity !== 'number' || !Number.isInteger(x.quantity) || x.quantity < 1 || x.quantity > 100) return false;
+  const okItem = (v: unknown): boolean => {
+    if (typeof v !== 'object' || v === null) return false;
+    const i = v as Record<string, unknown>;
+    if (typeof i.product_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(i.product_id)) return false;
+    return typeof i.quantity === 'number' && Number.isInteger(i.quantity) && i.quantity >= 1 && i.quantity <= 100;
+  };
+  if (Array.isArray(x.items)) {
+    if (x.items.length < 1 || x.items.length > 20) return false;
+    if (!x.items.every(okItem)) return false;
+  } else {
+    if (typeof x.product_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.product_id)) return false;
+    if (typeof x.quantity !== 'number' || !Number.isInteger(x.quantity) || x.quantity < 1 || x.quantity > 100) return false;
+  }
   if (typeof x.payment_method !== 'string' || !METHODS.has(x.payment_method)) return false;
+  if (x.delivery_mode !== undefined) {
+    if (typeof x.delivery_mode !== 'string' || !DELIVERY_MODES.has(x.delivery_mode)) return false;
+  }
   if (x.payer_phone !== undefined) {
     if (typeof x.payer_phone !== 'string' || !PHONE_RE.test(x.payer_phone)) return false;
   }
@@ -66,11 +92,24 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     throwApi('STRIPE_NOT_CONFIGURED', 503, 'Le paiement par carte arrive bientôt.');
   }
 
-  const { data: newId, error: rpcErr } = await sb.rpc('place_order', {
+  // Mode de réception : 'delivery' par défaut (rétro-compat). Le frais de
+  // livraison forfaitaire est décidé côté serveur (le body ne porte JAMAIS le
+  // montant) ; retrait sur place = 0.
+  const deliveryMode = body.delivery_mode ?? 'delivery';
+  const deliveryFeeMinor = deliveryMode === 'delivery' ? DELIVERY_FEE_MINOR : 0;
+
+  // One RPC per shape. place_order_multi enforces the same-seller rule itself,
+  // so a tampered payload mixing shops is rejected in the database, not only
+  // in the app. Pricing is always computed server-side from products.
+  const items: OrderItemInput[] = body.items ?? [
+    { product_id: body.product_id as string, quantity: body.quantity as number },
+  ];
+  const { data: newId, error: rpcErr } = await sb.rpc('place_order_multi', {
     p_buyer_id: userId,
-    p_product_id: body.product_id,
-    p_quantity: body.quantity,
+    p_items: items,
     p_payment_method: body.payment_method,
+    p_delivery_mode: deliveryMode,
+    p_delivery_fee_minor: deliveryFeeMinor,
   });
   if (rpcErr || !newId) {
     const msg = (rpcErr as { message?: string } | null)?.message ?? '';
@@ -79,18 +118,38 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     if (msg.includes('PRODUCT_NOT_AVAILABLE'))        throwApi('PRODUCT_NOT_AVAILABLE', 400, 'Produit indisponible.');
     if (msg.includes('BUYER_IS_SELLER'))              throwApi('BUYER_IS_SELLER', 400, "Tu ne peux pas acheter ton propre produit.");
     if (msg.includes('INVALID_QUANTITY'))             throwApi('INVALID_BODY', 400, 'Quantité invalide.');
+    if (msg.includes('MULTIPLE_SELLERS'))             throwApi('MULTIPLE_SELLERS', 400, "Une commande ne peut contenir que des articles d'une même boutique.");
+    if (msg.includes('DUPLICATE_ITEM'))               throwApi('INVALID_BODY', 400, 'Article en double dans la commande.');
+    if (msg.includes('TOO_MANY_ITEMS'))               throwApi('INVALID_BODY', 400, "Trop d'articles dans la commande.");
+    if (msg.includes('INVALID_ITEMS'))                throwApi('INVALID_BODY', 400, 'Articles invalides.');
+    if (msg.includes('INVALID_DELIVERY_MODE'))        throwApi('INVALID_BODY', 400, 'Mode de réception invalide.');
+    if (msg.includes('INVALID_DELIVERY_FEE'))         throwApi('INVALID_BODY', 400, 'Frais de livraison invalide.');
     if (msg.includes('PAYMENT_METHOD_NOT_SUPPORTED')) throwApi('PAYMENT_METHOD_NOT_SUPPORTED', 400, 'Carte non supportée pour le moment.');
     if (msg.includes('INSUFFICIENT_FUNDS'))           throwApi('INSUFFICIENT_FUNDS', 400, 'Solde insuffisant pour passer cette commande.');
     throwApi('INTERNAL_ERROR', 500, 'Erreur création commande');
   }
 
-  const { data: row, error: readErr } = await sb
-    .from('orders')
-    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at')
-    .eq('id', newId)
-    .single();
-  if (readErr || !row) {
-    console.error('[place-order] readback error:', readErr);
+  // MONEY-1: place_order has already COMMITTED atomically (for the wallet
+  // method it debited buyer→escrow). This readback is only to build the
+  // response. A transient failure here must NOT convert into a 500 that makes
+  // wrap.ts delete the idempotency reservation — a same-key client retry would
+  // then re-run the non-idempotent place_order and DOUBLE-DEBIT the buyer. So we
+  // retry the read a few times before ever giving up; in practice the row is
+  // always readable and no retry with the same key re-executes the money RPC.
+  let row: OrderRow | null = null;
+  let readErr: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await sb
+      .from('orders')
+      .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, delivery_mode, delivery_fee_minor, payment_method, currency, status, events, release_at, created_at')
+      .eq('id', newId)
+      .single();
+    if (!res.error && res.data) { row = res.data as OrderRow; readErr = null; break; }
+    readErr = res.error;
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 200));
+  }
+  if (!row) {
+    console.error('[place-order] readback error after retries:', readErr);
     throwApi('INTERNAL_ERROR', 500, 'Erreur lecture commande');
   }
 

@@ -22,6 +22,10 @@ export const STORAGE_KEYS = {
   pushToken: 'push.expoToken',
   favoriteProducts: 'favs.products',
   favoriteProperties: 'favs.properties',
+  cart: 'cart.state',
+  // « Pas intéressé / Masquer » on the Découvrir feed — composite keys
+  // `${kind}:${id}` the feed filters out (client 2026-07-30). Local-only for V1.
+  hiddenListings: 'discover.hidden',
 } as const;
 
 export const SECURE_KEYS = {

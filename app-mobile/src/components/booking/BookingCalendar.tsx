@@ -118,46 +118,62 @@ export function BookingCalendar({
         ))}
       </View>
 
-      {/* Day grid */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-        {cells.map((day, i) => {
-          if (!day) return <View key={`b-${i}`} style={{ width: `${100 / 7}%`, height: 40 }} />;
-          const disabled = day < today || day > maxDate;
-          const isStart = day === startDate;
-          const isEnd = day === endDate;
-          const inRange = !!startDate && !!endDate && day > startDate && day < endDate;
-          const selected = isStart || isEnd;
-          return (
-            <Pressable
-              key={day}
-              disabled={disabled}
-              onPress={() => onDayPress(day)}
-              style={{ width: `${100 / 7}%`, height: 40, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <View
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 999,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: selected ? colors.primary : inRange ? colors.primarySoft : 'transparent',
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: selected ? '700' : '500',
-                    color: disabled ? colors.textFaint : selected ? '#FFFFFF' : inRange ? colors.primaryDeep : colors.text,
-                  }}
+      {/* Day grid — explicit rows of 7 flex:1 cells (matches the weekday
+          header). The old width:${100/7}% + flexWrap dropped to 6 columns on
+          some devices from sub-pixel rounding → the SUNDAY column vanished and
+          every date shifted a slot (e.g. 15 Aug showed under Tuesday instead of
+          Saturday). Row-of-7 flex:1 can never wrap wrong (client 2026-07-30). */}
+      {Array.from({ length: Math.ceil(cells.length / 7) }, (_, week) => {
+        const row = cells.slice(week * 7, week * 7 + 7);
+        return (
+          <View key={`w-${week}`} style={{ flexDirection: 'row' }}>
+            {row.map((day, ci) => {
+              const i = week * 7 + ci;
+              if (!day) return <View key={`b-${i}`} style={{ flex: 1, height: 40 }} />;
+              const disabled = day < today || day > maxDate;
+              const isStart = day === startDate;
+              const isEnd = day === endDate;
+              const inRange = !!startDate && !!endDate && day > startDate && day < endDate;
+              const selected = isStart || isEnd;
+              return (
+                <Pressable
+                  key={day}
+                  disabled={disabled}
+                  onPress={() => onDayPress(day)}
+                  style={{ flex: 1, height: 40, alignItems: 'center', justifyContent: 'center' }}
                 >
-                  {Number(day.slice(8, 10))}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+                  <View
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 999,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: selected ? colors.primary : inRange ? colors.primarySoft : 'transparent',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: selected ? '700' : '500',
+                        color: disabled ? colors.textFaint : selected ? '#FFFFFF' : inRange ? colors.primaryDeep : colors.text,
+                      }}
+                    >
+                      {Number(day.slice(8, 10))}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+            {/* Pad the final partial row to 7 cells so flex:1 keeps the columns
+                aligned with the header. */}
+            {row.length < 7 &&
+              Array.from({ length: 7 - row.length }, (_, k) => (
+                <View key={`pad-${week}-${k}`} style={{ flex: 1, height: 40 }} />
+              ))}
+          </View>
+        );
+      })}
     </View>
   );
 }

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Appearance, View } from 'react-native';
-import { colorScheme } from 'nativewind';
+import { View } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import {
   type Colors,
   type ThemeName,
@@ -12,6 +12,7 @@ import {
   easing,
 } from './tokens';
 import { storage, STORAGE_KEYS } from '../lib/storage';
+import { APP_MAX_WIDTH } from '../lib/layout';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -32,22 +33,25 @@ const ThemeContext = createContext<Ctx | null>(null);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const stored = storage.getString(STORAGE_KEYS.themePreference) as ThemePreference | undefined;
   const [preference, setPreferenceState] = useState<ThemePreference>(stored ?? 'system');
-  const [systemTheme, setSystemTheme] = useState<ThemeName>(
-    () => (Appearance.getColorScheme() ?? 'light') as ThemeName,
-  );
+  // NativeWind owns the color scheme. We hand it the PREFERENCE
+  // ('system' | 'light' | 'dark') and read back the RESOLVED value. In
+  // 'system' mode NativeWind follows the OS and reacts to OS light/dark
+  // switches, so `colorScheme` is always the real, current scheme.
+  //
+  // Root cause of the "Système stuck on light" bug (client 2026-07-27): the
+  // old code pushed the *resolved* theme into colorScheme.set(theme). In
+  // NativeWind v4 a fixed value forces Appearance and MASKS the phone's real
+  // setting — once light had been shown, the OS reading never came back, so
+  // "Système" stayed light regardless of the device. Driving NativeWind with
+  // the preference (never the resolved value) and reading its resolved
+  // colorScheme fixes it for good.
+  const { colorScheme, setColorScheme } = useColorScheme();
 
   useEffect(() => {
-    const sub = Appearance.addChangeListener(({ colorScheme: cs }) => {
-      setSystemTheme((cs ?? 'light') as ThemeName);
-    });
-    return () => sub.remove();
-  }, []);
+    setColorScheme(preference);
+  }, [preference, setColorScheme]);
 
-  const theme: ThemeName = preference === 'system' ? systemTheme : preference;
-
-  useEffect(() => {
-    colorScheme.set(theme);
-  }, [theme]);
+  const theme: ThemeName = colorScheme === 'dark' ? 'dark' : 'light';
 
   const setPreference = (p: ThemePreference) => {
     setPreferenceState(p);
@@ -71,8 +75,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <View style={{ flex: 1, backgroundColor: value.colors.bg }} className={theme}>
-        {children}
+      <View style={{ flex: 1, backgroundColor: value.colors.bg, alignItems: 'center' }} className={theme}>
+        {/* Responsive: keep the app in a centered phone-width column on big
+            screens (tablets / unfolded foldables). No-op on phones whose width
+            is <= APP_MAX_WIDTH. Client 2026-07-26. */}
+        <View style={{ flex: 1, width: '100%', maxWidth: APP_MAX_WIDTH }}>
+          {children}
+        </View>
       </View>
     </ThemeContext.Provider>
   );

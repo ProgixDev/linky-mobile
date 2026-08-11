@@ -47,11 +47,11 @@ Deno.serve(makePost<Body>('/v1/admin/listings/list', valid, async ({ sb, body, r
 
   let pq = sb.from('products').select(
     'id, title, category, price_minor, city, status, view_count, created_at, ' +
-    'shops!inner(name, owner:users(id, display_name, kyc_status))',
+    'shops!inner(name, owner:users!shops_owner_id_fkey(id, display_name, kyc_status))',
   );
   let rq = sb.from('properties').select(
     'id, title, type, price_minor, city, status, view_count, created_at, ' +
-    'owner:users(id, display_name, kyc_status)',
+    'owner:users!properties_owner_id_fkey(id, display_name, kyc_status)',
   );
   if (body.status) {
     pq = pq.eq('status', body.status);

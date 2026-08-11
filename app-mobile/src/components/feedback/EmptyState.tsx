@@ -57,7 +57,13 @@ export function EmptyState({
         </Text>
       )}
       {ctaLabel && onCta && (
-        <View style={{ marginTop: 24 }}>
+        <View style={{ marginTop: 28, alignSelf: 'stretch', flexDirection: 'row', justifyContent: 'center' }}>
+          {/* Content-width CTA, horizontally centered under the (centered) text
+              (client 2026-07-29: "make it smaller + centered"). A row +
+              justifyContent:center reliably centers an auto-width button —
+              Button's own non-block alignSelf is flex-start, which is what made
+              the earlier auto-width version look left-shifted; wrapping it in a
+              centering row fixes that without the wide 280px block. */}
           <Button label={ctaLabel} onPress={onCta} />
         </View>
       )}

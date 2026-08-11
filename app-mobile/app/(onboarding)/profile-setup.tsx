@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, TextInput, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, TextInput, useWindowDimensions, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -115,93 +116,98 @@ export default function ProfileSetupRoute() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}>
-        {/* 3-segment progress */}
-        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 22 }}>
-          {[0, 1, 2].map((i) => (
-            <View
-              key={i}
-              style={{
-                flex: 1,
-                height: 4,
-                borderRadius: 999,
-                backgroundColor: i <= step ? colors.primary : colors.bgSunken,
-              }}
-            />
-          ))}
-        </View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}>
+          {/* 3-segment progress */}
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 22 }}>
+            {[0, 1, 2].map((i) => (
+              <View
+                key={i}
+                style={{
+                  flex: 1,
+                  height: 4,
+                  borderRadius: 999,
+                  backgroundColor: i <= step ? colors.primary : colors.bgSunken,
+                }}
+              />
+            ))}
+          </View>
 
-        {/* Pill header */}
-        <View
-          style={{
-            alignSelf: 'flex-start',
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 999,
-            backgroundColor: colors.primarySoft,
-            marginBottom: 10,
-          }}
-        >
-          <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primaryDeep, letterSpacing: 0.4 }}>
-            {t('onboarding.profile.stepBadge', { current: step + 1, total: 3, label: LABELS[step] })}
+          {/* Pill header */}
+          <View
+            style={{
+              alignSelf: 'flex-start',
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 999,
+              backgroundColor: colors.primarySoft,
+              marginBottom: 10,
+            }}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primaryDeep, letterSpacing: 0.4 }}>
+              {t('onboarding.profile.stepBadge', { current: step + 1, total: 3, label: LABELS[step] })}
+            </Text>
+          </View>
+
+          <Text variant="dispL" style={{ fontSize: 28, lineHeight: 34 }}>
+            {TITLES[step]}
           </Text>
+
+          <View style={{ flex: 1, marginTop: 22 }}>
+            {step === 0 && <IdentityStep name={name} setName={setName} />}
+
+            {step === 1 && <CityMapPicker value={city} onChange={setCity} />}
+
+            {step === 2 && (
+              <View style={{ gap: 10 }}>
+                <Text
+                  variant="bodyM"
+                  tone="muted"
+                  style={{ fontSize: 14, lineHeight: 20, letterSpacing: 0, marginBottom: 4 }}
+                >
+                  {t('onboarding.profile.rolesHelp')}
+                </Text>
+                {ROLES.map((r) => (
+                  <RoleCard
+                    key={r.id}
+                    role={r}
+                    selected={roles.has(r.id)}
+                    onToggle={() => toggleRole(r.id)}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* flexShrink:0 — the action row must never be squeezed by a tall
+              step (the map step pushed it off-screen entirely, client
+              2026-08-06). Belt-and-braces with the map's own maxHeight. */}
+          <View style={{ flexDirection: 'row', gap: 8, paddingTop: 12, flexShrink: 0 }}>
+            <Button
+              variant="outline"
+              size="lg"
+              label={t('common.back')}
+              style={{ flex: 1 }}
+              onPress={() => (step === 0 ? router.back() : setStep((s) => s - 1))}
+              disabled={updateProfile.isPending}
+            />
+            <Button
+              variant="dark"
+              size="lg"
+              label={step === 2 ? t('onboarding.profile.finish') : t('common.continue')}
+              style={{ flex: 2 }}
+              onPress={next}
+              loading={step === 2 && updateProfile.isPending}
+              disabled={
+                (step === 0 && !name.trim()) ||
+                (step === 1 && !city) ||
+                (step === 2 && roles.size === 0) ||
+                updateProfile.isPending
+              }
+            />
+          </View>
         </View>
-
-        <Text variant="dispL" style={{ fontSize: 28, lineHeight: 34 }}>
-          {TITLES[step]}
-        </Text>
-
-        <View style={{ flex: 1, marginTop: 22 }}>
-          {step === 0 && <IdentityStep name={name} setName={setName} />}
-
-          {step === 1 && <CityMapPicker value={city} onChange={setCity} />}
-
-          {step === 2 && (
-            <View style={{ gap: 10 }}>
-              <Text
-                variant="bodyM"
-                tone="muted"
-                style={{ fontSize: 14, lineHeight: 20, letterSpacing: 0, marginBottom: 4 }}
-              >
-                {t('onboarding.profile.rolesHelp')}
-              </Text>
-              {ROLES.map((r) => (
-                <RoleCard
-                  key={r.id}
-                  role={r}
-                  selected={roles.has(r.id)}
-                  onToggle={() => toggleRole(r.id)}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: 8, paddingTop: 12 }}>
-          <Button
-            variant="outline"
-            size="lg"
-            label={t('common.back')}
-            style={{ flex: 1 }}
-            onPress={() => (step === 0 ? router.back() : setStep((s) => s - 1))}
-            disabled={updateProfile.isPending}
-          />
-          <Button
-            variant="dark"
-            size="lg"
-            label={step === 2 ? t('onboarding.profile.finish') : t('common.continue')}
-            style={{ flex: 2 }}
-            onPress={next}
-            loading={step === 2 && updateProfile.isPending}
-            disabled={
-              (step === 0 && !name.trim()) ||
-              (step === 1 && !city) ||
-              (step === 2 && roles.size === 0) ||
-              updateProfile.isPending
-            }
-          />
-        </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -324,7 +330,7 @@ function RoleCard({
   onToggle: () => void;
 }) {
   const { colors, radii } = useTheme();
-  const { width: screenW } = useWindowDimensions();
+  const screenW = Math.min(useWindowDimensions().width, 500);
   const Icon = I[role.icon];
 
   // Responsive sizing — scales with screen width but stays within sensible bounds.

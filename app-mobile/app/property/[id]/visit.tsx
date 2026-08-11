@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
@@ -64,303 +65,305 @@ export default function VisitRequestRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        <ScreenHeader
-          title={t('property.visitTitle')}
-          subtitle={t('property.visitSubtitle')}
-        />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 120 }}
+        >
+          <ScreenHeader
+            title={t('property.visitTitle')}
+            subtitle={t('property.visitSubtitle')}
+          />
 
-        {/* Property preview */}
-        <View style={{ paddingHorizontal: 24 }}>
-          <View
-            style={{
-              padding: 12,
-              borderRadius: 18,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-              flexDirection: 'row',
-              gap: 12,
-              alignItems: 'center',
-            }}
-          >
-            <Image
-              source={property.photos[0]}
-              style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: colors.bgSunken }}
-              contentFit="cover"
-            />
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: colors.text,
-                  letterSpacing: 0,
-                  lineHeight: 18,
-                  includeFontPadding: false,
-                }}
-                numberOfLines={2}
-              >
-                {property.title}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                <MapPin size={11} color={colors.textMuted} strokeWidth={2} />
-                <Text style={{ fontSize: 11.5, color: colors.textMuted }}>
-                  {property.district}, {property.city}
+          {/* Property preview */}
+          <View style={{ paddingHorizontal: 24 }}>
+            <View
+              style={{
+                padding: 12,
+                borderRadius: 18,
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+                flexDirection: 'row',
+                gap: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Image
+                source={property.photos[0]}
+                style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: colors.bgSunken }}
+                contentFit="cover"
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: colors.text,
+                    letterSpacing: 0,
+                    lineHeight: 18,
+                    includeFontPadding: false,
+                  }}
+                  numberOfLines={2}
+                >
+                  {property.title}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <MapPin size={11} color={colors.textMuted} strokeWidth={2} />
+                  <Text style={{ fontSize: 11.5, color: colors.textMuted }}>
+                    {property.district}, {property.city}
+                  </Text>
+                </View>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '700',
+                    color: colors.text,
+                    marginTop: 4,
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {formatGNF(property.priceGnf)}
+                  {property.type === 'location' && (
+                    <Text style={{ fontWeight: '500', color: colors.textMuted }}>
+                      {property.perMonth ? t('property.visitPerMonth') : ' /jour'}
+                    </Text>
+                  )}
                 </Text>
               </View>
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: '700',
-                  color: colors.text,
-                  marginTop: 4,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                {formatGNF(property.priceGnf)}
-                {property.type === 'location' && (
-                  <Text style={{ fontWeight: '500', color: colors.textMuted }}>
-                    {property.perMonth ? t('property.visitPerMonth') : ' /jour'}
-                  </Text>
-                )}
-              </Text>
             </View>
           </View>
-        </View>
 
-        {/* Day selector */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: colors.textFaint,
-              letterSpacing: 0.6,
-              marginBottom: 10,
-            }}
-          >
-            {t('property.visitDay')}
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 10 }}
-          >
-            {DAYS.map((d) => {
-              const active = dayId === d.id;
-              return (
-                <Pressable
-                  key={d.id}
-                  onPress={() => {
-                    haptic.selection();
-                    setDayId(d.id);
-                  }}
-                  style={{
-                    width: 96,
-                    paddingVertical: 14,
-                    borderRadius: 16,
-                    borderWidth: active ? 2 : 1,
-                    borderColor: active ? colors.text : colors.border,
-                    backgroundColor: active ? colors.text : colors.card,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 10.5,
-                      fontWeight: '700',
-                      color: active ? 'rgba(255,255,255,0.7)' : colors.textFaint,
-                      letterSpacing: 0.5,
-                    }}
-                  >
-                    {d.label.toUpperCase()}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 18,
-                      fontWeight: '700',
-                      color: active ? colors.bg : colors.text,
-                      marginTop: 4,
-                      letterSpacing: -0.2,
-                      lineHeight: 22,
-                      includeFontPadding: false,
-                    }}
-                  >
-                    {formatDayLabel(dateForOffset(d.offset))}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Slot grid */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: colors.textFaint,
-              letterSpacing: 0.6,
-              marginBottom: 10,
-            }}
-          >
-            {t('property.visitSlot')}
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {SLOTS.map((s) => {
-              const active = slot === s;
-              return (
-                <Pressable
-                  key={s}
-                  onPress={() => {
-                    haptic.selection();
-                    setSlot(s);
-                  }}
-                  style={{
-                    flexBasis: '30%',
-                    flexGrow: 1,
-                    height: 46,
-                    borderRadius: 14,
-                    borderWidth: active ? 2 : 1,
-                    borderColor: active ? colors.primary : colors.border,
-                    backgroundColor: active ? colors.primarySoft : colors.card,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: '700',
-                      color: active ? colors.primaryDeep : colors.text,
-                      fontVariant: ['tabular-nums'],
-                      letterSpacing: 0,
-                      lineHeight: 17,
-                      includeFontPadding: false,
-                    }}
-                  >
-                    {s}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Note */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: colors.textFaint,
-              letterSpacing: 0.6,
-              marginBottom: 10,
-            }}
-          >
-            {t('property.visitMessageOptional')}
-          </Text>
-          <View
-            style={{
-              minHeight: 100,
-              padding: 14,
-              borderRadius: 16,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <TextInput
-              value={note}
-              onChangeText={setNote}
-              placeholder={t('property.visitNotePlaceholder')}
-              placeholderTextColor={colors.textFaint}
-              multiline
-              textAlignVertical="top"
+          {/* Day selector */}
+          <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
+            <Text
               style={{
-                fontSize: 14,
-                color: colors.text,
-                lineHeight: 20,
-                letterSpacing: 0,
-                padding: 0,
-                minHeight: 72,
+                fontSize: 11,
+                fontWeight: '700',
+                color: colors.textFaint,
+                letterSpacing: 0.6,
+                marginBottom: 10,
               }}
-            />
+            >
+              {t('property.visitDay')}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 10 }}
+            >
+              {DAYS.map((d) => {
+                const active = dayId === d.id;
+                return (
+                  <Pressable
+                    key={d.id}
+                    onPress={() => {
+                      haptic.selection();
+                      setDayId(d.id);
+                    }}
+                    style={{
+                      width: 96,
+                      paddingVertical: 14,
+                      borderRadius: 16,
+                      borderWidth: active ? 2 : 1,
+                      borderColor: active ? colors.text : colors.border,
+                      backgroundColor: active ? colors.text : colors.card,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: '700',
+                        color: active ? 'rgba(255,255,255,0.7)' : colors.textFaint,
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      {d.label.toUpperCase()}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        fontWeight: '700',
+                        color: active ? colors.bg : colors.text,
+                        marginTop: 4,
+                        letterSpacing: -0.2,
+                        lineHeight: 22,
+                        includeFontPadding: false,
+                      }}
+                    >
+                      {formatDayLabel(dateForOffset(d.offset))}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
-        </View>
-      </ScrollView>
 
-      <SafeAreaView
-        edges={['bottom']}
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          paddingHorizontal: 24,
-          paddingTop: 12,
-          paddingBottom: 8,
-          backgroundColor: colors.bg,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-        }}
-      >
-        <Pressable
-          disabled={!valid || requestVisit.isPending}
-          onPress={async () => {
-            if (!valid || !property || !slot) return;
-            try {
-              haptic.medium();
-              const day = DAYS.find((d) => d.id === dayId)!;
-              const target = dateForOffset(day.offset);
-              const [h, m] = slot.split(':').map(Number);
-              target.setHours(h, m, 0, 0);
-              await requestVisit.mutateAsync({
-                property_id: property.id,
-                requested_at: target.toISOString(),
-                note: note.trim() || undefined,
-              });
-              toast.show(t('property.visitSuccess'), 'success');
-              router.replace('/buyer/requests');
-            } catch (e: unknown) {
-              console.error('[request-visit] error:', e);
-              toast.show(toToastMessage(e, t('property.visitError')), 'danger');
-            }
-          }}
+          {/* Slot grid */}
+          <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: '700',
+                color: colors.textFaint,
+                letterSpacing: 0.6,
+                marginBottom: 10,
+              }}
+            >
+              {t('property.visitSlot')}
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {SLOTS.map((s) => {
+                const active = slot === s;
+                return (
+                  <Pressable
+                    key={s}
+                    onPress={() => {
+                      haptic.selection();
+                      setSlot(s);
+                    }}
+                    style={{
+                      flexBasis: '30%',
+                      flexGrow: 1,
+                      height: 46,
+                      borderRadius: 14,
+                      borderWidth: active ? 2 : 1,
+                      borderColor: active ? colors.primary : colors.border,
+                      backgroundColor: active ? colors.primarySoft : colors.card,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: '700',
+                        color: active ? colors.primaryDeep : colors.text,
+                        fontVariant: ['tabular-nums'],
+                        letterSpacing: 0,
+                        lineHeight: 17,
+                        includeFontPadding: false,
+                      }}
+                    >
+                      {s}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Note */}
+          <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: '700',
+                color: colors.textFaint,
+                letterSpacing: 0.6,
+                marginBottom: 10,
+              }}
+            >
+              {t('property.visitMessageOptional')}
+            </Text>
+            <View
+              style={{
+                minHeight: 100,
+                padding: 14,
+                borderRadius: 16,
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <TextInput
+                value={note}
+                onChangeText={setNote}
+                placeholder={t('property.visitNotePlaceholder')}
+                placeholderTextColor={colors.textFaint}
+                multiline
+                textAlignVertical="top"
+                style={{
+                  fontSize: 14,
+                  color: colors.text,
+                  lineHeight: 20,
+                  letterSpacing: 0,
+                  padding: 0,
+                  minHeight: 72,
+                }}
+              />
+            </View>
+          </View>
+        </ScrollView>
+
+        <SafeAreaView
+          edges={['bottom']}
           style={{
-            height: 56,
-            borderRadius: 16,
-            backgroundColor: valid ? colors.text : colors.bgSunken,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            opacity: !valid || requestVisit.isPending ? 0.6 : 1,
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            paddingHorizontal: 24,
+            paddingTop: 12,
+            paddingBottom: 8,
+            backgroundColor: colors.bg,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
           }}
         >
-          <CalendarDays
-            size={16}
-            color={valid ? colors.bg : colors.textFaint}
-            strokeWidth={2.25}
-          />
-          <Text
+          <Pressable
+            disabled={!valid || requestVisit.isPending}
+            onPress={async () => {
+              if (!valid || !property || !slot) return;
+              try {
+                haptic.medium();
+                const day = DAYS.find((d) => d.id === dayId)!;
+                const target = dateForOffset(day.offset);
+                const [h, m] = slot.split(':').map(Number);
+                target.setHours(h, m, 0, 0);
+                await requestVisit.mutateAsync({
+                  property_id: property.id,
+                  requested_at: target.toISOString(),
+                  note: note.trim() || undefined,
+                });
+                toast.show(t('property.visitSuccess'), 'success');
+                router.replace('/buyer/requests');
+              } catch (e: unknown) {
+                console.error('[request-visit] error:', e);
+                toast.show(toToastMessage(e, t('property.visitError')), 'danger');
+              }
+            }}
             style={{
-              fontSize: 15,
-              fontWeight: '700',
-              color: valid ? colors.bg : colors.textFaint,
-              lineHeight: 18,
-              includeFontPadding: false,
+              height: 56,
+              borderRadius: 16,
+              backgroundColor: valid ? colors.text : colors.bgSunken,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              opacity: !valid || requestVisit.isPending ? 0.6 : 1,
             }}
           >
-            {requestVisit.isPending ? t('property.visitSending') : t('property.visitSubmit')}
-          </Text>
-        </Pressable>
-      </SafeAreaView>
+            <CalendarDays
+              size={16}
+              color={valid ? colors.bg : colors.textFaint}
+              strokeWidth={2.25}
+            />
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: '700',
+                color: valid ? colors.bg : colors.textFaint,
+                lineHeight: 18,
+                includeFontPadding: false,
+              }}
+            >
+              {requestVisit.isPending ? t('property.visitSending') : t('property.visitSubmit')}
+            </Text>
+          </Pressable>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -1,4 +1,4 @@
-import { Dimensions, Pressable, ScrollView, Share, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
@@ -26,6 +26,7 @@ import { Text } from '../../src/components/primitives/Text';
 import { ProductCard } from '../../src/components/lists/ProductCard';
 import { ListingComments } from '../../src/components/comments/ListingComments';
 import { haptic } from '../../src/lib/haptics';
+import { shareMessage } from '../../src/lib/share';
 import { useProduct, useProducts, useToggleFavorite, useTrackView, useFindOrCreateConversation } from '../../src/data/queries';
 import { useShop } from '../../src/data/queries/shops';
 import { useFavorites } from '../../src/stores/favorites';
@@ -38,11 +39,15 @@ import { gnfToEur } from '../../src/lib/currency';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 import { useTranslation } from 'react-i18next';
 
-const { width: SW } = Dimensions.get('window');
-
 export default function ProductDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  // LIVE carousel width — capped to the responsive column (500) on big screens.
+  // A static module-level Dimensions.get() didn't update with Android screen
+  // zoom / display size, so the carousel item was narrower than the screen and
+  // the NEXT image peeked in on the right (client 2026-07-30).
+  const { width: winW } = useWindowDimensions();
+  const SW = Math.min(winW, 500);
   const { t } = useTranslation();
   const { data: product, isLoading, isError, refetch } = useProduct(id);
   const { data: related } = useProducts({ category: product?.category });
@@ -60,6 +65,7 @@ export default function ProductDetailRoute() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
   const addToCart = useCart((s) => s.add);
+  const replaceCart = useCart((s) => s.replaceWith);
   const { show } = useToast();
   const [photoIdx, setPhotoIdx] = useState(0);
   const { data: shop } = useShop(product?.shopId);
@@ -158,7 +164,11 @@ export default function ProductDetailRoute() {
                     haptic.light();
                     void Share.share({
                       title: product.title,
-                      message: `${product.title} — ${formatGNF(product.priceGnf)} sur Linky`,
+                      message: shareMessage(
+                        `${product.title} — ${formatGNF(product.priceGnf)} sur Linky`,
+                        'product',
+                        product.id,
+                      ),
                     }).catch(() => {});
                   }}
                   ariaLabel="Partager"
@@ -358,6 +368,25 @@ export default function ProductDetailRoute() {
             </Text>
           </View>
         </View>
+
+        {/* ===== Description ===== */}
+        {/* Moved above the specs (client 2026-07-26) to match the property
+            detail page — buyers read what the item is before the specs.
+            Heading hidden when empty (Phase Y.4). */}
+        {product.description.trim().length > 0 && (
+          <Section title={t('product.descriptionHeading')}>
+            <Text
+              style={{
+                fontSize: 14.5,
+                color: colors.text,
+                lineHeight: 22,
+                letterSpacing: 0,
+              }}
+            >
+              {product.description}
+            </Text>
+          </Section>
+        )}
 
         {/* ===== Trust strip ===== */}
         <View style={{ paddingHorizontal: 24, paddingTop: 18 }}>
@@ -561,24 +590,6 @@ export default function ProductDetailRoute() {
           </View>
         </Section>
 
-        {/* ===== Description ===== */}
-        {/* Phase Y.4 — hide the heading entirely when no description, rather
-            than showing "Description" above an empty paragraph. */}
-        {product.description.trim().length > 0 && (
-          <Section title={t('product.descriptionHeading')}>
-            <Text
-              style={{
-                fontSize: 14.5,
-                color: colors.text,
-                lineHeight: 22,
-                letterSpacing: 0,
-              }}
-            >
-              {product.description}
-            </Text>
-          </Section>
-        )}
-
         {/* ===== Commentaires ===== */}
         <Section title="Commentaires">
           <ListingComments kind="product" id={product.id} />
@@ -699,7 +710,30 @@ export default function ProductDetailRoute() {
               <Pressable
                 onPress={() => {
                   haptic.light();
-                  addToCart(product.id);
+                  // Several articles are fine — as long as they come from the
+                  // SAME shop (one order = one escrow = one seller = one QR).
+                  // A different shop can't be merged, so we offer to start a
+                  // fresh cart instead of silently dropping the old one
+                  // (client 2026-08-05).
+                  const res = addToCart(product.id, product.shopId);
+                  if (res === 'other-shop') {
+                    Alert.alert(
+                      'Une seule boutique par commande',
+                      'Ton panier contient déjà des articles d’une autre boutique. Chaque commande est livrée et payée séparément par boutique — veux-tu vider ton panier et commencer avec cet article ?',
+                      [
+                        { text: 'Annuler', style: 'cancel' },
+                        {
+                          text: 'Vider et ajouter',
+                          style: 'destructive',
+                          onPress: () => {
+                            replaceCart(product.id, product.shopId);
+                            show(t('product.addedToCart'), 'success');
+                          },
+                        },
+                      ],
+                    );
+                    return;
+                  }
                   show(t('product.addedToCart'), 'success');
                 }}
                 style={{
@@ -732,7 +766,8 @@ export default function ProductDetailRoute() {
               <Pressable
                 onPress={() => {
                   haptic.medium();
-                  addToCart(product.id);
+                  // « Acheter » = buy THIS article now, so the cart is reset to it.
+                  replaceCart(product.id, product.shopId);
                   router.push('/checkout');
                 }}
                 style={{
@@ -805,7 +840,7 @@ function ConditionChip({ condition }: { condition: 'neuf' | 'occasion' | 'recond
   const map: Record<typeof condition, { bg: string; fg: string; label: string }> = {
     neuf: { bg: colors.primarySoft, fg: colors.primaryDeep, label: 'Neuf' },
     occasion: { bg: colors.accentSoft, fg: colors.accentText, label: 'Occasion' },
-    reconditionné: { bg: '#E4ECF6', fg: '#2F5BBE', label: 'Reconditionné' },
+    reconditionné: { bg: 'rgba(58,124,168,0.14)', fg: colors.info, label: 'Reconditionné' },
   };
   const m = map[condition];
   return (

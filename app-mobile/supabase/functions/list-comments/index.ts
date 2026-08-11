@@ -33,7 +33,13 @@ interface CommentRow {
   parent_id: string | null;
   like_count: number;
 }
-interface UserRow { id: string; display_name: string | null; avatar_url: string | null; }
+interface UserRow { id: string; display_name: string | null; avatar_url: string | null; profile_public: boolean; }
+
+// « Profil public » (client 2026-08-06) : an author who turned it off is shown
+// to everyone else as this placeholder, with no avatar. Applied uniformly
+// (including to the author's own view of their comment) — simplest and there
+// is nothing to leak either way.
+const ANONYMOUS_NAME = 'Utilisateur';
 
 Deno.serve(makePost<Body>('/v1/comments/list', valid, async ({ sb, body, req }) => {
   const limit = body.limit ?? 50;
@@ -58,9 +64,14 @@ Deno.serve(makePost<Body>('/v1/comments/list', valid, async ({ sb, body, req }) 
   const byId = new Map<string, { displayName: string | null; avatarUrl: string | null }>();
   if (rows.length > 0) {
     const ids = [...new Set(rows.map((r) => r.author_id))];
-    const { data: users } = await sb.from('users').select('id, display_name, avatar_url').in('id', ids);
+    const { data: users } = await sb.from('users').select('id, display_name, avatar_url, profile_public').in('id', ids);
     for (const u of (users as UserRow[] | null) ?? []) {
-      byId.set(u.id, { displayName: u.display_name, avatarUrl: u.avatar_url });
+      byId.set(
+        u.id,
+        u.profile_public
+          ? { displayName: u.display_name, avatarUrl: u.avatar_url }
+          : { displayName: ANONYMOUS_NAME, avatarUrl: null },
+      );
     }
   }
 

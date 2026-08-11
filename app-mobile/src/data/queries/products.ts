@@ -33,6 +33,7 @@ export interface CreateProductInput {
   category: string;
   condition: 'neuf' | 'occasion' | 'reconditionné';
   photos: string[];
+  video_url?: string;
   city: string;
   district?: string;
 }
@@ -45,6 +46,7 @@ export interface UpdateProductInput {
   category?: string;
   condition?: 'neuf' | 'occasion' | 'reconditionné';
   photos?: string[];
+  video_url?: string | null;
   city?: string;
   district?: string | null;
   status?: 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
@@ -70,6 +72,11 @@ export interface ProductFilters {
   /** 'recent' (default) pages with the keyset cursor ; 'popular' is single-page
       by design — list-products returns no cursor for view_count ordering. */
   sort?: 'recent' | 'popular';
+  /** Keep the caller's OWN listings in the result. Needed wherever the list is
+      not a buyer discovery feed — e.g. Favoris, where a listing the user
+      explicitly hearted must show up even if they published it (client
+      2026-08-05: the Favoris tabs stayed at 0 for the client's own items). */
+  includeOwn?: boolean;
 }
 
 export function useProducts(filters: ProductFilters = {}) {
@@ -100,12 +107,33 @@ export function useProducts(filters: ProductFilters = {}) {
   // is explicit ; rely on the server filter alone.
   const data = useMemo(
     () =>
-      filters.shopId
+      filters.shopId || filters.includeOwn
         ? query.data
         : query.data?.filter((p) => !myShopIds.has(p.shopId)),
-    [query.data, myShopIds, filters.shopId],
+    [query.data, myShopIds, filters.shopId, filters.includeOwn],
   );
   return { ...query, data };
+}
+
+// Caller's own products across EVERY status (not just active) so sellers can see
+// + re-activate paused / mark-sold listings from the dashboard. Powered by
+// list-products' owner_id filter. Guards on UUID shape (pre-real-auth installs can
+// leak a mock 'u_...' id which the backend validator would reject).
+export function useMyProducts() {
+  const userId = useAuth((s) => s.user?.id ?? s.authUserId);
+  const isUuid = !!userId && /^[0-9a-f-]{36}$/i.test(userId);
+  return useQuery({
+    queryKey: ['my-products', userId],
+    enabled: isUuid,
+    queryFn: async (): Promise<Product[]> => {
+      const { products } = await apiPost<{ products: Product[] }>({
+        path: '/list-products',
+        authed: false,
+        body: { owner_id: userId },
+      });
+      return products;
+    },
+  });
 }
 
 export function useProduct(id: string | undefined) {
@@ -158,6 +186,14 @@ export function useToggleFavorite() {
     onSuccess: ({ productId }) => {
       qc.invalidateQueries({ queryKey: ['product', productId] });
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['my-products'] });
+      // Découvrir's local heart store is durable (MMKV) so it survives a
+      // remount on its own, but WITHOUT this invalidation a virtualized card
+      // that unmounts+remounts (scroll away and back) reseeds from the
+      // feed's now-stale cached `favorited`, silently undoing the local
+      // truth (client 2026-08-06 follow-up).
+      qc.invalidateQueries({ queryKey: ['discover-feed'] });
+      qc.invalidateQueries({ queryKey: ['discover-infinite'] });
     },
   });
 }
@@ -173,6 +209,7 @@ export function useCreateProduct() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['my-products'] });
       qc.invalidateQueries({ queryKey: ['shops'] });
       qc.invalidateQueries({ queryKey: ['my-shops'] });
     },
@@ -189,6 +226,7 @@ export function useUpdateProduct() {
     onSuccess: (product) => {
       qc.invalidateQueries({ queryKey: ['product', product.id] });
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['my-products'] });
     },
   });
 }
@@ -205,6 +243,7 @@ export function useSetProductStatus() {
     onSuccess: (product) => {
       qc.invalidateQueries({ queryKey: ['product', product.id] });
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['my-products'] });
       qc.invalidateQueries({ queryKey: ['my-shops'] });
     },
   });
@@ -219,6 +258,7 @@ export function useDeleteProduct() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['my-products'] });
       qc.invalidateQueries({ queryKey: ['my-shops'] });
     },
   });
@@ -241,7 +281,6 @@ interface Cursor { created_at: string; id: string }
 // (flat array across all loaded pages) + fetchNextPage / hasNextPage /
 // isFetchingNextPage from the underlying query.
 export function useProductsInfinite(filters: ProductFilters = {}) {
-  const myShopIds = useMyShopIds();
   const query = useInfiniteQuery({
     queryKey: ['products-infinite', filters],
     initialPageParam: undefined as Cursor | undefined,
@@ -264,17 +303,14 @@ export function useProductsInfinite(filters: ProductFilters = {}) {
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   });
 
-  // Filter the AGGREGATE (across all loaded pages) so own-products never appear
-  // even if they were in a page we already pulled. Per pre-fetch filtering is
-  // server-side only — see the V1.1 follow-up to add owner-aware filtering at
-  // list-products to avoid client-side waste.
-  //
-  // Phase U.0-B1 — when shopId is explicit the caller IS the owner asking
-  // for their own products (same fix as useProducts above).
-  const products = useMemo(() => {
-    const all = query.data?.pages.flatMap((p) => p.products) ?? [];
-    return filters.shopId ? all : all.filter((p) => !myShopIds.has(p.shopId));
-  }, [query.data, myShopIds, filters.shopId]);
+  // Client 2026-08-03 — own listings MUST appear in the Marché feed (parity with
+  // Découvrir : sellers want to SEE their published listings). Buying/renting your
+  // OWN listing is already blocked on the detail screen (isOwn → « Modifier »
+  // only), so we no longer hide-own here.
+  const products = useMemo(
+    () => query.data?.pages.flatMap((p) => p.products) ?? [],
+    [query.data],
+  );
   return { ...query, products };
 }
 
@@ -282,7 +318,7 @@ export function useProductsInfinite(filters: ProductFilters = {}) {
 // matching Content-Type, then puts public_url into the create-product photos[] array.
 export function useRequestPhotoUploadUrl() {
   return useMutation({
-    mutationFn: async (input: { kind: 'product' | 'property' | 'avatar'; filename: string; content_type: string }) => {
+    mutationFn: async (input: { kind: 'product' | 'property' | 'avatar' | 'property-video' | 'product-video'; filename: string; content_type: string }) => {
       return apiPost<PhotoUploadUrl>({ path: '/photo-upload-url', body: input });
     },
   });

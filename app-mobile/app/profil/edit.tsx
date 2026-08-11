@@ -1,19 +1,19 @@
 // Phase T.2 — small "Modifier mon profil" screen. The Pressable on profil
 // previously had no onPress ; this is the smallest correct fix : edit
-// display_name + city via the existing update-profile endpoint, no avatar
+// display_name via the existing update-profile endpoint, no avatar
 // upload yet (deferred to V1.1 — needs the photo-upload-url storage flow).
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { Camera, ChevronLeft, ChevronRight, MapPin, Phone as PhoneIcon, ShieldCheck, User as UserIcon, UserCog } from 'lucide-react-native';
+import { Camera, ChevronLeft, ChevronRight, Lock, MapPin, Phone as PhoneIcon, ShieldCheck, User as UserIcon, UserCog } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
-import { CityMapPicker } from '../../src/components/onboarding/CityMapPicker';
 import { useAuth } from '../../src/stores/auth';
 import { useUpdateProfile, useUploadAvatar } from '../../src/data/queries/auth';
 import { useMyPhones, useKycStatus } from '../../src/data/queries';
@@ -24,12 +24,14 @@ import { useTranslation } from 'react-i18next';
 function AccountRow({
   Icon,
   label,
+  sub,
   value,
   valueTone,
   onPress,
 }: {
   Icon: LucideIcon;
   label: string;
+  sub?: string;
   value?: string;
   valueTone?: 'success';
   onPress: () => void;
@@ -43,6 +45,7 @@ function AccountRow({
       style={{
         minHeight: 56,
         paddingHorizontal: 14,
+        paddingVertical: sub ? 10 : 0,
         borderRadius: 16,
         borderWidth: 1,
         borderColor: colors.border,
@@ -53,9 +56,16 @@ function AccountRow({
       }}
     >
       <Icon size={18} color={colors.textMuted} strokeWidth={1.75} />
-      <Text style={{ flex: 1, fontSize: 15.5, fontWeight: '500', color: colors.text }} numberOfLines={1}>
-        {label}
-      </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15.5, fontWeight: '500', color: colors.text }} numberOfLines={1}>
+          {label}
+        </Text>
+        {sub ? (
+          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2, letterSpacing: 0 }} numberOfLines={1}>
+            {sub}
+          </Text>
+        ) : null}
+      </View>
       {value && (
         <Text
           style={{
@@ -85,6 +95,7 @@ function resolveMime(asset: ImagePicker.ImagePickerAsset): AvatarMime {
 export default function ProfilEditRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const currentUser = useAuth((s) => s.user);
   const signIn = useAuth((s) => s.signIn);
   const updateProfile = useUpdateProfile();
@@ -103,23 +114,19 @@ export default function ProfilEditRoute() {
   const kycApproved = (kyc?.kycStatus ?? currentUser?.kyc_status) === 'approved';
 
   const [name, setName] = useState(currentUser?.display_name ?? '');
-  const [city, setCity] = useState(currentUser?.city ?? '');
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatar_url ?? '');
-  const [showCityPicker, setShowCityPicker] = useState(false);
   const [focusName, setFocusName] = useState(false);
 
   const initialAvatar = currentUser?.avatar_url ?? '';
   const dirty =
-    name.trim() !== (currentUser?.display_name ?? '') ||
-    city.trim() !== (currentUser?.city ?? '') ||
-    avatarUrl !== initialAvatar;
+    name.trim() !== (currentUser?.display_name ?? '') || avatarUrl !== initialAvatar;
   const canSave = dirty && !!name.trim() && !uploadAvatar.isPending;
 
   const onPickAvatar = async () => {
     if (uploadAvatar.isPending) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      toast.show("Autorise l'accès aux photos pour changer ta photo.", 'danger');
+      toast.show("Autorisez l'accès aux photos pour changer votre photo.", 'danger');
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
@@ -143,7 +150,6 @@ export default function ProfilEditRoute() {
     try {
       const res = await updateProfile.mutateAsync({
         display_name: name.trim(),
-        city: city.trim(),
         ...(avatarUrl !== initialAvatar ? { avatar_url: avatarUrl } : {}),
       });
       if (currentUser) signIn({ ...currentUser, ...res.user });
@@ -159,7 +165,7 @@ export default function ProfilEditRoute() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
       <View
         style={{
@@ -359,58 +365,10 @@ export default function ProfilEditRoute() {
           <ChevronRight size={16} color={colors.textFaint} strokeWidth={2} />
         </Pressable>
 
-        {/* Ville */}
-        <Text
-          style={{
-            fontSize: 11,
-            fontWeight: '700',
-            color: colors.textFaint,
-            letterSpacing: 0.6,
-            marginTop: 18,
-            marginBottom: 8,
-          }}
-        >
-          VILLE
-        </Text>
-        {showCityPicker ? (
-          <View style={{ height: 420 }}>
-            <CityMapPicker
-              value={city}
-              onChange={(v) => {
-                setCity(v);
-                setShowCityPicker(false);
-              }}
-            />
-          </View>
-        ) : (
-          <Pressable
-            onPress={() => setShowCityPicker(true)}
-            style={{
-              height: 56,
-              paddingHorizontal: 14,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.card,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 15.5,
-                fontWeight: '500',
-                color: city ? colors.text : colors.textFaint,
-              }}
-            >
-              {city || 'Choisir une ville'}
-            </Text>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
-              Changer
-            </Text>
-          </Pressable>
-        )}
+        {/* Ville retirée (client 2026-08-05) : elle faisait doublon avec la ville
+            de l'adresse de livraison — seule cette dernière compte réellement
+            (commandes), alors que la ville du profil n'alimentait qu'un badge.
+            Une seule source de vérité = « Adresses de livraison » ci-dessous. */}
 
         {/* Compte — rangées déplacées depuis l'onglet Profil. */}
         <Text
@@ -429,6 +387,7 @@ export default function ProfilEditRoute() {
           <AccountRow
             Icon={MapPin}
             label={t('profil.row.addresses')}
+            sub={t('profil.row.addressesSub')}
             onPress={() => router.push('/settings/addresses')}
           />
           <AccountRow
@@ -436,6 +395,16 @@ export default function ProfilEditRoute() {
             label={t('profil.row.roles')}
             value={t('profil.row.roleCount', { count: roles.length })}
             onPress={() => router.push('/profil/roles' as never)}
+          />
+          {/* Password login as an opt-in alternative to email OTP (client
+              2026-08-05 — the session expiring shouldn't always cost a fresh
+              code). email-signin already exists (it's the admin's login) ;
+              this is the missing "let a marketplace user set one" step. */}
+          <AccountRow
+            Icon={Lock}
+            label={t('profil.row.password')}
+            sub={t('profil.row.passwordSub')}
+            onPress={() => router.push('/settings/password' as never)}
           />
           <AccountRow
             Icon={ShieldCheck}
@@ -447,7 +416,16 @@ export default function ProfilEditRoute() {
         </View>
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 20, paddingVertical: 16 }}>
+      {/* The screen only claims the TOP safe-area edge, so this footer used to
+          sit UNDER the Android gesture/nav bar — « Enregistrer » was cut off
+          and hard to tap (client 2026-08-05). Pad by the real bottom inset. */}
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 16,
+          paddingBottom: 16 + insets.bottom,
+        }}
+      >
         <Button
           variant="dark"
           size="lg"

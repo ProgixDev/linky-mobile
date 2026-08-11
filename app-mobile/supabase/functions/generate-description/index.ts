@@ -57,6 +57,13 @@ Deno.serve(
       throwApi('AI_RATE_LIMITED', 429, 'Limite quotidienne de générations atteinte.');
     }
 
+    // Reserve the slot BEFORE the Gemini call (count attempts, not just
+    // successes). Inserting after the call let N concurrent requests all pass
+    // the pre-write count and all hit Gemini — cost amplification against the
+    // owner's key. Reserving here shrinks the race window from the whole call
+    // (~seconds) to a couple of DB round-trips.
+    await sb.from('ai_generation_log').insert({ user_id: userId });
+
     const facts = [
       `Titre : ${body.title.trim()}`,
       body.category ? `Catégorie : ${body.category.trim()}` : '',
@@ -98,7 +105,7 @@ Deno.serve(
         .join('')
         .trim();
       if (!text) throwApi('AI_FAILED', 502, 'La génération est revenue vide. Réessaie.');
-      await sb.from('ai_generation_log').insert({ user_id: userId });
+      // (Slot already reserved before the call — see the insert above.)
       return { body: { description: text } };
     } catch (e) {
       console.error('[generate-description] threw:', e);

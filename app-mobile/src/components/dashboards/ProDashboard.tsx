@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
   Star,
-  MessageSquare,
   BarChart3,
   ArrowUpRight,
   Package,
@@ -32,7 +31,8 @@ import { NoiseOverlay } from '../visuals/NoiseOverlay';
 import { haptic } from '../../lib/haptics';
 import { formatGNF } from '../../lib/format';
 import {
-  useProducts,
+  useMyProducts,
+  useMyShop,
   useMyShops,
   useMyProperties,
   useSetProductStatus,
@@ -41,7 +41,6 @@ import {
   useDeleteProperty,
 } from '../../data/queries';
 import { useWallet } from '../../data/queries/wallet';
-import { useAuth } from '../../stores/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sheet } from '../sheets/Sheet';
 import { useToast } from '../feedback/Toast';
@@ -59,28 +58,28 @@ export type ProMode = 'shop' | 'estate';
 export function IdentityPill({ mode }: { mode: ProMode }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const { data: shops } = useMyShops();
-  const user = useAuth((s) => s.user);
-  const myShop = shops?.[0];
-
-  // Shop mode: name + avatar come from the seller's own shop (if any). When
-  // there is no shop yet, route to /create so the next publish flow scaffolds one.
-  // Estate mode: agents do not own a shop record — show the user's own identity.
+  // Boutique and agence immo are SEPARATE profiles (client 2026-08-07) — each
+  // with its own name, logo, cover and city. This pill shows the one belonging
+  // to the mode the dashboard is currently in; it used to show shops[0] for
+  // both, so an agent editing « son agence » was really editing his boutique.
   const isShop = mode === 'shop';
-  const noShop = isShop && shops !== undefined && !myShop;
+  const { data: myShop, isSuccess } = useMyShop(isShop ? 'shop' : 'agency');
+  const noShop = isSuccess && !myShop;
 
-  const name = isShop ? (myShop?.name ?? t('proDashboard.identityCreateShop')) : (user?.display_name ?? t('proDashboard.identityMyAgency'));
-  const subtitle = isShop ? (noShop ? t('proDashboard.identitySubTapToCreate') : t('proDashboard.identitySubShop')) : t('proDashboard.identitySubAgency');
-  const avatar = isShop ? myShop?.avatar : user?.avatar_url;
+  const name = myShop?.name ?? (isShop ? t('proDashboard.identityCreateShop') : t('proDashboard.identityCreateAgency'));
+  const subtitle = noShop
+    ? t('proDashboard.identitySubTapToCreate')
+    : (isShop ? t('proDashboard.identitySubShop') : t('proDashboard.identitySubAgency'));
+  const avatar = myShop?.avatar;
 
   return (
     <Pressable
       onPress={() => {
-        // noShop → scaffold via the publish flow ; existing shop → edit it ;
-        // estate (agent) → the agent identity IS the user profile.
+        // No profile yet on THIS side → scaffold it via the publish flow ;
+        // existing one → personalize it. The kind param keeps an agent editing
+        // his agence and not the boutique he may also own.
         if (noShop) router.push('/create');
-        else if (isShop) router.push('/shop/edit');
-        else router.push('/profil/edit');
+        else router.push(isShop ? '/shop/edit' : ('/shop/edit?kind=agency' as never));
       }}
       style={{
         flexDirection: 'row',
@@ -207,9 +206,17 @@ export function ShopDashboard() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { data: shops } = useMyShops();
-  const myShop = shops?.[0];
-  const { data: products } = useProducts({ shopId: myShop?.id });
-  const { data: properties } = useMyProperties();
+  // The BOUTIQUE specifically — owning an agence immo must not make this
+  // dashboard think a boutique already exists (client 2026-08-07).
+  const myShop = shops?.find((s) => (s.kind ?? 'shop') === 'shop');
+  // Caller's OWN products across EVERY status (active + paused + sold + reserved
+  // + pending). Was useProducts({ shopId }) → list-products active-only, so a
+  // paused / mark-sold listing VANISHED from the dashboard and could only be
+  // recovered from Linky Admin (client 2026-08-03). useMyProducts is server-
+  // scoped to the caller via owner_id, so no other seller's stock can leak in.
+  const { data: products } = useMyProducts();
+  const ownShopIds = new Set((shops ?? []).map((s) => s.id));
+  const ownProducts = (products ?? []).filter((p) => ownShopIds.has(p.shopId));
   const setProductStatus = useSetProductStatus();
   const setPropertyStatus = useSetPropertyStatus();
   const deleteProduct = useDeleteProduct();
@@ -219,18 +226,13 @@ export function ShopDashboard() {
   const [statusTarget, setStatusTarget] = useState<ManagementTarget | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagementTarget | null>(null);
 
-  const productCount = products?.length ?? 0;
-  const propertyCount = properties?.length ?? 0;
-  const listingCount = productCount + propertyCount;
-  const pendingCount =
-    (products?.filter((p) => p.status === 'pending').length ?? 0) +
-    (properties?.filter((p) => p.status === 'pending').length ?? 0);
-  // Phase U.0 nit — boost is a V1.1 feature so p.boosted is never true in
-  // V1 ; the "Aucune boostée" subline was a permanent-zero metric.
-  // Replaced with "actives" count (the real available signal).
-  const activeListingsCount =
-    (products?.filter((p) => p.status === 'active').length ?? 0) +
-    (properties?.filter((p) => p.status === 'active').length ?? 0);
+  // Boutique = PRODUCTS only. Real-estate listings belong to the Immobilier
+  // (Estate) dashboard — they were leaking into "Mes annonces" + the counts
+  // here (client 2026-07-30).
+  const productCount = ownProducts.length;
+  const listingCount = productCount;
+  const pendingCount = ownProducts.filter((p) => p.status === 'pending').length;
+  const activeListingsCount = ownProducts.filter((p) => p.status === 'active').length;
 
   return (
     <View>
@@ -248,10 +250,14 @@ export function ShopDashboard() {
             label={t('proDashboard.qaOrders')}
             onPress={() => router.push('/seller/orders')}
           />
+          {/* « Demandes » removed from the Boutique quick actions (client
+              2026-07-30). Boost moved UP into this row (client 2026-08-07,
+              same change as Immobilier): it was a full-width banner below,
+              which cost a whole line to say what a 4th icon says. */}
           <QuickAction
-            Icon={MessageSquare}
-            label={t('proDashboard.qaRequests')}
-            onPress={() => router.push('/pro/demandes')}
+            Icon={Zap}
+            label={t('proDashboard.qaBoost')}
+            onPress={() => router.push('/pro/boost')}
           />
           <QuickAction
             Icon={ArrowUpRight}
@@ -264,48 +270,6 @@ export function ShopDashboard() {
             onPress={() => router.push('/pro/stats')}
           />
         </View>
-      </View>
-
-      {/* Boost — paid product visibility (Phase T.3 removed the fake entry; this
-          is the wired one). Standalone banner rather than a 5th quick action so
-          the 4-grid layout stays intact and the revenue feature stands out. */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
-        <Pressable
-          onPress={() => {
-            haptic.light();
-            router.push('/pro/boost');
-          }}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-            padding: 14,
-            borderRadius: 16,
-            backgroundColor: colors.accentSoft,
-          }}
-        >
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              backgroundColor: colors.card,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Zap size={20} color={colors.accentText} strokeWidth={2.25} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accentText, letterSpacing: 0 }}>
-              {t('pro.boostBannerTitle')}
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.accentText, opacity: 0.85, letterSpacing: 0, marginTop: 1 }}>
-              {t('pro.boostBannerSub')}
-            </Text>
-          </View>
-          <ChevronRight size={18} color={colors.accentText} strokeWidth={2} />
-        </Pressable>
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 22, flexDirection: 'row', gap: 10 }}>
@@ -360,7 +324,7 @@ export function ShopDashboard() {
       ) : (
         <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
           <SectionTitle title={t('proDashboard.sectionMyListings')} />
-          {(!products?.length && !properties?.length) ? (
+          {!ownProducts.length ? (
             <View
               style={{
                 padding: 20,
@@ -383,7 +347,7 @@ export function ShopDashboard() {
             </View>
           ) : (
             <View style={{ gap: 10 }}>
-              {products?.map((p) => (
+              {ownProducts.map((p) => (
                 <ManagementRow
                   key={`p-${p.id}`}
                   kind="product"
@@ -394,19 +358,6 @@ export function ShopDashboard() {
                   onPress={() => router.push(`/product/${p.id}`)}
                   onStatus={() => setStatusTarget({ kind: 'product', id: p.id, current: p.status })}
                   onDelete={() => setDeleteTarget({ kind: 'product', id: p.id, title: p.title })}
-                />
-              ))}
-              {properties?.map((p) => (
-                <ManagementRow
-                  key={`pr-${p.id}`}
-                  kind="property"
-                  title={p.title}
-                  price={`${formatGNF(p.priceGnf)}${p.type === 'location' ? (p.perMonth ? t('proDashboard.perMonth') : t('create.perDayAbbr')) : ''}`}
-                  cover={p.photos[0]}
-                  status={p.status}
-                  onPress={() => router.push(`/property/${p.id}`)}
-                  onStatus={() => setStatusTarget({ kind: 'property', id: p.id, current: p.status })}
-                  onDelete={() => setDeleteTarget({ kind: 'property', id: p.id, title: p.title })}
                 />
               ))}
             </View>
@@ -653,24 +604,36 @@ function ManagementRow({
           >
             {price}
           </Text>
+          {/* Reads as a dropdown, not a label (client 2026-08-07): sellers
+              were not realizing the status could be changed at all. Taller,
+              legible type, an outline and a chevron — the affordance is the
+              point, the behaviour (a sheet of choices) is unchanged. */}
           <Pressable
             onPress={(e) => {
               e.stopPropagation?.();
               onStatus();
             }}
-            hitSlop={6}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('proDashboard.a11yChangeStatus', { status: statusLabel })}
             style={{
-              paddingHorizontal: 8,
-              height: 22,
-              borderRadius: 999,
-              backgroundColor: statusTone,
+              flexDirection: 'row',
               alignItems: 'center',
+              gap: 4,
+              paddingLeft: 10,
+              paddingRight: 6,
+              height: 28,
+              borderRadius: 8,
+              backgroundColor: statusTone,
+              borderWidth: 1,
+              borderColor: statusFg,
               justifyContent: 'center',
             }}
           >
-            <Text style={{ fontSize: 10, fontWeight: '700', color: statusFg, letterSpacing: 0.3 }}>
+            <Text style={{ fontSize: 11.5, fontWeight: '700', color: statusFg, letterSpacing: 0.2 }}>
               {statusLabel.toUpperCase()}
             </Text>
+            <ChevronDown size={13} color={statusFg} strokeWidth={2.5} />
           </Pressable>
         </View>
       </View>
@@ -689,6 +652,192 @@ function ManagementRow({
   );
 }
 
+// Status + delete sheets — shared by BOTH the Boutique (products) and Immobilier
+// (properties) dashboards so the two sides get identical management. Branches on
+// target.kind ; the property variant adds the « réservé » status.
+function ManagementSheets({
+  statusTarget,
+  setStatusTarget,
+  deleteTarget,
+  setDeleteTarget,
+}: {
+  statusTarget: ManagementTarget | null;
+  setStatusTarget: (t: ManagementTarget | null) => void;
+  deleteTarget: ManagementTarget | null;
+  setDeleteTarget: (t: ManagementTarget | null) => void;
+}) {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  const setProductStatus = useSetProductStatus();
+  const setPropertyStatus = useSetPropertyStatus();
+  const deleteProduct = useDeleteProduct();
+  const deleteProperty = useDeleteProperty();
+  const toast = useToast();
+  const qc = useQueryClient();
+  return (
+    <>
+      {/* Status change sheet */}
+      <Sheet
+        open={!!statusTarget}
+        onClose={() => setStatusTarget(null)}
+        title={t('proDashboard.manageTitle')}
+        snapPoints={['52%']}
+      >
+        <View style={{ padding: 16, gap: 8 }}>
+          {/* Edit the listing content (not just its status). */}
+          <Pressable
+            onPress={() => {
+              const tgt = statusTarget;
+              setStatusTarget(null);
+              if (!tgt) return;
+              if (tgt.kind === 'product') router.push(`/product/edit/${tgt.id}`);
+              else router.push(`/property/edit/${tgt.id}`);
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              padding: 14,
+              borderRadius: 14,
+              backgroundColor: colors.primarySoft,
+              borderWidth: 1,
+              borderColor: colors.primary,
+            }}
+          >
+            <Pencil size={16} color={colors.primary} strokeWidth={2.25} />
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primaryDeep }}>{t('proDashboard.manageEditCta')}</Text>
+          </Pressable>
+          <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginTop: 4, marginBottom: 2 }}>
+            {t('proDashboard.manageStatusLabel')}
+          </Text>
+          {(statusTarget?.kind === 'property'
+            ? [
+                { value: 'active' as const, label: t('proDashboard.statusActive'), Icon: CircleDot },
+                { value: 'paused' as const, label: t('proDashboard.statusPaused'), Icon: Pause },
+                { value: 'reserved' as const, label: t('proDashboard.statusReserved'), Icon: Check },
+                { value: 'sold' as const, label: t('proDashboard.statusSold'), Icon: Check },
+              ]
+            : [
+                { value: 'active' as const, label: t('proDashboard.statusActive'), Icon: CircleDot },
+                { value: 'paused' as const, label: t('proDashboard.statusPaused'), Icon: Pause },
+                { value: 'sold' as const, label: t('proDashboard.statusSold'), Icon: Check },
+              ]
+          ).map((opt) => (
+            <Pressable
+              key={opt.value}
+              disabled={setProductStatus.isPending || setPropertyStatus.isPending}
+              onPress={async () => {
+                if (!statusTarget) return;
+                try {
+                  if (statusTarget.kind === 'product') {
+                    await setProductStatus.mutateAsync({ id: statusTarget.id, status: opt.value });
+                  } else {
+                    await setPropertyStatus.mutateAsync({ id: statusTarget.id, status: opt.value });
+                  }
+                  toast.show(t('proDashboard.statusToast', { label: opt.label }), 'success');
+                  setStatusTarget(null);
+                } catch (e: unknown) {
+                  console.error('[mes-annonces] status error:', e);
+                  toast.show(toToastMessage(e, t('proDashboard.statusError')), 'danger');
+                }
+              }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                padding: 14,
+                borderRadius: 14,
+                backgroundColor: statusTarget?.current === opt.value ? colors.primarySoft : colors.card,
+                borderWidth: 1,
+                borderColor: statusTarget?.current === opt.value ? colors.primary : colors.border,
+              }}
+            >
+              <opt.Icon size={16} color={colors.text} strokeWidth={2} />
+              <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.text }}>
+                {opt.label}
+              </Text>
+              {statusTarget?.current === opt.value && (
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary }}>{t('proDashboard.statusCurrent')}</Text>
+              )}
+            </Pressable>
+          ))}
+        </View>
+      </Sheet>
+
+      {/* Delete confirmation sheet */}
+      <Sheet
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title={t('proDashboard.deleteTitle')}
+        snapPoints={['35%']}
+      >
+        <View style={{ padding: 16, gap: 14 }}>
+          <Text style={{ fontSize: 14, color: colors.text }}>
+            {t('proDashboard.deleteBody', { title: deleteTarget?.title ?? '' })}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Pressable
+              onPress={() => setDeleteTarget(null)}
+              style={{
+                flex: 1,
+                height: 48,
+                borderRadius: 14,
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontWeight: '700', color: colors.text }}>{t('proDashboard.deleteCancel')}</Text>
+            </Pressable>
+            <Pressable
+              disabled={deleteProduct.isPending || deleteProperty.isPending}
+              onPress={async () => {
+                if (!deleteTarget) return;
+                try {
+                  if (deleteTarget.kind === 'product') {
+                    await deleteProduct.mutateAsync(deleteTarget.id);
+                  } else {
+                    await deleteProperty.mutateAsync(deleteTarget.id);
+                  }
+                  toast.show(t('proDashboard.deleteSuccess'), 'success');
+                  setDeleteTarget(null);
+                } catch (e: unknown) {
+                  console.error('[mes-annonces] delete error:', e);
+                  if (e instanceof ApiError && e.status === 404) {
+                    qc.invalidateQueries({ queryKey: ['products'] });
+                    qc.invalidateQueries({ queryKey: ['my-products'] });
+                    qc.invalidateQueries({ queryKey: ['my-properties'] });
+                    qc.invalidateQueries({ queryKey: ['my-shops'] });
+                    toast.show(t('proDashboard.deleteAlready'), 'info');
+                    setDeleteTarget(null);
+                    return;
+                  }
+                  toast.show(toToastMessage(e, t('proDashboard.deleteError')), 'danger');
+                }
+              }}
+              style={{
+                flex: 1,
+                height: 48,
+                borderRadius: 14,
+                backgroundColor: colors.danger,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: (deleteProduct.isPending || deleteProperty.isPending) ? 0.6 : 1,
+              }}
+            >
+              <Text style={{ fontWeight: '700', color: '#FFFFFF' }}>
+                {(deleteProduct.isPending || deleteProperty.isPending) ? t('proDashboard.deleteCtaBusy') : t('proDashboard.deleteCta')}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Sheet>
+    </>
+  );
+}
+
 // =================================================================
 // Estate (Real-estate agent) dashboard
 // =================================================================
@@ -698,6 +847,8 @@ export function EstateDashboard() {
   const { t } = useTranslation();
   const { data: properties } = useMyProperties();
   const myProperties = useMemo(() => (properties ?? []).slice(0, 4), [properties]);
+  const [statusTarget, setStatusTarget] = useState<ManagementTarget | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ManagementTarget | null>(null);
 
   const totalCount = properties?.length ?? 0;
   const pendingCount = properties?.filter((p) => p.status === 'pending').length ?? 0;
@@ -729,10 +880,16 @@ export function EstateDashboard() {
             label="Baux"
             onPress={() => router.push('/agent/leases' as never)}
           />
+          {/* Was « Demandes », which opened a second view of the SAME visit
+              requests as « Visites » — the client spotted the duplication
+              (2026-08-07). Visites is the one kept: it counts pending/accepted,
+              groups by day, and carries the Accepter / Refuser actions inline.
+              Boost takes the freed slot, which also retires the banner that
+              used to sit under this row. */}
           <QuickAction
-            Icon={MessageSquare}
-            label={t('proDashboard.qaRequests')}
-            onPress={() => router.push('/pro/demandes')}
+            Icon={Zap}
+            label={t('proDashboard.qaBoost')}
+            onPress={() => router.push('/pro/boost')}
           />
           <QuickAction
             Icon={ArrowUpRight}
@@ -805,11 +962,20 @@ export function EstateDashboard() {
                 status={p.status}
                 type={p.type}
                 onPress={() => router.push(`/property/${p.id}`)}
+                onStatus={() => setStatusTarget({ kind: 'property', id: p.id, current: p.status })}
+                onDelete={() => setDeleteTarget({ kind: 'property', id: p.id, title: p.title })}
               />
             ))}
           </View>
         )}
       </View>
+
+      <ManagementSheets
+        statusTarget={statusTarget}
+        setStatusTarget={setStatusTarget}
+        deleteTarget={deleteTarget}
+        setDeleteTarget={setDeleteTarget}
+      />
     </View>
   );
 }
@@ -1105,6 +1271,8 @@ function PropertyRow({
   status,
   type,
   onPress,
+  onStatus,
+  onDelete,
 }: {
   title: string;
   price: string;
@@ -1116,6 +1284,8 @@ function PropertyRow({
   status: 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
   type: 'location' | 'vente' | 'terrain';
   onPress: () => void;
+  onStatus?: () => void;
+  onDelete?: () => void;
 }) {
   const { colors } = useTheme();
   const typeLabel = type === 'location' ? 'LOCATION' : type === 'vente' ? 'VENTE' : 'TERRAIN';
@@ -1215,30 +1385,57 @@ function PropertyRow({
               </Text>
             </View>
           )}
-          <View
+          {/* Same dropdown affordance as the Boutique row (client 2026-08-07):
+              outlined, taller, chevron instead of a 9px pencil that nobody
+              read as "you can change this". */}
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onStatus?.();
+            }}
+            disabled={!onStatus}
+            hitSlop={8}
             style={{
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              borderRadius: 999,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingLeft: 10,
+              paddingRight: onStatus ? 6 : 10,
+              height: 28,
+              borderRadius: 8,
               backgroundColor: inactive ? colors.accentSoft : colors.primarySoft,
+              borderWidth: 1,
+              borderColor: inactive ? colors.accentText : colors.primaryDeep,
             }}
           >
             <Text
               style={{
-                fontSize: 10.5,
+                fontSize: 11.5,
                 fontWeight: '700',
                 color: inactive ? colors.accentText : colors.primaryDeep,
-                letterSpacing: 0.3,
+                letterSpacing: 0.2,
               }}
             >
               {statusLabel}
             </Text>
-          </View>
+            {onStatus && (
+              <ChevronDown size={13} color={inactive ? colors.accentText : colors.primaryDeep} strokeWidth={2.5} />
+            )}
+          </Pressable>
         </View>
       </View>
-      {/* Phase T.4 — the trailing kebab had no onPress ; the status
-          change / delete actions live on ManagementRow (used in the
-          "Mes annonces" list further up) ; remove dead control. */}
+      {onDelete && (
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onDelete();
+          }}
+          hitSlop={6}
+          style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Trash2 size={16} color={colors.danger} strokeWidth={2} />
+        </Pressable>
+      )}
     </Pressable>
   );
 }

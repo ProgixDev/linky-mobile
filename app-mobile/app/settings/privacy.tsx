@@ -22,20 +22,64 @@ import { useAuth } from '../../src/stores/auth';
 import { apiPost, toToastMessage } from '../../src/lib/api';
 import { unregisterPushToken } from '../../src/lib/push';
 import { useToast } from '../../src/components/feedback/Toast';
+import { useUpdateProfile, useExportMyData } from '../../src/data/queries/auth';
 
 export default function PrivacyRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const toast = useToast();
-  // Backed by the persisted prefs store (MMKV) so they survive an app reopen.
-  const personalize = usePrefs((s) => s.privacyPersonalize);
-  const setPersonalize = usePrefs((s) => s.setPrivacyPersonalize);
+  // Statistiques anonymes / Pub personnalisée stay device-local "Bientôt"
+  // placeholders — no analytics pipeline or ad system exists anywhere in
+  // Linky to back them (client 2026-08-06 : verified before touching this
+  // screen, see project notes — flipping these without the real system
+  // behind them would be the exact kind of fake toggle already removed
+  // elsewhere in this app).
   const analytics = usePrefs((s) => s.privacyAnalytics);
   const setAnalytics = usePrefs((s) => s.setPrivacyAnalytics);
   const adTracking = usePrefs((s) => s.privacyAdTracking);
   const setAdTracking = usePrefs((s) => s.setPrivacyAdTracking);
-  const profilePublic = usePrefs((s) => s.privacyProfilePublic);
-  const setProfilePublic = usePrefs((s) => s.setPrivacyProfilePublic);
+
+  // « Profil public » and « Recommandations personnalisées » are REAL
+  // (client 2026-08-06) — both have a server-side effect (list-comments /
+  // list-shop-reviews anonymize the name+avatar shown to OTHER users ;
+  // discover-feed nudges its ranking by the caller's own favorites), so both
+  // must be backed by the account's own row, not a device-local pref that
+  // other people's devices — or the server — could never see. Undefined
+  // (never touched) reads as the DB default, true.
+  const currentUser = useAuth((s) => s.user);
+  const signIn = useAuth((s) => s.signIn);
+  const profilePublic = currentUser?.profile_public ?? true;
+  const personalize = currentUser?.personalize_feed ?? true;
+  const updateProfile = useUpdateProfile();
+  const onToggleProfilePublic = async (next: boolean) => {
+    try {
+      const res = await updateProfile.mutateAsync({ profile_public: next });
+      if (currentUser) signIn({ ...currentUser, ...res.user });
+    } catch (e) {
+      toast.show(toToastMessage(e, t('settings.privacy.deleteMailError')), 'danger');
+    }
+  };
+  const onTogglePersonalize = async (next: boolean) => {
+    try {
+      const res = await updateProfile.mutateAsync({ personalize_feed: next });
+      if (currentUser) signIn({ ...currentUser, ...res.user });
+    } catch (e) {
+      toast.show(toToastMessage(e, t('settings.privacy.deleteMailError')), 'danger');
+    }
+  };
+
+  // « Télécharger mes données » is also REAL now — emails a JSON export to
+  // the account's own registered address.
+  const exportData = useExportMyData();
+  const onDownloadData = async () => {
+    if (exportData.isPending) return;
+    try {
+      const res = await exportData.mutateAsync();
+      toast.show(t('settings.privacy.exportSuccess', { email: res.to }), 'success');
+    } catch (e) {
+      toast.show(toToastMessage(e, t('settings.privacy.exportError')), 'danger');
+    }
+  };
 
   // Self-serve deletion (was a mailto stub) — calls the delete-account edge
   // fn. The server refuses (409, explicit French message) while money is in
@@ -60,7 +104,11 @@ export default function PrivacyRoute() {
                 // Push token first (authed call), then tear the session down.
                 await unregisterPushToken().catch(() => undefined);
                 await signOut();
-                router.replace('/(onboarding)' as never);
+                // '/(onboarding)' is not a route — the group has no index screen,
+                // so after deleting the account the app navigated nowhere (the
+                // `as never` cast was hiding the typed-routes error). Land on the
+                // same screen as a normal sign-out.
+                router.replace('/(onboarding)/welcome');
               } catch (e) {
                 toast.show(toToastMessage(e, t('settings.privacy.deleteMailError')), 'danger');
               } finally {
@@ -86,18 +134,15 @@ export default function PrivacyRoute() {
 
         <SectionLabel label={t('settings.privacy.sectionData')} />
         <Card>
-          {/* Pre-prod: every privacy toggle persists to MMKV but the downstream
-              gates (recommender, analytics, ad-tracking, profile visibility)
-              don't ship until V1.1. Badge each row so the user sees the
-              preference is stored for when the feature lands, not silently
-              ignored today. */}
+          {/* Analytics + ad-tracking stay MMKV-only "Bientôt" placeholders —
+              see the note above where their state is declared. Personalize is
+              REAL and backed by the server (discover-feed ranking). */}
           <ToggleRow
             Icon={Sparkles}
             label={t('settings.privacy.togglePersonalize')}
             sub={t('settings.privacy.togglePersonalizeSub')}
             value={personalize}
-            onChange={setPersonalize}
-            comingSoon
+            onChange={(v) => void onTogglePersonalize(v)}
           />
           <ToggleRow
             Icon={BarChart3}
@@ -125,8 +170,7 @@ export default function PrivacyRoute() {
             label={t('settings.privacy.toggleProfilePublic')}
             sub={t('settings.privacy.toggleProfilePublicSub')}
             value={profilePublic}
-            onChange={setProfilePublic}
-            comingSoon
+            onChange={(v) => void onToggleProfilePublic(v)}
             last
           />
         </Card>
@@ -141,8 +185,7 @@ export default function PrivacyRoute() {
             Icon={Download}
             label={t('settings.privacy.downloadLabel')}
             sub={t('settings.privacy.downloadSub')}
-            comingSoon
-            onPress={() => toast.show(t('common.comingSoonAvailable'), 'info')}
+            onPress={() => void onDownloadData()}
           />
           <ActionRow
             Icon={Trash2}

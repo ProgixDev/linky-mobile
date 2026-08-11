@@ -1,6 +1,6 @@
 import { makePost, stripTokens } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
-import { hmacHex, timingSafeEqual } from '@shared/hmac.ts';
+import { matchesOtpCode } from '@shared/phone-code.ts';
 import { signAccessToken, randomRefreshToken } from '@shared/jwt.ts';
 import { bcryptHash } from '@shared/bcrypt.ts';
 import { detectCarrier } from '@shared/validate.ts';
@@ -27,16 +27,31 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
   if (!otp) throwApi('OTP_NOT_FOUND', 404, 'Code introuvable ou expiré');
   if (otp.consumed_at) throwApi('OTP_ALREADY_USED', 410, 'Code déjà utilisé');
   if (new Date(otp.expires_at).getTime() <= Date.now()) throwApi('OTP_EXPIRED', 410, 'Code expiré');
-  if (otp.attempts >= MAX_ATTEMPTS) throwApi('OTP_TOO_MANY_ATTEMPTS', 429, 'Trop de tentatives');
 
   const hmacSecret = Deno.env.get('LINKY_OTP_HMAC_SECRET');
   const jwtSecret = Deno.env.get('LINKY_JWT_SECRET');
   if (!hmacSecret || !jwtSecret) throwApi('INTERNAL_ERROR', 500, 'Configuration manquante');
 
-  const expected = await hmacHex(hmacSecret, `${otp.target}:${body.code}`);
-  if (!timingSafeEqual(expected, otp.code_hash)) {
-    // 2B: atomic increment via RPC (no read-then-write race under concurrent wrong-code attempts).
-    await sb.rpc('increment_otp_attempts', { p_otp_id: otp.id });
+  // AUTH-02 fix: register this attempt ATOMICALLY *before* comparing the code,
+  // and gate on the value the atomic UPDATE returns — not on the stale `attempts`
+  // read above. increment_otp_attempts does `update ... set attempts = attempts+1
+  // returning attempts`, so the row lock serializes a concurrent burst: each
+  // request gets a distinct sequential count and everything past MAX_ATTEMPTS is
+  // rejected before any comparison. Previously the gate read a stale snapshot and
+  // only incremented on a wrong guess, so a high-concurrency flood could run far
+  // more than MAX_ATTEMPTS comparisons against one otp_id and brute-force it.
+  const { data: attemptsNow, error: eInc } = await sb.rpc('increment_otp_attempts', { p_otp_id: otp.id });
+  if (eInc) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+  if (typeof attemptsNow === 'number' && attemptsNow > MAX_ATTEMPTS) {
+    throwApi('OTP_TOO_MANY_ATTEMPTS', 429, 'Trop de tentatives');
+  }
+
+  // Local HMAC compare, or a round-trip to Prelude when Prelude generated the
+  // code (its `custom_code` is gated on our account, so it owns the secret).
+  // matchesOtpCode fails closed on any doubt.
+  const ok = await matchesOtpCode({ storedHash: otp.code_hash, target: otp.target, code: body.code, hmacSecret });
+  if (!ok) {
+    // Attempt already counted atomically above.
     throwApi('OTP_INVALID', 401, 'Code incorrect');
   }
 

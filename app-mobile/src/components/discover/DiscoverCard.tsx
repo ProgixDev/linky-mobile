@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, FlatList, Pressable, Share, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { Dimensions, FlatList, Pressable, Share, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -13,23 +13,36 @@ import {
   MessageCircle,
   Sparkles as SparklesIcon,
   RotateCcw,
+  Play,
   Video as VideoIcon,
   CloudOff,
   MapPin,
+  MoreHorizontal,
+  EyeOff,
 } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { formatGNF, formatEUR, formatDistance } from '../../lib/format';
 import { gnfToEur } from '../../lib/currency';
 import { haptic } from '../../lib/haptics';
+import { shareMessage } from '../../lib/share';
 import { useFavorites } from '../../stores/favorites';
+import { useHiddenListings } from '../../stores/hiddenListings';
 import { usePrefs } from '../../stores/prefs';
 import { useAuth } from '../../stores/auth';
+import { useToast } from '../feedback/Toast';
 import { useToggleFavorite } from '../../data/queries/products';
 import { useTogglePropertyFavorite } from '../../data/queries/properties';
 import type { DiscoverItem } from '../../data/types';
 
-const { width: SW, height: SH } = Dimensions.get('window');
+// SH is only the fallback for the `height` default param (the parent pager
+// passes the real measured height). WIDTH must be LIVE — a static
+// Dimensions.get() captured once at module load doesn't update when the user
+// changes Android "screen zoom" (display size), which left the card narrower
+// than the screen (black bar + clipped CTA). Each component reads the live
+// window width via useWindowDimensions() instead (client 2026-07-30).
+const { height: SH } = Dimensions.get('window');
+const CARD_MAX_W = 500;
 
 // Reserved width on the right side so bottom text doesn't run under the action rail.
 const RAIL_WIDTH = 72;
@@ -45,7 +58,13 @@ export function DiscoverCard({
 }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const { show } = useToast();
+  const hideListing = useHiddenListings((s) => s.hide);
   const insets = useSafeAreaInsets();
+  // Live window width → card always fills the screen at any Android screen-zoom
+  // / display-size setting (was a stale module-level Dimensions.get()).
+  const { width: winW } = useWindowDimensions();
+  const SW = Math.min(winW, CARD_MAX_W);
   const dataSaver = usePrefs((s) => s.dataSaver);
   const roles = useAuth((s) => s.roles);
   const isBuyer = roles.includes('buyer');
@@ -69,13 +88,39 @@ export function DiscoverCard({
         : '/jour'
       : null;
   const photos = data.item.photos;
-  const videoUrl = !isProduct ? data.item.videoUrl : undefined;
+  // Video plays for BOTH products and properties now (client 2026-08-03 — product
+  // listings can carry an optional video, parity with immo).
+  const videoUrl = data.item.videoUrl;
   const district = !isProduct ? data.item.district : isProduct ? data.item.city : '';
   const distanceToRoad = !isProduct ? data.item.distanceToRoadMeters : undefined;
-  const isFav = useFavorites((s) =>
+  // Heart state: the local store is the single source of truth for RENDERING
+  // (seeded from the server once, then updated by explicit SETs below).
+  //
+  // Bug fixed 2026-08-06: the previous version read `serverFav ?? localFav`
+  // on every render. `serverFav` (data.item.favorited) is a snapshot from
+  // whenever this feed PAGE was fetched — it never changes just because the
+  // user tapped the heart, so with `??` it permanently shadowed the local
+  // toggle. Symptoms matched exactly what the client reported : the heart
+  // never turned red (isFav kept re-reading the frozen "not favorited"
+  // snapshot), repeated taps each recomputed the SAME "willFavorite=true"
+  // intent (since isFav never flipped), sending the server's real toggle RPC
+  // back and forth — which is why the count bounced and "reset to 0" once the
+  // client's optimistic math and the server's real alternating state diverged.
+  const localFav = useFavorites((s) =>
     isProduct ? s.productIds.has(id) : s.propertyIds.has(id),
   );
-  const toggleFavLocal = useFavorites((s) => (isProduct ? s.toggleProduct : s.toggleProperty));
+  const setLocalFav = useFavorites((s) => (isProduct ? s.setProductFav : s.setPropertyFav));
+  const serverFav = data.item.favorited;
+  // Re-seed only when the SERVER sends a genuinely new verdict (mount, or a
+  // real refetch) — never on a re-render caused by our own optimistic tap.
+  const seededServerFav = useRef<boolean | undefined>(undefined);
+  useEffect(() => {
+    if (serverFav === undefined) return; // anonymous caller — local store already is truth
+    if (seededServerFav.current === serverFav) return;
+    seededServerFav.current = serverFav;
+    setLocalFav(id, serverFav);
+  }, [serverFav, id, setLocalFav]);
+  const isFav = localFav;
   // Server-truth like persistence. Both endpoints return the new fav_count ;
   // we keep the displayed count optimistic so the heart-tap feels instant
   // and reconcile with the server response on success. Failure reverts both
@@ -84,23 +129,37 @@ export function DiscoverCard({
   const togglePropertyFav = useTogglePropertyFavorite();
   const serverFavCount = data.item.favCount ?? 0;
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
-  // Reset optimistic state when the underlying server count changes (refetch).
-  useEffect(() => { setOptimisticCount(null); }, [serverFavCount]);
+  // Drop the optimistic value whenever the server sends a fresh truth (refetch)
+  // — either a new count OR a new heart state.
+  useEffect(() => { setOptimisticCount(null); }, [serverFavCount, serverFav]);
   const displayCount = optimisticCount ?? serverFavCount;
 
   const onLike = () => {
+    // Ignore taps while a toggle for THIS card is already in flight — a fast
+    // double-tap used to fire two overlapping "toggle" requests at the real,
+    // non-idempotent server RPC, which flipped the row TWICE (like → unlike)
+    // and is exactly how repeated taps ended up back at the original count
+    // (client 2026-08-06). One tap in flight at a time ; the heart already
+    // animates instantly below so this reads as a single fluid gesture, not
+    // a delay.
+    if (toggleProductFav.isPending || togglePropertyFav.isPending) return;
     haptic.light();
-    const willFavorite = !isFav;
-    // Optimistic UI : flip local heart + count immediately.
-    toggleFavLocal(id);
-    setOptimisticCount(displayCount + (willFavorite ? 1 : -1));
+    const previous = isFav;
+    const willFavorite = !previous;
+    // Optimistic UI : SET (not toggle) the local heart + move the count. Using
+    // an explicit set — rather than the old toggle-and-hope — means repeated
+    // or overlapping calls always converge to the last known intent instead
+    // of compounding. Clamp at 0 : a like count can never go negative.
+    setLocalFav(id, willFavorite);
+    setOptimisticCount(Math.max(0, displayCount + (willFavorite ? 1 : -1)));
     const onErr = () => {
-      // Roll back both : flip the heart back, drop the optimistic delta.
-      toggleFavLocal(id);
+      setLocalFav(id, previous);
       setOptimisticCount(null);
     };
-    const onOk = (res: { fav_count: number }) => {
-      setOptimisticCount(res.fav_count);
+    const onOk = (res: { fav_count: number; favorited: boolean }) => {
+      // Server truth wins for BOTH values, so heart and count stay in lockstep.
+      setOptimisticCount(Math.max(0, res.fav_count));
+      setLocalFav(id, res.favorited);
     };
     if (isProduct) {
       toggleProductFav.mutate(id, { onSuccess: onOk, onError: onErr });
@@ -115,12 +174,34 @@ export function DiscoverCard({
   // photoIdx is updated from onMomentumScrollEnd so the dot indicator stays
   // in lockstep with the active photo, regardless of who triggered the swipe.
   const [photoIdx, setPhotoIdx] = useState(0);
+  // User can pause the reel (video OR the auto-advancing photo slideshow) with
+  // a single tap ; double-tap still likes (see handleTap).
+  const [paused, setPaused] = useState(false);
+  // « … » options menu (Masquer / Pas intéressé). Per-card state — only the
+  // active card's menu can be open ; scrolling away closes it (see effect below).
+  const [menuOpen, setMenuOpen] = useState(false);
+  // AUTO + MANUAL (client 2026-07-31) : photos auto-advance AND stay swipeable.
+  // A manual swipe just stamps this timestamp so the auto-advance skips its next
+  // ticks for ~4s — it never jumps off the photo the user swiped to, then
+  // resumes. No permanent stop.
+  const lastPhotoInteractRef = useRef(0);
+  const onHideListing = () => {
+    haptic.medium();
+    setMenuOpen(false);
+    hideListing(data.kind, id);
+    // The feed filters this listing out (useHiddenListings) so the card leaves
+    // the feed ; the toast confirms the action. French literal (client is
+    // French-first) — avoids touching the 3 locale files for one menu.
+    show('Masqué de ton feed', 'info');
+  };
   const photoListRef = useRef<FlatList<string>>(null);
   // When the reel scrolls off-screen and back, jump the pager to photo 0 so a
   // returning user always sees the cover, not whatever they last swiped to.
   useEffect(() => {
     if (!isActive) {
       setPhotoIdx(0);
+      setPaused(false);
+      setMenuOpen(false);
       photoListRef.current?.scrollToOffset({ offset: 0, animated: false });
     }
   }, [isActive]);
@@ -137,13 +218,32 @@ export function DiscoverCard({
   const enableVideo = !!videoUrl && !dataSaver;
   const player = useVideoPlayer(enableVideo ? (videoUrl as string) : '', (p) => {
     p.loop = true;
-    p.muted = true;
+    // Sound ON (client 2026-07-27) — hear the video's audio if it has any.
+    // Only the active reel plays (see effect below), so just one plays at a time.
+    p.muted = false;
   });
   useEffect(() => {
     if (!enableVideo) return;
-    if (isActive) player.play();
+    if (isActive && !paused) player.play();
     else player.pause();
-  }, [isActive, player, enableVideo]);
+  }, [isActive, player, enableVideo, paused]);
+
+  // No video → photos AUTO-advance like a story (4s/image, looping) AND stay
+  // manually swipeable. A tick is skipped while the user is mid-swipe or within
+  // 4s of one (lastPhotoInteractRef), so the auto-advance never jumps off the
+  // photo they just swiped to — it resumes ~4s after they stop.
+  useEffect(() => {
+    if (enableVideo || !isActive || paused || photos.length <= 1) return;
+    const timer = setInterval(() => {
+      if (Date.now() - lastPhotoInteractRef.current < 4000) return;
+      setPhotoIdx((i) => {
+        const next = (i + 1) % photos.length;
+        photoListRef.current?.scrollToIndex({ index: next, animated: true });
+        return next;
+      });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [enableVideo, isActive, paused, photos.length]);
 
   // Heart pop on double-tap
   const heartScale = useSharedValue(0);
@@ -152,17 +252,42 @@ export function DiscoverCard({
     opacity: heartScale.value > 0 ? 1 : 0,
   }));
   const lastTap = useRef(0);
+  const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Clear any pending single-tap when the card goes inactive (scroll / tab
+  // switch) or unmounts — else the stray timer fires setPaused on the now
+  // inactive card and it stays paused (won't auto-resume) on return.
+  useEffect(() => {
+    if (!isActive && singleTapTimer.current) {
+      clearTimeout(singleTapTimer.current);
+      singleTapTimer.current = null;
+    }
+    return () => {
+      if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+    };
+  }, [isActive]);
   const handleTap = () => {
     const now = Date.now();
     if (now - lastTap.current < 280) {
-      // Double-tap : same as tapping the heart — fires the server toggle so
-      // the count persists. Only acts on the favorite path (no unfavorite via
-      // double-tap, matching IG/TikTok pattern : double-tap loves, doesn't toggle).
+      // Double-tap : like (server toggle so the count persists). Cancels the
+      // pending single-tap so a double-tap never also pauses. No unfavorite via
+      // double-tap (IG/TikTok pattern : double-tap loves, doesn't toggle).
+      if (singleTapTimer.current) {
+        clearTimeout(singleTapTimer.current);
+        singleTapTimer.current = null;
+      }
       if (!isFav) onLike();
       haptic.medium();
       heartScale.value = withSpring(1.4, { damping: 8 }, () => {
         heartScale.value = withSpring(0, { damping: 12 });
       });
+    } else {
+      // Single-tap (confirmed after the double-tap window) : pause / resume the
+      // video or the photo slideshow so the user can stop on one shot.
+      singleTapTimer.current = setTimeout(() => {
+        setPaused((p) => !p);
+        haptic.light();
+        singleTapTimer.current = null;
+      }, 280);
     }
     lastTap.current = now;
   };
@@ -191,7 +316,8 @@ export function DiscoverCard({
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             keyExtractor={(_, i) => photoKeys[i] ?? String(i)}
-            onMomentumScrollEnd={onPhotoScroll}
+            onScrollBeginDrag={() => { lastPhotoInteractRef.current = Date.now(); }}
+            onMomentumScrollEnd={(e) => { lastPhotoInteractRef.current = Date.now(); onPhotoScroll(e); }}
             scrollEventThrottle={16}
             removeClippedSubviews
             initialNumToRender={2}
@@ -224,6 +350,36 @@ export function DiscoverCard({
           locations={[0, 0.18, 0.45, 1]}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
+
+        {/* Pause overlay — single tap pauses the video / photo slideshow so the
+            user can stop on one shot ; the play glyph signals it's paused. */}
+        {paused && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 999,
+                backgroundColor: 'rgba(0,0,0,0.55)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Play size={28} color="#FFFFFF" fill="#FFFFFF" strokeWidth={1.5} />
+            </View>
+          </View>
+        )}
 
         {/* ===== Top filter pills (hidden for pure pros) ===== */}
         {!isPurePro && (
@@ -259,8 +415,13 @@ export function DiscoverCard({
           </View>
         )}
 
-        {/* ===== Video / carousel indicator ===== */}
-        {videoUrl ? (
+        {/* ===== Video / carousel indicator =====
+            The « Visite vidéo » pill is hidden when the video simply plays
+            (client 2026-08-07): on a video-first feed it labelled the obvious
+            and sat on top of the image. It STAYS in data-saver mode, where it
+            is the only thing explaining why the video is frozen — dropping it
+            there would leave a still frame and no reason for it. */}
+        {videoUrl ? (dataSaver ? (
           <View
             style={{
               position: 'absolute',
@@ -288,10 +449,10 @@ export function DiscoverCard({
                 letterSpacing: 0,
               }}
             >
-              {dataSaver ? t('decouvrir.card.visiteVideoPaused') : t('decouvrir.card.visiteVideo')}
+              {t('decouvrir.card.visiteVideoPaused')}
             </Text>
           </View>
-        ) : photos.length > 1 ? (
+        ) : null) : photos.length > 1 ? (
           <View
             style={{
               position: 'absolute',
@@ -307,10 +468,11 @@ export function DiscoverCard({
               <View
                 key={i}
                 style={{
-                  width: i === photoIdx ? 22 : 5,
-                  height: 5,
+                  width: i === photoIdx ? 22 : 6,
+                  height: 6,
                   borderRadius: 999,
-                  backgroundColor: i === photoIdx ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
+                  // Client 2026-07-30 : indicateur vert, point actif blanc.
+                  backgroundColor: i === photoIdx ? '#FFFFFF' : colors.primary,
                 }}
               />
             ))}
@@ -338,9 +500,22 @@ export function DiscoverCard({
           }}
           onShare={() => {
             haptic.light();
-            void Share.share({ message: t('decouvrir.card.shareMessage') }).catch(() => {});
+            // Was a generic sentence that didn't even say WHICH listing was
+            // being shared — now the title + a real link to it.
+            void Share.share({
+              message: shareMessage(
+                `${data.item.title} — sur Linky`,
+                isProduct ? 'product' : 'property',
+                id,
+              ),
+            }).catch(() => {});
+          }}
+          onMore={() => {
+            haptic.light();
+            setMenuOpen(true);
           }}
           likeCount={String(displayCount)}
+          commentCount={String(data.item.commentCount ?? 0)}
           bottomAnchor={bottomCardOffset + 60} // sits just above the bottom card
         />
 
@@ -499,6 +674,64 @@ export function DiscoverCard({
           </Pressable>
         </View>
       </Pressable>
+
+      {/* « … » options menu — centred modal (no tab-bar math). Masquer / Pas
+          intéressé hides the listing from the feed for good (this device). */}
+      {menuOpen && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 50,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 24,
+          }}
+        >
+          <Pressable
+            onPress={() => setMenuOpen(false)}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)' }}
+          />
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 340,
+              backgroundColor: colors.card,
+              borderRadius: 20,
+              padding: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Text
+              style={{
+                textAlign: 'center',
+                color: colors.textMuted,
+                fontSize: 13,
+                paddingVertical: 12,
+                paddingHorizontal: 12,
+                letterSpacing: 0,
+              }}
+            >
+              Cette annonce ne t&apos;intéresse pas ?
+            </Text>
+            <Pressable
+              onPress={onHideListing}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 14, borderRadius: 14 }}
+            >
+              <EyeOff size={20} color={colors.text} strokeWidth={2} />
+              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>Masquer de mon feed</Text>
+            </Pressable>
+            <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 8 }} />
+            <Pressable onPress={() => setMenuOpen(false)} style={{ alignItems: 'center', paddingVertical: 14 }}>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.textMuted }}>Annuler</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -509,45 +742,66 @@ function DiscoverRail({
   onLike,
   onComment,
   onShare,
+  onMore,
   likeCount,
+  commentCount,
   bottomAnchor,
 }: {
   isFav: boolean;
   onLike: () => void;
   onComment: () => void;
   onShare: () => void;
+  onMore: () => void;
   likeCount: string;
+  commentCount: string;
   bottomAnchor: number;
 }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  // Client 2026-07-30: right rail = icons only. The "Commenter" / "Partager"
+  // WORD labels are dropped (kept as accessibility labels for screen readers).
+  // The like COUNT stays under the heart — it's data, not a label.
   const items = [
     {
       key: 'like',
       icon: (
+        // Instagram-style : the heart itself fills solid red when liked (not
+        // the circle behind it) — white outline, no fill, when not liked
+        // (client 2026-08-06).
         <Heart
           size={22}
-          color="#FFFFFF"
-          fill={isFav ? '#FFFFFF' : 'transparent'}
+          color={isFav ? colors.danger : '#FFFFFF'}
+          fill={isFav ? colors.danger : 'transparent'}
           strokeWidth={isFav ? 0 : 2}
         />
       ),
       label: likeCount,
+      a11y: "J'aime",
       onPress: onLike,
-      bg: isFav ? colors.danger : 'rgba(0,0,0,0.4)',
+      bg: 'rgba(0,0,0,0.4)',
     },
     {
       key: 'comment',
       icon: <MessageCircle size={21} color="#FFFFFF" strokeWidth={2} />,
-      label: t('decouvrir.card.comment'),
+      label: commentCount,
+      a11y: t('decouvrir.card.comment'),
       onPress: onComment,
       bg: 'rgba(0,0,0,0.4)',
     },
     {
       key: 'share',
       icon: <Share2 size={20} color="#FFFFFF" strokeWidth={2} />,
-      label: t('decouvrir.card.share'),
+      label: '',
+      a11y: t('decouvrir.card.share'),
       onPress: onShare,
+      bg: 'rgba(0,0,0,0.4)',
+    },
+    {
+      key: 'more',
+      icon: <MoreHorizontal size={21} color="#FFFFFF" strokeWidth={2} />,
+      label: '',
+      a11y: 'Options',
+      onPress: onMore,
       bg: 'rgba(0,0,0,0.4)',
     },
   ];
@@ -566,6 +820,7 @@ function DiscoverRail({
           key={it.key}
           onPress={it.onPress}
           hitSlop={6}
+          accessibilityLabel={it.a11y}
           style={{ alignItems: 'center', gap: 4 }}
         >
           <View
@@ -582,18 +837,20 @@ function DiscoverRail({
           >
             {it.icon}
           </View>
-          <Text
-            style={{
-              fontSize: 10.5,
-              fontWeight: '700',
-              color: '#FFFFFF',
-              letterSpacing: 0,
-              lineHeight: 12,
-              includeFontPadding: false,
-            }}
-          >
-            {it.label}
-          </Text>
+          {it.label ? (
+            <Text
+              style={{
+                fontSize: 10.5,
+                fontWeight: '700',
+                color: '#FFFFFF',
+                letterSpacing: 0,
+                lineHeight: 12,
+                includeFontPadding: false,
+              }}
+            >
+              {it.label}
+            </Text>
+          ) : null}
         </Pressable>
       ))}
     </View>
@@ -603,11 +860,12 @@ function DiscoverRail({
 export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const { width: winW, height: winH } = useWindowDimensions();
   return (
     <View
       style={{
-        width: SW,
-        height: SH,
+        width: Math.min(winW, CARD_MAX_W),
+        height: winH,
         backgroundColor: colors.discoverBg,
         alignItems: 'center',
         justifyContent: 'center',
@@ -629,7 +887,7 @@ export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
       </View>
       <Text
         style={{
-          color: '#FFFFFF',
+          color: colors.text,
           fontSize: 24,
           fontWeight: '700',
           letterSpacing: -0.3,
@@ -642,7 +900,7 @@ export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
       </Text>
       <Text
         style={{
-          color: 'rgba(255,255,255,0.65)',
+          color: colors.textMuted,
           fontSize: 14,
           textAlign: 'center',
           marginTop: 12,
@@ -660,15 +918,15 @@ export function DiscoverEnd({ onRefresh }: { onRefresh: () => void }) {
           height: 48,
           paddingHorizontal: 24,
           borderRadius: 999,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colors.text,
           flexDirection: 'row',
           gap: 8,
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <RotateCcw size={15} color="#0E1311" strokeWidth={2.25} />
-        <Text style={{ color: '#0E1311', fontWeight: '700', fontSize: 14 }}>{t('decouvrir.card.endCta')}</Text>
+        <RotateCcw size={15} color={colors.bg} strokeWidth={2.25} />
+        <Text style={{ color: colors.bg, fontWeight: '700', fontSize: 14 }}>{t('decouvrir.card.endCta')}</Text>
       </Pressable>
     </View>
   );

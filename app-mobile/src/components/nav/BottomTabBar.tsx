@@ -56,10 +56,11 @@ export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarPro
         (TAB_ORDER as readonly string[]).indexOf(a.name) -
         (TAB_ORDER as readonly string[]).indexOf(b.name),
     );
-  const activeRoute = state.routes[state.index];
-  const onDiscoverRoute = activeRoute?.name === 'decouvrir';
-  const barBg = onDiscoverRoute ? 'rgba(14, 19, 17, 0.92)' : colors.bgElev;
-  const borderColor = onDiscoverRoute ? 'rgba(255,255,255,0.08)' : colors.border;
+  // The tab bar follows the app theme everywhere, including Découvrir (client
+  // 2026-07-27) — it used to be force-dark on that route, which left a black
+  // bar under a light-mode app.
+  const barBg = colors.bgElev;
+  const borderColor = colors.border;
 
   return (
     <View
@@ -93,7 +94,7 @@ export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarPro
         };
 
         const activeColor = colors.primary;
-        const inactiveColor = onDiscoverRoute ? 'rgba(255,255,255,0.6)' : colors.textFaint;
+        const inactiveColor = colors.textFaint;
 
         if (isFab) {
           return (

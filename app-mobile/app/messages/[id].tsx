@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   TextInput,
   View,
 } from 'react-native';
+// keyboard-controller's KAV handles Expo edge-to-edge correctly — the plain RN
+// KeyboardAvoidingView (behavior undefined on Android) left the composer under
+// the keyboard. Same fix already applied to the comments thread.
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -113,7 +116,7 @@ export default function ChatRoute() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
       {pinned && (
@@ -186,6 +189,10 @@ export default function ChatRoute() {
         ref={scrollRef}
         contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 14, gap: 8 }}
         showsVerticalScrollIndicator={false}
+        // Client 2026-07-22: dragging the thread dismisses the keyboard, and taps
+        // on the messages close it too (send button still works).
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
       >
         {data?.messages.map((m) => {
@@ -199,12 +206,15 @@ export default function ChatRoute() {
                   borderRadius: 14,
                   borderBottomRightRadius: isMine ? 4 : 14,
                   borderBottomLeftRadius: isMine ? 14 : 4,
-                  backgroundColor: isMine ? colors.primarySoft : colors.card,
+                  backgroundColor: isMine ? colors.primary : colors.card,
                   borderWidth: isMine ? 0 : 1,
                   borderColor: colors.border,
                 }}
               >
-                <Text style={{ fontSize: 13, color: isMine ? colors.primaryDeep : colors.text }}>{m.body}</Text>
+                {/* Sent bubble : white on solid green (was primaryDeep on
+                    primarySoft = dark green on dark green, unreadable in dark
+                    mode — client 2026-08-03). */}
+                <Text style={{ fontSize: 13, color: isMine ? '#FFFFFF' : colors.text }}>{m.body}</Text>
               </View>
               <Text
                 variant="micro"

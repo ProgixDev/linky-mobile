@@ -11,7 +11,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { hmacHex, timingSafeEqual } from '@shared/hmac.ts';
+import { matchesOtpCode } from '@shared/phone-code.ts';
 import { detectCarrier } from '@shared/validate.ts';
 
 interface Body { otp_id: string; code: string }
@@ -51,8 +51,9 @@ Deno.serve(makePost<Body>('/v1/phones/add-confirm', valid, async ({ sb, body, re
 
   const hmacSecret = Deno.env.get('LINKY_OTP_HMAC_SECRET');
   if (!hmacSecret) throwApi('INTERNAL_ERROR', 500, 'Configuration manquante');
-  const expected = await hmacHex(hmacSecret, `${otp.target}:${body.code}`);
-  if (!timingSafeEqual(expected, otp.code_hash)) {
+  // Local HMAC compare, or a round-trip to Prelude when it generated the code.
+  const ok = await matchesOtpCode({ storedHash: otp.code_hash, target: otp.target, code: body.code, hmacSecret });
+  if (!ok) {
     await sb.rpc('increment_otp_attempts', { p_otp_id: otp.id });
     throwApi('OTP_INVALID', 401, 'Code incorrect');
   }
@@ -68,6 +69,15 @@ Deno.serve(makePost<Body>('/v1/phones/add-confirm', valid, async ({ sb, body, re
   if (eCons) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   if (!consumed) throwApi('OTP_ALREADY_USED', 410, 'Code déjà utilisé');
 
+  // Client 2026-07-22: the FIRST phone a user links becomes primary automatically
+  // (a lone number is de facto the default — mobile-money payouts need one set).
+  // Later adds stay non-primary ; switching primary remains an explicit action.
+  const { count: existingPhones } = await sb
+    .from('phones')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  const makePrimary = (existingPhones ?? 0) === 0;
+
   // Final insert. The e164 UNIQUE constraint is the last line of defense:
   // even if two confirms race past the add-request "already linked" check
   // with different codes for the same number, only one can win.
@@ -77,7 +87,7 @@ Deno.serve(makePost<Body>('/v1/phones/add-confirm', valid, async ({ sb, body, re
       user_id: userId,
       e164: otp.target,
       carrier: detectCarrier(otp.target),
-      is_primary: false, // never auto-primary ; set-primary is a separate explicit action
+      is_primary: makePrimary, // first phone auto-primary (client 2026-07-22)
       verified_at: new Date().toISOString(),
     })
     .select('id, e164, carrier, is_primary, verified_at, created_at')

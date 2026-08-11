@@ -14,6 +14,10 @@ interface OpeningHours {
 }
 
 interface Body {
+  /** 'shop' (boutique, products) or 'agency' (agence immo, properties).
+   *  Only meaningful on CREATE — a profile never changes kind afterwards
+   *  (client 2026-08-07). Defaults to 'shop' for older clients. */
+  kind?: 'shop' | 'agency';
   id?: string;
   name: string;
   city: string;
@@ -78,6 +82,7 @@ function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
   const x = b as Record<string, unknown>;
   if (x.id !== undefined && !isUuid(x.id)) return false;
+  if (x.kind !== undefined && x.kind !== 'shop' && x.kind !== 'agency') return false;
   if (typeof x.name !== 'string' || x.name.trim().length < 2 || x.name.length > 80) return false;
   if (typeof x.city !== 'string' || x.city.trim().length < 2 || x.city.length > 80) return false;
   if (x.about !== undefined && (typeof x.about !== 'string' || x.about.length > 800)) return false;
@@ -100,6 +105,7 @@ Deno.serve(makePost<Body>('/v1/shops/upsert', valid, async ({ sb, body, req }) =
   }
   const payload = {
     owner_id: userId,
+    kind: body.kind === 'agency' ? 'agency' : 'shop',
     name: body.name.trim(),
     city: body.city.trim(),
     about: body.about?.trim() ?? '',
@@ -154,7 +160,7 @@ Deno.serve(makePost<Body>('/v1/shops/upsert', valid, async ({ sb, body, req }) =
   // Pull the joined view so product_count is included in the response.
   const { data: withCounts } = await sb
     .from('shops_with_counts')
-    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count, opening_hours')
+    .select('id, owner_id, name, about, city, cover_url, avatar_url, verified, rating, review_count, follower_count, response_time_text, product_count, opening_hours, kind, property_count')
     .eq('id', row!.id)
     .single();
   return { body: { shop: mapShop((withCounts ?? row) as ShopRow) } };

@@ -37,6 +37,17 @@ function valid(b: unknown): b is Body {
   return typeof b === 'object' && b !== null;
 }
 
+// Idempotency-cache filter (wrap.ts contract) : the signed realtime_jwt is a
+// LIVE bearer (role=authenticated). Never persist it into
+// idempotency_keys.response_body (kept 24h), which a service-role/DB read could
+// replay within the window. The live response to the caller is unaffected —
+// wrap.ts only filters the CACHED copy.
+function stripRealtimeJwt(body: unknown): unknown {
+  if (!body || typeof body !== 'object') return body;
+  const { realtime_jwt: _t, ...rest } = body as Record<string, unknown>;
+  return rest;
+}
+
 Deno.serve(makePost<Body>('/v1/realtime/mint-jwt', valid, async ({ req }) => {
   const userId = await requireUser(req);
 
@@ -54,4 +65,4 @@ Deno.serve(makePost<Body>('/v1/realtime/mint-jwt', valid, async ({ req }) => {
       expires_in: REALTIME_TOKEN_TTL_SEC,
     },
   };
-}));
+}, stripRealtimeJwt));

@@ -31,6 +31,8 @@ interface CreateListingState {
   furnished: boolean;
   amenities: string[];
   propertyPhotos: PropertyPhoto[];
+  // Optional property video (client 2026-07-26). Public URL after upload.
+  videoUrl?: string;
   lat?: number;
   lng?: number;
   setKind: (k: ListingKind) => void;
@@ -63,6 +65,7 @@ const DEFAULTS = {
   furnished: false,
   amenities: [] as string[],
   propertyPhotos: [] as PropertyPhoto[],
+  videoUrl: undefined as string | undefined,
   lat: undefined as number | undefined,
   lng: undefined as number | undefined,
 };

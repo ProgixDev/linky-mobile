@@ -15,6 +15,7 @@ interface Body {
   category?: string;
   condition?: 'neuf' | 'occasion' | 'reconditionné';
   photos?: string[];
+  video_url?: string | null;
   city?: string;
   district?: string | null;
   status?: 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
@@ -36,6 +37,7 @@ function valid(b: unknown): b is Body {
     if (!Array.isArray(x.photos) || x.photos.length > 8) return false;
     if (!x.photos.every((p) => typeof p === 'string' && URL_RE.test(p))) return false;
   }
+  if (x.video_url !== undefined && x.video_url !== null && (typeof x.video_url !== 'string' || !URL_RE.test(x.video_url))) return false;
   if (x.city !== undefined && (typeof x.city !== 'string' || x.city.trim().length < 2 || x.city.length > 80)) return false;
   if (x.district !== undefined && x.district !== null && (typeof x.district !== 'string' || x.district.length > 80)) return false;
   if (x.status !== undefined && !(STATUSES as readonly string[]).includes(x.status as string)) return false;
@@ -70,13 +72,14 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
   if (body.category !== undefined)    patch.category = body.category;
   if (body.condition !== undefined)   patch.condition = body.condition;
   if (body.photos !== undefined)      patch.photos = body.photos;
+  if (body.video_url !== undefined)   patch.video_url = body.video_url;
   if (body.city !== undefined)        patch.city = body.city.trim();
   if (body.district !== undefined)    patch.district = body.district === null ? null : body.district.trim() || null;
   if (body.status !== undefined)      patch.status = body.status;
 
   const { data, error } = await sb
     .from('products').update(patch).eq('id', body.id)
-    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, boosted, view_count, fav_count, city, district, created_at')
+    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, created_at')
     .single();
   if (error || !data) {
     console.error('[product-update] update error:', error);

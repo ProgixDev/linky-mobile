@@ -6,7 +6,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../src/lib/queryClient';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { I18nextProvider } from 'react-i18next';
@@ -14,20 +15,8 @@ import { useFonts } from 'expo-font';
 import i18n from '../src/i18n';
 import { ThemeProvider } from '../src/theme/ThemeProvider';
 import { ToastProvider } from '../src/components/feedback/Toast';
+import { UpdateBanner } from '../src/components/feedback/UpdateBanner';
 import { usePushRegistration, useNotificationTapRouting } from '../src/lib/push';
-
-// Single QueryClient at module scope — do NOT instantiate inside the component.
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60_000,
-      gcTime: 30 * 60_000,
-      retry: 3,
-      refetchOnReconnect: true,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -170,6 +159,10 @@ export default function RootLayout() {
                           options={{ animation: 'slide_from_right' }}
                         />
                       </Stack>
+                      {/* Sits above every screen : a downloaded update can be
+                          applied in ONE restart instead of two (client
+                          2026-08-05 — testers kept running stale bundles). */}
+                      <UpdateBanner />
                     </ToastProvider>
                   </BottomSheetModalProvider>
                 </ThemeProvider>

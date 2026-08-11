@@ -35,7 +35,7 @@ Deno.serve(makePost<Body>('/v1/orders/list-mine', valid, async ({ sb, body, req 
   const limit = body.limit ?? 50;
   let q = sb
     .from('orders')
-    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at')
+    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, delivery_mode, delivery_fee_minor, payment_method, currency, status, events, release_at, created_at')
     .eq('buyer_id', userId);
   if (body.status) q = q.eq('status', body.status);
   if (body.cursor) {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Linking, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -245,7 +245,9 @@ export default function CheckoutConfirmRoute() {
                 style={{ marginTop: 14 }}
                 label={t('checkout.confirmOpenPayment')}
                 onPress={() => {
-                  void Linking.openURL(`https://payment.lengopay.com/${intent.railIntentId}`).catch(() => undefined);
+                  // In-app WebView re-offer (client 2026-07-26) — no external browser.
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
+                  router.replace({ pathname: '/checkout/pay', params: { url: `https://payment.lengopay.com/${intent.railIntentId}`, orderId: order.id } } as any);
                 }}
               />
             )}

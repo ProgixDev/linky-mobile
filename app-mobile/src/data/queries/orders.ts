@@ -137,9 +137,13 @@ export function useOrderWithIntent(id: string | undefined) {
 }
 
 export interface PlaceOrderInput {
-  productId: string;
-  quantity: number;
+  /** Every article of the cart — all from the SAME shop (client 2026-08-05).
+   *  The server re-checks that rule and recomputes every amount itself. */
+  items: { productId: string; quantity: number }[];
   paymentMethod: PaymentMethod;
+  /** Mode de réception (2026-07-30). 'delivery' facture le frais forfaitaire
+   *  Linky ; 'pickup' est gratuit. Omis → 'delivery' côté serveur. */
+  deliveryMode?: 'pickup' | 'delivery';
   /** Optional Q6 override; omit to use the user's primary phone from /phones. */
   payerPhone?: string;
 }
@@ -155,17 +159,17 @@ export function usePlaceOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      productId,
-      quantity,
+      items,
       paymentMethod,
+      deliveryMode,
       payerPhone,
     }: PlaceOrderInput): Promise<PlaceOrderResult> => {
       return apiPost<PlaceOrderResult>({
         path: '/place-order',
         body: {
-          product_id: productId,
-          quantity,
+          items: items.map((i) => ({ product_id: i.productId, quantity: i.quantity })),
           payment_method: paymentMethod,
+          ...(deliveryMode ? { delivery_mode: deliveryMode } : {}),
           ...(payerPhone ? { payer_phone: payerPhone } : {}),
         },
       });

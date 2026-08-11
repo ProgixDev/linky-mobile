@@ -9,6 +9,9 @@ interface Body {
   city?: string;
   query?: string;
   shop_id?: string;
+  // When the caller asks for their OWN stock (their user id), every status is
+  // returned so they can manage paused/sold rows. Public reads stay active-only.
+  owner_id?: string;
   sort?: 'recent' | 'popular';
   // Filter-sheet additions: price ceiling (GNF minor) + product condition.
   price_max?: number;
@@ -37,6 +40,7 @@ function valid(b: unknown): b is Body {
   if (x.city !== undefined && (typeof x.city !== 'string' || x.city.length > 80)) return false;
   if (x.query !== undefined && typeof x.query !== 'string') return false;
   if (x.shop_id !== undefined && (typeof x.shop_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.shop_id))) return false;
+  if (x.owner_id !== undefined && (typeof x.owner_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.owner_id))) return false;
   if (x.sort !== undefined && x.sort !== 'recent' && x.sort !== 'popular') return false;
   if (x.price_max !== undefined && (typeof x.price_max !== 'number' || !Number.isInteger(x.price_max) || x.price_max < 0)) return false;
   if (x.condition !== undefined && (typeof x.condition !== 'string' || !CONDITIONS.has(x.condition))) return false;
@@ -49,10 +53,19 @@ Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body }) => {
   const limit = body.limit ?? 50;
   const sortIsRecent = !body.sort || body.sort === 'recent';
   const hasCursor = !!(body.cursor && sortIsRecent);
+  const ownerScoped = !!body.owner_id;
   let q = sb
     .from('products')
-    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, boosted, view_count, fav_count, city, district, created_at')
-    .eq('status', 'active');
+    .select(
+      'id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, created_at' +
+        (ownerScoped ? ', shops!inner(owner_id)' : ''),
+    );
+
+  // Owner asking for their OWN stock → every status (so they can re-activate a
+  // paused / mark-sold listing from the dashboard). Public reads (no owner_id)
+  // stay active-only. Mirrors list-properties' owner_id behaviour.
+  if (ownerScoped) q = q.eq('shops.owner_id', body.owner_id!);
+  else q = q.eq('status', 'active');
 
   if (body.category && body.category !== 'all') q = q.eq('category', body.category);
   if (body.city && body.city.trim().length > 0) q = q.eq('city', body.city.trim());

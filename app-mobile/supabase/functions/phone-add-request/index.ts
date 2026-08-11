@@ -16,6 +16,7 @@
 // insert time anyway.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
+import { sendCodeToPhone, PRELUDE_CODE_SENTINEL } from '@shared/phone-code.ts';
 import { requireUser } from '@shared/auth.ts';
 import { normalizePhone } from '@shared/validate.ts';
 import { hmacHex } from '@shared/hmac.ts';
@@ -90,10 +91,40 @@ Deno.serve(makePost<Body>('/v1/phones/add-request', valid, async ({ sb, body, re
     .single();
   if (e3 || !inserted) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
 
-  // SMS delivery is not wired in V1 (memo project_phase_s_withdrawals : Orange
-  // SMS + Twilio failover queued). Until then the dev_code stub echoes the code
-  // to the client so the in-app paste flow works for the owner's test rounds —
-  // gated to the SAME pre-prod posture as otp-request.
-  console.log(`[OTP STUB add_phone] target=${target} code=${code} otp_id=${inserted.id}`);
-  return { body: { otp_id: inserted.id, dev_code: code } };
+  // Phone linking is a possession proof (find_or_create_user_with_phone trusts
+  // the e164 → user_id link, see header). Echoing the code back would let a
+  // signed-in attacker bind ANY unlinked number to their own account without
+  // proving possession — an account-takeover path (audit SEC-02). So we deliver
+  // the code out-of-band and FAIL CLOSED when no rail is configured. The code is
+  // never returned or logged in production; a pre-prod echo requires an explicit
+  // LINKY_DEV_OTP_ECHO=1 (must stay unset in prod).
+  //
+  // Rails live in @shared/phone-code.ts: SMS first, then WhatsApp. Guinean
+  // carriers reject our SMS until the "LINKY" sender is registered with them,
+  // so WhatsApp is what actually delivers today.
+  const sent = await sendCodeToPhone(target, code, 'verification');
+  if (sent) {
+    if (sent.verifier === 'prelude') {
+      // Prelude generated this code, so our HMAC is meaningless for it —
+      // stamp the row so the confirm step knows to ask Prelude instead. Fail
+      // the request if the stamp cannot be written: the alternative is a user
+      // holding a valid code against a row that will never accept it.
+      const { error: eMark } = await sb
+        .from('otp_codes')
+        .update({ code_hash: PRELUDE_CODE_SENTINEL })
+        .eq('id', inserted.id);
+      if (eMark) {
+        console.error('[phone-add-request] could not mark otp as prelude-verified:', eMark);
+        throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+      }
+    }
+    return { body: { otp_id: inserted.id, delivery: sent.delivery } };
+  }
+
+  if (Deno.env.get('LINKY_DEV_OTP_ECHO') === '1') {
+    console.log(`[OTP DEV ECHO add_phone] otp_id=${inserted.id}`);
+    return { body: { otp_id: inserted.id, dev_code: code } };
+  }
+  throwApi('OTP_DELIVERY_UNAVAILABLE', 503,
+    "L'ajout de numéro par SMS n'est pas encore activé. Réessaie plus tard.");
 }));

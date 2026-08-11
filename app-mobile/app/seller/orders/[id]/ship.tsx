@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Truck, Package, MapPin, Building2 } from 'lucide-react-native';
@@ -94,157 +95,159 @@ export default function ShipRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        <ScreenHeader
-          title={t('seller.shipTitle')}
-          subtitle={t('seller.shipSubtitle')}
-        />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 120 }}
+        >
+          <ScreenHeader
+            title={t('seller.shipTitle')}
+            subtitle={t('seller.shipSubtitle')}
+          />
 
-        <View style={{ paddingHorizontal: 24, gap: 10 }}>
-          {CARRIERS.map((c) => (
-            <CarrierRow
-              key={c.id}
-              carrier={c}
-              selected={carrier === c.id}
-              onPress={() => setCarrier(c.id)}
-            />
-          ))}
-        </View>
-
-        {/* Tracking number */}
-        {trackingRequired && (
-          <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: '700',
-                color: colors.textFaint,
-                letterSpacing: 0.6,
-                marginBottom: 10,
-              }}
-            >
-              {t('seller.shipTrackingLabel')}
-            </Text>
-            <View
-              style={{
-                height: 56,
-                paddingHorizontal: 14,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.card,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              <Package size={18} color={colors.textMuted} strokeWidth={1.75} />
-              <TextInput
-                value={tracking}
-                onChangeText={setTracking}
-                placeholder={t('seller.shipTrackingPlaceholder')}
-                placeholderTextColor={colors.textFaint}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                // Server validates ≤ 60 chars (set-order-tracking valid()) ;
-                // mirror here so we never pop a 400 for a runaway paste.
-                maxLength={60}
-                style={{
-                  flex: 1,
-                  fontSize: 15,
-                  fontWeight: '600',
-                  color: colors.text,
-                  letterSpacing: 0.5,
-                  padding: 0,
-                }}
+          <View style={{ paddingHorizontal: 24, gap: 10 }}>
+            {CARRIERS.map((c) => (
+              <CarrierRow
+                key={c.id}
+                carrier={c}
+                selected={carrier === c.id}
+                onPress={() => setCarrier(c.id)}
               />
-            </View>
-            <Text
-              style={{
-                fontSize: 12,
-                color: colors.textMuted,
-                marginTop: 8,
-                letterSpacing: 0,
-                lineHeight: 16,
-              }}
-            >
-              {t('seller.shipTrackingHint')}
-            </Text>
+            ))}
           </View>
-        )}
-      </ScrollView>
 
-      <SafeAreaView
-        edges={['bottom']}
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          paddingHorizontal: 24,
-          paddingTop: 12,
-          paddingBottom: 8,
-          backgroundColor: colors.bg,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-        }}
-      >
-        <Pressable
-          disabled={!valid || shipMutation.isPending || !id}
-          onPress={async () => {
-            if (!id || shipMutation.isPending) return;
-            haptic.medium();
-            try {
-              const trimmed = tracking.trim();
-              // Phase X.12 — send the human-readable carrier LABEL
-              // ("Jefa Delivery") rather than the internal id ("jefa") so
-              // the buyer's order-detail timeline reads cleanly. CARRIERS
-              // is a fixed V1 list, so .find() is exhaustive ; the `?? carrier`
-              // fallback is paranoia for a future enum addition.
-              // Phase I.8 — backend gets the STABLE FR label so the buyer
-              // timeline reads "Jefa Delivery" regardless of UI language.
-              const carrierLabel = CARRIER_BACKEND_LABELS[carrier] ?? carrier;
-              await shipMutation.mutateAsync({
-                orderId: id,
-                trackingNumber: trimmed.length > 0 ? trimmed : undefined,
-                carrier: carrierLabel,
-              });
-              toast.show(t('seller.shipSuccess'), 'success');
-              router.replace(`/seller/orders/${id}`);
-            } catch (e) {
-              toast.show(toToastMessage(e, t('seller.shipError')), 'danger');
-            }
-          }}
+          {/* Tracking number */}
+          {trackingRequired && (
+            <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '700',
+                  color: colors.textFaint,
+                  letterSpacing: 0.6,
+                  marginBottom: 10,
+                }}
+              >
+                {t('seller.shipTrackingLabel')}
+              </Text>
+              <View
+                style={{
+                  height: 56,
+                  paddingHorizontal: 14,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <Package size={18} color={colors.textMuted} strokeWidth={1.75} />
+                <TextInput
+                  value={tracking}
+                  onChangeText={setTracking}
+                  placeholder={t('seller.shipTrackingPlaceholder')}
+                  placeholderTextColor={colors.textFaint}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  // Server validates ≤ 60 chars (set-order-tracking valid()) ;
+                  // mirror here so we never pop a 400 for a runaway paste.
+                  maxLength={60}
+                  style={{
+                    flex: 1,
+                    fontSize: 15,
+                    fontWeight: '600',
+                    color: colors.text,
+                    letterSpacing: 0.5,
+                    padding: 0,
+                  }}
+                />
+              </View>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: colors.textMuted,
+                  marginTop: 8,
+                  letterSpacing: 0,
+                  lineHeight: 16,
+                }}
+              >
+                {t('seller.shipTrackingHint')}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        <SafeAreaView
+          edges={['bottom']}
           style={{
-            height: 56,
-            borderRadius: 16,
-            backgroundColor: valid && !shipMutation.isPending ? colors.text : colors.bgSunken,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: valid && !shipMutation.isPending ? 1 : 0.6,
-            flexDirection: 'row',
-            gap: 8,
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            paddingHorizontal: 24,
+            paddingTop: 12,
+            paddingBottom: 8,
+            backgroundColor: colors.bg,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
           }}
         >
-          {shipMutation.isPending && (
-            <ActivityIndicator size="small" color={valid ? colors.bg : colors.textFaint} />
-          )}
-          <Text
+          <Pressable
+            disabled={!valid || shipMutation.isPending || !id}
+            onPress={async () => {
+              if (!id || shipMutation.isPending) return;
+              haptic.medium();
+              try {
+                const trimmed = tracking.trim();
+                // Phase X.12 — send the human-readable carrier LABEL
+                // ("Jefa Delivery") rather than the internal id ("jefa") so
+                // the buyer's order-detail timeline reads cleanly. CARRIERS
+                // is a fixed V1 list, so .find() is exhaustive ; the `?? carrier`
+                // fallback is paranoia for a future enum addition.
+                // Phase I.8 — backend gets the STABLE FR label so the buyer
+                // timeline reads "Jefa Delivery" regardless of UI language.
+                const carrierLabel = CARRIER_BACKEND_LABELS[carrier] ?? carrier;
+                await shipMutation.mutateAsync({
+                  orderId: id,
+                  trackingNumber: trimmed.length > 0 ? trimmed : undefined,
+                  carrier: carrierLabel,
+                });
+                toast.show(t('seller.shipSuccess'), 'success');
+                router.replace(`/seller/orders/${id}`);
+              } catch (e) {
+                toast.show(toToastMessage(e, t('seller.shipError')), 'danger');
+              }
+            }}
             style={{
-              fontSize: 15,
-              fontWeight: '700',
-              color: valid && !shipMutation.isPending ? colors.bg : colors.textFaint,
-              lineHeight: 18,
-              includeFontPadding: false,
+              height: 56,
+              borderRadius: 16,
+              backgroundColor: valid && !shipMutation.isPending ? colors.text : colors.bgSunken,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: valid && !shipMutation.isPending ? 1 : 0.6,
+              flexDirection: 'row',
+              gap: 8,
             }}
           >
-            {shipMutation.isPending ? t('seller.shipSending') : t('seller.shipSubmit')}
-          </Text>
-        </Pressable>
-      </SafeAreaView>
+            {shipMutation.isPending && (
+              <ActivityIndicator size="small" color={valid ? colors.bg : colors.textFaint} />
+            )}
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: '700',
+                color: valid && !shipMutation.isPending ? colors.bg : colors.textFaint,
+                lineHeight: 18,
+                includeFontPadding: false,
+              }}
+            >
+              {shipMutation.isPending ? t('seller.shipSending') : t('seller.shipSubmit')}
+            </Text>
+          </Pressable>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

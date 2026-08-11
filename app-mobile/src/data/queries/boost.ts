@@ -24,26 +24,34 @@ export function useBoost(id: string | undefined) {
   });
 }
 
+// Exactly one of productId / propertyId.
 export interface CreateBoostInput {
-  productId: string;
+  productId?: string;
+  propertyId?: string;
   days: number;
 }
 
 export function useCreateBoost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ productId, days }: CreateBoostInput): Promise<Boost> => {
+    mutationFn: async ({ productId, propertyId, days }: CreateBoostInput): Promise<Boost> => {
       const { boost } = await apiPost<{ boost: Boost }>({
         path: '/create-boost',
-        body: { product_id: productId, days },
+        body: propertyId ? { property_id: propertyId, days } : { product_id: productId, days },
       });
       return boost;
     },
-    onSuccess: (_boost, { productId }) => {
+    onSuccess: (_boost, { productId, propertyId }) => {
       qc.invalidateQueries({ queryKey: ['boosts'] });
       qc.invalidateQueries({ queryKey: ['wallet'] }); // balance just dropped
-      qc.invalidateQueries({ queryKey: ['products'] }); // product now surfaces boosted
-      qc.invalidateQueries({ queryKey: ['product', productId] });
+      if (propertyId) {
+        qc.invalidateQueries({ queryKey: ['my-properties'] });
+        qc.invalidateQueries({ queryKey: ['properties'] }); // now surfaces boosted
+        qc.invalidateQueries({ queryKey: ['property', propertyId] });
+      } else {
+        qc.invalidateQueries({ queryKey: ['products'] });
+        qc.invalidateQueries({ queryKey: ['product', productId] });
+      }
     },
   });
 }

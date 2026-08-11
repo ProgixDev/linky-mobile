@@ -2,14 +2,14 @@
   "expo": {
     "name": "Linky",
     "slug": "linky",
-    "version": "0.1.2",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "linky",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.linky.app",
+      "bundleIdentifier": "com.linkygroup.app",
       "icon": {
         "light": "./assets/images/icon.png",
         "dark": "./assets/images/icon-dark.png",
@@ -51,10 +51,13 @@
         "NSCameraUsageDescription": "Linky a besoin de l'appareil photo pour scanner ta pièce d'identité et photographier tes annonces.",
         "NSPhotoLibraryUsageDescription": "Linky a besoin d'accéder à tes photos pour les ajouter à tes annonces.",
         "NSLocationWhenInUseUsageDescription": "Linky utilise ta position pour te montrer les annonces près de toi."
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
-      "package": "com.linky.app",
+      "package": "com.linkygroup.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#F7F3EC"
@@ -68,7 +71,8 @@
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "runtimeVersion": "1.0.0"
     },
     "plugins": [
       "expo-router",
@@ -136,6 +140,9 @@
         "projectId": "1a374f22-a608-457f-b6a8-8206e0de66d6"
       }
     },
-    "owner": "linkyorg"
+    "owner": "linkyorg",
+    "updates": {
+      "url": "https://u.expo.dev/1a374f22-a608-457f-b6a8-8206e0de66d6"
+    }
   }
 }

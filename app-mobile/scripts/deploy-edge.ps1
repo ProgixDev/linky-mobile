@@ -18,9 +18,14 @@ $entry     = Join-Path $fnDir "index.ts"
 if (-not (Test-Path $entry))    { throw "entrypoint not found: $entry" }
 if (-not (Test-Path $denoJson)) { throw "deno.json not found: $denoJson" }
 
-$ref = 'fvvqgcsphwrmdlclnxcz'
-$pat = (((Get-Content (Join-Path $root '.env') | Where-Object { $_ -match '^\s*SUPABASE_ACCESS_TOKEN\s*=' } | Select-Object -First 1) -split '=', 2)[1]).Trim().Trim('"')
-if (-not $pat) { throw "SUPABASE_ACCESS_TOKEN not found in .env" }
+$ref = 'mkaddhcjneilvwqethjo'   # prod actuelle (l'ancien 'fvvqgcsphwrmdlclnxcz' est décommissionné — 2026-07-30)
+# Token : priorité à $env:SB_DEPLOY_TOKEN (le PAT .env n'a pas les droits deploy
+# sur la prod actuelle) ; sinon repli sur SUPABASE_ACCESS_TOKEN du .env.
+$pat = $env:SB_DEPLOY_TOKEN
+if (-not $pat) {
+  $pat = (((Get-Content (Join-Path $root '.env') | Where-Object { $_ -match '^\s*SUPABASE_ACCESS_TOKEN\s*=' } | Select-Object -First 1) -split '=', 2)[1]).Trim().Trim('"')
+}
+if (-not $pat) { throw "no deploy token (set SB_DEPLOY_TOKEN or SUPABASE_ACCESS_TOKEN in .env)" }
 
 Add-Type -AssemblyName System.Net.Http
 $client = New-Object System.Net.Http.HttpClient
