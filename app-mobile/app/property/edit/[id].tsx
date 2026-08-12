@@ -477,7 +477,13 @@ export default function PropertyEditRoute() {
               </View>
             </View>
 
-            <Input label={t('propertyEdit.titleLabel')} value={title} onChangeText={setTitle} />
+            <Input
+              label={t('propertyEdit.titleLabel')}
+              value={title}
+              onChangeText={(txt) => setTitle(txt.slice(0, 30))}
+              maxLength={30}
+              helperText={`${title.length} / 30`}
+            />
 
             {type === 'location' && (
               <View>

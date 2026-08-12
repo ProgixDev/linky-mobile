@@ -474,7 +474,13 @@ export default function ProductEditRoute() {
               )}
             </View>
 
-            <Input label={t('productEdit.titleLabel')} value={title} onChangeText={setTitle} />
+            <Input
+              label={t('productEdit.titleLabel')}
+              value={title}
+              onChangeText={(txt) => setTitle(txt.slice(0, 30))}
+              maxLength={30}
+              helperText={`${title.length} / 30`}
+            />
 
             <View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
