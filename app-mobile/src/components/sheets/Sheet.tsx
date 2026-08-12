@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
-import BottomSheet, {
+import {
+  BottomSheetModal,
   BottomSheetView,
   BottomSheetBackdrop,
   type BottomSheetBackdropProps,
@@ -16,10 +17,35 @@ export interface SheetProps {
   children: ReactNode;
 }
 
+/**
+ * Bottom sheet, rendered THROUGH THE ROOT PORTAL.
+ *
+ * Why BottomSheetModal and not BottomSheet (client 2026-08-07, third report of
+ * the same symptom): the plain `BottomSheet` renders inline, where it is
+ * declared. Every sheet in this app is declared inside a tab screen, so the tab
+ * bar — a sibling rendered after it — painted straight over the footer. On the
+ * Immobilier filter that meant « Voir les résultats » sat under the tab bar and
+ * could not be reached, no matter how the sheet was sized. Two earlier fixes
+ * (flex:1 on the scroll view, then disabling dynamic sizing) were both real bugs
+ * worth fixing, but neither was THIS one, because the problem was never height.
+ *
+ * `BottomSheetModal` renders into `BottomSheetModalProvider`, which is already
+ * mounted at the root in app/_layout.tsx — so the sheet lands above the whole
+ * app, tab bar included. The provider was there all along; this component just
+ * never used it.
+ */
 export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, children }: SheetProps) {
   const { colors, radii } = useTheme();
-  const ref = useRef<BottomSheet>(null);
+  const ref = useRef<BottomSheetModal>(null);
   const snaps = useMemo(() => snapPoints, [snapPoints]);
+
+  // A modal is driven by present/dismiss rather than by mounting. Keeping it
+  // always rendered is what lets it animate out instead of vanishing; it costs
+  // nothing while closed, since the portal holds no content until presented.
+  useEffect(() => {
+    if (open) ref.current?.present();
+    else ref.current?.dismiss();
+  }, [open]);
 
   const handleChanges = useCallback(
     (index: number) => {
@@ -35,26 +61,18 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
     [],
   );
 
-  if (!open) return null;
-
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={ref}
       snapPoints={snaps}
-      // @gorhom/bottom-sheet v5 turns dynamic sizing ON by default, which makes
-      // the sheet measure its CONTENT and size itself to it — quietly competing
-      // with the snapPoints we just declared. On the Immobilier filter (type +
-      // période + prix + ville + pièces + goudron + meublé) the measured height
-      // won, the sheet grew past the screen, and « Voir les résultats » ended up
-      // below the fold with no way to scroll to it (client 2026-08-05, still
-      // reported 2026-08-07 after the flex:1 fix on the scroll view — that fix
-      // was necessary but not sufficient).
-      //
-      // Every caller of this component passes explicit snap points, so dynamic
-      // sizing was never the intended mode here. Off = the sheet is exactly as
-      // tall as declared, and a flex:1 body with a pinned footer lays out.
+      // v5 turns dynamic sizing ON by default: the sheet measures its CONTENT
+      // and sizes itself to it, competing with the snap points we declared. Every
+      // caller here passes explicit ones, so that was never the intended mode.
       enableDynamicSizing={false}
       enablePanDownToClose
+      // Closing by gesture must tell the parent too, otherwise its `open` state
+      // stays true and the sheet can never be reopened.
+      onDismiss={onClose}
       // Keyboard handling for inputs inside the sheet (e.g. the city search).
       // fillParent = the sheet expands to the space above the keyboard on focus,
       // so the field always clears it (more reliable on Android edge-to-edge than
@@ -86,6 +104,6 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
         )}
         {children}
       </BottomSheetView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 }
