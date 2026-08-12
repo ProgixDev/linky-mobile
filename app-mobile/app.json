@@ -48,9 +48,9 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Linky a besoin de l'appareil photo pour scanner ta pièce d'identité et photographier tes annonces.",
+        "NSCameraUsageDescription": "Linky a besoin de l'appareil photo pour scanner les codes QR de retrait et ta pièce d'identité.",
         "NSPhotoLibraryUsageDescription": "Linky a besoin d'accéder à tes photos pour les ajouter à tes annonces.",
-        "NSLocationWhenInUseUsageDescription": "Linky utilise ta position pour te montrer les annonces près de toi."
+        "NSLocationWhenInUseUsageDescription": "Linky utilise ta position pour te montrer les annonces près de toi et préremplir l'adresse de tes annonces."
       },
       "runtimeVersion": {
         "policy": "appVersion"
@@ -84,7 +84,12 @@
           "color": "#0A5240"
         }
       ],
+      [
       "expo-secure-store",
+      {
+        "faceIDPermission": false
+      }
+    ],
       "expo-video",
       [
         "expo-camera",
@@ -112,13 +117,16 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Linky a besoin d'accéder à tes photos pour les ajouter à tes annonces."
+          "photosPermission": "Linky a besoin d'accéder à tes photos pour les ajouter à tes annonces.",
+          "microphonePermission": false
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Linky utilise ta position pour préremplir l'adresse de tes annonces."
+          "locationWhenInUsePermission": "Linky utilise ta position pour te montrer les annonces près de toi et préremplir l'adresse de tes annonces.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false
         }
       ],
       "@rnmapbox/maps",

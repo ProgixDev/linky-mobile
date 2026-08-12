@@ -29,3 +29,8 @@ supabase/.temp/
 # PDF regen backups
 *.previous.pdf.bak
 .git-commit-msg.tmp
+
+# Cles privees Apple (App Store Connect API, APNs). Un `git add -A` suffirait
+# a publier la cle de signature ; le depot a deja connu un incident de ce type.
+*.p8
+AuthKey_*
