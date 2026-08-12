@@ -19,6 +19,7 @@ import { BookingCalendar } from '../../../src/components/booking/BookingCalendar
 import { formatBookingDate } from '../../../src/components/booking/BookingUI';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
 import { useProperty, useRequestBooking } from '../../../src/data/queries';
+import { usePropertyAvailability } from '../../../src/data/queries/bookings';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 import { formatGNF } from '../../../src/lib/format';
@@ -33,6 +34,7 @@ export default function BookPropertyRoute() {
   const { colors, radii } = useTheme();
   const { data: prop, isLoading, isError, refetch } = useProperty(id);
   const request = useRequestBooking();
+  const availability = usePropertyAvailability(id);
   const { show } = useToast();
 
   const [startDate, setStartDate] = useState<string | null>(null);
@@ -118,7 +120,15 @@ export default function BookPropertyRoute() {
               startDate={startDate}
               endDate={endDate}
               onChange={(s, e) => { setStartDate(s); setEndDate(e); }}
+              blockedRanges={availability.data?.ranges ?? []}
             />
+            {availability.data?.blocked_by_monthly && (
+              // Un bail au mois immobilise le logement sans date de fin connue :
+              // aucune plage a griser, il faut le dire en clair.
+              <Text variant="micro" tone="muted" style={{ marginTop: 6, letterSpacing: 0, textTransform: 'none' }}>
+                Ce logement est actuellement loué au mois.
+              </Text>
+            )}
             {period === 'day' && (
               <Text variant="micro" tone="muted" style={{ marginTop: 6, letterSpacing: 0, textTransform: 'none' }}>
                 {startDate && !endDate

@@ -13,6 +13,29 @@ export interface RequestBookingInput {
   note?: string;
 }
 
+export interface PropertyAvailability {
+  blocked_by_monthly: boolean;
+  ranges: { start: string; end: string }[];
+}
+
+/** Creneaux deja payes ET signes d'un bien, pour griser le calendrier.
+ *  Lecture publique : que des dates, jamais l'identite du locataire. */
+export function usePropertyAvailability(propertyId: string | undefined) {
+  return useQuery({
+    queryKey: ['property-availability', propertyId],
+    enabled: !!propertyId,
+    // Un sejour peut etre paye par quelqu'un d'autre pendant que l'ecran est
+    // ouvert : on ne veut pas servir un calendrier perime depuis le cache.
+    staleTime: 30_000,
+    queryFn: async (): Promise<PropertyAvailability> =>
+      apiPost<PropertyAvailability>({
+        path: '/property-availability',
+        authed: false,
+        body: { property_id: propertyId },
+      }),
+  });
+}
+
 export function useMyBookings() {
   return useQuery({
     queryKey: ['my-bookings'],
