@@ -16,7 +16,7 @@ import { TopBar } from '../../../src/components/nav/TopBar';
 import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 import { useToast } from '../../../src/components/feedback/Toast';
-import { ApiError } from '../../../src/lib/api';
+import { ApiError, toToastMessage } from '../../../src/lib/api';
 import {
   useBoosts,
   useCreateBoost,
@@ -93,7 +93,7 @@ export default function BoostNewRoute() {
         toast.show(t('pro.boostInsufficientBody'), 'danger');
         return;
       }
-      toast.show(e instanceof ApiError ? e.message_fr : t('pro.boostErrorToast'), 'danger');
+      toast.show(toToastMessage(e, t('pro.boostErrorToast')), 'danger');
     }
   };
 

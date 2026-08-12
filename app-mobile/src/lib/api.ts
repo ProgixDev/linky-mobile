@@ -62,6 +62,7 @@ const TECHNIQUES = new Set([
   'Configuration manquante',
   'Session invalide ou expiree.', 'Session invalide ou expirée.',
   'Erreur reseau', 'Erreur réseau',
+  'Erreur de rafraichissement', 'Erreur de rafraîchissement',
 ]);
 
 export function toToastMessage(e: unknown, fallback: string): string {
@@ -302,6 +303,17 @@ export async function apiPost<T>({ path, body, authed = true, idempotencyKey }: 
         }
         // Coupure reseau : on garde les jetons. Le prochain appel reessaiera.
       }
+    }
+
+    // Le rejeu a AUSSI renvoye 401 : le rafraichissement a beau avoir « reussi »
+    // (ou avoir ete saute par la temporisation), le serveur refuse toujours ce
+    // compte. Sans ce garde-fou on retombait dans la session fantome que la
+    // correction precedente etait censee fermer : l'ecran restait connecte et
+    // chaque action echouait en silence.
+    if (res.status === 401) {
+      await secure.remove(SECURE_KEYS.authToken);
+      await secure.remove(SECURE_KEYS.refreshToken);
+      onSessionLost?.();
     }
   }
 

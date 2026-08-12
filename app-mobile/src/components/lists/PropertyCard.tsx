@@ -136,6 +136,10 @@ export function PropertyCard({
         </View>
         </View>
         <View style={{ gap: 6, alignItems: compact ? 'flex-start' : 'flex-end', flexShrink: 0 }}>
+        {/* Masquee aussi en compact : elle ajoutait une ligne dans le carrousel
+            260 px, ce qui redonnait aux cartes des hauteurs inegales — la
+            plainte meme qui a motive le mode compact. */}
+        {!compact && (
         <View
           style={{
             paddingHorizontal: 10,
@@ -152,6 +156,7 @@ export function PropertyCard({
             {formatDistance(property.distanceToRoadMeters)}
           </Text>
         </View>
+        )}
         {!compact && distanceFromUserKm != null && distanceFromUserKm > 0 && (
           <View
             style={{

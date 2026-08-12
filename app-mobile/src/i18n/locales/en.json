@@ -1563,7 +1563,7 @@
       "toggleProfilePublic": "Public profile",
       "toggleProfilePublicSub": "Other users see your real name in your comments and reviews (your shop stays visible either way).",
       "downloadLabel": "Download my data",
-      "downloadSub": "Get all your data by email, in JSON format.",
+      "downloadSub": "Get all your data by email, as a PDF.",
       "deleteLabel": "Delete my account",
       "deleteSub": "Permanently delete your account and free your number / email.",
       "deleteConfirmTitle": "Delete my account",
