@@ -13,9 +13,17 @@ import type { Property } from '../../data/types';
 export function PropertyCard({
   property,
   distanceFromUserKm,
+  compact = false,
 }: {
   property: Property;
   distanceFromUserKm?: number;
+  /** Carrousel horizontal de l'accueil : 260 px de large. La mise en deux
+   *  colonnes n'y tient pas — elle ecrasait le titre et le quartier sur deux
+   *  lignes, et les cartes finissaient de hauteurs differentes (client
+   *  2026-08-11). En compact : une colonne, chaque texte sur UNE ligne, et pas
+   *  de pastille de distance. Le nombre de lignes devient identique d'une carte
+   *  a l'autre, donc les hauteurs s'alignent d'elles-memes. */
+  compact?: boolean;
 }) {
   const { colors, radii } = useTheme();
   const imgProps = useDataSaverImageProps();
@@ -97,15 +105,15 @@ export function PropertyCard({
           minWidth: 0 est indispensable — sans lui, une colonne flex refuse de
           se rétrécir sous la largeur de son contenu et le titre pousserait les
           pastilles hors de la carte au lieu de passer à la ligne. */}
-      <View style={{ padding: 14, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-        <Text variant="titleM" numberOfLines={2}>
+      <View style={{ padding: 14, flexDirection: compact ? 'column' : 'row', gap: compact ? 6 : 10, alignItems: compact ? 'stretch' : 'flex-start' }}>
+        <View style={{ flex: compact ? undefined : 1, minWidth: 0, gap: 6 }}>
+        <Text variant="titleM" numberOfLines={compact ? 1 : 2}>
           {property.title}
         </Text>
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <View style={{ flexDirection: 'row', gap: 3, alignItems: 'center' }}>
             <I.pin size={12} color={colors.textMuted} />
-            <Text variant="caption" tone="muted">
+            <Text variant="caption" tone="muted" numberOfLines={1}>
               {property.district}
             </Text>
           </View>
@@ -127,7 +135,7 @@ export function PropertyCard({
           )}
         </View>
         </View>
-        <View style={{ gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
+        <View style={{ gap: 6, alignItems: compact ? 'flex-start' : 'flex-end', flexShrink: 0 }}>
         <View
           style={{
             paddingHorizontal: 10,
@@ -144,7 +152,7 @@ export function PropertyCard({
             {formatDistance(property.distanceToRoadMeters)}
           </Text>
         </View>
-        {distanceFromUserKm != null && distanceFromUserKm > 0 && (
+        {!compact && distanceFromUserKm != null && distanceFromUserKm > 0 && (
           <View
             style={{
               paddingHorizontal: 10,

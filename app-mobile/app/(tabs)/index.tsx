@@ -556,7 +556,7 @@ function BuyerHome() {
                 ))
               : properties?.map((p) => (
                   <View key={p.id} style={{ width: 260 }}>
-                    <PropertyCard property={p} />
+                    <PropertyCard property={p} compact />
                   </View>
                 )) ?? null}
           </ScrollView>
