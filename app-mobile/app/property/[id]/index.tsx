@@ -218,7 +218,15 @@ export default function PropertyDetailRoute() {
             </View>
           </SafeAreaView>
           {prop.videoUrl && (
-            <View
+            <Pressable
+              onPress={() =>
+                // Ouvre le fil Decouvrir directement sur CETTE annonce, ou la
+                // video se lit en plein ecran (client 2026-08-11).
+                router.push(`/(tabs)/decouvrir?focusKind=property&focusId=${prop.id}` as never)
+              }
+              accessibilityRole="button"
+              accessibilityLabel="Voir la visite vidéo"
+              hitSlop={8}
               style={{
                 position: 'absolute',
                 bottom: 14,
@@ -234,7 +242,7 @@ export default function PropertyDetailRoute() {
             >
               <I.video size={12} color="#FFFFFF" />
               <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>Visite vidéo</Text>
-            </View>
+            </Pressable>
           )}
 
           {/* Carousel dots — counts the video slide (if any) + photos. */}
@@ -294,7 +302,7 @@ export default function PropertyDetailRoute() {
               leading={<I.msg size={15} color={colors.text} />}
               onPress={onNegotiatePress}
               disabled={findOrCreate.isPending || !prop.ownerId}
-              style={{ marginTop: 12, alignSelf: 'flex-start' }}
+              style={{ marginTop: 12, alignSelf: 'center' }}
             />
           )}
 
