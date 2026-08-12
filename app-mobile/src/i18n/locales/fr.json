@@ -196,7 +196,7 @@
   },
   "home": {
     "favorites": "Favoris",
-    "greeting": "Bonjour,",
+    "greeting": "Bienvenue,",
     "fallbackName": "Vous",
     "notifications": "Notifications",
     "cart_one": "Panier ({{count}} article)",

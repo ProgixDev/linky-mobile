@@ -196,7 +196,7 @@
   },
   "home": {
     "favorites": "Favoritos",
-    "greeting": "Hola,",
+    "greeting": "Bienvenido,",
     "fallbackName": "Usted",
     "notifications": "Notificaciones",
     "cart_one": "Carrito ({{count}} artículo)",

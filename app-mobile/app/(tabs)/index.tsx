@@ -267,7 +267,13 @@ function BuyerHome() {
               >
                 {firstName}
               </Text>
-              <Hand size={17} color={colors.accent} strokeWidth={2.25} />
+              {/* Inclinee comme l'emoji d'origine : une main droite verticale
+                  se lit comme un « stop », inclinee elle se lit comme un salut.
+                  La rotation est portee par un View — les icones ne prennent pas
+                  de transform directement. */}
+              <View style={{ transform: [{ rotate: '20deg' }] }}>
+                <Hand size={17} color={colors.accent} strokeWidth={2.25} />
+              </View>
             </View>
           </View>
           {/* Favoris / notifications / panier — the trio, kept consistent with
