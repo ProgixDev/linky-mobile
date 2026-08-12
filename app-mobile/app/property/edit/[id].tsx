@@ -477,7 +477,20 @@ export default function PropertyEditRoute() {
               </View>
             </View>
 
-            <Input label={t('propertyEdit.titleLabel')} value={title} onChangeText={setTitle} />
+            <Input
+              label={t('propertyEdit.titleLabel')}
+              value={title}
+              // Pas de maxLength ni de troncature ici : une annonce publiee AVANT
+              // la limite peut depasser 30 signes. maxLength bloquerait alors
+              // toute frappe — le vendeur ne pourrait plus modifier son titre du
+              // tout — et une troncature effacerait son texte des qu'il touche le
+              // champ. On autorise donc a RACCOURCIR librement, jamais a
+              // rallonger au-dela de la limite.
+              onChangeText={(txt) =>
+                setTitle(txt.length > title.length && txt.length > 30 ? title : txt)
+              }
+              helperText={`${title.length} / 30`}
+            />
 
             {type === 'location' && (
               <View>

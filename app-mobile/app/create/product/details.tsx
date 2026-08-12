@@ -56,7 +56,9 @@ export default function CreateProductDetailsRoute() {
             <Input
               label={t('create.fieldTitle')}
               value={state.title}
-              onChangeText={(txt) => state.set('title', txt)}
+              onChangeText={(txt) => state.set('title', txt.slice(0, 30))}
+              maxLength={30}
+              helperText={`${state.title.length} / 30`}
             />
 
             <View>

@@ -182,6 +182,51 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const { data: bkExpired } = await sb.rpc('expire_stale_booking_intents');
 
+  // ── Boost intents (Lengopay) — troisieme chemin, isole des deux autres
+  //    (client 2026-08-12 : booster par Orange Money / MTN et pas seulement par
+  //    portefeuille). Sur succes, process_boost_intent_outcome delegue a
+  //    confirm_boost_payment, qui active le boost et remonte l'annonce ; sur
+  //    echec le boost reserve est annule et l'annonce n'a jamais bouge.
+  let boPolled = 0, boCompleted = 0, boFailed = 0, boCancelled = 0, boPending = 0, boErrors = 0;
+  const { data: boostIntents, error: boPickErr } = await sb.rpc('pick_boost_intents_to_poll', { p_limit: 200 });
+  if (boPickErr) {
+    console.error('[cron-poll-intents] boost intent pick error:', boPickErr);
+  } else {
+    for (const intent of (boostIntents ?? []) as PendingIntent[]) {
+      boPolled++;
+      try {
+        const status = await getPaymentStatus(intent.rail_intent_id);
+        if (status.status === 'success') {
+          const { error: oErr } = await sb.rpc('process_boost_intent_outcome', {
+            p_intent_id: intent.id, p_terminal_status: 'completed', p_rail_status: status.status,
+            p_error_code: null, p_error_message: null,
+          });
+          if (oErr) throw new Error(`process_boost_intent_outcome failed: ${oErr.message}`);
+          boCompleted++;
+        } else if (status.status === 'failed' || status.status === 'cancelled') {
+          await sb.rpc('process_boost_intent_outcome', {
+            p_intent_id: intent.id, p_terminal_status: status.status, p_rail_status: status.status,
+            p_error_code: status.error_code ?? null, p_error_message: status.message ?? null,
+          });
+          if (status.status === 'failed') boFailed++; else boCancelled++;
+        } else {
+          await sb.rpc('bump_intent_poll', {
+            p_intent_id: intent.id, p_rail_status: status.status, p_error_code: null, p_error_message: null,
+          });
+          boPending++;
+        }
+      } catch (e) {
+        console.error(`[cron-poll-intents] boost transient on intent ${intent.id}:`, e);
+        await sb.rpc('bump_intent_poll', {
+          p_intent_id: intent.id, p_rail_status: intent.rail_status,
+          p_error_code: 'RAIL_TRANSIENT', p_error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
+        });
+        boErrors++;
+      }
+    }
+  }
+  const { data: boExpired } = await sb.rpc('expire_stale_boost_intents');
+
   // Phase V.6 — stale Stripe PI sweep. Cancel-first / local-flip-second.
   // The picker (FOR UPDATE SKIP LOCKED) guarantees two overlapping cron ticks
   // never act on the same row.
@@ -310,6 +355,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   return new Response(JSON.stringify({
     polled, completed, failed, cancelled, stillPending, errors, expired: expiredCount ?? 0,
     bkPolled, bkCompleted, bkFailed, bkCancelled, bkPending, bkErrors, bkExpired: bkExpired ?? 0,
+    boPolled, boCompleted, boFailed, boCancelled, boPending, boErrors, boExpired: boExpired ?? 0,
     stripeSwept, stripeCancelled, stripeAlreadyTerminal, stripeSkipped,
     bookingSwept, bookingCancelled, bookingAlreadyTerminal, bookingSkipped,
   }), { status: 200, headers: { 'content-type': 'application/json' } });

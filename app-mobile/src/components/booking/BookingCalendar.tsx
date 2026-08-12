@@ -26,12 +26,19 @@ export function BookingCalendar({
   endDate,
   onChange,
   maxAheadDays = 180,
+  blockedRanges = [],
 }: {
   mode: 'range' | 'single';
   startDate: string | null;
   endDate: string | null;
   onChange: (start: string | null, end: string | null) => void;
   maxAheadDays?: number;
+  /** Sejours deja payes ET signes (client 2026-08-11). Bornes de fin EXCLUES :
+   *  un depart le 27 libere le 27 pour l'arrivee suivante, comme a l'hotel —
+   *  et c'est la convention de la garde de chevauchement cote serveur. Une
+   *  demande en attente ne figure PAS ici : le proprietaire arbitre entre
+   *  plusieurs candidats. */
+  blockedRanges?: { start: string; end: string }[];
 }) {
   const { colors, radii } = useTheme();
   const now = new Date();
@@ -55,6 +62,15 @@ export function BookingCalendar({
 
   const canGoPrev = viewYear > now.getFullYear() || viewMonth > now.getMonth();
 
+  const isBlocked = (day: string) =>
+    blockedRanges.some((r) => day >= r.start && day < r.end);
+
+  /** Une plage ne doit pas ENJAMBER un sejour occupe : sans ce test, choisir le
+   *  10 puis le 30 reserverait par-dessus une semaine deja vendue, et le refus
+   *  ne tomberait qu'a l'envoi. */
+  const rangeCrossesBlocked = (from: string, to: string) =>
+    blockedRanges.some((r) => from < r.end && r.start < to);
+
   const onDayPress = (day: string) => {
     haptic.selection();
     if (mode === 'single') {
@@ -63,6 +79,10 @@ export function BookingCalendar({
     }
     // range: no start OR both set OR tapped before start → restart
     if (!startDate || (startDate && endDate) || day <= startDate) {
+      onChange(day, null);
+    } else if (rangeCrossesBlocked(startDate, day)) {
+      // Le sejour demande enjambe des nuits vendues : on repart de ce jour
+      // plutot que de laisser composer une plage impossible.
       onChange(day, null);
     } else {
       onChange(startDate, day);
@@ -130,7 +150,8 @@ export function BookingCalendar({
             {row.map((day, ci) => {
               const i = week * 7 + ci;
               if (!day) return <View key={`b-${i}`} style={{ flex: 1, height: 40 }} />;
-              const disabled = day < today || day > maxDate;
+              const blocked = isBlocked(day);
+              const disabled = day < today || day > maxDate || blocked;
               const isStart = day === startDate;
               const isEnd = day === endDate;
               const inRange = !!startDate && !!endDate && day > startDate && day < endDate;
@@ -149,14 +170,29 @@ export function BookingCalendar({
                       borderRadius: 999,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: selected ? colors.primary : inRange ? colors.primarySoft : 'transparent',
+                      backgroundColor: blocked
+                        ? 'rgba(209,79,60,0.16)' // colors.danger a 16 % — lisible en clair comme en sombre
+                        : selected
+                          ? colors.primary
+                          : inRange
+                            ? colors.primarySoft
+                            : 'transparent',
                     }}
                   >
                     <Text
                       style={{
                         fontSize: 13,
                         fontWeight: selected ? '700' : '500',
-                        color: disabled ? colors.textFaint : selected ? '#FFFFFF' : inRange ? colors.primaryDeep : colors.text,
+                        color: blocked
+                          ? colors.danger
+                          : disabled
+                            ? colors.textFaint
+                            : selected
+                              ? '#FFFFFF'
+                              : inRange
+                                ? colors.primaryDeep
+                                : colors.text,
+                        textDecorationLine: blocked ? 'line-through' : 'none',
                       }}
                     >
                       {Number(day.slice(8, 10))}

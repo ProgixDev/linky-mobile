@@ -3,11 +3,13 @@ import { Pressable, RefreshControl, View, useWindowDimensions } from 'react-nati
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { StatusBar } from 'expo-status-bar';
 import { useIsFocused } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { DiscoverCard, DiscoverEnd } from '../../src/components/discover/DiscoverCard';
 import { useDiscoverInfinite, type DiscoverFilter } from '../../src/data/queries';
+import { useProperty } from '../../src/data/queries/properties';
 import { useHiddenListings } from '../../src/stores/hiddenListings';
 import type { DiscoverItem } from '../../src/data/types';
 import { Text } from '../../src/components/primitives/Text';
@@ -38,6 +40,15 @@ export default function DecouvrirRoute() {
   const feedFilter: DiscoverFilter = isPureAgent ? 'properties' : isPureSeller ? 'products' : tab;
 
   const { items, isLoading, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useDiscoverInfinite(feedFilter);
+
+  // Ouverture sur une annonce precise, depuis la pastille « Visite video » de sa
+  // fiche (client 2026-08-11). On ne cherche PAS l'annonce dans le fil : elle
+  // peut se trouver a la page 5 de la pagination, ou nulle part si le fil est
+  // filtre autrement. On la charge donc a part et on la place en tete — le seul
+  // moyen fiable de garantir que le lien tombe toujours sur la bonne video.
+  const focusParams = useLocalSearchParams<{ focusKind?: string; focusId?: string }>();
+  const focusPropertyId = focusParams.focusKind === 'property' ? focusParams.focusId : undefined;
+  const { data: focusProperty } = useProperty(focusPropertyId);
   const [activeIndex, setActiveIndex] = useState(0);
   // Focus-gate playback : the tab-navigator keeps this screen MOUNTED when the
   // user switches tabs (or pushes a detail screen over it), so activeIndex alone
@@ -65,7 +76,15 @@ export default function DecouvrirRoute() {
   // « Pas intéressé / Masquer » : drop the listings the user hid from their feed
   // (client 2026-07-30). Applies to the initial load, pagination AND refetch.
   const hiddenKeys = useHiddenListings((s) => s.keys);
-  const visibleItems = items.filter((d) => !hiddenKeys.has(`${d.kind}:${d.item.id}`));
+  const feedItems = items.filter((d) => !hiddenKeys.has(`${d.kind}:${d.item.id}`));
+  // L'annonce ciblee passe devant, et est retiree du reste pour ne pas
+  // apparaitre deux fois si le fil la contenait deja.
+  const visibleItems: DiscoverItem[] = focusProperty
+    ? [
+        { kind: 'property', item: focusProperty },
+        ...feedItems.filter((d) => !(d.kind === 'property' && d.item.id === focusProperty.id)),
+      ]
+    : feedItems;
 
   // Key on stable identity (kind + id), NOT the array index — hiding one listing
   // shifts every following index and would remount those cards (recreating the

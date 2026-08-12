@@ -20,6 +20,10 @@ Deno.serve(makePost<Record<string, unknown>>(
         'id, product_id, property_id, seller_id, amount_minor, days, status, starts_at, ends_at, created_at, products(title, photos, status), properties(title, status)',
       )
       .eq('seller_id', userId)
+      // Un boost mobile money reserve mais jamais paye n'est pas un achat : il
+      // ne doit pas apparaitre dans l'historique du vendeur. Le cron le passera
+      // en 'cancelled' au bout de 15 min, mais il ne doit pas se voir avant.
+      .neq('status', 'pending_payment')
       .order('created_at', { ascending: false })
       .limit(100);
     if (error) {

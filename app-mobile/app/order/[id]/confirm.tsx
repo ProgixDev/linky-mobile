@@ -12,6 +12,7 @@ import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { TopBar } from '../../../src/components/nav/TopBar';
 import { I } from '../../../src/icons/Icon';
 import { formatGNF } from '../../../src/lib/format';
+import { toToastMessage } from '../../../src/lib/api';
 import { useOrder, useConfirmReception } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useAuth } from '../../../src/stores/auth';
@@ -162,10 +163,10 @@ export default function OrderConfirmRoute() {
                         router.replace(`/order/${order.id}`);
                       },
                       onError: (e) => {
-                        const msg = (e as { message_fr?: string; message?: string }).message_fr
-                          ?? (e as { message?: string }).message
-                          ?? t('order.confirmError');
-                        show(msg, 'danger');
+                        // Passe par le filtre commun : la lecture directe de
+                        // message_fr affichait « Erreur base de donnees » sur
+                        // une panne serveur.
+                        show(toToastMessage(e, t('order.confirmError')), 'danger');
                       },
                     },
                   );

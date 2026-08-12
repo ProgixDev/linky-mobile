@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheet, {
   BottomSheetView,
   BottomSheetBackdrop,
@@ -16,8 +17,20 @@ export interface SheetProps {
   children: ReactNode;
 }
 
+/** Hauteur de BottomTabBar (70 + ajustement systeme, voir ce composant). Toutes
+ *  les feuilles de l'app sont ouvertes depuis un ecran d'onglet : la barre du
+ *  bas, rendue apres elles, passe donc par-dessus leur pied de page. On reserve
+ *  sa hauteur a l'interieur de la feuille plutot que de deplacer la feuille
+ *  ailleurs dans l'arbre — un essai via BottomSheetModal et le portail racine a
+ *  rendu TOUTES les feuilles inertes chez le client (2026-08-11), pour un
+ *  probleme qui n'etait que de recouvrement visuel. */
+function tabBarAllowance(insetBottom: number): number {
+  return 70 + Math.max(insetBottom - 8, 0);
+}
+
 export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, children }: SheetProps) {
   const { colors, radii } = useTheme();
+  const insets = useSafeAreaInsets();
   const ref = useRef<BottomSheet>(null);
   const snaps = useMemo(() => snapPoints, [snapPoints]);
 
@@ -35,31 +48,24 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
     [],
   );
 
+  // Monte a l'ouverture, demonte a la fermeture : c'est le comportement qui a
+  // toujours fonctionne ici. Ne pas le remplacer par present()/dismiss() sans
+  // l'avoir teste sur un appareil.
   if (!open) return null;
 
   return (
     <BottomSheet
       ref={ref}
       snapPoints={snaps}
-      // @gorhom/bottom-sheet v5 turns dynamic sizing ON by default, which makes
-      // the sheet measure its CONTENT and size itself to it — quietly competing
-      // with the snapPoints we just declared. On the Immobilier filter (type +
-      // période + prix + ville + pièces + goudron + meublé) the measured height
-      // won, the sheet grew past the screen, and « Voir les résultats » ended up
-      // below the fold with no way to scroll to it (client 2026-08-05, still
-      // reported 2026-08-07 after the flex:1 fix on the scroll view — that fix
-      // was necessary but not sufficient).
-      //
-      // Every caller of this component passes explicit snap points, so dynamic
-      // sizing was never the intended mode here. Off = the sheet is exactly as
-      // tall as declared, and a flex:1 body with a pinned footer lays out.
+      // v5 active le dimensionnement automatique par DEFAUT : la feuille se
+      // mesure sur son contenu et entre en concurrence avec les hauteurs qu'on
+      // vient de declarer. Sur le filtre Immobilier — le plus long de l'app —
+      // la mesure l'emportait et le pied de page sortait de l'ecran. Tous les
+      // appelants passent une hauteur explicite : ce mode n'a jamais ete voulu.
       enableDynamicSizing={false}
       enablePanDownToClose
-      // Keyboard handling for inputs inside the sheet (e.g. the city search).
-      // fillParent = the sheet expands to the space above the keyboard on focus,
-      // so the field always clears it (more reliable on Android edge-to-edge than
-      // "interactive"). Restore on blur. Requires the input to be a
-      // BottomSheetTextInput and the content a BottomSheetScrollView.
+      // Clavier : la feuille remonte au-dessus (recherche de ville). fillParent
+      // est plus fiable qu'interactive sur Android bord-a-bord.
       keyboardBehavior="fillParent"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
@@ -68,7 +74,7 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
       handleIndicatorStyle={{ backgroundColor: colors.borderStrong, width: 44 }}
       backgroundStyle={{ backgroundColor: colors.card, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl }}
     >
-      <BottomSheetView style={{ flex: 1 }}>
+      <BottomSheetView style={{ flex: 1, paddingBottom: tabBarAllowance(insets.bottom) }}>
         {title && (
           <View
             style={{

@@ -29,11 +29,22 @@ function isTrustedPaymentUrl(raw?: string): boolean {
 export default function CheckoutPayRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const { url, orderId, bookingId } = useLocalSearchParams<{ url?: string; orderId?: string; bookingId?: string }>();
+  const { url, orderId, bookingId, boostId } = useLocalSearchParams<{
+    url?: string; orderId?: string; bookingId?: string; boostId?: string;
+  }>();
   const safeUrl = isTrustedPaymentUrl(url) ? url : undefined;
   const [loading, setLoading] = useState(true);
 
   const goConfirm = () => {
+    // Paiement d'un boost (Orange/MTN) : retour a l'historique des boosts, qui
+    // attend la confirmation du cron. `pending=1` lui dit de rafraichir en
+    // boucle quelques instants — sans ca le vendeur revient sur une liste ou son
+    // boost n'apparait pas encore et croit avoir paye pour rien.
+    if (boostId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+      router.replace({ pathname: '/pro/boost', params: { pending: '1' } } as any);
+      return;
+    }
     // Booking payment (Orange/MTN): return to the booking detail, which refetches
     // and shows 'paid' once the cron confirms the rail.
     if (bookingId) {

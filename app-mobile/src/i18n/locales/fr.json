@@ -196,7 +196,7 @@
   },
   "home": {
     "favorites": "Favoris",
-    "greeting": "Bonjour,",
+    "greeting": "Bienvenue,",
     "fallbackName": "Vous",
     "notifications": "Notifications",
     "cart_one": "Panier ({{count}} article)",
@@ -225,8 +225,8 @@
     "catVente": "Vente",
     "catTerrains": "Terrains",
     "decouvrirBadge": "NOUVEAU",
-    "decouvrirTitle": "Découvrez en swipant.",
-    "decouvrirSub": "Articles et logements, à la file.",
+    "decouvrirTitle": "Découvrez des annonces",
+    "decouvrirSub": "Comme dans les réseaux sociaux.",
     "walletOpen": "Voir le wallet"
   },
   "wallet": {
@@ -891,7 +891,14 @@
     "visitsBucketPast": "Passé",
     "visitsToastAccepted": "Visite confirmée",
     "visitsToastRejected": "Demande refusée",
-    "visitsToastError": "Action impossible"
+    "visitsToastError": "Action impossible",
+    "boostPickMethod": "Moyen de paiement",
+    "boostMethodWallet": "Portefeuille Linky",
+    "boostMethodWalletHint": "Solde : {{balance}}",
+    "boostMethodOrange": "Orange Money",
+    "boostMethodMtn": "MTN MoMo",
+    "boostMethodMomoHint": "Paiement depuis ton téléphone",
+    "boostPendingBanner": "Paiement en cours de vérification. Ton boost apparaîtra ici dès la confirmation."
   },
   "buyer": {
     "requestsTitle": "Mes demandes",
@@ -1563,7 +1570,7 @@
       "toggleProfilePublic": "Profil public",
       "toggleProfilePublicSub": "Les autres utilisateurs voient ton vrai nom dans tes commentaires et avis (ta boutique reste toujours visible).",
       "downloadLabel": "Télécharger mes données",
-      "downloadSub": "Reçois toutes tes données par email, au format JSON.",
+      "downloadSub": "Reçois toutes tes données par email, en PDF.",
       "deleteLabel": "Supprimer mon compte",
       "deleteSub": "Supprime définitivement votre compte et libère votre numéro / e-mail.",
       "deleteConfirmTitle": "Supprimer mon compte",

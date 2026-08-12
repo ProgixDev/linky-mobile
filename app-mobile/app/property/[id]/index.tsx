@@ -45,6 +45,9 @@ export default function PropertyDetailRoute() {
   const isFav = useFavorites((s) => (id ? s.propertyIds.has(id) : false));
   const toggleFav = useFavorites((s) => s.toggleProperty);
   const [photoIdx, setPhotoIdx] = useState(0);
+  // Hauteur mesuree du pied collant. 160 = repli le temps du premier rendu :
+  // la valeur du pied a deux rangees, pour qu'aucune frame ne masque le bas.
+  const [footerH, setFooterH] = useState(160);
   // Detail page is IMAGES ONLY (client 2026-07-27) — a listing's video shows
   // only in the Découvrir feed, never on the detail page.
   const videoSrc = '';
@@ -132,7 +135,12 @@ export default function PropertyDetailRoute() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      {/* La marge basse suit la hauteur REELLE du pied collant (client
+          2026-08-11 : « Voir les commentaires » passait dessous). Elle etait
+          figee a 100 px, valeur juste tant que le pied n'avait qu'une rangee ;
+          la reservation en a ajoute une seconde. Mesurer plutot que deviner
+          evite que le prochain bouton ajoute recasse la meme chose. */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: footerH + 24 }}>
         <View style={{ aspectRatio: 1, position: 'relative', backgroundColor: colors.bgSunken }}>
           {/* Swipeable photo carousel (client 2026-07-22) — was a single static
               image ; multi-photo property listings now page + animate like the
@@ -210,7 +218,15 @@ export default function PropertyDetailRoute() {
             </View>
           </SafeAreaView>
           {prop.videoUrl && (
-            <View
+            <Pressable
+              onPress={() =>
+                // Ouvre le fil Decouvrir directement sur CETTE annonce, ou la
+                // video se lit en plein ecran (client 2026-08-11).
+                router.push(`/(tabs)/decouvrir?focusKind=property&focusId=${prop.id}` as never)
+              }
+              accessibilityRole="button"
+              accessibilityLabel="Voir la visite vidéo"
+              hitSlop={8}
               style={{
                 position: 'absolute',
                 bottom: 14,
@@ -226,7 +242,7 @@ export default function PropertyDetailRoute() {
             >
               <I.video size={12} color="#FFFFFF" />
               <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>Visite vidéo</Text>
-            </View>
+            </Pressable>
           )}
 
           {/* Carousel dots — counts the video slide (if any) + photos. */}
@@ -282,11 +298,17 @@ export default function PropertyDetailRoute() {
           {prop.type === 'location' && !isOwnProperty && (
             <Button
               variant="outline"
+              // `block` plutot qu'un alignSelf : la zone cliquable du bouton
+              // porte width:'100%'. Sur un conteneur dimensionne au contenu,
+              // ce pourcentage se resout sur l'espace DISPONIBLE et la pastille
+              // deborde a droite — son texte, pourtant centre a l'interieur,
+              // apparait alors decale (client 2026-08-11).
+              block
               label="Négocier le prix"
               leading={<I.msg size={15} color={colors.text} />}
               onPress={onNegotiatePress}
               disabled={findOrCreate.isPending || !prop.ownerId}
-              style={{ marginTop: 12, alignSelf: 'flex-start' }}
+              style={{ marginTop: 12 }}
             />
           )}
 
@@ -451,7 +473,10 @@ export default function PropertyDetailRoute() {
           Self-action guard : when the viewer owns the property, replace
           counterparty actions with a manage CTA — both find-or-create and
           request-visit 403 self-targets, so offering them is misleading. */}
-      <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
+      <StickyBottom
+        style={{ flexDirection: 'row', gap: 8 }}
+        onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
+      >
         {isOwnProperty ? (
           <Button
             variant="outline"

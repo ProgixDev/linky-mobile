@@ -1,9 +1,10 @@
 // Boost home — the seller's boost history + a CTA to buy a new one. Replaces
 // the Phase T.3 "Bientôt disponible" placeholder now that the boost module is
 // wired (migration 20260701_01 + create/list/get-boost).
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronRight, Zap } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -32,6 +33,33 @@ export default function BoostIndex() {
   const tiers = q.data?.tiers ?? [];
   const cheapest = tiers.length ? Math.min(...tiers.map((x) => x.amountGnf)) : null;
 
+  // Retour de la page Lengopay : le boost paye par mobile money n'existe pas
+  // encore ici — il est 'pending_payment' et list-boosts le masque. C'est le
+  // cron qui l'activera, en quelques secondes. On rafraichit donc en boucle
+  // pendant une minute plutot que de laisser le vendeur devant une liste
+  // inchangee, croyant avoir paye dans le vide.
+  const { pending } = useLocalSearchParams<{ pending?: string }>();
+  const [awaiting, setAwaiting] = useState(pending === '1');
+  const countRef = useRef(boosts.length);
+  useEffect(() => {
+    if (!awaiting) return;
+    const started = Date.now();
+    const timer = setInterval(() => {
+      if (Date.now() - started > 60_000) {
+        setAwaiting(false);
+        return;
+      }
+      void q.refetch();
+    }, 3000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- q change a chaque rendu ; la boucle ne depend que de `awaiting`.
+  }, [awaiting]);
+  useEffect(() => {
+    // Le boost est apparu : on arrete d'interroger.
+    if (awaiting && boosts.length > countRef.current) setAwaiting(false);
+    countRef.current = boosts.length;
+  }, [boosts.length, awaiting]);
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
@@ -48,6 +76,29 @@ export default function BoostIndex() {
         <ScreenHeader title={t('pro.boostScreenTitle')} subtitle={t('pro.boostSubtitle')} />
 
         <View style={{ paddingHorizontal: 20 }}>
+          {awaiting && (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                padding: 12,
+                marginBottom: 12,
+                borderRadius: 14,
+                backgroundColor: colors.primarySoft,
+                borderWidth: 1,
+                borderColor: colors.primary,
+              }}
+            >
+              <Zap size={16} color={colors.primaryDeep} strokeWidth={2.4} />
+              <Text
+                variant="micro"
+                style={{ flex: 1, color: colors.primaryDeep, letterSpacing: 0, textTransform: 'none', lineHeight: 16 }}
+              >
+                {t('pro.boostPendingBanner')}
+              </Text>
+            </View>
+          )}
           <Button
             label={t('pro.boostNewCta')}
             block

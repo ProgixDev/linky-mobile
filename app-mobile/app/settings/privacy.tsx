@@ -3,9 +3,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  Eye,
   Sparkles,
-  BarChart3,
   Download,
   Trash2,
   Lock,
@@ -28,17 +26,6 @@ export default function PrivacyRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const toast = useToast();
-  // Statistiques anonymes / Pub personnalisée stay device-local "Bientôt"
-  // placeholders — no analytics pipeline or ad system exists anywhere in
-  // Linky to back them (client 2026-08-06 : verified before touching this
-  // screen, see project notes — flipping these without the real system
-  // behind them would be the exact kind of fake toggle already removed
-  // elsewhere in this app).
-  const analytics = usePrefs((s) => s.privacyAnalytics);
-  const setAnalytics = usePrefs((s) => s.setPrivacyAnalytics);
-  const adTracking = usePrefs((s) => s.privacyAdTracking);
-  const setAdTracking = usePrefs((s) => s.setPrivacyAdTracking);
-
   // « Profil public » and « Recommandations personnalisées » are REAL
   // (client 2026-08-06) — both have a server-side effect (list-comments /
   // list-shop-reviews anonymize the name+avatar shown to OTHER users ;
@@ -134,31 +121,23 @@ export default function PrivacyRoute() {
 
         <SectionLabel label={t('settings.privacy.sectionData')} />
         <Card>
-          {/* Analytics + ad-tracking stay MMKV-only "Bientôt" placeholders —
-              see the note above where their state is declared. Personalize is
-              REAL and backed by the server (discover-feed ranking). */}
+          {/* « Statistiques anonymes » et « Pub personnalisée » retirés
+              (client 2026-08-11). Ils ne pilotaient RIEN : ni collecte de
+              statistiques, ni régie publicitaire n'existent dans Linky, et leur
+              état ne vivait que sur le telephone.
+              Le plus grave n'etait pas l'inutilite : « Statistiques anonymes »
+              s'affichait ACTIVE, donc un ecran de confidentialite annoncait a
+              l'utilisateur une collecte qui n'a jamais lieu. Sur ce sujet, la
+              bonne reponse a « faites-vous de la pub ciblee ? » est « non »,
+              pas « bientot ». Cet ecran ne liste plus que du reel.
+              Recommandations personnalisees RESTE : elle est branchee sur le
+              classement du fil Decouvrir cote serveur. */}
           <ToggleRow
             Icon={Sparkles}
             label={t('settings.privacy.togglePersonalize')}
             sub={t('settings.privacy.togglePersonalizeSub')}
             value={personalize}
             onChange={(v) => void onTogglePersonalize(v)}
-          />
-          <ToggleRow
-            Icon={BarChart3}
-            label={t('settings.privacy.toggleAnalytics')}
-            sub={t('settings.privacy.toggleAnalyticsSub')}
-            value={analytics}
-            onChange={setAnalytics}
-            comingSoon
-          />
-          <ToggleRow
-            Icon={Eye}
-            label={t('settings.privacy.toggleAds')}
-            sub={t('settings.privacy.toggleAdsSub')}
-            value={adTracking}
-            onChange={setAdTracking}
-            comingSoon
             last
           />
         </Card>
