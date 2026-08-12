@@ -1,6 +1,8 @@
 import '../global.css';
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
+import { setOnSessionLost } from '../src/lib/api';
+import { useAuth } from '../src/stores/auth';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -48,6 +50,20 @@ export default function RootLayout() {
       void SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, fontError]);
+
+  // Session definitivement refusee par le serveur : on deconnecte pour de bon.
+  // Sans ca, les jetons etaient effaces du stockage mais l'ecran restait celui
+  // d'un utilisateur connecte — chaque action echouait alors sur « Session
+  // invalide ou expiree », sans aucune issue proposee (client 2026-08-11).
+  // Enregistre ici plutot qu'importe depuis api.ts : l'import inverse creerait
+  // un cycle avec data/queries/auth.
+  useEffect(() => {
+    setOnSessionLost(() => {
+      void useAuth.getState().signOut();
+      router.replace('/(onboarding)/welcome');
+    });
+    return () => setOnSessionLost(null);
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

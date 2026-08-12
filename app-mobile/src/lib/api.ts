@@ -76,6 +76,16 @@ function uuid(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+/** Appelee UNIQUEMENT quand le serveur declare le jeton de rafraichissement
+ *  mort. Enregistree par app/_layout.tsx, qui deconnecte proprement et ramene
+ *  a l'ecran de connexion. Un rappel plutot qu'un import direct du magasin :
+ *  data/queries/auth importe deja ce module, l'import inverse creerait un
+ *  cycle. */
+let onSessionLost: (() => void) | null = null;
+export function setOnSessionLost(cb: (() => void) | null): void {
+  onSessionLost = cb;
+}
+
 interface RefreshResponse { access_token: string; refresh_token: string }
 
 async function callRefresh(refreshToken: string): Promise<RefreshResponse> {
@@ -214,10 +224,25 @@ export async function apiPost<T>({ path, body, authed = true, idempotencyKey }: 
         await secure.set(SECURE_KEYS.refreshToken, next.refresh_token);
         headers = await buildHeaders();
         res = await send(headers);
-      } catch {
-        // Refresh failed → user is logged out. Clear and propagate the original 401.
-        await secure.remove(SECURE_KEYS.authToken);
-        await secure.remove(SECURE_KEYS.refreshToken);
+      } catch (e) {
+        // DEUX echecs tres differents etaient traites pareil (client 2026-08-11,
+        // « Session invalide ou expiree » en pleine utilisation) :
+        //
+        // 1. Le serveur REFUSE le jeton (401/403) : la session est reellement
+        //    morte, il faut deconnecter — et le DIRE, au lieu de laisser une
+        //    session fantome ou l'ecran parait connecte mais chaque action
+        //    echoue.
+        // 2. Le reseau a laché (status 0) : la session est PARFAITEMENT VALIDE.
+        //    L'ancien code effacait quand meme les jetons, donc une coupure de
+        //    3G suffisait a deconnecter definitivement — et chaque reconnexion
+        //    coute un SMS. Sur le marche vise, c'est quotidien.
+        const status = e instanceof ApiError ? e.status : 0;
+        if (status === 401 || status === 403) {
+          await secure.remove(SECURE_KEYS.authToken);
+          await secure.remove(SECURE_KEYS.refreshToken);
+          onSessionLost?.();
+        }
+        // Coupure reseau : on garde les jetons. Le prochain appel reessaiera.
       }
     }
   }
