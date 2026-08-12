@@ -24,7 +24,18 @@ import {
   useMyProperties,
   useProducts,
   useWallet,
+  type BoostPayMethod,
 } from '../../../src/data/queries';
+
+/** Les trois rails ouverts au boost (client 2026-08-12). Stripe n'y figure pas :
+ *  le rail carte a ete abandonne en juillet 2026 (pas de compte live, cartes
+ *  guineennes refusees) — l'argent passe par le portefeuille ou par le mobile
+ *  money via Lengopay, exactement comme une commande. */
+const PAY_METHODS: { id: BoostPayMethod; nameKey: string; badge: string; badgeColor: string; badgeFg?: string; logo?: number }[] = [
+  { id: 'wallet', nameKey: 'pro.boostMethodWallet', badge: 'W', badgeColor: '#1F6F5C' },
+  { id: 'orange-money', nameKey: 'pro.boostMethodOrange', badge: 'OM', badgeColor: '#FF7900', logo: require('../../../assets/images/pay-orange-money.png') },
+  { id: 'mtn-money', nameKey: 'pro.boostMethodMtn', badge: 'MTN', badgeColor: '#FFCB05', badgeFg: '#000000', logo: require('../../../assets/images/pay-mtn-momo.png') },
+];
 
 type Selection = { kind: 'product' | 'property'; id: string };
 
@@ -76,16 +87,27 @@ export default function BoostNewRoute() {
   );
   const [days, setDays] = useState<number | null>(null);
   const selectedTier = tiers.find((x) => x.days === days) ?? null;
+  const [method, setMethod] = useState<BoostPayMethod>('wallet');
 
   const onPay = async () => {
     if (!selected || !selectedTier || create.isPending) return;
     try {
       haptic.medium();
-      await create.mutateAsync(
+      const target =
         selected.kind === 'property'
-          ? { propertyId: selected.id, days: selectedTier.days }
-          : { productId: selected.id, days: selectedTier.days },
-      );
+          ? { propertyId: selected.id }
+          : { productId: selected.id };
+      const res = await create.mutateAsync({ ...target, days: selectedTier.days, method });
+
+      // Mobile money : rien n'est paye a cet instant. On ouvre la page Lengopay
+      // dans l'app ; le boost ne s'activera qu'au retour, quand le cron aura vu
+      // l'encaissement. Surtout pas de toast de succes ici.
+      if (res.kind === 'redirect') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+        router.replace({ pathname: '/checkout/pay', params: { url: res.paymentUrl, boostId: res.boostId } } as any);
+        return;
+      }
+
       toast.show(t('pro.boostSuccessToast'), 'success');
       router.replace('/pro/boost');
     } catch (e) {
@@ -185,6 +207,34 @@ export default function BoostNewRoute() {
         )}
 
         {hasListings && (
+          <View style={{ gap: 10 }}>
+            <Text variant="micro" tone="muted" style={{ letterSpacing: 0.5 }}>
+              {t('pro.boostPickMethod').toUpperCase()}
+            </Text>
+            {PAY_METHODS.map((m) => (
+              <PayMethodOption
+                key={m.id}
+                name={t(m.nameKey)}
+                hint={
+                  m.id === 'wallet'
+                    ? t('pro.boostMethodWalletHint', { balance: formatGNF(wallet.data?.balanceGnf ?? 0) })
+                    : t('pro.boostMethodMomoHint')
+                }
+                badge={m.badge}
+                badgeColor={m.badgeColor}
+                badgeFg={m.badgeFg}
+                logo={m.logo}
+                selected={method === m.id}
+                onSelect={() => {
+                  haptic.light();
+                  setMethod(m.id);
+                }}
+              />
+            ))}
+          </View>
+        )}
+
+        {hasListings && (
           <Button
             label={
               selectedTier
@@ -254,6 +304,82 @@ function ListingOption({
         </Text>
         <Text tone="muted" variant="micro" style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}>
           {subtitle}
+        </Text>
+      </View>
+      <View
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 999,
+          borderWidth: selected ? 0 : 1.5,
+          borderColor: colors.border,
+          backgroundColor: selected ? colors.primary : 'transparent',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {selected ? <Check size={13} color="#FFFFFF" strokeWidth={3} /> : null}
+      </View>
+    </Pressable>
+  );
+}
+
+/** Tuile de rail. Meme traitement visuel que l'ecran de paiement : le logo
+ *  occupe toute la tuile blanche (contentFit cover, aucun rembourrage), sinon
+ *  les marques flottent au milieu d'un carre vide. Repli sur des initiales
+ *  colorees quand il n'y a pas d'image — le portefeuille n'en a pas. */
+function PayMethodOption({
+  name, hint, badge, badgeColor, badgeFg, logo, selected, onSelect,
+}: {
+  name: string;
+  hint: string;
+  badge: string;
+  badgeColor: string;
+  badgeFg?: string;
+  logo?: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onSelect}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 12,
+        borderRadius: 16,
+        backgroundColor: selected ? colors.primarySoft : colors.card,
+        borderWidth: selected ? 2 : 1,
+        borderColor: selected ? colors.primary : colors.border,
+      }}
+    >
+      <View
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 12,
+          overflow: 'hidden',
+          backgroundColor: logo ? '#FFFFFF' : badgeColor,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {logo ? (
+          <Image source={logo} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+        ) : (
+          <Text style={{ fontSize: 15, fontWeight: '800', color: badgeFg ?? '#FFFFFF', letterSpacing: 0 }}>
+            {badge}
+          </Text>
+        )}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text, letterSpacing: 0 }}>
+          {name}
+        </Text>
+        <Text tone="muted" variant="micro" style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}>
+          {hint}
         </Text>
       </View>
       <View

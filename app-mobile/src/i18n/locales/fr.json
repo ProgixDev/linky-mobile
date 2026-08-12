@@ -891,7 +891,14 @@
     "visitsBucketPast": "Passé",
     "visitsToastAccepted": "Visite confirmée",
     "visitsToastRejected": "Demande refusée",
-    "visitsToastError": "Action impossible"
+    "visitsToastError": "Action impossible",
+    "boostPickMethod": "Moyen de paiement",
+    "boostMethodWallet": "Portefeuille Linky",
+    "boostMethodWalletHint": "Solde : {{balance}}",
+    "boostMethodOrange": "Orange Money",
+    "boostMethodMtn": "MTN MoMo",
+    "boostMethodMomoHint": "Paiement depuis ton téléphone",
+    "boostPendingBanner": "Paiement en cours de vérification. Ton boost apparaîtra ici dès la confirmation."
   },
   "buyer": {
     "requestsTitle": "Mes demandes",

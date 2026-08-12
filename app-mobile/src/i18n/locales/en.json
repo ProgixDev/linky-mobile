@@ -891,7 +891,14 @@
     "boostDetailEnd": "End",
     "boostDetailViewProduct": "View the listing →",
     "boostBannerTitle": "Boost a listing",
-    "boostBannerSub": "More visibility, more sales."
+    "boostBannerSub": "More visibility, more sales.",
+    "boostPickMethod": "Payment method",
+    "boostMethodWallet": "Linky wallet",
+    "boostMethodWalletHint": "Balance: {{balance}}",
+    "boostMethodOrange": "Orange Money",
+    "boostMethodMtn": "MTN MoMo",
+    "boostMethodMomoHint": "Pay from your phone",
+    "boostPendingBanner": "Payment is being verified. Your boost will appear here once confirmed."
   },
   "buyer": {
     "requestsTitle": "My requests",

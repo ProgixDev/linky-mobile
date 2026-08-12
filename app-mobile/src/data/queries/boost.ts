@@ -29,19 +29,40 @@ export interface CreateBoostInput {
   productId?: string;
   propertyId?: string;
   days: number;
+  /** Défaut portefeuille — c'était le seul rail avant le 2026-08-12. */
+  method?: BoostPayMethod;
+  payerPhone?: string;
 }
+
+export type BoostPayMethod = 'wallet' | 'orange-money' | 'mtn-money';
+
+/** Portefeuille : le boost est actif immédiatement (débit atomique côté serveur).
+ *  Mobile money : rien n'est actif encore — l'argent doit d'abord transiter par
+ *  la page Lengopay, et c'est le cron qui activera. Les deux issues sont donc
+ *  volontairement de formes différentes, pour que l'écran ne puisse pas
+ *  confondre « payé » et « à payer ». */
+export type CreateBoostResult =
+  | { kind: 'active'; boost: Boost }
+  | { kind: 'redirect'; boostId: string; paymentUrl: string };
 
 export function useCreateBoost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ productId, propertyId, days }: CreateBoostInput): Promise<Boost> => {
-      const { boost } = await apiPost<{ boost: Boost }>({
+    mutationFn: async ({
+      productId, propertyId, days, method = 'wallet', payerPhone,
+    }: CreateBoostInput): Promise<CreateBoostResult> => {
+      const target = propertyId ? { property_id: propertyId } : { product_id: productId };
+      const res = await apiPost<{ boost?: Boost; boost_id?: string; payment_url?: string }>({
         path: '/create-boost',
-        body: propertyId ? { property_id: propertyId, days } : { product_id: productId, days },
+        body: { ...target, days, method, ...(payerPhone ? { payer_phone: payerPhone } : {}) },
       });
-      return boost;
+      if (res.payment_url && res.boost_id) {
+        return { kind: 'redirect', boostId: res.boost_id, paymentUrl: res.payment_url };
+      }
+      if (!res.boost) throw new Error('Réponse inattendue du serveur');
+      return { kind: 'active', boost: res.boost };
     },
-    onSuccess: (_boost, { productId, propertyId }) => {
+    onSuccess: (_res, { productId, propertyId }) => {
       qc.invalidateQueries({ queryKey: ['boosts'] });
       qc.invalidateQueries({ queryKey: ['wallet'] }); // balance just dropped
       if (propertyId) {
