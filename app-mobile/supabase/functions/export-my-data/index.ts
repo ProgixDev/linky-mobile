@@ -8,6 +8,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { buildDataExportPdf } from '@shared/pdf-export.ts';
 
 // No input beyond auth — the export is always "everything about ME".
 interface Body { [key: string]: never }
@@ -67,14 +68,27 @@ Deno.serve(makePost<Body>('/v1/privacy/export-my-data', valid, async ({ sb, req 
     reviews_written: reviewsWritten.data ?? [],
     comments_written: commentsWritten.data ?? [],
   };
-  const json = JSON.stringify(bundle, null, 2);
+  // PDF plutot que JSON (client 2026-08-11) : l'utilisateur recevait un dump
+  // machine, illisible pour un non-developpeur. Genere cote serveur — rendre du
+  // HTML en PDF sur le telephone demanderait un module NATIF, donc un nouveau
+  // build, or le client teste par mises a jour a distance.
+  const pdf = await buildDataExportPdf(bundle);
+
+  // btoa attend une chaine ; String.fromCharCode(...bytes) sur un tableau de
+  // plusieurs dizaines de milliers d'octets DEPASSE la pile d'arguments et
+  // plante. On encode par tranches.
+  let binaire = '';
+  for (let i = 0; i < pdf.length; i += 8192) {
+    binaire += String.fromCharCode(...pdf.subarray(i, i + 8192));
+  }
+  const attachmentBase64 = btoa(binaire);
 
   const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
     <h2 style="color:#0A5240;margin:0 0 8px">Linky</h2>
-    <p>Voici l'export de tes données, en pièce jointe (format JSON, lisible avec n'importe quel éditeur de texte).</p>
+    <p>Voici l'export de tes données personnelles, en pièce jointe.</p>
     <p style="color:#666">Si tu n'as pas demandé cet export, ignore cet email.</p>
   </div>`;
-  const attachmentBase64 = btoa(unescape(encodeURIComponent(json)));
+  const nomFichier = 'linky-mes-donnees.pdf';
 
   // Resend needs RESEND_FROM (a domain-verified sender) which isn't configured
   // yet — falls through to the landing's Gmail relay, the SAME delivery path
@@ -92,7 +106,7 @@ Deno.serve(makePost<Body>('/v1/privacy/export-my-data', valid, async ({ sb, req 
           to: [primaryEmail],
           subject: 'Tes données Linky',
           html,
-          attachments: [{ filename: 'linky-mes-donnees.json', content: attachmentBase64 }],
+          attachments: [{ filename: nomFichier, content: attachmentBase64 }],
         }),
       });
       if (!r.ok) {
@@ -120,7 +134,7 @@ Deno.serve(makePost<Body>('/v1/privacy/export-my-data', valid, async ({ sb, req 
         to: primaryEmail,
         subject: 'Tes données Linky',
         html,
-        attachmentFilename: 'linky-mes-donnees.json',
+        attachmentFilename: nomFichier,
         attachmentContentBase64: attachmentBase64,
       }),
     });
