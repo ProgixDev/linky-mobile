@@ -47,13 +47,6 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
     else ref.current?.dismiss();
   }, [open]);
 
-  const handleChanges = useCallback(
-    (index: number) => {
-      if (index === -1) onClose();
-    },
-    [onClose],
-  );
-
   const renderBackdrop = useCallback(
     (p: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...p} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.45} />
@@ -70,8 +63,12 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
       // caller here passes explicit ones, so that was never the intended mode.
       enableDynamicSizing={false}
       enablePanDownToClose
-      // Closing by gesture must tell the parent too, otherwise its `open` state
-      // stays true and the sheet can never be reopened.
+      // SEUL chemin de fermeture vers le parent. Surtout PAS un onChange qui
+      // testerait index === -1 : une modale signale -1 tant qu'elle est fermee,
+      // donc au montage ET pendant l'animation d'ouverture. Le parent remettait
+      // alors son etat a zero aussitot, la feuille se refermait dans la foulee,
+      // et le bouton paraissait mort (regression introduite le 2026-08-11 en
+      // passant au portail). onDismiss ne se declenche qu'a une vraie fermeture.
       onDismiss={onClose}
       // Keyboard handling for inputs inside the sheet (e.g. the city search).
       // fillParent = the sheet expands to the space above the keyboard on focus,
@@ -81,7 +78,6 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
       keyboardBehavior="fillParent"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
-      onChange={handleChanges}
       backdropComponent={renderBackdrop}
       handleIndicatorStyle={{ backgroundColor: colors.borderStrong, width: 44 }}
       backgroundStyle={{ backgroundColor: colors.card, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl }}
