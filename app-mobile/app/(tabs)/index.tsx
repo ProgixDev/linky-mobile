@@ -23,6 +23,7 @@ import {
   Building2,
   Home as HomeIcon,
   TreePine,
+  Hand,
 } from 'lucide-react-native';
 import {
   EstateDashboard,
@@ -248,17 +249,26 @@ function BuyerHome() {
             >
               {t('home.greeting')}
             </Text>
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: '700',
-                color: colors.text,
-                marginTop: 1,
-              }}
-              numberOfLines={1}
-            >
-              {firstName} 👋
-            </Text>
+            {/* Icone de marque plutot qu'un emoji 👋 : l'emoji est rendu par la
+                police systeme, donc son style change d'un telephone a l'autre et
+                echappe a l'identite visuelle (client 2026-08-11). Ici, l'or de
+                la marque et le meme trait que toutes les autres icones.
+                flexShrink sur le prenom pour que la main reste visible meme avec
+                un prenom long. */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 }}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: '700',
+                  color: colors.text,
+                  flexShrink: 1,
+                }}
+                numberOfLines={1}
+              >
+                {firstName}
+              </Text>
+              <Hand size={17} color={colors.accent} strokeWidth={2.25} />
+            </View>
           </View>
           {/* Favoris / notifications / panier — the trio, kept consistent with
               the Marché header (client 2026-07-26). Favoris was moved here off
