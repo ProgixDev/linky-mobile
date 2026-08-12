@@ -76,15 +76,15 @@ export default function CreatePropertyDetailsRoute() {
               </View>
             </View>
 
-            {/* 30 caracteres — choix du client (2026-08-11). Sans limite
-                visible, des vendeurs collaient toute leur description dans ce
-                champ. C'est serre : le placeholder de cet ecran meme,
-                « Appartement 2P meublé, Kaloum », en fait 29. Une variante a
-                peine plus longue (« Appartement 3 pièces meublé, Kaloum », 35)
-                ne passe plus et devra etre abregee. La contrepartie est que le
-                titre tient toujours sur UNE ligne, meme dans le carrousel
-                etroit de l'accueil. Le serveur plafonne a 120 et reste le
-                garde-fou. */}
+            {/* 30 caracteres — valeur voulue par le client (2026-08-11).
+                Sans limite visible, des vendeurs collaient toute leur
+                description dans ce champ. Un titre tient ainsi toujours sur
+                une seule ligne, y compris dans le carrousel etroit de
+                l'accueil. Le placeholder de cet ecran, « Appartement 2P
+                meublé, Kaloum », en fait 29 : la marge est mince, a surveiller
+                si des vendeurs se plaignent. Le serveur plafonne a 120 et
+                reste le garde-fou — le baisser rejetterait la modification
+                d'annonces existantes au titre plus long. */}
             <Input
               label={t('create.fieldTitleProp2')}
               value={state.title}
