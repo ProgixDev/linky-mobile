@@ -91,7 +91,14 @@ export function PropertyCard({
           </View>
         )}
       </View>
-      <View style={{ padding: 14, gap: 6 }}>
+      {/* Titre + lieu à gauche, pastilles à droite sur la même hauteur
+          (client 2026-08-11) : les deux pastilles occupaient chacune une ligne
+          entière sous le texte, ce qui allongeait la carte pour presque rien.
+          minWidth: 0 est indispensable — sans lui, une colonne flex refuse de
+          se rétrécir sous la largeur de son contenu et le titre pousserait les
+          pastilles hors de la carte au lieu de passer à la ligne. */}
+      <View style={{ padding: 14, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
         <Text variant="titleM" numberOfLines={2}>
           {property.title}
         </Text>
@@ -119,9 +126,10 @@ export function PropertyCard({
             </View>
           )}
         </View>
+        </View>
+        <View style={{ gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
         <View
           style={{
-            alignSelf: 'flex-start',
             paddingHorizontal: 10,
             paddingVertical: 4,
             borderRadius: 999,
@@ -139,7 +147,6 @@ export function PropertyCard({
         {distanceFromUserKm != null && distanceFromUserKm > 0 && (
           <View
             style={{
-              alignSelf: 'flex-start',
               paddingHorizontal: 10,
               paddingVertical: 4,
               borderRadius: 999,
@@ -157,6 +164,7 @@ export function PropertyCard({
             </Text>
           </View>
         )}
+        </View>
       </View>
     </Pressable>
   );
