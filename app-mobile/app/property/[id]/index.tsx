@@ -298,11 +298,17 @@ export default function PropertyDetailRoute() {
           {prop.type === 'location' && !isOwnProperty && (
             <Button
               variant="outline"
+              // `block` plutot qu'un alignSelf : la zone cliquable du bouton
+              // porte width:'100%'. Sur un conteneur dimensionne au contenu,
+              // ce pourcentage se resout sur l'espace DISPONIBLE et la pastille
+              // deborde a droite — son texte, pourtant centre a l'interieur,
+              // apparait alors decale (client 2026-08-11).
+              block
               label="Négocier le prix"
               leading={<I.msg size={15} color={colors.text} />}
               onPress={onNegotiatePress}
               disabled={findOrCreate.isPending || !prop.ownerId}
-              style={{ marginTop: 12, alignSelf: 'center' }}
+              style={{ marginTop: 12 }}
             />
           )}
 
