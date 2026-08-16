@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -8,6 +8,8 @@ import { I } from '../../icons/Icon';
 import { formatGNF } from '../../lib/format';
 import { haptic } from '../../lib/haptics';
 import { useFavorites } from '../../stores/favorites';
+import { useCart } from '../../stores/cart';
+import { useToast } from '../feedback/Toast';
 import { useDataSaverImageProps } from '../../lib/dataSaver';
 import type { Product } from '../../data/types';
 
@@ -23,6 +25,42 @@ export function ProductCard({
   const toggleFav = useFavorites((s) => s.toggleProduct);
   const sold = product.status === 'sold';
   const imgProps = useDataSaverImageProps();
+  const addToCart = useCart((s) => s.add);
+  const replaceCart = useCart((s) => s.replaceWith);
+  const toast = useToast();
+  const outOfStock = product.stock != null && product.stock <= 0;
+
+  /** Ajout rapide depuis la liste (client 2026-08-13). Comportement STRICTEMENT
+   *  identique a celui de la fiche produit — meme regle « une seule boutique par
+   *  commande », meme texte : deux chemins vers la meme action ne doivent pas se
+   *  comporter differemment. */
+  const onQuickAdd = () => {
+    haptic.light();
+    if (outOfStock) {
+      toast.show('Cet article est en rupture de stock.', 'info');
+      return;
+    }
+    const res = addToCart(product.id, product.shopId);
+    if (res === 'other-shop') {
+      Alert.alert(
+        'Une seule boutique par commande',
+        'Ton panier contient déjà des articles d’une autre boutique. Chaque commande est livrée et payée séparément par boutique — veux-tu vider ton panier et commencer avec cet article ?',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          {
+            text: 'Vider et ajouter',
+            style: 'destructive',
+            onPress: () => {
+              replaceCart(product.id, product.shopId);
+              toast.show('Ajouté au panier', 'success');
+            },
+          },
+        ],
+      );
+      return;
+    }
+    toast.show('Ajouté au panier', 'success');
+  };
 
   return (
     <Pressable
@@ -117,7 +155,10 @@ export function ProductCard({
           </View>
         )}
       </View>
-      <View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+        {/* minWidth 0 : sans lui, un titre long refuse de se tronquer et pousse
+            le bouton hors de la carte. */}
+        <View style={{ flex: 1, minWidth: 0 }}>
         <Text
           numberOfLines={2}
           style={{
@@ -142,6 +183,29 @@ export function ProductCard({
             </Text>
           </View>
         ) : null}
+        </View>
+
+        {/* Ajout rapide au panier. Masque sur la rangee compacte de l'accueil
+            (cartes de 260 px : la place manque) et sur un article vendu. */}
+        {!compact && !sold && (
+          <Pressable
+            onPress={onQuickAdd}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Ajouter ${product.title} au panier`}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 999,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: outOfStock ? colors.bgSunken : colors.primary,
+              marginTop: 2,
+            }}
+          >
+            <I.cart size={16} color={outOfStock ? colors.textFaint : '#FFFFFF'} />
+          </Pressable>
+        )}
       </View>
     </Pressable>
   );
