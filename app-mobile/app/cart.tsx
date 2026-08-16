@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -11,7 +11,6 @@ import { Card } from '../src/components/primitives/Card';
 import { useToast } from '../src/components/feedback/Toast';
 import { Button } from '../src/components/primitives/Button';
 import { TopBar } from '../src/components/nav/TopBar';
-import { StickyBottom } from '../src/components/nav/StickyBottom';
 import { EmptyState } from '../src/components/feedback/EmptyState';
 import { I } from '../src/icons/Icon';
 import { formatGNF, formatEUR } from '../src/lib/format';
@@ -62,10 +61,40 @@ export default function CartRoute() {
   const items = lines
     .map((l, i) => ({ line: l, product: queries[i].data }))
     .filter((x): x is { line: typeof lines[0]; product: Product } => !!x.product);
-  const subtotal = items.reduce((sum, { line, product }) => sum + product.priceGnf * line.quantity, 0);
-  const fees = Math.round(subtotal * 0.03);
-  const total = subtotal + fees;
-  const sellers = Array.from(new Set(items.map((i) => i.product.shopId))).length;
+  // Regroupement par boutique (client 2026-08-13 : « l'ajout d'articles de
+  // boutiques differentes n'est pas actif »). Le panier en accepte desormais
+  // plusieurs, mais chaque groupe reste UNE commande : un escrow, un vendeur,
+  // une livraison, un QR — et un paiement mobile money ne peut de toute facon
+  // pas etre reparti entre deux vendeurs. On paie donc groupe par groupe.
+  const groups = useMemo(() => {
+    const byShop = new Map<string, typeof items>();
+    for (const it of items) {
+      const k = it.product.shopId;
+      const list = byShop.get(k);
+      if (list) list.push(it);
+      else byShop.set(k, [it]);
+    }
+    return Array.from(byShop.entries()).map(([shopId, groupItems]) => {
+      const sub = groupItems.reduce((s, { line, product }) => s + product.priceGnf * line.quantity, 0);
+      const f = Math.round(sub * 0.03);
+      return { shopId, items: groupItems, subtotal: sub, fees: f, total: sub + f };
+    });
+  }, [items]);
+
+  // Noms de boutique — meme cle de cache que useShop, donc aucun appel en double
+  // si l'utilisateur a deja ouvert la boutique.
+  const shopQueries = useQueries({
+    queries: groups.map((g) => ({
+      queryKey: ['shop', g.shopId],
+      queryFn: async () => {
+        const { shop } = await apiPost<{ shop: { id: string; name: string } }>({
+          path: '/get-shop', authed: false, body: { id: g.shopId },
+        });
+        return shop;
+      },
+      staleTime: 5 * 60_000,
+    })),
+  });
 
   if (!allLoaded && lines.length > 0) {
     return (
@@ -105,46 +134,54 @@ export default function CartRoute() {
         back
         subtitle={t('cart.subtitle', {
           itemsLabel: t('cart.article', { count: items.length }),
-          sellersLabel: t('cart.seller', { count: sellers }),
+          sellersLabel: t('cart.seller', { count: groups.length }),
         })}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 10 }}>
-        {/* Tells the buyer the rule BEFORE they hit it (client 2026-08-05).
-            One order = one escrow = one seller = one delivery = one QR, so a
-            cart can hold many articles but only from a single shop. */}
-        <View
-          style={{
-            gap: 10,
-            padding: 12,
-            borderRadius: 14,
-            backgroundColor: colors.bgSunken,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+        {/* Le panier accepte plusieurs boutiques, mais chacune donne lieu a une
+            commande distincte — livraison, paiement et QR separes. On l'annonce
+            AVANT que l'acheteur ne le decouvre au paiement. Inutile de le dire
+            quand il n'y a qu'une boutique : ce serait du bruit. */}
+        {groups.length > 1 && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 8,
+              padding: 12,
+              borderRadius: 14,
+              backgroundColor: colors.bgSunken,
+            }}
+          >
             <I.store size={15} color={colors.primary} />
             <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 17 }}>
-              {t('cart.singleShopNotice')}
+              Ton panier contient {groups.length} boutiques. Chaque boutique fait l'objet d'une
+              commande séparée : tu la paies et la reçois indépendamment.
             </Text>
           </View>
-          {/* Since a cart is locked to one shop, give the buyer a direct way to
-              keep shopping THERE instead of hitting the "other shop" wall
-              (client 2026-08-05). The shop page lists all its articles. */}
-          <Pressable
-            onPress={() => {
-              haptic.light();
-              router.push(`/shop/${items[0].product.shopId}`);
-            }}
-            hitSlop={6}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' }}
-          >
-            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary, letterSpacing: 0 }}>
-              {t('cart.browseShop')}
-            </Text>
-            <I.chevronR size={14} color={colors.primary} />
-          </Pressable>
-        </View>
+        )}
 
-        {items.map(({ line, product }) => (
+        {groups.map((group, gi) => (
+        <View key={group.shopId} style={{ gap: 10 }}>
+          {/* En-tete de boutique. Il n'apparait que s'il y a plusieurs groupes :
+              avec une seule boutique il n'apporte rien et ajoute du bruit. */}
+          {groups.length > 1 && (
+            <Pressable
+              onPress={() => {
+                haptic.light();
+                router.push(`/shop/${group.shopId}`);
+              }}
+              hitSlop={6}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}
+            >
+              <I.store size={14} color={colors.primary} />
+              <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', letterSpacing: 0 }} numberOfLines={1}>
+                {shopQueries[gi]?.data?.name ?? 'Boutique'}
+              </Text>
+              <I.chevronR size={14} color={colors.textMuted} />
+            </Pressable>
+          )}
+        {group.items.map(({ line, product }) => (
           <Card key={product.id} padding={10}>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Image
@@ -248,32 +285,44 @@ export default function CartRoute() {
             <Text variant="caption" tone="muted" style={{ letterSpacing: 0 }}>
               {t('cart.subtotal')}
             </Text>
-            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(subtotal)}</Text>
+            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(group.subtotal)}</Text>
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
             <Text variant="caption" tone="muted" style={{ letterSpacing: 0 }}>
               {t('cart.feesLabel')} <Text style={{ color: colors.primary }}>(3%)</Text>
             </Text>
-            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(fees)}</Text>
+            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(group.fees)}</Text>
           </View>
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('cart.total')}</Text>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={{ fontWeight: '700', fontSize: 18, fontVariant: ['tabular-nums'] }}>
-                {formatGNF(total)}
+                {formatGNF(group.total)}
               </Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0 }}>
-                {formatEUR(gnfToEur(total))}
+                {formatEUR(gnfToEur(group.total))}
               </Text>
             </View>
           </View>
         </Card>
-      </ScrollView>
 
-      <StickyBottom>
-        <Button size="lg" block label={t('cart.pay')} onPress={() => router.push('/checkout')} />
-      </StickyBottom>
+        {/* Un bouton PAR boutique. Le paiement porte l'identifiant du groupe :
+            l'ecran de paiement ne traite que ces lignes-la, et ne vide que
+            celles-la une fois la commande passee. */}
+        <Button
+          size="lg"
+          block
+          label={`${t('cart.pay')} · ${formatGNF(group.total)}`}
+          onPress={() => {
+            haptic.light();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+            router.push({ pathname: '/checkout', params: { shopId: group.shopId } } as any);
+          }}
+        />
+        </View>
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 }

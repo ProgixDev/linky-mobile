@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
 import { useQueries } from '@tanstack/react-query';
@@ -80,7 +80,13 @@ export default function CheckoutRoute() {
       })),
     [t],
   );
-  const lines = useCart((s) => s.lines);
+  // Le panier peut contenir plusieurs boutiques ; une COMMANDE reste
+  // mono-boutique. shopId arrive du bouton du groupe : on ne traite que ces
+  // lignes-la. Absent (ancien lien, panier a une seule boutique) = tout le
+  // panier, comme avant.
+  const { shopId } = useLocalSearchParams<{ shopId?: string }>();
+  const allLines = useCart((s) => s.lines);
+  const lines = shopId ? allLines.filter((l) => l.shopId === shopId) : allLines;
   const placeOrder = usePlaceOrder();
   const { show } = useToast();
   // Mode de réception (client 2026-07-30). Livraison Linky par défaut (frais
@@ -533,7 +539,10 @@ export default function CheckoutRoute() {
                     // Phase U.3 — wallet payment is instant + non-cancellable
                     // from the buyer side, so this is the actual moment of
                     // payment success → safe to clear.
-                    useCart.getState().clear();
+                    // Ne vider QUE la boutique payee : les autres groupes
+                    // restent dans le panier pour etre commandes ensuite.
+                    if (shopId) useCart.getState().removeShop(shopId);
+                    else useCart.getState().clear();
                     show(t('checkout.orderCreated'), 'success');
                     router.replace(`/checkout/success?orderId=${order.id}`);
                   }

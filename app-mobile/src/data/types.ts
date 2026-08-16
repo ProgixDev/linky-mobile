@@ -163,6 +163,11 @@ export interface BoostTier {
 export interface CartLine {
   productId: ID;
   quantity: number;
+  /** Boutique de l'article. Depuis 2026-08-13 le panier peut contenir plusieurs
+   *  boutiques ; c'est ce champ qui permet de les regrouper et de commander
+   *  boutique par boutique. Optionnel a la lecture : les paniers enregistres
+   *  avant cette version n'en ont pas. */
+  shopId?: ID;
 }
 
 export interface Order {

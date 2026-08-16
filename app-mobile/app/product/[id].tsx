@@ -710,30 +710,11 @@ export default function ProductDetailRoute() {
               <Pressable
                 onPress={() => {
                   haptic.light();
-                  // Several articles are fine — as long as they come from the
-                  // SAME shop (one order = one escrow = one seller = one QR).
-                  // A different shop can't be merged, so we offer to start a
-                  // fresh cart instead of silently dropping the old one
-                  // (client 2026-08-05).
-                  const res = addToCart(product.id, product.shopId);
-                  if (res === 'other-shop') {
-                    Alert.alert(
-                      'Une seule boutique par commande',
-                      'Ton panier contient déjà des articles d’une autre boutique. Chaque commande est livrée et payée séparément par boutique — veux-tu vider ton panier et commencer avec cet article ?',
-                      [
-                        { text: 'Annuler', style: 'cancel' },
-                        {
-                          text: 'Vider et ajouter',
-                          style: 'destructive',
-                          onPress: () => {
-                            replaceCart(product.id, product.shopId);
-                            show(t('product.addedToCart'), 'success');
-                          },
-                        },
-                      ],
-                    );
-                    return;
-                  }
+                  // Le panier accepte plusieurs boutiques depuis 2026-08-13. Une
+                  // COMMANDE reste mono-boutique (1 escrow = 1 vendeur = 1 QR) :
+                  // l'ecran du panier regroupe par boutique et on paie un groupe
+                  // a la fois. Il n'y a donc plus rien a refuser ici.
+                  addToCart(product.id, product.shopId);
                   show(t('product.addedToCart'), 'success');
                 }}
                 style={{

@@ -1,4 +1,4 @@
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -26,39 +26,19 @@ export function ProductCard({
   const sold = product.status === 'sold';
   const imgProps = useDataSaverImageProps();
   const addToCart = useCart((s) => s.add);
-  const replaceCart = useCart((s) => s.replaceWith);
   const toast = useToast();
   const outOfStock = product.stock != null && product.stock <= 0;
 
-  /** Ajout rapide depuis la liste (client 2026-08-13). Comportement STRICTEMENT
-   *  identique a celui de la fiche produit — meme regle « une seule boutique par
-   *  commande », meme texte : deux chemins vers la meme action ne doivent pas se
-   *  comporter differemment. */
+  /** Ajout rapide depuis la liste (client 2026-08-13). Le panier accepte
+   *  desormais plusieurs boutiques : plus aucun refus ici, le regroupement et le
+   *  paiement boutique par boutique se font a l'ecran du panier. */
   const onQuickAdd = () => {
     haptic.light();
     if (outOfStock) {
       toast.show('Cet article est en rupture de stock.', 'info');
       return;
     }
-    const res = addToCart(product.id, product.shopId);
-    if (res === 'other-shop') {
-      Alert.alert(
-        'Une seule boutique par commande',
-        'Ton panier contient déjà des articles d’une autre boutique. Chaque commande est livrée et payée séparément par boutique — veux-tu vider ton panier et commencer avec cet article ?',
-        [
-          { text: 'Annuler', style: 'cancel' },
-          {
-            text: 'Vider et ajouter',
-            style: 'destructive',
-            onPress: () => {
-              replaceCart(product.id, product.shopId);
-              toast.show('Ajouté au panier', 'success');
-            },
-          },
-        ],
-      );
-      return;
-    }
+    addToCart(product.id, product.shopId);
     toast.show('Ajouté au panier', 'success');
   };
 
