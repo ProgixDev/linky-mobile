@@ -170,8 +170,13 @@ export function BookingCalendar({
                       borderRadius: 999,
                       alignItems: 'center',
                       justifyContent: 'center',
+                      // Rouge PLEIN, au meme niveau que le vert plein d'un jour
+                      // choisi (client 2026-08-13 : « en rouge les creneaux
+                      // reserves »). Le rouge a 16 % qu'il y avait ici se lisait
+                      // comme un gris sale sur fond sombre — un jour verrouille
+                      // doit se voir d'un coup d'oeil, sans etre cherche.
                       backgroundColor: blocked
-                        ? 'rgba(209,79,60,0.16)' // colors.danger a 16 % — lisible en clair comme en sombre
+                        ? colors.danger
                         : selected
                           ? colors.primary
                           : inRange
@@ -182,9 +187,9 @@ export function BookingCalendar({
                     <Text
                       style={{
                         fontSize: 13,
-                        fontWeight: selected ? '700' : '500',
+                        fontWeight: selected || blocked ? '700' : '500',
                         color: blocked
-                          ? colors.danger
+                          ? '#FFFFFF'
                           : disabled
                             ? colors.textFaint
                             : selected
@@ -192,7 +197,10 @@ export function BookingCalendar({
                               : inRange
                                 ? colors.primaryDeep
                                 : colors.text,
+                        // Le barre en plus du rouge plein : la couleur seule ne
+                        // doit pas porter l'information (daltonisme).
                         textDecorationLine: blocked ? 'line-through' : 'none',
+                        textDecorationColor: '#FFFFFF',
                       }}
                     >
                       {Number(day.slice(8, 10))}
@@ -210,6 +218,45 @@ export function BookingCalendar({
           </View>
         );
       })}
+
+      {/* Legende. Sans elle, un calendrier sans aucune date prise ne prouve rien
+          au proprietaire : il ne peut pas distinguer « aucune reservation » de
+          « la fonction ne marche pas ». Les trois etats sont donc nommes en
+          permanence, meme quand aucun jour n'est rouge. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 14,
+          marginTop: 12,
+          paddingTop: 12,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+        }}
+      >
+        <LegendDot color="transparent" borderColor={colors.borderStrong} label={'Disponible'} />
+        <LegendDot color={colors.primary} label={'Ton séjour'} />
+        <LegendDot color={colors.danger} label={'Déjà réservé'} />
+      </View>
+    </View>
+  );
+}
+
+function LegendDot({ color, borderColor, label }: { color: string; borderColor?: string; label: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <View
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: 999,
+          backgroundColor: color,
+          borderWidth: borderColor ? 1 : 0,
+          borderColor: borderColor ?? 'transparent',
+        }}
+      />
+      <Text style={{ fontSize: 11.5, color: colors.textMuted, letterSpacing: 0 }}>{label}</Text>
     </View>
   );
 }
