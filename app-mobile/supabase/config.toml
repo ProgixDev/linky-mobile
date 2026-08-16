@@ -808,3 +808,6 @@ verify_jwt = false
 
 [functions.export-my-data]
 verify_jwt = false
+
+[functions.property-availability]
+verify_jwt = false
