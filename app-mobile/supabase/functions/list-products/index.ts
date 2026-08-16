@@ -57,7 +57,7 @@ Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body }) => {
   let q = sb
     .from('products')
     .select(
-      'id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, created_at' +
+      'id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, created_at' +
         (ownerScoped ? ', shops!inner(owner_id)' : ''),
     );
 

@@ -18,6 +18,7 @@ export interface ProductRow {
   fav_count: number;
   city: string;
   district: string | null;
+  stock?: number | null;
   created_at: string;
 }
 
@@ -67,6 +68,8 @@ export function mapProduct(r: ProductRow) {
     favCount: r.fav_count,
     city: r.city,
     district: r.district ?? undefined,
+    // null = quantite non renseignee (annonces d'avant le stock) : aucune limite.
+    stock: r.stock ?? null,
     createdAt: r.created_at,
   };
 }

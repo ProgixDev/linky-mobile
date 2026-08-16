@@ -1128,7 +1128,8 @@
     "total": "Total",
     "pay": "Ir al pago",
     "singleShopNotice": "Un pedido por tienda: puedes añadir varios artículos de la misma tienda, pero no de dos tiendas distintas.",
-    "browseShop": "Ver todos los artículos de esta tienda"
+    "browseShop": "Ver todos los artículos de esta tienda",
+    "stockMax": "Solo quedan {{count}} unidad(es) de este artículo."
   },
   "checkout": {
     "pay": {

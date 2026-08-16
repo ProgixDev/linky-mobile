@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../src/theme/ThemeProvider';
 import { Text } from '../src/components/primitives/Text';
 import { Card } from '../src/components/primitives/Card';
+import { useToast } from '../src/components/feedback/Toast';
 import { Button } from '../src/components/primitives/Button';
 import { TopBar } from '../src/components/nav/TopBar';
 import { StickyBottom } from '../src/components/nav/StickyBottom';
@@ -24,6 +25,7 @@ import { haptic } from '../src/lib/haptics';
 export default function CartRoute() {
   const { colors, radii } = useTheme();
   const { t } = useTranslation();
+  const toast = useToast();
   const { lines, setQuantity, remove } = useCart();
 
   // One real-backend fetch per cart line; shared cache with useProduct on the
@@ -196,8 +198,22 @@ export default function CartRoute() {
                     <Text style={{ minWidth: 24, textAlign: 'center', fontWeight: '700', fontSize: 14, fontVariant: ['tabular-nums'] }}>
                       {line.quantity}
                     </Text>
+                    {/* Plafond = quantité déclarée par le vendeur. `stock` null
+                        signifie « non renseignée » (annonces publiées avant le
+                        stock) et ne plafonne rien. Ce blocage est du confort :
+                        la vérité est dans place_order_multi, qui verrouille la
+                        ligne produit et refuse le dépassement même si le panier
+                        a été trafiqué. */}
                     <Pressable
                       onPress={() => {
+                        if (product.stock != null && line.quantity >= product.stock) {
+                          haptic.light();
+                          toast.show(
+                            t('cart.stockMax', { count: product.stock }),
+                            'info',
+                          );
+                          return;
+                        }
                         haptic.light();
                         setQuantity(product.id, line.quantity + 1);
                       }}
@@ -207,7 +223,10 @@ export default function CartRoute() {
                         height: 30,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: colors.primary,
+                        backgroundColor:
+                          product.stock != null && line.quantity >= product.stock
+                            ? colors.borderStrong
+                            : colors.primary,
                         borderRadius: 999,
                       }}
                     >

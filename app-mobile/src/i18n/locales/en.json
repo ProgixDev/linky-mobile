@@ -1128,7 +1128,8 @@
     "total": "Total",
     "pay": "Continue to payment",
     "singleShopNotice": "One order per shop: you can add several articles from the same shop, but not from two different shops.",
-    "browseShop": "Browse all articles from this shop"
+    "browseShop": "Browse all articles from this shop",
+    "stockMax": "Only {{count}} item(s) left in stock."
   },
   "checkout": {
     "pay": {

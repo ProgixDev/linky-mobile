@@ -19,6 +19,7 @@ interface Body {
   video_url?: string;
   city: string;
   district?: string;
+  stock?: number | null;
 }
 
 const URL_RE = /^https?:\/\/[^\s]{8,500}$/i;
@@ -41,6 +42,9 @@ function valid(b: unknown): b is Body {
   if (x.video_url !== undefined && (typeof x.video_url !== 'string' || !URL_RE.test(x.video_url))) return false;
   if (typeof x.city !== 'string' || x.city.trim().length < 2 || x.city.length > 80) return false;
   if (x.district !== undefined && (typeof x.district !== 'string' || x.district.length > 80)) return false;
+  // Quantite disponible. null/absent = non renseignee, donc sans plafond.
+  if (x.stock !== undefined && x.stock !== null &&
+      (typeof x.stock !== 'number' || !Number.isInteger(x.stock) || x.stock < 0 || x.stock > 100000)) return false;
   return true;
 }
 
@@ -114,12 +118,13 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     video_url: body.video_url ?? null,
     city: body.city.trim(),
     district: body.district?.trim() || null,
+    stock: body.stock ?? null,
     status: 'active',
   };
   const { data, error } = await sb
     .from('products')
     .insert(insert)
-    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, created_at')
+    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, created_at')
     .single();
   if (error || !data) {
     console.error('[product-create] insert error:', error);

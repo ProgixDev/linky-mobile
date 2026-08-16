@@ -118,6 +118,8 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     if (msg.includes('PRODUCT_NOT_AVAILABLE'))        throwApi('PRODUCT_NOT_AVAILABLE', 400, 'Produit indisponible.');
     if (msg.includes('BUYER_IS_SELLER'))              throwApi('BUYER_IS_SELLER', 400, "Tu ne peux pas acheter ton propre produit.");
     if (msg.includes('INVALID_QUANTITY'))             throwApi('INVALID_BODY', 400, 'Quantité invalide.');
+    if (msg.includes('OUT_OF_STOCK'))                 throwApi('OUT_OF_STOCK', 400, 'Cet article est en rupture de stock.');
+    if (msg.includes('INSUFFICIENT_STOCK'))           throwApi('INSUFFICIENT_STOCK', 400, 'Il ne reste plus assez d\'exemplaires de cet article.');
     if (msg.includes('MULTIPLE_SELLERS'))             throwApi('MULTIPLE_SELLERS', 400, "Une commande ne peut contenir que des articles d'une même boutique.");
     if (msg.includes('DUPLICATE_ITEM'))               throwApi('INVALID_BODY', 400, 'Article en double dans la commande.');
     if (msg.includes('TOO_MANY_ITEMS'))               throwApi('INVALID_BODY', 400, "Trop d'articles dans la commande.");

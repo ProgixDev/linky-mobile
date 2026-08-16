@@ -97,6 +97,9 @@ export interface Product {
   favorited?: boolean;
   city: string;
   district?: string;
+  /** Quantité disponible déclarée par le vendeur. `null` = non renseignée
+   *  (annonces publiées avant le stock) : aucun plafond au panier. */
+  stock?: number | null;
   createdAt: string;
 }
 

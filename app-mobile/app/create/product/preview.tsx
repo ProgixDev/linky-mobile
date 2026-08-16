@@ -85,6 +85,10 @@ export default function CreatePreviewRoute() {
                 photos: state.photos,
                 video_url: state.videoUrl,
                 city: state.city,
+                // La quantite etait saisie a l'etape Details puis PERDUE ici : le
+                // serveur ne l'a jamais recue, donc rien ne plafonnait le panier
+                // (client 2026-08-13, capture d'un panier a 7 Range Rover).
+                stock: state.quantity,
                 // Geography simplified per 2026-05-29 client meeting: cities only, no districts.
               };
               await createProduct.mutateAsync(body);
