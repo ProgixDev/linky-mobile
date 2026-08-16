@@ -50,6 +50,8 @@ export interface UpdateProductInput {
   city?: string;
   district?: string | null;
   status?: 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
+  /** Quantité disponible. `null` = non renseignée, donc aucun plafond au panier. */
+  stock?: number | null;
 }
 
 export interface PhotoUploadUrl {

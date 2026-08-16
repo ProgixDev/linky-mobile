@@ -86,6 +86,10 @@ export default function ProductEditRoute() {
   const [city, setCity] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [videoUrl, setVideoUrl] = useState<string | undefined>(undefined);
+  // Quantite disponible. Chaine et non nombre : le champ doit pouvoir etre VIDE,
+  // ce qui signifie « non renseignee » — donc aucun plafond, l'etat des annonces
+  // publiees avant le stock. 0 est different : c'est une rupture.
+  const [stock, setStock] = useState<string>('');
   const [videoUploading, setVideoUploading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -98,6 +102,7 @@ export default function ProductEditRoute() {
     setCity(product.city ?? '');
     setPhotos(product.photos ?? []);
     setVideoUrl(product.videoUrl);
+    setStock(product.stock == null ? '' : String(product.stock));
     setHydrated(true);
   }
 
@@ -113,6 +118,7 @@ export default function ProductEditRoute() {
       price !== product.priceGnf ||
       condition !== product.condition ||
       city.trim() !== (product.city ?? '') ||
+      stock !== (product.stock == null ? '' : String(product.stock)) ||
       photosDirty ||
       videoDirty);
   const canSave = dirty && !!title.trim() && price > 0 && !!city.trim() && photos.length >= 1;
@@ -249,6 +255,7 @@ export default function ProductEditRoute() {
         price_minor: price,
         condition,
         city: city.trim(),
+        stock: stock.trim() === '' ? null : Number(stock),
         ...(photosDirty ? { photos } : {}),
         ...(videoDirty ? { video_url: videoUrl ?? null } : {}),
       });
@@ -507,6 +514,15 @@ export default function ProductEditRoute() {
               onChangeText={(txt) => setPrice(Number(txt.replace(/\D/g, '')) || 0)}
               keyboardType="number-pad"
               helperText={`≈ ${gnfToEur(price)} €`}
+            />
+
+            <Input
+              label="Quantité disponible"
+              value={stock}
+              onChangeText={(txt) => setStock(txt.replace(/\D/g, ''))}
+              keyboardType="number-pad"
+              placeholder="Illimitée"
+              helperText="Laisse vide pour ne pas limiter. L'acheteur ne pourra pas en commander plus."
             />
 
             <View>
