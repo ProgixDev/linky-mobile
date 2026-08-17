@@ -10,7 +10,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { User as UserIcon } from 'lucide-react-native';
+import { Camera, User as UserIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
@@ -277,25 +277,52 @@ function IdentityStep({
           disabled={uploading}
           accessibilityRole="button"
           accessibilityLabel={avatarUrl ? 'Changer la photo de profil' : 'Ajouter une photo de profil'}
-          style={{
-            width: 104,
-            height: 104,
-            borderRadius: 999,
-            backgroundColor: colors.bgSunken,
-            borderWidth: 3,
-            borderColor: colors.bg,
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-          }}
         >
-          {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-          ) : uploading ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <UserIcon size={40} color={colors.textFaint} strokeWidth={1.5} />
-          )}
+          {/* Le rognage doit rester SUR le cercle, pas sur le conteneur : la
+              pastille debordant vers le bas-droit serait sinon coupee. */}
+          <View
+            style={{
+              width: 104,
+              height: 104,
+              borderRadius: 999,
+              backgroundColor: colors.bgSunken,
+              borderWidth: 3,
+              borderColor: colors.bg,
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            ) : (
+              <UserIcon size={40} color={colors.textFaint} strokeWidth={1.5} />
+            )}
+          </View>
+          {/* Pastille verte, identique a celle de Profil -> Modifier : c'est elle
+              qui dit que le cercle est cliquable. Sans elle, l'utilisateur voit
+              un simple emplacement vide et passe a cote (client 2026-08-17). */}
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: 32,
+              height: 32,
+              borderRadius: 999,
+              backgroundColor: colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 2,
+              borderColor: colors.bg,
+            }}
+          >
+            {uploading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Camera size={16} color="#FFFFFF" strokeWidth={2} />
+            )}
+          </View>
         </Pressable>
         {/* Sans ce libelle, rien n'indique que le cercle est cliquable. */}
         <Text variant="caption" tone="muted" style={{ marginTop: 8, letterSpacing: 0 }}>
