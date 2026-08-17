@@ -57,9 +57,35 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
   if (e2) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   if ((dayCount ?? 0) >= PER_DAY) throwApi('OTP_RATE_LIMITED', 429, 'Limite quotidienne atteinte.');
 
-  const arr = new Uint32Array(1);
-  crypto.getRandomValues(arr);
-  const code = String(100000 + (arr[0] % 900000));
+  // ─── Compte de revue Apple / Google ────────────────────────────────────────
+  // Un examinateur d'App Store est en Californie : il ne recevra JAMAIS un SMS
+  // guinéen, et il n'a pas accès à notre boîte mail. Sans identifiants qui
+  // fonctionnent, l'application est refusée en revue — Apple l'exige
+  // explicitement pour toute application derrière une connexion.
+  //
+  // Le contournement est volontairement minuscule : pour CE seul destinataire,
+  // on enregistre l'empreinte d'un code fixe au lieu d'un code tiré au hasard,
+  // et on n'envoie rien. La vérification, elle, n'est pas touchée du tout et
+  // suit exactement le chemin normal — expiration, usage unique, comptage des
+  // tentatives et quota journalier s'appliquent au compte de revue comme aux
+  // autres.
+  //
+  // Inerte tant que les DEUX secrets ne sont pas posés : sans eux, le
+  // comportement est identique au caractère près à celui d'avant.
+  const reviewTarget = Deno.env.get('LINKY_REVIEW_TARGET');
+  const reviewCode = Deno.env.get('LINKY_REVIEW_CODE');
+  const isReviewAccount =
+    !!reviewTarget && !!reviewCode &&
+    target === (body.channel === 'phone' ? normalizePhone(reviewTarget) : normalizeEmail(reviewTarget));
+
+  let code: string;
+  if (isReviewAccount) {
+    code = reviewCode as string;
+  } else {
+    const arr = new Uint32Array(1);
+    crypto.getRandomValues(arr);
+    code = String(100000 + (arr[0] % 900000));
+  }
   const hmacSecret = Deno.env.get('LINKY_OTP_HMAC_SECRET');
   if (!hmacSecret) throwApi('INTERNAL_ERROR', 500, 'Configuration manquante');
   const code_hash = await hmacHex(hmacSecret, `${target}:${code}`);
@@ -71,6 +97,14 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
     .select('id')
     .single();
   if (e3 || !inserted) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+
+  // Compte de revue : on s'arrête ici, avant toute tentative d'envoi. Rien ne
+  // part par SMS ni par email — l'examinateur connaît déjà le code, il est dans
+  // les notes de soumission. Aucun crédit consommé, aucun échec d'acheminement
+  // vers un numéro qui n'existe pas.
+  if (isReviewAccount) {
+    return { body: { otp_id: inserted.id, delivery: 'review' } };
+  }
 
   // Email delivery: when LANDING_OTP_URL + OTP_EMAIL_SECRET are set, POST the code to
   // the landing's /api/send-otp transactional endpoint.
