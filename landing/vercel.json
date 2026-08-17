@@ -3,7 +3,7 @@
   "redirects": [
     {
       "source": "/linky.apk",
-      "destination": "https://expo.dev/artifacts/eas/tyzvwYv7L2gHNtLLa1iUeJJWwsgeCj2l3JaApO3GM-k.apk",
+      "destination": "https://github.com/ProgixDev/linky-downloads/releases/latest/download/linky.apk",
       "permanent": false
     },
     {
