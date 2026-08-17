@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { View, useColorScheme as useSystemColorScheme } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import {
   type Colors,
@@ -45,13 +45,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // "Système" stayed light regardless of the device. Driving NativeWind with
   // the preference (never the resolved value) and reading its resolved
   // colorScheme fixes it for good.
-  const { colorScheme, setColorScheme } = useColorScheme();
+  // NativeWind reste pilote pour ses classes utilitaires, mais ce n est plus
+  // lui qui decide du theme rendu — voir plus bas.
+  const { setColorScheme } = useColorScheme();
 
   useEffect(() => {
     setColorScheme(preference);
   }, [preference, setColorScheme]);
 
-  const theme: ThemeName = colorScheme === 'dark' ? 'dark' : 'light';
+  // Lecture DIRECTE du reglage de l'appareil. Sans elle, le theme du tout
+  // premier rendu venait de NativeWind, qui n'a pas encore recu la preference
+  // (elle lui est poussee dans l'effet ci-dessus) : l'application s'ouvrait donc
+  // en clair une fraction de seconde, puis basculait — ou restait en clair si
+  // l'effet tardait. En mode 'system' l'OS est desormais la source de verite des
+  // le premier pixel ; NativeWind reste pilote en parallele pour ses classes.
+  const systemScheme = useSystemColorScheme();
+  const theme: ThemeName =
+    preference === 'system'
+      ? (systemScheme === 'dark' ? 'dark' : 'light')
+      : preference;
 
   const setPreference = (p: ThemePreference) => {
     setPreferenceState(p);
