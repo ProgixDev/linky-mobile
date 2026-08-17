@@ -60,6 +60,21 @@ export default function PasswordSigninRoute() {
       router.replace('/(tabs)');
     } catch (e: unknown) {
       haptic.error();
+      // Identifiants refuses : on remplace le message generique du serveur par
+      // une phrase qui dit quoi faire. Elle couvre VOLONTAIREMENT les trois cas
+      // — mauvais mot de passe, compte inexistant, compte sans mot de passe —
+      // sans dire lequel : reveler qu'une adresse est inscrite chez nous
+      // permettrait de dresser la liste de nos utilisateurs en essayant des
+      // adresses au hasard. Le serveur applique la meme regle, et l'app ne doit
+      // pas defaire ce qu'il protege.
+      const code = (e as { code?: string })?.code;
+      if (code === 'AUTH_INVALID_CREDENTIALS') {
+        toast.show(
+          "Aucun compte ne correspond à ces identifiants. Vérifie ton mot de passe, ou crée un compte si tu n'en as pas encore.",
+          'danger',
+        );
+        return;
+      }
       toast.show(toToastMessage(e, t('onboarding.passwordSignin.error')), 'danger');
     }
   };
