@@ -9,7 +9,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { useAuth } from '../../src/stores/auth';
-import { useEmailSignin } from '../../src/data/queries/auth';
+import { useEmailSignin, usePhoneSignin } from '../../src/data/queries/auth';
 import { toToastMessage } from '../../src/lib/api';
 import { useToast } from '../../src/components/feedback/Toast';
 import { haptic } from '../../src/lib/haptics';
@@ -23,7 +23,10 @@ import { haptic } from '../../src/lib/haptics';
 export default function PasswordSigninRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const params = useLocalSearchParams<{ email?: string }>();
+  // Le meme ecran sert les deux canaux : on se connecte avec celui de son
+  // inscription. Le parametre recu decide de la serrure interrogee.
+  const params = useLocalSearchParams<{ email?: string; phone?: string }>();
+  const isPhone = typeof params.phone === 'string' && params.phone.length > 0;
   const [email, setEmail] = useState(params.email ?? '');
   const [password, setPassword] = useState('');
   const [focusField, setFocusField] = useState<'email' | 'password' | null>(null);
@@ -31,21 +34,22 @@ export default function PasswordSigninRoute() {
   const signIn = useAuth((s) => s.signIn);
   const completeOnboarding = useAuth((s) => s.completeOnboarding);
   const setPendingResetIntent = useAuth((s) => s.setPendingResetIntent);
-  const signin = useEmailSignin();
+  const emailSignin = useEmailSignin();
+  const phoneSignin = usePhoneSignin();
+  const signin = isPhone ? phoneSignin : emailSignin;
   const toast = useToast();
 
   const trimmedEmail = email.trim();
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-  const valid = validEmail && password.length >= 8;
+  const valid = (isPhone || validEmail) && password.length >= 8;
   const busy = signin.isPending;
 
   const submit = async () => {
     if (!valid || busy) return;
     try {
-      const { access_token, refresh_token, user } = await signin.mutateAsync({
-        email: trimmedEmail,
-        password,
-      });
+      const { access_token, refresh_token, user } = isPhone
+        ? await phoneSignin.mutateAsync({ phone: params.phone as string, password })
+        : await emailSignin.mutateAsync({ email: trimmedEmail, password });
       await setTokens(access_token, refresh_token);
       signIn(user);
       // A password can only be set by an already-onboarded account (Profil →

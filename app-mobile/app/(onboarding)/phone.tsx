@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Lock, MessageSquare } from 'lucide-react-native';
 import { Trans, useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -10,8 +10,6 @@ import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { useAuth } from '../../src/stores/auth';
 import { useRequestOtp } from '../../src/data/queries/auth';
-import { toToastMessage } from '../../src/lib/api';
-import { useToast } from '../../src/components/feedback/Toast';
 
 function GuineaFlag() {
   return (
@@ -38,11 +36,9 @@ export default function PhoneRoute() {
   const [focused, setFocused] = useState(false);
   const setChannel = useAuth((s) => s.setChannel);
   const setPendingPhone = useAuth((s) => s.setPendingPhone);
-  const setPendingOtpId = useAuth((s) => s.setPendingOtpId);
-  const setPendingDevCode = useAuth((s) => s.setPendingDevCode);
-  const setPendingDelivery = useAuth((s) => s.setPendingDelivery);
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isLogin = mode === 'login';
   const requestOtp = useRequestOtp();
-  const toast = useToast();
   const valid = phone.replace(/\D/g, '').length >= 8;
   const busy = requestOtp.isPending;
 
@@ -212,18 +208,23 @@ export default function PhoneRoute() {
               disabled={!valid || busy}
               onPress={async () => {
                 const target = `+224${phone.replace(/\D/g, '')}`;
-                try {
-                  const { otp_id, dev_code, delivery } = await requestOtp.mutateAsync({ channel: 'phone', target });
-                  setChannel('phone');
-                  setPendingPhone(`+224 ${phone}`);
-                  setPendingOtpId(otp_id);
-                  setPendingDevCode(dev_code ?? null);
-                  setPendingDelivery(delivery ?? null);
-                  router.push('/(onboarding)/otp');
-                } catch (e: unknown) {
-                  console.error('[otp-request] error:', e);
-                  toast.show(toToastMessage(e, t('onboarding.phone.errorSend')), 'danger');
+                setChannel('phone');
+                setPendingPhone(`+224 ${phone}`);
+                // Meme regle que pour l'email : a l'inscription on choisit son mot
+                // de passe AVANT que le code parte, a la connexion on va droit au
+                // mot de passe. Le code reste accessible en repli sur l'ecran
+                // suivant, indispensable pour les comptes crees avant.
+                if (!isLogin) {
+                  router.push({
+                    pathname: '/(onboarding)/signup-password',
+                    params: { channel: 'phone', target },
+                  } as never);
+                  return;
                 }
+                router.push({
+                  pathname: '/(onboarding)/password-signin',
+                  params: { phone: target },
+                } as never);
               }}
             />
           </View>

@@ -97,6 +97,20 @@ export function useEmailSignin() {
   });
 }
 
+/** Jumelle de useEmailSignin pour les comptes créés par téléphone. Même
+ *  protections côté serveur, même forme de réponse — seule la serrure change. */
+export function usePhoneSignin() {
+  return useMutation({
+    mutationFn: async (input: { phone: string; password: string }): Promise<AuthBundle> => {
+      return apiPost({
+        path: '/phone-signin',
+        authed: false,
+        body: input,
+      });
+    },
+  });
+}
+
 // Lets an already-authed user set/change their password, so a future session
 // expiry can be resolved with email-signin instead of always needing a fresh
 // OTP (client 2026-08-05). A STALE session (>10 min old) gets an OTP_REQUIRED
