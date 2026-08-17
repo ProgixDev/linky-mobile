@@ -138,6 +138,8 @@ export function LocationMapPicker({
           <MapView
             testID={testID ? `${testID}-map` : undefined}
             style={{ flex: 1 }}
+            logoEnabled={false}
+            attributionEnabled={false}
             styleURL="mapbox://styles/mapbox/streets-v12"
             compassEnabled={false}
             scaleBarEnabled={false}

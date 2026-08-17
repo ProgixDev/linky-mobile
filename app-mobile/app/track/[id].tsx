@@ -119,8 +119,8 @@ export default function TrackRoute() {
             styleURL="mapbox://styles/mapbox/streets-v12"
             compassEnabled={false}
             scaleBarEnabled={false}
-            logoEnabled
-            attributionEnabled
+            logoEnabled={false}
+            attributionEnabled={false}
           >
             <Camera
               ref={cameraRef}

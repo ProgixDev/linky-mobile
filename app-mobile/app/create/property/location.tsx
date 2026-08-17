@@ -117,8 +117,8 @@ export default function CreatePropertyLocationRoute() {
               styleURL="mapbox://styles/mapbox/streets-v12"
               compassEnabled={false}
               scaleBarEnabled={false}
-              logoEnabled={true}
-              attributionEnabled={true}
+              logoEnabled={false}
+              attributionEnabled={false}
               onPress={handleMapPress}
             >
               <Camera

@@ -76,8 +76,8 @@ export function PropertyLocationMap({
             styleURL="mapbox://styles/mapbox/streets-v12"
             compassEnabled={false}
             scaleBarEnabled={false}
-            logoEnabled={true}
-            attributionEnabled={true}
+            logoEnabled={false}
+            attributionEnabled={false}
             scrollEnabled={false}
             zoomEnabled={false}
             rotateEnabled={false}
