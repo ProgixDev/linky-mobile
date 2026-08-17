@@ -28,7 +28,7 @@ type RoleId = 'buy' | 'sell' | 'agent';
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
 export default function ProfileSetupRoute() {
-  const { colors, radii } = useTheme();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const setRolesInStore = useAuth((s) => s.setRoles);
   const signIn = useAuth((s) => s.signIn);
