@@ -40,6 +40,11 @@ interface AuthState {
   // reuses the SAME hardened OTP path (rate limits, enumeration-safety) rather
   // than a second one.
   pendingResetIntent: boolean;
+  /** Mot de passe choisi a l'INSCRIPTION, en transit entre l'ecran de saisie et
+   *  la validation du code. Volontairement en memoire seule — comme tous les
+   *  champs pendingX, il n'est jamais ecrit dans MMKV. Efface des que la session
+   *  est ouverte. */
+  pendingPassword: string | null;
   roles: UserRole[];
   setChannel: (c: AuthChannel) => void;
   setPendingPhone: (p: string) => void;
@@ -48,6 +53,7 @@ interface AuthState {
   setPendingDevCode: (code: string | null) => void;
   setPendingDelivery: (d: 'sms' | 'whatsapp' | 'email' | null) => void;
   setPendingResetIntent: (v: boolean) => void;
+  setPendingPassword: (p: string | null) => void;
   setRoles: (r: UserRole[]) => void;
   setTokens: (access: string, refresh: string) => Promise<void>;
   signIn: (user: AuthUser) => void;
@@ -104,6 +110,7 @@ export const useAuth = create<AuthState>((set) => ({
   pendingDevCode: null,
   pendingDelivery: null,
   pendingResetIntent: false,
+  pendingPassword: null,
   roles: loadRoles(),
   setChannel: (channel) => set({ channel }),
   setPendingPhone: (pendingPhone) => set({ pendingPhone }),
@@ -112,6 +119,7 @@ export const useAuth = create<AuthState>((set) => ({
   setPendingDevCode: (pendingDevCode) => set({ pendingDevCode }),
   setPendingDelivery: (pendingDelivery) => set({ pendingDelivery }),
   setPendingResetIntent: (pendingResetIntent) => set({ pendingResetIntent }),
+  setPendingPassword: (pendingPassword) => set({ pendingPassword }),
   setRoles: (roles) => {
     // T.1.fix — also patch the persisted AuthUser snapshot so an app boot
     // reads matching roles from BOTH MMKV slots (auth.roles AND
@@ -190,6 +198,7 @@ export const useAuth = create<AuthState>((set) => ({
       pendingDevCode: null,
       pendingDelivery: null,
       pendingResetIntent: false,
+      pendingPassword: null,
       pendingPhone: '+224 622 55 12 88',
       pendingEmail: '',
       roles: ['buyer'],

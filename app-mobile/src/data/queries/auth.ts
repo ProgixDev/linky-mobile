@@ -60,7 +60,10 @@ export function useRequestOtp() {
 
 export function useVerifyOtp() {
   return useMutation({
-    mutationFn: async (input: { otp_id: string; code: string }): Promise<AuthBundle> => {
+    /** `password` : uniquement lors d'une INSCRIPTION. Le serveur ne l'applique
+     *  que si ce code vient de créer le compte — sur un compte existant il est
+     *  ignoré, sans quoi ce point d'entrée deviendrait une prise de contrôle. */
+    mutationFn: async (input: { otp_id: string; code: string; password?: string }): Promise<AuthBundle> => {
       return apiPost({
         path: '/otp-verify',
         authed: false,

@@ -106,6 +106,8 @@ export default function OtpRoute() {
   const setPendingDelivery = useAuth((s) => s.setPendingDelivery);
   const delivery = useAuth((s) => s.pendingDelivery);
   const pendingResetIntent = useAuth((s) => s.pendingResetIntent);
+  const pendingPassword = useAuth((s) => s.pendingPassword);
+  const setPendingPassword = useAuth((s) => s.setPendingPassword);
   const setPendingResetIntent = useAuth((s) => s.setPendingResetIntent);
   const setTokens = useAuth((s) => s.setTokens);
   const signIn = useAuth((s) => s.signIn);
@@ -142,12 +144,18 @@ export default function OtpRoute() {
     firedRef.current = true;
     (async () => {
       try {
+        // Le mot de passe n'est transmis que s'il vient d'etre choisi a
+        // l'inscription. Le serveur ne l'applique QUE si ce code cree le compte :
+        // sur une connexion ou une reinitialisation il est ignore, donc l'envoyer
+        // ici ne peut jamais ecraser le mot de passe d'un compte existant.
         const { access_token, refresh_token, user, was_created } = await verifyOtp.mutateAsync({
           otp_id: pendingOtpId,
           code,
+          ...(pendingPassword ? { password: pendingPassword } : {}),
         });
         await setTokens(access_token, refresh_token);
         setPendingOtpId(null);
+        setPendingPassword(null);
         signIn(user);
         haptic.success();
         // "Mot de passe oublié ?" lands here too — the OTP just verified

@@ -5,13 +5,26 @@ import { signAccessToken, randomRefreshToken } from '@shared/jwt.ts';
 import { bcryptHash } from '@shared/bcrypt.ts';
 import { detectCarrier } from '@shared/validate.ts';
 
-interface Body { otp_id: string; code: string; app?: 'driver' | 'marketplace' }
+// `password` : mot de passe choisi pendant l'inscription, applique UNIQUEMENT si
+// ce code vient de creer le compte. C'est ce qui rend possible l'inscription
+// « mot de passe d'abord » sans rouvrir le detournement par pre-inscription :
+// aucun compte non verifie portant un mot de passe n'existe jamais, puisque le
+// compte n'est cree qu'au moment ou le code prouve la propriete de l'adresse.
+// Voir find_or_create_user_with_email, qui efface justement le mot de passe
+// quand un OTP verifie une adresse pre-enregistree par quelqu'un d'autre.
+interface Body { otp_id: string; code: string; app?: 'driver' | 'marketplace'; password?: string }
+
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 128;
 
 function valid(b: unknown): b is Body {
   const x = b as Body;
   return !!x && typeof x.otp_id === 'string' && /^[0-9a-f-]{36}$/i.test(x.otp_id)
     && typeof x.code === 'string' && /^\d{6}$/.test(x.code)
-    && (x.app === undefined || x.app === 'driver' || x.app === 'marketplace');
+    && (x.app === undefined || x.app === 'driver' || x.app === 'marketplace')
+    && (x.password === undefined
+        || (typeof x.password === 'string'
+            && x.password.length >= PASSWORD_MIN && x.password.length <= PASSWORD_MAX));
 }
 
 const MAX_ATTEMPTS = 5;
@@ -100,6 +113,25 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
 
   // Backfill user_id on the (already-consumed) OTP row for audit traceability.
   await sb.from('otp_codes').update({ user_id: userId }).eq('id', otp.id);
+
+  // Inscription « mot de passe d'abord » : on ne pose le mot de passe QUE si ce
+  // code vient de creer le compte. La condition wasCreated est la garde
+  // essentielle — sans elle, quiconque recevrait un code sur une adresse
+  // existante pourrait en redefinir le mot de passe sans connaitre l'ancien,
+  // ce qui transformerait ce point d'entree en prise de controle de compte.
+  // Changer le mot de passe d'un compte existant passe par set-password, qui
+  // exige une verification supplementaire.
+  //
+  // Au pire l'ecriture echoue : le compte existe alors sans mot de passe, son
+  // proprietaire se connecte par code et peut en definir un depuis ses
+  // reglages. Degradation acceptable — jamais un trou de securite.
+  if (wasCreated && typeof body.password === 'string') {
+    const { error: ePwd } = await sb
+      .from('users')
+      .update({ password_hash: await bcryptHash(body.password) })
+      .eq('id', userId);
+    if (ePwd) console.error('[otp-verify] could not set signup password:', ePwd);
+  }
 
   // Mark a NEWLY-created account with the app it was born in, so the driver app can
   // refuse a login from a marketplace email (driver ≠ customer). Existing accounts keep
