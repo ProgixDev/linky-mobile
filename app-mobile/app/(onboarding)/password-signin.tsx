@@ -190,7 +190,7 @@ export default function PasswordSigninRoute() {
             </Pressable>
           </View>
 
-          <View style={{ paddingBottom: 4 }}>
+          <View style={{ paddingBottom: 4, gap: 10 }}>
             <Button
               variant="dark"
               size="lg"
@@ -198,6 +198,22 @@ export default function PasswordSigninRoute() {
               label={busy ? t('onboarding.passwordSignin.ctaBusy') : t('onboarding.passwordSignin.cta')}
               disabled={!valid || busy}
               onPress={submit}
+            />
+            {/* Repli par code, en bouton plein et non en lien discret. Tous les
+                comptes creés AVANT l'inscription par mot de passe n'en ont pas :
+                sans cette sortie visible, ils se retrouveraient devant un champ
+                qu'ils ne peuvent pas remplir. Le meme ecran sert donc les deux
+                generations d'utilisateurs. */}
+            <Button
+              variant="secondary"
+              size="lg"
+              block
+              label="Recevoir un code à la place"
+              disabled={busy}
+              onPress={() => {
+                haptic.light();
+                router.push('/(onboarding)/auth-choice?mode=login' as never);
+              }}
             />
           </View>
         </View>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Lock, Mail } from 'lucide-react-native';
 import { Trans, useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -10,8 +10,6 @@ import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { useAuth } from '../../src/stores/auth';
 import { useRequestOtp } from '../../src/data/queries/auth';
-import { toToastMessage } from '../../src/lib/api';
-import { useToast } from '../../src/components/feedback/Toast';
 
 export default function EmailRoute() {
   const { colors } = useTheme();
@@ -20,11 +18,9 @@ export default function EmailRoute() {
   const [focused, setFocused] = useState(false);
   const setChannel = useAuth((s) => s.setChannel);
   const setPendingEmail = useAuth((s) => s.setPendingEmail);
-  const setPendingOtpId = useAuth((s) => s.setPendingOtpId);
-  const setPendingDevCode = useAuth((s) => s.setPendingDevCode);
-  const setPendingDelivery = useAuth((s) => s.setPendingDelivery);
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isLogin = mode === 'login';
   const requestOtp = useRequestOtp();
-  const toast = useToast();
   const trimmed = email.trim();
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
   const busy = requestOtp.isPending;
@@ -174,38 +170,31 @@ export default function EmailRoute() {
               label={busy ? t('onboarding.phone.ctaBusy') : t('onboarding.phone.cta')}
               disabled={!valid || busy}
               onPress={async () => {
-                try {
-                  const { otp_id, dev_code, delivery } = await requestOtp.mutateAsync({ channel: 'email', target: trimmed });
-                  setChannel('email');
-                  setPendingEmail(trimmed);
-                  setPendingOtpId(otp_id);
-                  setPendingDevCode(dev_code ?? null);
-                  setPendingDelivery(delivery ?? null);
-                  router.push('/(onboarding)/otp');
-                } catch (e: unknown) {
-                  console.error('[otp-request:email] error:', e);
-                  toast.show(toToastMessage(e, t('onboarding.email.errorSend')), 'danger');
-                }
-              }}
-            />
-            {/* Opt-in fast path for anyone who set a password (client
-                2026-08-05) — a session that expires no longer always costs a
-                fresh OTP. No-op for accounts without one : email-signin just
-                fails with the same generic message as a wrong password. */}
-            <Pressable
-              onPress={() => {
+                // INSCRIPTION : on demande d'abord le mot de passe, le code part
+                // depuis l'ecran suivant. Le compte n'est cree qu'a la validation,
+                // donc rien n'existe encore a ce stade.
                 setChannel('email');
                 setPendingEmail(trimmed);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
-                router.push({ pathname: '/(onboarding)/password-signin', params: { email: trimmed } } as any);
+                if (!isLogin) {
+                  router.push({
+                    pathname: '/(onboarding)/signup-password',
+                    params: { channel: 'email', target: trimmed },
+                  } as any);
+                  return;
+                }
+                // CONNEXION : le mot de passe devient le chemin principal — plus
+                // un SMS a chaque ouverture de session. L'ecran suivant offre le
+                // repli par code, indispensable pour les comptes crees avant.
+                router.push({
+                  pathname: '/(onboarding)/password-signin',
+                  params: { email: trimmed },                } as any);
               }}
-              hitSlop={8}
-              style={{ marginTop: 14, alignItems: 'center' }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMuted, letterSpacing: 0 }}>
-                {t('onboarding.email.usePassword')}
-              </Text>
-            </Pressable>
+            />
+            {/* L'ancien lien « utiliser mon mot de passe » a disparu : le mot de
+                passe EST devenu le chemin principal, et l'envoi de code depuis cet
+                ecran aussi — il se declenche desormais depuis l'ecran suivant,
+                apres le choix du mot de passe (inscription) ou en repli explicite
+                (connexion). */}
           </View>
         </View>
       </KeyboardAvoidingView>

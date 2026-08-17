@@ -125,7 +125,13 @@ export default function AuthChoiceRoute() {
             onPress={() => {
               haptic.medium();
               setChannel(choice);
-              router.push(choice === 'phone' ? '/(onboarding)/phone' : '/(onboarding)/email');
+              // Le mode suit le parcours : l'ecran suivant doit savoir s'il inscrit ou
+              // connecte, pour demander un mot de passe avant d'envoyer le code.
+              router.push({
+                pathname: choice === 'phone' ? '/(onboarding)/phone' : '/(onboarding)/email',
+                params: isLogin ? { mode: 'login' } : {},
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- les routes typees se regenerent au prochain demarrage d'Expo.
+              } as any);
             }}
           />
         </View>
