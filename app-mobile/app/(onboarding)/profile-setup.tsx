@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, TextInput, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, TextInput, useWindowDimensions, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -19,7 +19,8 @@ import { I, type IconKey } from '../../src/icons/Icon';
 import { roleHeroes } from '../../src/data/photos';
 import { CityMapPicker } from '../../src/components/onboarding/CityMapPicker';
 import { ROLE_FROM_UI, useAuth } from '../../src/stores/auth';
-import { useUpdateProfile } from '../../src/data/queries/auth';
+import * as ImagePicker from 'expo-image-picker';
+import { useUpdateProfile, useUploadAvatar, type AvatarMime } from '../../src/data/queries/auth';
 import { useToast } from '../../src/components/feedback/Toast';
 
 type RoleId = 'buy' | 'sell' | 'agent';
@@ -34,6 +35,34 @@ export default function ProfileSetupRoute() {
   const currentUser = useAuth((s) => s.user);
   const updateProfile = useUpdateProfile();
   const toast = useToast();
+  const uploadAvatar = useUploadAvatar();
+  const [avatarUrl, setAvatarUrl] = useState('');
+
+  // Photo de profil des l'inscription (client 2026-08-17). Meme mecanique que
+  // Profil -> Modifier : on televerse tout de suite et on garde l'URL, que
+  // l'enregistrement du profil transmettra avec le nom et la ville. La photo
+  // reste FACULTATIVE : elle ne conditionne pas le bouton Continuer.
+  const onPickAvatar = async () => {
+    if (uploadAvatar.isPending) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      toast.show("Autorise l'accès aux photos pour ajouter ta photo.", 'danger');
+      return;
+    }
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images', allowsEditing: true, aspect: [1, 1], quality: 0.9,
+    });
+    if (picked.canceled || picked.assets.length === 0) return;
+    const asset = picked.assets[0];
+    const m = asset.mimeType?.toLowerCase();
+    const mime: AvatarMime =
+      m === 'image/png' || m === 'image/webp' || m === 'image/jpeg' ? m : 'image/jpeg';
+    try {
+      setAvatarUrl(await uploadAvatar.mutateAsync({ uri: asset.uri, mime }));
+    } catch {
+      toast.show('Téléversement de la photo échoué.', 'danger');
+    }
+  };
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
@@ -93,6 +122,7 @@ export default function ProfileSetupRoute() {
         display_name: trimmedName,
         city: trimmedCity,
         roles: canonical,
+        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
       });
       if (currentUser) {
         signIn({ ...currentUser, ...res.user });
@@ -154,7 +184,15 @@ export default function ProfileSetupRoute() {
           </Text>
 
           <View style={{ flex: 1, marginTop: 22 }}>
-            {step === 0 && <IdentityStep name={name} setName={setName} />}
+            {step === 0 && (
+              <IdentityStep
+                name={name}
+                setName={setName}
+                avatarUrl={avatarUrl}
+                onPickAvatar={onPickAvatar}
+                uploading={uploadAvatar.isPending}
+              />
+            )}
 
             {step === 1 && <CityMapPicker value={city} onChange={setCity} />}
 
@@ -215,18 +253,30 @@ export default function ProfileSetupRoute() {
 function IdentityStep({
   name,
   setName,
+  avatarUrl,
+  onPickAvatar,
+  uploading,
 }: {
   name: string;
   setName: (v: string) => void;
+  avatarUrl: string;
+  onPickAvatar: () => void;
+  uploading: boolean;
 }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   return (
     <View>
-      {/* Avatar — photo upload not wired in onboarding (no upload flow here);
-          camera badge removed so it doesn't promise an action. */}
+      {/* Photo de profil, ajoutable des l'inscription (client 2026-08-17). Le
+          cercle etait auparavant decoratif : il ressemblait a un bouton sans en
+          etre un, et la photo ne pouvait s'ajouter qu'apres coup depuis les
+          reglages. Elle reste facultative — elle ne bloque pas Continuer. */}
       <View style={{ alignItems: 'center', marginBottom: 26 }}>
-        <View
+        <Pressable
+          onPress={onPickAvatar}
+          disabled={uploading}
+          accessibilityRole="button"
+          accessibilityLabel={avatarUrl ? 'Changer la photo de profil' : 'Ajouter une photo de profil'}
           style={{
             width: 104,
             height: 104,
@@ -236,10 +286,21 @@ function IdentityStep({
             borderColor: colors.bg,
             alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
-          <UserIcon size={40} color={colors.textFaint} strokeWidth={1.5} />
-        </View>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          ) : uploading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <UserIcon size={40} color={colors.textFaint} strokeWidth={1.5} />
+          )}
+        </Pressable>
+        {/* Sans ce libelle, rien n'indique que le cercle est cliquable. */}
+        <Text variant="caption" tone="muted" style={{ marginTop: 8, letterSpacing: 0 }}>
+          {avatarUrl ? 'Changer la photo' : 'Ajouter une photo (facultatif)'}
+        </Text>
       </View>
 
       {/* Inputs */}

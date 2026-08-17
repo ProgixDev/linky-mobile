@@ -187,7 +187,7 @@ export function useExportMyData() {
   });
 }
 
-type AvatarMime = 'image/jpeg' | 'image/png' | 'image/webp';
+export type AvatarMime = 'image/jpeg' | 'image/png' | 'image/webp';
 
 // Picks up a local image URI, optimizes it, uploads it to the avatars bucket via
 // a one-shot signed URL, and returns the public_url to hand to useUpdateProfile.
