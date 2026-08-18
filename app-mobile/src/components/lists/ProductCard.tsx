@@ -134,6 +134,26 @@ export function ProductCard({
             </Text>
           </View>
         )}
+        {/* Rupture de stock : le vendeur a declare une quantite, elle est
+            epuisee. Sans ce voile, l'annonce paraissait achetable et l'acheteur
+            ne l'apprenait qu'au refus du serveur, apres avoir choisi son mode de
+            paiement. Distinct de VENDU, qui est un statut pose a la main par le
+            vendeur — ici l'article peut revenir des qu'il reapprovisionne. */}
+        {!sold && outOfStock && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.45)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '700', letterSpacing: 1, fontSize: 15 }}>
+              RUPTURE
+            </Text>
+          </View>
+        )}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
         {/* minWidth 0 : sans lui, un titre long refuse de se tronquer et pousse
