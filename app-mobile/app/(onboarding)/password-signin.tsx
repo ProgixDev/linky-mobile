@@ -9,7 +9,7 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { useAuth } from '../../src/stores/auth';
-import { useEmailSignin, usePhoneSignin } from '../../src/data/queries/auth';
+import { useEmailSignin, usePhoneSignin, useRequestOtp } from '../../src/data/queries/auth';
 import { toToastMessage } from '../../src/lib/api';
 import { useToast } from '../../src/components/feedback/Toast';
 import { haptic } from '../../src/lib/haptics';
@@ -41,6 +41,13 @@ export default function PasswordSigninRoute() {
   const signIn = useAuth((s) => s.signIn);
   const completeOnboarding = useAuth((s) => s.completeOnboarding);
   const setPendingResetIntent = useAuth((s) => s.setPendingResetIntent);
+  const setChannel = useAuth((s) => s.setChannel);
+  const setPendingEmail = useAuth((s) => s.setPendingEmail);
+  const setPendingPhone = useAuth((s) => s.setPendingPhone);
+  const setPendingOtpId = useAuth((s) => s.setPendingOtpId);
+  const setPendingDevCode = useAuth((s) => s.setPendingDevCode);
+  const setPendingDelivery = useAuth((s) => s.setPendingDelivery);
+  const requestOtp = useRequestOtp();
   const emailSignin = useEmailSignin();
   const phoneSignin = usePhoneSignin();
   const signin = isPhone ? phoneSignin : emailSignin;
@@ -51,6 +58,40 @@ export default function PasswordSigninRoute() {
   const valid = (isPhone ? digits.length >= 8 : validEmail) && password.length >= 8;
   const busy = signin.isPending;
 
+  // « Mot de passe oublie » : on reutilise l identifiant deja saisi et on envoie
+  // le code directement. Renvoyer vers l ecran de choix bouclait a l infini
+  // depuis que celui-ci mene lui-meme a cet ecran — l utilisateur ne pouvait
+  // plus JAMAIS atteindre la saisie du code.
+  //
+  // Ce parcours sert tout le monde : mot de passe perdu, et compte qui n en a
+  // jamais eu. Un seul chemin, comme demande.
+  const onForgot = async () => {
+    if (busy) return;
+    const target = isPhone ? e164 : trimmedId;
+    if (isPhone ? digits.length < 8 : !validEmail) {
+      toast.show(
+        isPhone ? 'Saisis ton numéro pour recevoir un code.' : 'Saisis ton email pour recevoir un code.',
+        'info',
+      );
+      return;
+    }
+    try {
+      haptic.light();
+      setPendingResetIntent(true);
+      setChannel(isPhone ? 'phone' : 'email');
+      if (isPhone) setPendingPhone(target); else setPendingEmail(target);
+      const { otp_id, dev_code, delivery } = await requestOtp.mutateAsync({
+        channel: isPhone ? 'phone' : 'email', target,
+      });
+      setPendingOtpId(otp_id);
+      setPendingDevCode(dev_code ?? null);
+      setPendingDelivery(delivery ?? null);
+      router.push('/(onboarding)/otp');
+    } catch (e) {
+      setPendingResetIntent(false);
+      toast.show(toToastMessage(e, "Impossible d envoyer le code. Reessaie."), 'danger');
+    }
+  };
   const submit = async () => {
     if (!valid || busy) return;
     try {
@@ -198,8 +239,7 @@ export default function PasswordSigninRoute() {
                 see otp.tsx for the redirect to /settings/password. */}
             <Pressable
               onPress={() => {
-                setPendingResetIntent(true);
-                router.push('/(onboarding)/auth-choice?mode=login' as never);
+                void onForgot();
               }}
               hitSlop={8}
               style={{ marginTop: 10, alignSelf: 'flex-start' }}
