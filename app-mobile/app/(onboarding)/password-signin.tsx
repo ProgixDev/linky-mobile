@@ -188,16 +188,6 @@ export default function PasswordSigninRoute() {
               </View>
             </View>
 
-            <Pressable
-              onPress={() => router.replace('/(onboarding)/email')}
-              hitSlop={8}
-              style={{ marginTop: 16, alignSelf: 'flex-start' }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primaryDeep, letterSpacing: 0 }}>
-                {t('onboarding.passwordSignin.useCode')}
-              </Text>
-            </Pressable>
-
             {/* Forgot password: verifying an OTP already proves ownership of
                 the account (email or phone, whichever they're comfortable
                 with) exactly like a normal signin, so this just flags the
