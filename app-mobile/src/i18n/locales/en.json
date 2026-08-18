@@ -1428,7 +1428,9 @@
       "cta": "Sign in",
       "ctaBusy": "Signing in…",
       "error": "Wrong email or password.",
-      "forgot": "Forgot password?"
+      "forgot": "Forgot password?",
+      "subtitleEmail": "Enter your email and password to sign in.",
+      "subtitlePhone": "Enter your phone number and password to sign in."
     }
   },
   "auth": {

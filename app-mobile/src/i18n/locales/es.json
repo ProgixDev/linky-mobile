@@ -1428,7 +1428,9 @@
       "cta": "Iniciar sesión",
       "ctaBusy": "Iniciando sesión…",
       "error": "Correo o contraseña incorrectos.",
-      "forgot": "¿Olvidaste tu contraseña?"
+      "forgot": "¿Olvidaste tu contraseña?",
+      "subtitleEmail": "Introduce tu email y tu contraseña para entrar.",
+      "subtitlePhone": "Introduce tu número y tu contraseña para entrar."
     }
   },
   "auth": {

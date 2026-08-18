@@ -1428,7 +1428,9 @@
       "cta": "Se connecter",
       "ctaBusy": "Connexion…",
       "error": "Email ou mot de passe incorrect.",
-      "forgot": "Mot de passe oublié ?"
+      "forgot": "Mot de passe oublié ?",
+      "subtitleEmail": "Saisis ton email et ton mot de passe pour te connecter.",
+      "subtitlePhone": "Saisis ton numéro et ton mot de passe pour te connecter."
     }
   },
   "auth": {

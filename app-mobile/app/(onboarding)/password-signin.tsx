@@ -157,7 +157,7 @@ export default function PasswordSigninRoute() {
               tone="muted"
               style={{ marginTop: 10, fontSize: 15, lineHeight: 22, letterSpacing: 0 }}
             >
-              {t('onboarding.passwordSignin.subtitle')}
+              {t(isPhone ? 'onboarding.passwordSignin.subtitlePhone' : 'onboarding.passwordSignin.subtitleEmail')}
             </Text>
 
             <View style={{ marginTop: 28 }}>
