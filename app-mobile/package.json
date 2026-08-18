@@ -10,7 +10,9 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "prebuild": "expo prebuild --clean"
+    "prebuild": "expo prebuild --clean",
+    "ship": "eas update --branch preview --platform all --environment preview --message",
+    "ship:prod": "eas update --branch production --platform all --environment preview --message"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.14",
