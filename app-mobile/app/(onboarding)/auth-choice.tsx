@@ -131,7 +131,12 @@ export default function AuthChoiceRoute() {
               // l'identifiant sur un ecran separe : un seul ecran porte les deux
               // champs. Le choix email/telephone ne sert plus qu'a l'inscription.
               if (isLogin) {
-                router.push('/(onboarding)/password-signin' as never);
+                // Le canal choisi ici decide du champ affiche a l'ecran suivant :
+                // un seul champ, celui que l'utilisateur vient de designer.
+                router.push({
+                  pathname: '/(onboarding)/password-signin',
+                  params: { channel: choice },
+                } as never);
                 return;
               }
               router.push({

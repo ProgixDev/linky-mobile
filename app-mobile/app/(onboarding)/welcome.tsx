@@ -194,11 +194,7 @@ export default function WelcomeRoute() {
             size="lg"
             block
             label={t('onboarding.welcome.haveAccount')}
-            // Connexion : droit a l'ecran identifiant + mot de passe. Passer par
-            // le choix email/telephone n'a plus de sens — un seul champ accepte
-            // les deux, et l'ecran de choix restait affiche pour etre ensuite
-            // ignore. Ce chemin ne sert plus qu'a l'inscription.
-            onPress={() => router.push('/(onboarding)/password-signin' as never)}
+            onPress={() => router.push('/(onboarding)/auth-choice?mode=login')}
           />
         </View>
       </View>

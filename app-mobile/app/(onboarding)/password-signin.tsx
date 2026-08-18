@@ -3,7 +3,7 @@ import { Platform, Pressable, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Lock, Mail } from 'lucide-react-native';
+import { ArrowLeft, Lock, Mail, Phone } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
@@ -25,14 +25,13 @@ export default function PasswordSigninRoute() {
   const { t } = useTranslation();
   // Le meme ecran sert les deux canaux : on se connecte avec celui de son
   // inscription. Le parametre recu decide de la serrure interrogee.
-  const params = useLocalSearchParams<{ email?: string; phone?: string }>();
-  // UN SEUL champ identifiant. Le type se déduit de la saisie : la présence d'un
-  // « @ » désigne un email, tout le reste est traité comme un numéro. C'est la
-  // convention des applications internationales, et elle évite de faire choisir
-  // à l'utilisateur une chose que le système sait deviner.
+  const params = useLocalSearchParams<{ email?: string; phone?: string; channel?: string }>();
+  // Le canal a DEJA ete choisi a l'ecran precedent : on n'affiche donc qu'un
+  // seul champ, celui qu'il a designe. Lui demander « email ou numero » ici
+  // reviendrait a lui reposer la question a laquelle il vient de repondre.
   const [identifier, setIdentifier] = useState(params.email ?? params.phone ?? '');
   const trimmedId = identifier.trim();
-  const isPhone = trimmedId.length > 0 && !trimmedId.includes('@');
+  const isPhone = params.channel === 'phone' || (!params.channel && !!params.phone);
   const digits = trimmedId.replace(/\D/g, '');
   // Guinée : le numéro est accepté avec ou sans indicatif.
   const e164 = digits.startsWith('224') ? `+${digits}` : `+224${digits}`;
@@ -122,7 +121,7 @@ export default function PasswordSigninRoute() {
 
             <View style={{ marginTop: 28 }}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textFaint, letterSpacing: 0.6, marginBottom: 8 }}>
-                EMAIL OU NUMÉRO
+                {isPhone ? 'NUMÉRO DE TÉLÉPHONE' : 'ADRESSE EMAIL'}
               </Text>
               <View
                 style={{
@@ -137,14 +136,18 @@ export default function PasswordSigninRoute() {
                   gap: 10,
                 }}
               >
-                <Mail size={18} color={focusField === 'email' ? colors.primary : colors.textMuted} strokeWidth={1.75} />
+                {isPhone ? (
+                  <Phone size={18} color={focusField === 'email' ? colors.primary : colors.textMuted} strokeWidth={1.75} />
+                ) : (
+                  <Mail size={18} color={focusField === 'email' ? colors.primary : colors.textMuted} strokeWidth={1.75} />
+                )}
                 <TextInput
                   value={identifier}
                   onChangeText={setIdentifier}
                   keyboardType={isPhone ? 'phone-pad' : 'email-address'}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  placeholder="you@example.com ou 622 00 00 00"
+                  placeholder={isPhone ? '622 00 00 00' : 'you@example.com'}
                   placeholderTextColor={colors.textFaint}
                   onFocus={() => setFocusField('email')}
                   onBlur={() => setFocusField(null)}
