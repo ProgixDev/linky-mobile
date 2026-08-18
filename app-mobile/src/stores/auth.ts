@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS, secure, SECURE_KEYS } from '../lib/storage';
+import { apiPost } from '../lib/api';
 import { useCart } from './cart';
 import { useFavorites } from './favorites';
 import { useHiddenListings } from './hiddenListings';
@@ -169,8 +170,20 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
   signOut: async () => {
-    // V1: clears local credentials + persisted user + roles + cart. The remote
-    // session revoke endpoint lands later (TODO: /v1/session/revoke).
+    // Revocation cote SERVEUR AVANT d effacer les jetons — apres, on n aurait
+    // plus de quoi s authentifier pour le demander. Sans cela la session
+    // restait valide 90 jours sur le serveur : un telephone perdu ou revendu
+    // laissait une porte ouverte trois mois durant.
+    //
+    // En MEILLEUR EFFORT : hors ligne ou serveur muet, la deconnexion locale
+    // doit aboutir quand meme. Rester connecte parce que le reseau est tombe
+    // serait pire que le probleme qu on corrige.
+    try {
+      const refresh = await secure.get(SECURE_KEYS.refreshToken);
+      if (refresh) await apiPost({ path: '/session-revoke', body: { refresh_token: refresh } });
+    } catch (e) {
+      console.warn('[auth] revocation de session impossible, deconnexion locale poursuivie', e);
+    }
     await secure.remove(SECURE_KEYS.authToken);
     await secure.remove(SECURE_KEYS.refreshToken);
     storage.remove(STORAGE_KEYS.currentUserId);

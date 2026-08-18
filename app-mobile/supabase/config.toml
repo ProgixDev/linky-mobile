@@ -814,3 +814,6 @@ verify_jwt = false
 
 [functions.phone-signin]
 verify_jwt = false
+
+[functions.session-revoke]
+verify_jwt = false
