@@ -26,8 +26,16 @@ export default function PasswordSigninRoute() {
   // Le meme ecran sert les deux canaux : on se connecte avec celui de son
   // inscription. Le parametre recu decide de la serrure interrogee.
   const params = useLocalSearchParams<{ email?: string; phone?: string }>();
-  const isPhone = typeof params.phone === 'string' && params.phone.length > 0;
-  const [email, setEmail] = useState(params.email ?? '');
+  // UN SEUL champ identifiant. Le type se déduit de la saisie : la présence d'un
+  // « @ » désigne un email, tout le reste est traité comme un numéro. C'est la
+  // convention des applications internationales, et elle évite de faire choisir
+  // à l'utilisateur une chose que le système sait deviner.
+  const [identifier, setIdentifier] = useState(params.email ?? params.phone ?? '');
+  const trimmedId = identifier.trim();
+  const isPhone = trimmedId.length > 0 && !trimmedId.includes('@');
+  const digits = trimmedId.replace(/\D/g, '');
+  // Guinée : le numéro est accepté avec ou sans indicatif.
+  const e164 = digits.startsWith('224') ? `+${digits}` : `+224${digits}`;
   const [password, setPassword] = useState('');
   const [focusField, setFocusField] = useState<'email' | 'password' | null>(null);
   const setTokens = useAuth((s) => s.setTokens);
@@ -39,17 +47,17 @@ export default function PasswordSigninRoute() {
   const signin = isPhone ? phoneSignin : emailSignin;
   const toast = useToast();
 
-  const trimmedEmail = email.trim();
-  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-  const valid = (isPhone || validEmail) && password.length >= 8;
+
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedId);
+  const valid = (isPhone ? digits.length >= 8 : validEmail) && password.length >= 8;
   const busy = signin.isPending;
 
   const submit = async () => {
     if (!valid || busy) return;
     try {
       const { access_token, refresh_token, user } = isPhone
-        ? await phoneSignin.mutateAsync({ phone: params.phone as string, password })
-        : await emailSignin.mutateAsync({ email: trimmedEmail, password });
+        ? await phoneSignin.mutateAsync({ phone: e164, password })
+        : await emailSignin.mutateAsync({ email: trimmedId, password });
       await setTokens(access_token, refresh_token);
       signIn(user);
       // A password can only be set by an already-onboarded account (Profil →
@@ -114,7 +122,7 @@ export default function PasswordSigninRoute() {
 
             <View style={{ marginTop: 28 }}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textFaint, letterSpacing: 0.6, marginBottom: 8 }}>
-                {t('onboarding.email.label')}
+                EMAIL OU NUMÉRO
               </Text>
               <View
                 style={{
@@ -131,12 +139,12 @@ export default function PasswordSigninRoute() {
               >
                 <Mail size={18} color={focusField === 'email' ? colors.primary : colors.textMuted} strokeWidth={1.75} />
                 <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
+                  value={identifier}
+                  onChangeText={setIdentifier}
+                  keyboardType={isPhone ? 'phone-pad' : 'email-address'}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  placeholder={t('onboarding.email.placeholder')}
+                  placeholder="you@example.com ou 622 00 00 00"
                   placeholderTextColor={colors.textFaint}
                   onFocus={() => setFocusField('email')}
                   onBlur={() => setFocusField(null)}
@@ -217,22 +225,6 @@ export default function PasswordSigninRoute() {
               label={busy ? t('onboarding.passwordSignin.ctaBusy') : t('onboarding.passwordSignin.cta')}
               disabled={!valid || busy}
               onPress={submit}
-            />
-            {/* Repli par code, en bouton plein et non en lien discret. Tous les
-                comptes creés AVANT l'inscription par mot de passe n'en ont pas :
-                sans cette sortie visible, ils se retrouveraient devant un champ
-                qu'ils ne peuvent pas remplir. Le meme ecran sert donc les deux
-                generations d'utilisateurs. */}
-            <Button
-              variant="secondary"
-              size="lg"
-              block
-              label="Recevoir un code à la place"
-              disabled={busy}
-              onPress={() => {
-                haptic.light();
-                router.push('/(onboarding)/auth-choice?mode=login' as never);
-              }}
             />
           </View>
         </View>

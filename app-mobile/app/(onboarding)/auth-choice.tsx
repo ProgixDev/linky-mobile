@@ -127,10 +127,16 @@ export default function AuthChoiceRoute() {
               setChannel(choice);
               // Le mode suit le parcours : l'ecran suivant doit savoir s'il inscrit ou
               // connecte, pour demander un mot de passe avant d'envoyer le code.
+              // En CONNEXION on ne demande plus de choisir un canal ni de saisir
+              // l'identifiant sur un ecran separe : un seul ecran porte les deux
+              // champs. Le choix email/telephone ne sert plus qu'a l'inscription.
+              if (isLogin) {
+                router.push('/(onboarding)/password-signin' as never);
+                return;
+              }
               router.push({
                 pathname: choice === 'phone' ? '/(onboarding)/phone' : '/(onboarding)/email',
                 params: isLogin ? { mode: 'login' } : {},
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- les routes typees se regenerent au prochain demarrage d'Expo.
               } as any);
             }}
           />
