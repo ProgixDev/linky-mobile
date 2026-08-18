@@ -1347,9 +1347,9 @@
     },
     "authChoice": {
       "title": "Vous êtes où ?",
-      "titleLogin": "Vous reconnecter",
+      "titleLogin": "Te reconnecter",
       "subtitle": "On adapte le paiement selon votre région.",
-      "subtitleLogin": "Choisissez comment vous vous êtes inscrit·e pour recevoir votre code.",
+      "subtitleLogin": "Choisis avec quoi tu t'es inscrit·e.",
       "phoneTitle": "Je suis en Guinée",
       "phoneSub": "Téléphone & Mobile Money",
       "emailTitle": "Je suis à l'étranger",
@@ -1421,8 +1421,8 @@
       "fallbackName": "vous"
     },
     "passwordSignin": {
-      "title": "Ton mot de passe.",
-      "subtitle": "Connecte-toi directement, sans code à recevoir par email.",
+      "title": "Content de te revoir.",
+      "subtitle": "Saisis ton mot de passe pour te connecter.",
       "passwordLabel": "MOT DE PASSE",
       "useCode": "Recevoir un code par email à la place",
       "cta": "Se connecter",

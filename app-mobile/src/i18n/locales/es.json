@@ -1347,9 +1347,9 @@
     },
     "authChoice": {
       "title": "¿Dónde está?",
-      "titleLogin": "Volver a conectarse",
+      "titleLogin": "Volver a entrar",
       "subtitle": "Adaptamos el pago según su región.",
-      "subtitleLogin": "Elija cómo se registró para recibir su código.",
+      "subtitleLogin": "Elige con qué te registraste.",
       "phoneTitle": "Estoy en Guinea",
       "phoneSub": "Teléfono y Mobile Money",
       "emailTitle": "Estoy en el extranjero",
@@ -1421,8 +1421,8 @@
       "fallbackName": "usted"
     },
     "passwordSignin": {
-      "title": "Tu contraseña.",
-      "subtitle": "Inicia sesión directamente, sin esperar un código por correo.",
+      "title": "Qué bueno verte.",
+      "subtitle": "Introduce tu contraseña para entrar.",
       "passwordLabel": "CONTRASEÑA",
       "useCode": "Recibir un código por correo en su lugar",
       "cta": "Iniciar sesión",

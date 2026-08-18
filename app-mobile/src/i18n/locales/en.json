@@ -1349,7 +1349,7 @@
       "title": "Where are you?",
       "titleLogin": "Sign back in",
       "subtitle": "We adapt payment to your region.",
-      "subtitleLogin": "Pick how you signed up to receive your code.",
+      "subtitleLogin": "Choose what you signed up with.",
       "phoneTitle": "I'm in Guinea",
       "phoneSub": "Phone & Mobile Money",
       "emailTitle": "I'm abroad",
@@ -1421,8 +1421,8 @@
       "fallbackName": "friend"
     },
     "passwordSignin": {
-      "title": "Your password.",
-      "subtitle": "Sign in directly, no code to wait for by email.",
+      "title": "Welcome back.",
+      "subtitle": "Enter your password to sign in.",
       "passwordLabel": "PASSWORD",
       "useCode": "Get a code by email instead",
       "cta": "Sign in",
