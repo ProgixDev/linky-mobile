@@ -639,7 +639,11 @@ export default function MarcheRoute() {
             off-screen with no way to scroll to it (client 2026-08-05). */}
         <BottomSheetScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32 }}
+          // 160 en bas, pas 32 : la barre d'onglets est dessinee PAR-DESSUS la
+          // feuille et fait ~90 px. Avec 32, le pied atteignait le bas du contenu
+          // mais restait sous la barre — on defilait jusqu'au bout sans jamais
+          // voir les boutons (client 2026-08-20). Cette marge les degage.
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 160 }}
         >
           {isArticles ? (
             <>
