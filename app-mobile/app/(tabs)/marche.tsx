@@ -642,7 +642,7 @@ export default function MarcheRoute() {
         <View style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <BottomSheetScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 190 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 120 }}
         >
           {isArticles ? (
             <>
@@ -867,11 +867,9 @@ export default function MarcheRoute() {
             flexDirection: 'row',
             gap: 8,
             padding: 16,
-            // La barre d'onglets est dessinee PAR-DESSUS la feuille, et elle est
-            // plus haute que la marge que Sheet.tsx reserve : elle recouvrait donc
-            // encore les boutons. Cette marge les remonte franchement au-dessus.
-            // Le fond du pied, lui, continue jusqu'en bas — pas de bande vide.
-            paddingBottom: 110,
+            // Sheet.tsx reserve deja la hauteur de la barre d'onglets sur son
+            // conteneur ; il ne reste ici qu'une respiration visuelle.
+            paddingBottom: 20,
             borderTopWidth: 1,
             borderTopColor: colors.border,
           }}
