@@ -639,10 +639,10 @@ export default function MarcheRoute() {
             qu'on ajoutait des filtres (client 2026-08-20).
             `minHeight: 0` est indispensable : sans lui un enfant defilant refuse
             de se retrecir sous la taille de son contenu. */}
-        <View style={{ flex: 1, minHeight: 0 }}>
+        <View style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <BottomSheetScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 108 }}
         >
           {isArticles ? (
             <>
@@ -850,13 +850,20 @@ export default function MarcheRoute() {
             </>
           )}
         </BottomSheetScrollView>
-        {/* Pied EPINGLE, hors du defilement : toujours visible, jamais a
-            chercher. flexShrink 0 pour qu'il ne se fasse jamais comprimer par
-            le contenu, et une marge basse qui le degage de la barre d'onglets —
-            celle-ci est dessinee par-dessus la feuille. */}
+        {/* Pied ANCRE en position absolue. Trois tentatives par les regles de
+            disposition ont echoue : le pied continuait d'etre pousse par le
+            contenu. Hors du flux, il ne peut plus l'etre — sa place ne depend
+            plus de ce qu'il y a au-dessus (client 2026-08-20).
+            La zone defilante reserve 108 px en bas pour que le dernier filtre ne
+            passe pas dessous, et le fond opaque evite que le contenu se voie au
+            travers en defilant. */}
         <View
           style={{
-            flexShrink: 0,
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: colors.card,
             flexDirection: 'row',
             gap: 8,
             padding: 16,
