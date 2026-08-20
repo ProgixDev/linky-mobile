@@ -639,7 +639,7 @@ export default function MarcheRoute() {
             off-screen with no way to scroll to it (client 2026-08-05). */}
         <BottomSheetScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32 }}
         >
           {isArticles ? (
             <>
@@ -846,7 +846,15 @@ export default function MarcheRoute() {
               )}
             </>
           )}
-        </BottomSheetScrollView>
+        {/* Le pied est DANS la zone de defilement, volontairement.
+            Epingle en dehors, il etait pousse hors de l'ecran des que le
+            contenu s'allongeait — et recouvert par la barre d'onglets, qui est
+            dessinee par-dessus la feuille (client 2026-08-20 : « quand je
+            selectionne quelque chose ils se cachent davantage »). Les deux
+            marges successives n'y changeaient rien : le probleme n'etait pas la
+            marge mais le fait que la zone defilante ne se contraignait pas.
+            A l'interieur du defilement, les boutons restent TOUJOURS
+            atteignables, quel que soit le nombre de filtres affiches. */}
         <View
           style={{
             flexDirection: 'row',
@@ -881,6 +889,7 @@ export default function MarcheRoute() {
             onPress={() => setSheetOpen(false)}
           />
         </View>
+        </BottomSheetScrollView>
       </Sheet>
     </SafeAreaView>
   );
