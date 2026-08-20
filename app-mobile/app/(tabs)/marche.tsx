@@ -646,11 +646,14 @@ export default function MarcheRoute() {
               {/* ===== ARTICLES filters — the sheet used to show immobilier
                   filters on this tab (type/pièces/goudron/meublé did nothing
                   for products). Now: price + condition + city, all wired. */}
-              {/* No price ceiling under « Tout » : a bucket cannot span a
-                  100k/jour rental and a 500M sale — any value we offered would
-                  silently exclude one of the two. Pick a type to filter price. */}
-              {filters.propertyType !== 'all' && (
-                <>
+              {/* Les paliers ci-dessous sont ceux des PRODUITS (100k a 5M) et ne
+                  dependent d'aucun type de bien. Ils etaient enveloppes dans une
+                  garde sur propertyType — le filtre IMMOBILIER — recopiee ici par
+                  erreur : sa valeur par defaut etant « Tout », prix et etat
+                  disparaissaient et l'onglet Articles ne montrait plus que la
+                  ville (client 2026-08-20). La garde reste justifiee cote
+                  immobilier, ou un intervalle ne peut pas couvrir a la fois une
+                  location au jour et une vente. */}
               <MicroLabel label={t('marche.filterMaxPrice')} />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
                 {[
@@ -687,8 +690,6 @@ export default function MarcheRoute() {
                   />
                 ))}
               </View>
-                </>
-              )}
 
               <MicroLabel label={t('marche.filterCity')} />
               <View style={{ marginBottom: 18 }}>
