@@ -9,7 +9,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Search,
   SlidersHorizontal,
@@ -71,7 +71,6 @@ const PROPERTY_TYPE_DEFS: { value: 'all' | 'location' | 'vente' | 'terrain'; lab
 export default function MarcheRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const filters = useFilters();
   // Resolve the static def lists into actual i18n labels at render so they
   // re-translate when the user switches language.
@@ -632,7 +631,7 @@ export default function MarcheRoute() {
       </ScrollView>
 
       {/* ===== Filter sheet ===== */}
-      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('marche.filterSheetTitle')} snapPoints={['80%']}>
+      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('marche.filterSheetTitle')} snapPoints={['92%']}>
         {/* flex:1 is REQUIRED — without it the ScrollView sizes itself to its
             content inside the sheet's flex column, so the taller Immobilier
             filter set (type + période + prix + ville + pièces + distance +
@@ -852,8 +851,12 @@ export default function MarcheRoute() {
             flexDirection: 'row',
             gap: 8,
             padding: 16,
-            // Keep the action row clear of the Android gesture/nav bar.
-            paddingBottom: 16 + insets.bottom,
+            // PAS d'insets.bottom ici : Sheet.tsx reserve deja la barre
+            // d'onglets ET l'encoche du bas. L'ajouter une seconde fois faisait
+            // perdre une centaine de pixels au bas du panneau, ce qui poussait
+            // le pied hors de l'ecran sur les jeux de filtres les plus longs
+            // (client 2026-08-19 : « Location masque plus le bas »).
+            paddingBottom: 16,
             borderTopWidth: 1,
             borderTopColor: colors.border,
           }}
