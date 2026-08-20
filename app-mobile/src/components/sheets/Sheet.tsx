@@ -2,7 +2,6 @@ import { useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheet, {
-  BottomSheetView,
   BottomSheetBackdrop,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
@@ -74,7 +73,14 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
       handleIndicatorStyle={{ backgroundColor: colors.borderStrong, width: 44 }}
       backgroundStyle={{ backgroundColor: colors.card, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl }}
     >
-      <BottomSheetView style={{ flex: 1, paddingBottom: tabBarAllowance(insets.bottom) }}>
+      {/* View SIMPLE, surtout pas BottomSheetView : celui-ci se MESURE SUR SON
+          CONTENU. Sa hauteur suivait donc le contenu au lieu de remplir la
+          feuille, et une zone defilante enfant ne recevait aucune borne — elle
+          ne defilait donc pas reellement, son bas etait simplement coupe et
+          devenait inatteignable. Symptome decisif signale par le client le
+          2026-08-20 : « je ne peux pas defiler jusqu a voir les boutons ». Une
+          zone qui defile vraiment finit toujours par montrer sa fin. */}
+      <View style={{ flex: 1, paddingBottom: tabBarAllowance(insets.bottom) }}>
         {title && (
           <View
             style={{
@@ -91,7 +97,7 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
           </View>
         )}
         {children}
-      </BottomSheetView>
+      </View>
     </BottomSheet>
   );
 }
