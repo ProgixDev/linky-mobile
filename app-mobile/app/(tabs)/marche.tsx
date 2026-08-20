@@ -642,7 +642,7 @@ export default function MarcheRoute() {
         <View style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <BottomSheetScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 }}
         >
           {isArticles ? (
             <>
@@ -867,9 +867,12 @@ export default function MarcheRoute() {
             flexDirection: 'row',
             gap: 8,
             padding: 16,
-            // Sheet.tsx reserve deja la hauteur de la barre d'onglets sur son
-            // conteneur ; il ne reste ici qu'une respiration visuelle.
-            paddingBottom: 20,
+            // Sheet.tsx reserve exactement la hauteur de la barre d'onglets
+            // (70 + insets.bottom - 8, la meme formule des deux cotes). Cette
+            // marge s'ajoute par-dessus : c'est l'ecart VISIBLE entre les boutons
+            // et la barre, demande par le client le 2026-08-20. La regler ici
+            // n'affecte que ce panneau.
+            paddingBottom: 36,
             borderTopWidth: 1,
             borderTopColor: colors.border,
           }}
