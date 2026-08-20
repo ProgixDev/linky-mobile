@@ -632,17 +632,14 @@ export default function MarcheRoute() {
 
       {/* ===== Filter sheet ===== */}
       <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('marche.filterSheetTitle')} snapPoints={['92%']}>
-        {/* Colonne explicite : c'est ELLE qui contraint la hauteur, et c'est ce
-            qui manquait. `flex: 1` seul sur la zone defilante ne suffisait pas —
-            son parent n'imposait aucune borne, elle grandissait donc avec son
-            contenu et poussait le pied sous la barre d'onglets, d'autant plus
-            qu'on ajoutait des filtres (client 2026-08-20).
-            `minHeight: 0` est indispensable : sans lui un enfant defilant refuse
-            de se retrecir sous la taille de son contenu. */}
-        <View style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        {/* flex:1 is REQUIRED — without it the ScrollView sizes itself to its
+            content inside the sheet's flex column, so the taller Immobilier
+            filter set (type + période + prix + ville + pièces + distance +
+            meublé) overflowed and pushed the footer (« Voir les résultats »)
+            off-screen with no way to scroll to it (client 2026-08-05). */}
         <BottomSheetScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32 }}
         >
           {isArticles ? (
             <>
@@ -849,30 +846,26 @@ export default function MarcheRoute() {
               )}
             </>
           )}
-        </BottomSheetScrollView>
-        {/* Pied ANCRE en position absolue. Trois tentatives par les regles de
-            disposition ont echoue : le pied continuait d'etre pousse par le
-            contenu. Hors du flux, il ne peut plus l'etre — sa place ne depend
-            plus de ce qu'il y a au-dessus (client 2026-08-20).
-            La zone defilante reserve 108 px en bas pour que le dernier filtre ne
-            passe pas dessous, et le fond opaque evite que le contenu se voie au
-            travers en defilant. */}
+        {/* Le pied est DANS la zone de defilement, volontairement.
+            Epingle en dehors, il etait pousse hors de l'ecran des que le
+            contenu s'allongeait — et recouvert par la barre d'onglets, qui est
+            dessinee par-dessus la feuille (client 2026-08-20 : « quand je
+            selectionne quelque chose ils se cachent davantage »). Les deux
+            marges successives n'y changeaient rien : le probleme n'etait pas la
+            marge mais le fait que la zone defilante ne se contraignait pas.
+            A l'interieur du defilement, les boutons restent TOUJOURS
+            atteignables, quel que soit le nombre de filtres affiches. */}
         <View
           style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: colors.card,
             flexDirection: 'row',
             gap: 8,
             padding: 16,
-            // Sheet.tsx reserve exactement la hauteur de la barre d'onglets
-            // (70 + insets.bottom - 8, la meme formule des deux cotes). Cette
-            // marge s'ajoute par-dessus : c'est l'ecart VISIBLE entre les boutons
-            // et la barre, demande par le client le 2026-08-20. La regler ici
-            // n'affecte que ce panneau.
-            paddingBottom: 36,
+            // PAS d'insets.bottom ici : Sheet.tsx reserve deja la barre
+            // d'onglets ET l'encoche du bas. L'ajouter une seconde fois faisait
+            // perdre une centaine de pixels au bas du panneau, ce qui poussait
+            // le pied hors de l'ecran sur les jeux de filtres les plus longs
+            // (client 2026-08-19 : « Location masque plus le bas »).
+            paddingBottom: 16,
             borderTopWidth: 1,
             borderTopColor: colors.border,
           }}
@@ -896,7 +889,7 @@ export default function MarcheRoute() {
             onPress={() => setSheetOpen(false)}
           />
         </View>
-        </View>
+        </BottomSheetScrollView>
       </Sheet>
     </SafeAreaView>
   );

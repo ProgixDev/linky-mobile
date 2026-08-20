@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheet, {
+  BottomSheetView,
   BottomSheetBackdrop,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
@@ -73,15 +74,7 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
       handleIndicatorStyle={{ backgroundColor: colors.borderStrong, width: 44 }}
       backgroundStyle={{ backgroundColor: colors.card, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl }}
     >
-      {/* View SIMPLE, pas BottomSheetView. Ce dernier se MESURE SUR SON
-          CONTENU — c est son role, il sert au dimensionnement automatique, qui
-          est justement desactive ici. Sa hauteur suivait donc le contenu au
-          lieu de remplir la feuille : tout enfant ancre « en bas » se retrouvait
-          ancre au bas du CONTENU, lequel deborde sous la barre d onglets.
-          C est ce qui a fait echouer cinq tentatives de fixer le pied du
-          panneau de filtres (client 2026-08-20). Une View simple avec flex 1
-          remplit la feuille et donne enfin une borne aux enfants. */}
-      <View style={{ flex: 1, paddingBottom: tabBarAllowance(insets.bottom) }}>
+      <BottomSheetView style={{ flex: 1, paddingBottom: tabBarAllowance(insets.bottom) }}>
         {title && (
           <View
             style={{
@@ -98,7 +91,7 @@ export function Sheet({ open, onClose, snapPoints = ['60%', '90%'], title, child
           </View>
         )}
         {children}
-      </View>
+      </BottomSheetView>
     </BottomSheet>
   );
 }
