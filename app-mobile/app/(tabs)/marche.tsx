@@ -632,14 +632,17 @@ export default function MarcheRoute() {
 
       {/* ===== Filter sheet ===== */}
       <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('marche.filterSheetTitle')} snapPoints={['92%']}>
-        {/* flex:1 is REQUIRED — without it the ScrollView sizes itself to its
-            content inside the sheet's flex column, so the taller Immobilier
-            filter set (type + période + prix + ville + pièces + distance +
-            meublé) overflowed and pushed the footer (« Voir les résultats »)
-            off-screen with no way to scroll to it (client 2026-08-05). */}
+        {/* Colonne explicite : c'est ELLE qui contraint la hauteur, et c'est ce
+            qui manquait. `flex: 1` seul sur la zone defilante ne suffisait pas —
+            son parent n'imposait aucune borne, elle grandissait donc avec son
+            contenu et poussait le pied sous la barre d'onglets, d'autant plus
+            qu'on ajoutait des filtres (client 2026-08-20).
+            `minHeight: 0` est indispensable : sans lui un enfant defilant refuse
+            de se retrecir sous la taille de son contenu. */}
+        <View style={{ flex: 1, minHeight: 0 }}>
         <BottomSheetScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 }}
         >
           {isArticles ? (
             <>
@@ -846,26 +849,20 @@ export default function MarcheRoute() {
               )}
             </>
           )}
-        {/* Le pied est DANS la zone de defilement, volontairement.
-            Epingle en dehors, il etait pousse hors de l'ecran des que le
-            contenu s'allongeait — et recouvert par la barre d'onglets, qui est
-            dessinee par-dessus la feuille (client 2026-08-20 : « quand je
-            selectionne quelque chose ils se cachent davantage »). Les deux
-            marges successives n'y changeaient rien : le probleme n'etait pas la
-            marge mais le fait que la zone defilante ne se contraignait pas.
-            A l'interieur du defilement, les boutons restent TOUJOURS
-            atteignables, quel que soit le nombre de filtres affiches. */}
+        </BottomSheetScrollView>
+        {/* Pied EPINGLE, hors du defilement : toujours visible, jamais a
+            chercher. flexShrink 0 pour qu'il ne se fasse jamais comprimer par
+            le contenu, et une marge basse qui le degage de la barre d'onglets —
+            celle-ci est dessinee par-dessus la feuille. */}
         <View
           style={{
+            flexShrink: 0,
             flexDirection: 'row',
             gap: 8,
             padding: 16,
-            // PAS d'insets.bottom ici : Sheet.tsx reserve deja la barre
-            // d'onglets ET l'encoche du bas. L'ajouter une seconde fois faisait
-            // perdre une centaine de pixels au bas du panneau, ce qui poussait
-            // le pied hors de l'ecran sur les jeux de filtres les plus longs
-            // (client 2026-08-19 : « Location masque plus le bas »).
-            paddingBottom: 16,
+            // Respiration entre les boutons et la barre d'onglets, qui est
+            // dessinee par-dessus la feuille (client 2026-08-20).
+            paddingBottom: 24,
             borderTopWidth: 1,
             borderTopColor: colors.border,
           }}
@@ -889,7 +886,7 @@ export default function MarcheRoute() {
             onPress={() => setSheetOpen(false)}
           />
         </View>
-        </BottomSheetScrollView>
+        </View>
       </Sheet>
     </SafeAreaView>
   );
