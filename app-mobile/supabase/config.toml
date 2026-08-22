@@ -817,3 +817,6 @@ verify_jwt = false
 
 [functions.session-revoke]
 verify_jwt = false
+
+[functions.place-orders-batch]
+verify_jwt = false

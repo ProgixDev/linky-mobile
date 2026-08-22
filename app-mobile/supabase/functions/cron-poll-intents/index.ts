@@ -227,6 +227,52 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const { data: boExpired } = await sb.rpc('expire_stale_boost_intents');
 
+  // ── Intentions de LOT (panier multi-boutiques, client 2026-08-21). Un seul
+  //    paiement couvre N commandes. process_batch_intent_outcome verifie que la
+  //    somme des totaux vaut EXACTEMENT le montant encaisse avant de creer la
+  //    moindre ecriture de sequestre — un lot dont une commande aurait bouge
+  //    entre-temps est refuse plutot que regle de travers.
+  let baPolled = 0, baCompleted = 0, baFailed = 0, baCancelled = 0, baPending = 0, baErrors = 0;
+  const { data: batchIntents, error: baPickErr } = await sb.rpc('pick_batch_intents_to_poll', { p_limit: 200 });
+  if (baPickErr) {
+    console.error('[cron-poll-intents] batch intent pick error:', baPickErr);
+  } else {
+    for (const intent of (batchIntents ?? []) as PendingIntent[]) {
+      baPolled++;
+      try {
+        const status = await getPaymentStatus(intent.rail_intent_id);
+        if (status.status === 'success') {
+          const { error: oErr } = await sb.rpc('process_batch_intent_outcome', {
+            p_intent_id: intent.id, p_terminal_status: 'completed', p_rail_status: status.status,
+            p_error_code: null, p_error_message: null,
+          });
+          if (oErr) throw new Error(`process_batch_intent_outcome failed: ${oErr.message}`);
+          baCompleted++;
+        } else if (status.status === 'failed' || status.status === 'cancelled') {
+          await sb.rpc('process_batch_intent_outcome', {
+            p_intent_id: intent.id, p_terminal_status: status.status, p_rail_status: status.status,
+            p_error_code: status.error_code ?? null, p_error_message: status.message ?? null,
+          });
+          if (status.status === 'failed') baFailed++; else baCancelled++;
+        } else {
+          await sb.rpc('bump_intent_poll', {
+            p_intent_id: intent.id, p_rail_status: status.status, p_error_code: null, p_error_message: null,
+          });
+          baPending++;
+        }
+      } catch (e) {
+        console.error(`[cron-poll-intents] batch transient on intent ${intent.id}:`, e);
+        await sb.rpc('bump_intent_poll', {
+          p_intent_id: intent.id, p_rail_status: intent.rail_status,
+          p_error_code: 'RAIL_TRANSIENT', p_error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
+        });
+        baErrors++;
+      }
+    }
+  }
+  const { data: baExpired } = await sb.rpc('expire_stale_batch_intents');
+
+
   // Phase V.6 — stale Stripe PI sweep. Cancel-first / local-flip-second.
   // The picker (FOR UPDATE SKIP LOCKED) guarantees two overlapping cron ticks
   // never act on the same row.
@@ -356,6 +402,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     polled, completed, failed, cancelled, stillPending, errors, expired: expiredCount ?? 0,
     bkPolled, bkCompleted, bkFailed, bkCancelled, bkPending, bkErrors, bkExpired: bkExpired ?? 0,
     boPolled, boCompleted, boFailed, boCancelled, boPending, boErrors, boExpired: boExpired ?? 0,
+    baPolled, baCompleted, baFailed, baCancelled, baPending, baErrors, baExpired: baExpired ?? 0,
     stripeSwept, stripeCancelled, stripeAlreadyTerminal, stripeSkipped,
     bookingSwept, bookingCancelled, bookingAlreadyTerminal, bookingSkipped,
   }), { status: 200, headers: { 'content-type': 'application/json' } });
