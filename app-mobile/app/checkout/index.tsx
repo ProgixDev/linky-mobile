@@ -17,7 +17,7 @@ import { I, type IconKey } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useCart } from '../../src/stores/cart';
 import { apiPost } from '../../src/lib/api';
-import { usePlaceOrder, useWallet } from '../../src/data/queries';
+import { usePlaceOrder, usePlaceOrdersBatch, useWallet } from '../../src/data/queries';
 import { useMyAddresses } from '../../src/data/queries/addresses';
 import { DELIVERY_FEE_GNF, type DeliveryMode } from '../../src/lib/delivery';
 import type { PaymentMethod, Product } from '../../src/data/types';
@@ -80,14 +80,15 @@ export default function CheckoutRoute() {
       })),
     [t],
   );
-  // Le panier peut contenir plusieurs boutiques ; une COMMANDE reste
-  // mono-boutique. shopId arrive du bouton du groupe : on ne traite que ces
-  // lignes-la. Absent (ancien lien, panier a une seule boutique) = tout le
-  // panier, comme avant.
+  // Client 2026-08-21 : le panier se regle en UNE fois, meme avec plusieurs
+  // boutiques. On traite donc TOUJOURS le panier entier. Le parametre shopId
+  // n'est plus emis nulle part ; on l'accepte encore pour qu'un lien profond
+  // deja ouvert (ancienne version, notification) ne pointe pas dans le vide.
   const { shopId } = useLocalSearchParams<{ shopId?: string }>();
   const allLines = useCart((s) => s.lines);
   const lines = shopId ? allLines.filter((l) => l.shopId === shopId) : allLines;
   const placeOrder = usePlaceOrder();
+  const placeBatch = usePlaceOrdersBatch();
   const { show } = useToast();
   // Mode de réception (client 2026-07-30). Livraison Linky par défaut (frais
   // forfaitaire) ; retrait boutique gratuit. La livraison a besoin d'une adresse
@@ -191,12 +192,57 @@ export default function CheckoutRoute() {
       retry: 1,
     })),
   });
-  const allLoaded = queries.every((q) => !q.isLoading);
+  // `!isLoading` ne suffit pas : une requete en ERREUR n'est plus « loading »
+  // mais n'a pas de donnee. Le sous-total la comptait alors pour 0 pendant que
+  // le serveur, lui, facturait le vrai prix — l'acheteur validait un montant
+  // qui n'etait pas celui qu'on lui prenait. On exige donc que CHAQUE article
+  // soit charge avant d'autoriser le paiement. Le panier, lui, sait retirer
+  // tout seul une ligne dont le produit a ete supprime (404) ; il suffit d'y
+  // revenir.
+  const allLoaded = queries.every((q) => !q.isLoading && !!q.data);
+
+  // Un article n'a pas pu etre relu (reseau, produit supprime). Plutot qu'un
+  // bouton grise sans explication, on renvoie au panier, qui purge tout seul
+  // les lignes dont le produit n'existe plus.
+  const loadFailed = queries.some((q) => !q.isLoading && !q.data);
+
+  // Nombre de boutiques distinctes. On se fie au produit charge (source
+  // serveur) plutot qu'au shopId du panier, qui n'est qu'une copie locale.
+  // Tant que les produits chargent, shopCount vaut 0 ou moins que la realite —
+  // sans effet, le bouton Payer est de toute facon bloque sur `allLoaded`.
+  const shopIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const q of queries) if (q.data?.shopId) s.add(q.data.shopId);
+    return s;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queries.map((q) => q.data?.shopId ?? '').join(',')]);
+  // Un panier mono-boutique continue d'emprunter place-order, le chemin le plus
+  // eprouve (sequestre, livraison, QR). Le lot ne sert qu'a ce qu'il apporte
+  // vraiment : encaisser une seule fois pour plusieurs vendeurs.
+  const isBatch = shopIds.size > 1;
+
+  // La commission est arrondie PAR COMMANDE cote serveur (une commande par
+  // boutique). Un 3% applique au sous-total global pourrait s'en ecarter de
+  // quelques francs — et process_batch_intent_outcome refuse tout lot dont la
+  // somme des commandes ne vaut pas exactement le montant encaisse. On
+  // reproduit donc le meme decoupage ici.
+  const subtotalByShop = useMemo(() => {
+    const m = new Map<string, number>();
+    lines.forEach((l, i) => {
+      const p = queries[i].data;
+      if (!p) return;
+      m.set(p.shopId, (m.get(p.shopId) ?? 0) + p.priceGnf * l.quantity);
+    });
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lines, queries.map((q) => q.data?.id ?? '').join(',')]);
   const subtotal = lines.reduce((sum, l, i) => {
     const p = queries[i].data;
     return sum + (p?.priceGnf ?? 0) * l.quantity;
   }, 0);
-  const serviceFee = Math.round(subtotal * 0.03);
+  const serviceFee = isBatch
+    ? Array.from(subtotalByShop.values()).reduce((s, sub) => s + Math.round(sub * 0.03), 0)
+    : Math.round(subtotal * 0.03);
   // Le frais de livraison DOIT refléter la valeur serveur (delivery.ts) : le
   // serveur recalcule le forfait, ici on montre juste le même montant.
   const deliveryFee = deliveryMode === 'delivery' ? DELIVERY_FEE_GNF : 0;
@@ -490,18 +536,24 @@ export default function CheckoutRoute() {
         <Button
           size="lg"
           block
-          loading={placeOrder.isPending || cardFlowBusy}
-          disabled={placeOrder.isPending || cardFlowBusy || !allLoaded || lines.length === 0 || addressGateLoading}
+          loading={placeOrder.isPending || placeBatch.isPending || cardFlowBusy}
+          disabled={placeOrder.isPending || placeBatch.isPending || cardFlowBusy || (!allLoaded && !loadFailed) || lines.length === 0 || addressGateLoading}
           label={
-            placeOrder.isPending || cardFlowBusy
+            placeOrder.isPending || placeBatch.isPending || cardFlowBusy
               ? t('checkout.payingCta')
-              : needsAddress
-                ? 'Ajouter une adresse de livraison'
-                : t('checkout.payCta', { amount: formatGNF(total) })
+              : loadFailed
+                ? 'Revenir au panier'
+                : needsAddress
+                  ? 'Ajouter une adresse de livraison'
+                  : t('checkout.payCta', { amount: formatGNF(total) })
           }
           onPress={() => {
             // Livraison sans adresse : on ne prend pas le paiement — on envoie
             // d'abord ajouter une adresse de destination.
+            if (loadFailed) {
+              router.back();
+              return;
+            }
             if (needsAddress) {
               router.push('/settings/addresses' as any);
               return;
@@ -510,6 +562,48 @@ export default function CheckoutRoute() {
             if (!first) return;
             if (selected === 'card') {
               void handleCardOrder();
+              return;
+            }
+            // ── Panier multi-boutiques : un seul encaissement, N commandes ──
+            // On navigue avec la PREMIERE commande du lot. Ce n'est pas un
+            // raccourci d'affichage : les commandes d'un lot basculent
+            // ensemble (process_batch_intent_outcome les traite dans une
+            // transaction), donc sonder l'une revient a sonder toutes les
+            // autres. L'ecran de confirmation vide le panier entier a la
+            // reussite — ce qui est desormais exactement le bon geste.
+            if (isBatch) {
+              placeBatch.mutate(
+                {
+                  items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+                  paymentMethod: selected,
+                  deliveryMode,
+                },
+                {
+                  onSuccess: (res) => {
+                    const firstOrder = res.orders[0];
+                    if (!firstOrder) {
+                      show(t('checkout.payErrorFallback'), 'danger');
+                      return;
+                    }
+                    if (res.payment_url) {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+                      router.replace({ pathname: '/checkout/pay', params: { url: res.payment_url, orderId: firstOrder.id } } as any);
+                    } else if (res.paid) {
+                      // Portefeuille : debit et sequestre deja faits, rien ne
+                      // peut plus echouer cote acheteur → on vide le panier.
+                      useCart.getState().clear();
+                      show(t('checkout.orderCreated'), 'success');
+                      router.replace(`/checkout/success?orderId=${firstOrder.id}`);
+                    } else {
+                      router.replace(`/checkout/confirm/${firstOrder.id}` as any);
+                    }
+                  },
+                  onError: (err: unknown) => {
+                    const msg = (err as { message?: string })?.message ?? t('checkout.payErrorFallback');
+                    show(msg, 'danger');
+                  },
+                },
+              );
               return;
             }
             placeOrder.mutate(

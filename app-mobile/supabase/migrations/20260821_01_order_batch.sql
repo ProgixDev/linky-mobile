@@ -315,6 +315,11 @@ begin
       select id into v_escrow_wallet_id
         from public.wallets
         where user_id = '00000000-0000-0000-0000-000000000001' and currency = 'GNF';
+      -- Sans ce garde, un sequestre absent partirait en NULL dans post_transfer
+      -- et echouerait sur une contrainte NOT NULL — meme resultat (rollback),
+      -- mais un message illisible dans les journaux le jour ou ca arrive.
+      if v_buyer_wallet_id is null then raise exception 'BUYER_WALLET_NOT_FOUND'; end if;
+      if v_escrow_wallet_id is null then raise exception 'ESCROW_WALLET_NOT_FOUND'; end if;
 
       perform public.post_transfer(
         v_buyer_wallet_id, v_escrow_wallet_id, v_shop_total,
@@ -528,3 +533,50 @@ revoke all on function public.pick_intents_to_poll(integer) from public, anon, a
 grant execute on function public.pick_intents_to_poll(integer) to service_role;
 revoke all on function public.expire_stale_intents() from public, anon, authenticated;
 grant execute on function public.expire_stale_intents() to service_role;
+
+-- ─── 8. Restitution du stock a l'annulation ─────────────────────────────────
+-- Defaut trouve en construisant le lot (2026-08-21), mais ANTERIEUR a lui : le
+-- stock est decremente a la creation de la commande (migration 20260813_01) et
+-- n'etait jamais rendu quand le paiement echouait, expirait ou etait annule.
+-- Un acheteur qui ouvrait la page Lengopay puis fermait l'application retirait
+-- donc definitivement les articles du stock du vendeur.
+--
+-- Un declencheur plutot qu'une correction dans process_intent_outcome : il
+-- couvre d'un coup TOUS les chemins d'annulation — expiration par le cron,
+-- annulation par l'acheteur, echec du rail, lot ou commande simple — presents
+-- comme a venir, et il est l'exact inverse du decrement.
+--
+-- La transition surveillee est 'placed' -> 'cancelled' uniquement. 'placed'
+-- signifie « paiement jamais encaisse » ; une commande payee qui serait
+-- remboursee plus tard suit un autre chemin et ne doit pas repasser par ici.
+create or replace function public.restore_stock_on_order_cancel()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.products p
+    set stock = p.stock + agg.qty,
+        updated_at = now()
+    from (
+      select oi.product_id, sum(oi.quantity)::int as qty
+        from public.order_items oi
+       where oi.order_id = new.id
+       group by oi.product_id
+    ) agg
+   where p.id = agg.product_id
+     -- stock null = quantite non declaree : rien n'avait ete decremente, donc
+     -- rien a rendre. Sans ce filtre on inventerait du stock.
+     and p.stock is not null;
+  return new;
+end;
+$$;
+revoke all on function public.restore_stock_on_order_cancel() from public, anon, authenticated;
+
+drop trigger if exists trg_restore_stock_on_order_cancel on public.orders;
+create trigger trg_restore_stock_on_order_cancel
+  after update of status on public.orders
+  for each row
+  when (old.status = 'placed' and new.status = 'cancelled')
+  execute function public.restore_stock_on_order_cancel();

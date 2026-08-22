@@ -190,6 +190,61 @@ export function usePlaceOrder() {
   });
 }
 
+// ─── Panier multi-boutiques : UN paiement, N commandes ──────────────────────
+// Client 2026-08-21 : « un seul bouton dans le panier ». Le serveur cree les N
+// commandes dans UNE transaction (place_orders_batch) puis ouvre UNE intention
+// de paiement qui les couvre toutes. On ne poste jamais de montant : le total
+// encaisse est relu en base cote serveur.
+export interface PlaceOrdersBatchInput {
+  /** Le panier ENTIER, toutes boutiques confondues. Le serveur regroupe. */
+  items: { productId: string; quantity: number }[];
+  /** Pas de 'card' ici : Stripe est abandonne (2026-07-26). */
+  paymentMethod: 'wallet' | 'orange-money' | 'mtn-money';
+  deliveryMode?: 'pickup' | 'delivery';
+  payerPhone?: string;
+}
+
+export interface PlaceOrdersBatchResult {
+  batch_id: string;
+  /** Une entree par boutique, dans l'ordre de creation. */
+  orders: { id: string; total_minor: number; status: string }[];
+  /** Portefeuille : true, les commandes naissent deja payees. */
+  paid?: boolean;
+  /** Rail mobile money : montant total du lot + page hebergee Lengopay. */
+  total_minor?: number;
+  payment_url?: string;
+}
+
+export function usePlaceOrdersBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      items,
+      paymentMethod,
+      deliveryMode,
+      payerPhone,
+    }: PlaceOrdersBatchInput): Promise<PlaceOrdersBatchResult> => {
+      return apiPost<PlaceOrdersBatchResult>({
+        path: '/place-orders-batch',
+        body: {
+          items: items.map((i) => ({ product_id: i.productId, quantity: i.quantity })),
+          payment_method: paymentMethod,
+          ...(deliveryMode ? { delivery_mode: deliveryMode } : {}),
+          ...(payerPhone ? { payer_phone: payerPhone } : {}),
+        },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders-infinite'] });
+      qc.invalidateQueries({ queryKey: ['wallet'] });
+      // Meme regle que usePlaceOrder : on ne vide PAS le panier ici. Le rail
+      // peut encore echouer ou etre annule ; le vidage se fait au moment ou le
+      // paiement est reellement acquis.
+    },
+  });
+}
+
 // scanToken is the QR-gate secret (per migration 20260601_03_qr_scan_gate). The
 // buyer learns it ONLY by scanning the seller's QR — it's never delivered to
 // the buyer via /get-order. Without it, the server raises INVALID_SCAN_TOKEN

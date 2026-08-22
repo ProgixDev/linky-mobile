@@ -37,7 +37,7 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
 
   const { data: row, error } = await sb
     .from('orders')
-    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, delivery_mode, delivery_fee_minor, payment_method, currency, status, events, release_at, created_at, scan_token')
+    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, delivery_mode, delivery_fee_minor, payment_method, currency, status, events, release_at, created_at, scan_token, batch_id')
     .eq('id', body.id)
     .maybeSingle();
   if (error) {
@@ -125,10 +125,18 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
   // (V1 retry creates a NEW order, not a new attempt on the same one).
   // Ordering defensively by attempt_index + created_at descending so a future
   // on-same-order retry pattern continues to return the latest.
-  const { data: intentRow, error: intentErr } = await sb
-    .from('payment_intents')
-    .select('id, order_id, rail, rail_intent_id, rail_status, status, method, currency, amount_minor, payer_phone, attempt_index, attempts_count, last_polled_at, last_error_code, last_error_message, created_at, updated_at, completed_at')
-    .eq('order_id', body.id)
+  // Panier multi-boutiques (2026-08-21) : l'intention porte alors batch_id et
+  // PAS order_id — un seul encaissement couvre les N commandes du lot. Sans ce
+  // basculement, l'ecran de confirmation ne verrait aucune intention et lirait
+  // la commande comme un paiement portefeuille, ce qui est faux. Les commandes
+  // d'un lot changent d'etat ensemble, donc l'intention du lot est bien celle
+  // de CETTE commande.
+  const intentCols =
+    'id, order_id, batch_id, rail, rail_intent_id, rail_status, status, method, currency, amount_minor, payer_phone, attempt_index, attempts_count, last_polled_at, last_error_code, last_error_message, created_at, updated_at, completed_at';
+  const intentQuery = sb.from('payment_intents').select(intentCols);
+  const { data: intentRow, error: intentErr } = await (r.batch_id
+    ? intentQuery.eq('batch_id', r.batch_id)
+    : intentQuery.eq('order_id', body.id))
     .order('attempt_index', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(1)

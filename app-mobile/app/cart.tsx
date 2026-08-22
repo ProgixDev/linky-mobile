@@ -11,6 +11,7 @@ import { Card } from '../src/components/primitives/Card';
 import { useToast } from '../src/components/feedback/Toast';
 import { Button } from '../src/components/primitives/Button';
 import { TopBar } from '../src/components/nav/TopBar';
+import { StickyBottom } from '../src/components/nav/StickyBottom';
 import { EmptyState } from '../src/components/feedback/EmptyState';
 import { I } from '../src/icons/Icon';
 import { formatGNF, formatEUR } from '../src/lib/format';
@@ -22,7 +23,7 @@ import type { Product } from '../src/data/types';
 import { haptic } from '../src/lib/haptics';
 
 export default function CartRoute() {
-  const { colors, radii } = useTheme();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const toast = useToast();
   const { lines, setQuantity, remove } = useCart();
@@ -63,9 +64,11 @@ export default function CartRoute() {
     .filter((x): x is { line: typeof lines[0]; product: Product } => !!x.product);
   // Regroupement par boutique (client 2026-08-13 : « l'ajout d'articles de
   // boutiques differentes n'est pas actif »). Le panier en accepte desormais
-  // plusieurs, mais chaque groupe reste UNE commande : un escrow, un vendeur,
-  // une livraison, un QR — et un paiement mobile money ne peut de toute facon
-  // pas etre reparti entre deux vendeurs. On paie donc groupe par groupe.
+  // plusieurs. Chaque groupe reste UNE commande cote serveur — un sequestre, un
+  // vendeur, une livraison, un QR — mais depuis le 2026-08-21 le paiement est
+  // unique : place_orders_batch cree les N commandes dans une transaction et un
+  // seul encaissement les couvre toutes. Le regroupement ne sert donc plus qu'a
+  // l'affichage et au calcul de la commission, arrondie commande par commande.
   const groups = useMemo(() => {
     const byShop = new Map<string, typeof items>();
     for (const it of items) {
@@ -80,6 +83,16 @@ export default function CartRoute() {
       return { shopId, items: groupItems, subtotal: sub, fees: f, total: sub + f };
     });
   }, [items]);
+
+  // Total GLOBAL = somme des totaux par boutique, PAS un 3% recalcule sur le
+  // sous-total global. C'est important : le serveur cree une commande par
+  // boutique et arrondit la commission commande par commande. Additionner les
+  // totaux deja arrondis donne exactement le montant que le serveur encaissera ;
+  // un arrondi global pourrait en differer de quelques francs, et
+  // process_batch_intent_outcome refuse tout lot dont la somme ne colle pas.
+  const grandSubtotal = groups.reduce((s, g) => s + g.subtotal, 0);
+  const grandFees = groups.reduce((s, g) => s + g.fees, 0);
+  const grandTotal = grandSubtotal + grandFees;
 
   // Noms de boutique — meme cle de cache que useShop, donc aucun appel en double
   // si l'utilisateur a deja ouvert la boutique.
@@ -138,29 +151,10 @@ export default function CartRoute() {
         })}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 10 }}>
-        {/* Le panier accepte plusieurs boutiques, mais chacune donne lieu a une
-            commande distincte — livraison, paiement et QR separes. On l'annonce
-            AVANT que l'acheteur ne le decouvre au paiement. Inutile de le dire
-            quand il n'y a qu'une boutique : ce serait du bruit. */}
-        {groups.length > 1 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              gap: 8,
-              padding: 12,
-              borderRadius: 14,
-              backgroundColor: colors.bgSunken,
-            }}
-          >
-            <I.store size={15} color={colors.primary} />
-            <Text variant="caption" tone="muted" style={{ flex: 1, letterSpacing: 0, lineHeight: 17 }}>
-              Ton panier contient {groups.length} boutiques. Chaque boutique fait l'objet d'une
-              commande séparée : tu la paies et la reçois indépendamment.
-            </Text>
-          </View>
-        )}
-
+        {/* Plus de bandeau « chaque boutique se paie separement » : depuis le
+            2026-08-21 le panier se regle en UNE fois. Ce qui reste vrai — une
+            livraison et un code de retrait par boutique — est dit dans le
+            recapitulatif, la ou l'acheteur regarde le montant. */}
         {groups.map((group, gi) => (
         <View key={group.shopId} style={{ gap: 10 }}>
           {/* En-tete de boutique. Il n'apparait que s'il y a plusieurs groupes :
@@ -276,53 +270,60 @@ export default function CartRoute() {
           </Card>
         ))}
 
-        {/* Phase U.0 should-fix — promo codes are a V1.1 feature (the screen
-            itself is now a ComingSoonScreen) ; the inert "Code promo" Card
-            in the live purchase flow used to imply they were available. */}
+        </View>
+        ))}
 
-        <Card padding={14}>
+        {/* Recapitulatif GLOBAL. Client 2026-08-21 : un seul total, une seule
+            validation, meme avec plusieurs boutiques. Les totaux par boutique
+            ont disparu — ils poussaient a payer en plusieurs fois.
+            Ces montants sont indicatifs : le serveur recalcule tout depuis les
+            prix en base, et c'est SA valeur qui est encaissee. */}
+        <Card padding={14} style={{ marginTop: 4 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
             <Text variant="caption" tone="muted" style={{ letterSpacing: 0 }}>
               {t('cart.subtotal')}
             </Text>
-            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(group.subtotal)}</Text>
+            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(grandSubtotal)}</Text>
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
             <Text variant="caption" tone="muted" style={{ letterSpacing: 0 }}>
               {t('cart.feesLabel')} <Text style={{ color: colors.primary }}>(3%)</Text>
             </Text>
-            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(group.fees)}</Text>
+            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(grandFees)}</Text>
           </View>
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('cart.total')}</Text>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={{ fontWeight: '700', fontSize: 18, fontVariant: ['tabular-nums'] }}>
-                {formatGNF(group.total)}
+                {formatGNF(grandTotal)}
               </Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0 }}>
-                {formatEUR(gnfToEur(group.total))}
+                {formatEUR(gnfToEur(grandTotal))}
               </Text>
             </View>
           </View>
+          {groups.length > 1 && (
+            <Text variant="caption" tone="muted" style={{ marginTop: 10, letterSpacing: 0, lineHeight: 16 }}>
+              Un seul paiement pour {groups.length} boutiques. Chacune prépare et livre sa
+              commande de son côté, avec son propre code de retrait.
+            </Text>
+          )}
         </Card>
+      </ScrollView>
 
-        {/* Un bouton PAR boutique. Le paiement porte l'identifiant du groupe :
-            l'ecran de paiement ne traite que ces lignes-la, et ne vide que
-            celles-la une fois la commande passee. */}
+      {/* Un seul bouton pour tout le panier (client 2026-08-21). */}
+      <StickyBottom>
         <Button
           size="lg"
           block
-          label={`${t('cart.pay')} · ${formatGNF(group.total)}`}
+          label={`${t('cart.pay')} · ${formatGNF(grandTotal)}`}
           onPress={() => {
             haptic.light();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
-            router.push({ pathname: '/checkout', params: { shopId: group.shopId } } as any);
+            router.push('/checkout');
           }}
         />
-        </View>
-        ))}
-      </ScrollView>
+      </StickyBottom>
     </SafeAreaView>
   );
 }

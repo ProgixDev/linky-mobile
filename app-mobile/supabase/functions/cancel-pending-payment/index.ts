@@ -23,15 +23,33 @@ Deno.serve(makePost<Body>('/v1/payments/cancel-pending', valid, async ({ sb, bod
   const userId = await requireUser(req);
 
   const { data: order } = await sb.from('orders')
-    .select('id, buyer_id, status').eq('id', body.order_id).maybeSingle();
+    .select('id, buyer_id, status, batch_id').eq('id', body.order_id).maybeSingle();
   if (!order) throwApi('ORDER_NOT_FOUND', 404, 'Commande introuvable.');
   if (order.buyer_id !== userId) throwApi('FORBIDDEN', 403, "Tu n'es pas l'acheteur de cette commande.");
   if (order.status !== 'placed') throwApi('INVALID_STATUS', 400, 'Cette commande ne peut plus être annulée.');
 
-  const { data: intent } = await sb
+  // Panier multi-boutiques (2026-08-21) : l'intention porte batch_id et couvre
+  // N commandes. Annuler, ici, annule TOUT le lot — c'est la seule issue
+  // coherente : un encaissement unique ne peut pas etre annule pour une seule
+  // des commandes qu'il couvre.
+  const isBatch = !!order.batch_id;
+  if (isBatch) {
+    // Une commande du lot deja payee/avancee = le lot est en train de se
+    // regler. On refuse plutot que de defaire a moitie.
+    const { data: siblings } = await sb.from('orders')
+      .select('id, status').eq('batch_id', order.batch_id);
+    const moved = (siblings ?? []).filter((o) => o.status !== 'placed');
+    if (moved.length > 0) {
+      throwApi('INVALID_STATUS', 400, 'Ce panier ne peut plus être annulé.');
+    }
+  }
+
+  const intentQuery = sb
     .from('payment_intents')
-    .select('id, rail, rail_intent_id')
-    .eq('order_id', body.order_id)
+    .select('id, rail, rail_intent_id');
+  const { data: intent } = await (isBatch
+    ? intentQuery.eq('batch_id', order.batch_id)
+    : intentQuery.eq('order_id', body.order_id))
     .eq('status', 'pending')
     .order('attempt_index', { ascending: false })
     .order('created_at', { ascending: false })
@@ -84,13 +102,16 @@ Deno.serve(makePost<Body>('/v1/payments/cancel-pending', valid, async ({ sb, bod
     }
   }
 
-  const { error: rpcErr } = await sb.rpc('process_intent_outcome', {
-    p_intent_id:       intent.id,
-    p_terminal_status: 'cancelled',
-    p_rail_status:     'user_cancelled',
-    p_error_code:      'USER_CANCELLED',
-    p_error_message:   'User initiated cancel/retry from confirmation screen',
-  });
+  const { error: rpcErr } = await sb.rpc(
+    isBatch ? 'process_batch_intent_outcome' : 'process_intent_outcome',
+    {
+      p_intent_id:       intent.id,
+      p_terminal_status: 'cancelled',
+      p_rail_status:     'user_cancelled',
+      p_error_code:      'USER_CANCELLED',
+      p_error_message:   'User initiated cancel/retry from confirmation screen',
+    },
+  );
   if (rpcErr) {
     console.error('[cancel-pending-payment] rpc error:', rpcErr);
     throwApi('INTERNAL_ERROR', 500, "Erreur lors de l'annulation");

@@ -162,6 +162,10 @@ export interface OrderRow {
   // is seller). Other endpoints don't even include it in their SELECT, so
   // it's optional here.
   scan_token?: string;
+  // Lot de commandes payees en une fois (panier multi-boutiques, 2026-08-21).
+  // Non nul => l'intention de paiement de cette commande porte batch_id, pas
+  // order_id. Optionnel : seul get-order le selectionne.
+  batch_id?: string | null;
 }
 
 // Two opt-in PII gates layered on top of the base mapper:
