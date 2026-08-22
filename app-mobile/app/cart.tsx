@@ -285,12 +285,9 @@ export default function CartRoute() {
             </Text>
             <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(grandSubtotal)}</Text>
           </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-            <Text variant="caption" tone="muted" style={{ letterSpacing: 0 }}>
-              {t('cart.feesLabel')} <Text style={{ color: colors.primary }}>(3%)</Text>
-            </Text>
-            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(grandFees)}</Text>
-          </View>
+          {/* Ligne de commission MASQUEE (client 2026-08-22). Le montant est
+              toujours preleve — il est dans grandTotal, et le serveur en reste
+              seul maitre. On ne le detaille simplement plus a l'acheteur. */}
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('cart.total')}</Text>

@@ -245,7 +245,13 @@ export default function CheckoutRoute() {
     : Math.round(subtotal * 0.03);
   // Le frais de livraison DOIT refléter la valeur serveur (delivery.ts) : le
   // serveur recalcule le forfait, ici on montre juste le même montant.
-  const deliveryFee = deliveryMode === 'delivery' ? DELIVERY_FEE_GNF : 0;
+  //
+  // Client 2026-08-22 : le forfait s'applique PAR BOUTIQUE — deux boutiques
+  // font deux colis, deux livreurs, deux trajets. L'acheteur ne voit qu'un
+  // chiffre, mais c'est bien leur somme. shopIds.size vaut 1 pour un panier
+  // mono-boutique, donc la formule couvre les deux cas sans branche.
+  const shopCount = Math.max(shopIds.size, 1);
+  const deliveryFee = deliveryMode === 'delivery' ? DELIVERY_FEE_GNF * shopCount : 0;
   const total = subtotal + serviceFee + deliveryFee;
 
   return (
@@ -261,7 +267,7 @@ export default function CheckoutRoute() {
               presentation only — 'delivery' stays the default selection. */}
           {([
             { mode: 'pickup' as DeliveryMode, icon: 'store' as IconKey, title: 'Retrait sur place', hint: 'Vous récupérez à la boutique — Gratuit' },
-            { mode: 'delivery' as DeliveryMode, icon: 'truck' as IconKey, title: 'Livraison à domicile', hint: `Linky vous livre — ${formatGNF(DELIVERY_FEE_GNF)}` },
+            { mode: 'delivery' as DeliveryMode, icon: 'truck' as IconKey, title: 'Livraison à domicile', hint: `Linky vous livre — ${formatGNF(DELIVERY_FEE_GNF * shopCount)}${shopCount > 1 ? ` (${shopCount} colis)` : ''}` },
           ]).map((opt, i) => {
             const sel = deliveryMode === opt.mode;
             const Ico = I[opt.icon];
@@ -519,9 +525,13 @@ export default function CheckoutRoute() {
         <MicroLabel label="Récapitulatif" />
         <Card padding={14}>
           <RecapRow label="Sous-total" value={formatGNF(subtotal)} />
-          <RecapRow label="Frais de service" value={formatGNF(serviceFee)} />
+          {/* Commission MASQUEE (client 2026-08-22), comme dans le panier :
+              elle reste comprise dans `total`, seul son detail disparait. Les
+              deux ecrans doivent rester d'accord — l'afficher ici apres l'avoir
+              cachee dans le panier ferait apparaitre un frais surgi de nulle
+              part au moment de payer. */}
           <RecapRow
-            label={deliveryMode === 'delivery' ? 'Livraison' : 'Retrait sur place'}
+            label={deliveryMode === 'delivery' ? (shopCount > 1 ? `Livraison (${shopCount} colis)` : 'Livraison') : 'Retrait sur place'}
             value={deliveryMode === 'delivery' ? formatGNF(deliveryFee) : 'Gratuit'}
           />
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
