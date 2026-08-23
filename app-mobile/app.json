@@ -51,7 +51,7 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Linky a besoin de l'appareil photo pour scanner les codes QR de retrait et ta pièce d'identité.",
+        "NSCameraUsageDescription": "Linky a besoin de l'appareil photo pour prendre les photos de tes annonces, scanner les codes QR de remise et vérifier ta pièce d'identité.",
         "NSPhotoLibraryUsageDescription": "Linky a besoin d'accéder à tes photos pour les ajouter à tes annonces.",
         "NSLocationWhenInUseUsageDescription": "Linky utilise ta position pour te montrer les annonces près de toi et préremplir l'adresse de tes annonces."
       },

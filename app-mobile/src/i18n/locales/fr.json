@@ -657,7 +657,12 @@
     "publishFailed": "Publication échouée",
     "perMonthAbbr": " /mois",
     "perDayAbbr": " /jour",
-    "fieldDistance": "Distance au goudron (m)"
+    "fieldDistance": "Distance au goudron (m)",
+    "photoSourceTitle": "Ajouter des photos",
+    "photoSourceBody": "Prends une photo maintenant ou choisis-en dans ta galerie.",
+    "photoSourceCamera": "Prendre une photo",
+    "photoSourceGallery": "Choisir dans la galerie",
+    "photosCamPermDenied": "Autorisez l'appareil photo pour prendre une photo"
   },
   "seller": {
     "ordersTitle": "Commandes reçues",

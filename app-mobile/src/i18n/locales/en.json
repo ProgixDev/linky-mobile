@@ -657,7 +657,12 @@
     "rentalPeriodDay": "Daily",
     "fieldDescriptionPropPlaceholder": "Describe the property: highlights, neighborhood, condition…",
     "amenityCellar": "Cellar",
-    "perDayAbbr": " /day"
+    "perDayAbbr": " /day",
+    "photoSourceTitle": "Add photos",
+    "photoSourceBody": "Take a photo now or pick from your gallery.",
+    "photoSourceCamera": "Take a photo",
+    "photoSourceGallery": "Choose from gallery",
+    "photosCamPermDenied": "Allow the camera to take a photo"
   },
   "seller": {
     "ordersTitle": "Orders received",

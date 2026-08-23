@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { pickPhotos } from '../../../src/lib/pickPhotos';
 import { Camera, Film, Plus, Trash2, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -97,24 +98,28 @@ export default function PropertyPhotosRoute() {
   async function addPhotos() {
     if (uploading || propertyPhotos.length >= MAX_PHOTOS) return;
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        toast.show('Autorisez l’accès aux photos pour continuer', 'danger');
-        return;
-      }
-      // Multi-select: the picker caps at `remaining` so we never exceed MAX_PHOTOS.
+      // Camera OU galerie (client 2026-08-23) : l'agent photographie le bien
+      // pendant la visite. Meme porte que l'ecran produit — les deux ecrans
+      // dupliquaient le meme appel, les faire diverger sur une permission
+      // serait passe inapercu.
       const remaining = MAX_PHOTOS - propertyPhotos.length;
-      const picked = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images',
-        quality: 0.8,
-        allowsMultipleSelection: true,
-        selectionLimit: remaining,
+      const toUpload = await pickPhotos({
+        remaining,
+        labels: {
+          title: t('create.photoSourceTitle'),
+          body: t('create.photoSourceBody'),
+          camera: t('create.photoSourceCamera'),
+          gallery: t('create.photoSourceGallery'),
+          cancel: t('common.cancel'),
+          galleryDenied: t('create.photosPermDenied'),
+          cameraDenied: t('create.photosCamPermDenied'),
+        },
+        onDenied: (m) => toast.show(m, 'danger'),
       });
-      if (picked.canceled || picked.assets.length === 0) return;
+      if (toUpload.length === 0) return;
 
       setUploading(true);
       haptic.light();
-      const toUpload = picked.assets.slice(0, remaining);
       const uploaded: PropertyPhoto[] = [];
       for (const asset of toUpload) {
         try {

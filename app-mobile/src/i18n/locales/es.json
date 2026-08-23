@@ -657,7 +657,12 @@
     "publishFailed": "Error al publicar",
     "perMonthAbbr": " /mes",
     "perDayAbbr": " /día",
-    "fieldDistance": "Distancia a la carretera asfaltada (m)"
+    "fieldDistance": "Distancia a la carretera asfaltada (m)",
+    "photoSourceTitle": "Añadir fotos",
+    "photoSourceBody": "Haz una foto ahora o elige de tu galería.",
+    "photoSourceCamera": "Hacer una foto",
+    "photoSourceGallery": "Elegir de la galería",
+    "photosCamPermDenied": "Permite la cámara para hacer una foto"
   },
   "seller": {
     "ordersTitle": "Pedidos recibidos",

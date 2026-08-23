@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { pickPhotos } from '../../../src/lib/pickPhotos';
 import { Film, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -99,23 +100,25 @@ export default function CreatePhotosRoute() {
   async function handleAdd() {
     if (!canAdd) return;
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        show(t('create.photosPermDenied'), 'danger');
-        return;
-      }
-
-      // Multi-select: the picker caps at `remaining` so we never exceed MAX_PHOTOS.
-      const picked = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images',
-        quality: 0.8,
-        allowsMultipleSelection: true,
-        selectionLimit: remaining,
+      // Camera OU galerie (client 2026-08-23) : le vendeur photographie sa
+      // marchandise sur place. La galerie seule l'obligeait a quitter l'app.
+      // pickPhotos gere le choix, les permissions et le plafond restant.
+      const toUpload = await pickPhotos({
+        remaining,
+        labels: {
+          title: t('create.photoSourceTitle'),
+          body: t('create.photoSourceBody'),
+          camera: t('create.photoSourceCamera'),
+          gallery: t('create.photoSourceGallery'),
+          cancel: t('common.cancel'),
+          galleryDenied: t('create.photosPermDenied'),
+          cameraDenied: t('create.photosCamPermDenied'),
+        },
+        onDenied: (m) => show(m, 'danger'),
       });
-      if (picked.canceled || picked.assets.length === 0) return;
+      if (toUpload.length === 0) return;
 
       setUploading(true);
-      const toUpload = picked.assets.slice(0, remaining);
       const uploaded: string[] = [];
       for (const asset of toUpload) {
         try {
