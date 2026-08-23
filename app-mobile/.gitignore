@@ -34,3 +34,13 @@ supabase/.temp/
 # a publier la cle de signature ; le depot a deja connu un incident de ce type.
 *.p8
 AuthKey_*
+
+# Cles de compte de service Google (FCM V1, Play Store). Ce sont des CLES
+# PRIVEES : elles autorisent l'envoi de notifications et la publication au nom
+# du projet. Elles vivent sur les serveurs EAS, jamais dans le depot — un secret
+# commite reste dans l'historique meme apres suppression.
+# Attention : `eas build` archive aussi des fichiers ignores par git, donc ne
+# pas les deposer dans ce dossier meme ignores.
+*firebase-adminsdk*.json
+*service-account*.json
+google-service-account*.json
