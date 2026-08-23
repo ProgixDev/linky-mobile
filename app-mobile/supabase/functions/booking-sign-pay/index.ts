@@ -108,11 +108,19 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
     throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
   }
 
-  // Stamp the tenant's signature (they held-to-sign before opening the page).
-  await sb.from('bookings').update({
-    tenant_signed_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).eq('id', bk.id);
-
+  // AUCUNE signature n'est apposee ici. Client 2026-08-22 : « il faut faire la
+  // signature APRES le paiement du client, pas avant ».
+  //
+  // Ce que faisait le code d'avant : il tamponnait tenant_signed_at au moment
+  // ou la page de paiement s'OUVRAIT. Un locataire qui refermait la page sans
+  // payer laissait donc un contrat portant sa signature et aucun paiement —
+  // exactement ce que le client a vu a l'ecran (« Signature locataire
+  // ✔ 21/08/2026 » sous « en attente du paiement »). Un contrat signe engage ;
+  // il ne doit pas exister avant que l'argent soit reellement encaisse.
+  //
+  // La signature est desormais posee par confirm_booking_payment, qui fait deja
+  // `tenant_signed_at = coalesce(tenant_signed_at, now())` a la confirmation du
+  // paiement (migration 20260707_02). Aucune migration necessaire : il suffisait
+  // de retirer le tampon anticipe.
   return { body: { booking_id: bk.id, payment_url: initResp.payment_url } };
 }));

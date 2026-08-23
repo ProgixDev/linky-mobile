@@ -17,7 +17,7 @@ export const BOOKING_STATUS_META: Record<string, {
   fg: (c: Colors) => string;
 }> = {
   requested: { label: 'En attente',        Icon: Clock, bg: (c) => c.accentSoft,  fg: (c) => c.accentText },
-  accepted:  { label: 'À signer & payer',  Icon: FileText, bg: (c) => c.primarySoft, fg: (c) => c.primaryDeep },
+  accepted:  { label: 'À payer',  Icon: FileText, bg: (c) => c.primarySoft, fg: (c) => c.primaryDeep },
   rejected:  { label: 'Refusée',           Icon: XIcon, bg: () => 'rgba(209,79,60,0.12)', fg: (c) => c.danger },
   cancelled: { label: 'Annulée',           Icon: XIcon, bg: (c) => c.bgSunken, fg: (c) => c.textMuted },
   paid:      { label: 'Payée — séquestre', Icon: Check, bg: (c) => c.primarySoft, fg: (c) => c.primaryDeep },
@@ -128,7 +128,7 @@ export function ContractView({ booking }: { booking: Booking }) {
         <ContractRow k="Caution (1 mois)" v={formatGNF(c.deposit_minor)} />
       ) : null}
       <ContractRow k="Frais de service (3%)" v={formatGNF(c.fees_minor)} />
-      <ContractRow k="Total à la signature" v={formatGNF(c.total_minor)} bold />
+      <ContractRow k="Total à payer" v={formatGNF(c.total_minor)} bold />
       <View style={{ height: 1, backgroundColor: colors.border }} />
       {c.clauses.map((cl, i) => (
         <Text key={i} style={{ fontSize: 11.5, color: colors.textMuted, lineHeight: 17, letterSpacing: 0 }}>
@@ -150,9 +150,12 @@ export function ContractView({ booking }: { booking: Booking }) {
               : 'En attente'
         }
       />
+      {/* Client 2026-08-22 : « la signature APRES le paiement, pas avant ». Le
+          libelle dit donc ce qui la declenchera, au lieu d'un « En attente »
+          muet qui laissait croire a une action manuelle oubliee. */}
       <ContractRow
         k="Signature locataire"
-        v={booking.tenantSignedAt ? `✔ ${new Date(booking.tenantSignedAt).toLocaleDateString('fr-FR')}` : 'En attente'}
+        v={booking.tenantSignedAt ? `✔ ${new Date(booking.tenantSignedAt).toLocaleDateString('fr-FR')}` : 'Après paiement'}
       />
     </View>
   );

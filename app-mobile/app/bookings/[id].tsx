@@ -40,9 +40,10 @@ export default function BookingDetailRoute() {
     if (payBusy) return;
     setPayBusy(true);
     try {
-      // Stamp the signature + get the Lengopay hosted page (Orange/MTN), then
-      // open it in the in-app WebView. On return we land back here; the cron
-      // flips the booking to 'paid' once the rail confirms, so we refetch.
+      // Ouvre la page Lengopay (Orange/MTN) dans la WebView interne. Aucune
+      // signature n'est posee ici : client 2026-08-22, « la signature APRES le
+      // paiement, pas avant ». C'est le cron qui, a la confirmation du rail,
+      // bascule la reservation en 'paid' ET appose la signature du locataire.
       const { payment_url } = await signPay.mutateAsync(booking.id);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`; /checkout/pay exists on disk (same cast as checkout/index + confirm).
       router.push({ pathname: '/checkout/pay', params: { url: payment_url, bookingId: booking.id } } as any);
@@ -94,7 +95,7 @@ export default function BookingDetailRoute() {
           <HoldToConfirmButton
             // Amount lives in the trust strip above — keeping it out of the
             // label stops the text from crowding the 56px pill.
-            label={payBusy ? 'Paiement en cours…' : 'Maintenir pour signer & payer'}
+            label={payBusy ? 'Paiement en cours…' : 'Maintenir pour payer'}
             onConfirm={onSignPay}
             disabled={payBusy}
           />
