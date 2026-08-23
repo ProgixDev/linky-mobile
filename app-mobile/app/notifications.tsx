@@ -272,7 +272,8 @@ function NotificationRow({ item }: { item: AppNotification }) {
         onPress={() => {
           if (canOpen) router.push(item.deeplink as never);
         }}
-        style={({ pressed }) => ({
+        android_ripple={{ color: colors.border }}
+        style={{
           flexDirection: 'row',
           gap: GAP,
           paddingVertical: 12,
@@ -280,8 +281,7 @@ function NotificationRow({ item }: { item: AppNotification }) {
           // coller en haut : avec des corps de 1 a 3 lignes, un alignement
           // haut donnait des pastilles a des hauteurs toutes differentes.
           alignItems: 'center',
-          opacity: pressed ? 0.65 : 1,
-        })}
+        }}
       >
         <View
           style={{

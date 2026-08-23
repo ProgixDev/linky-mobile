@@ -127,7 +127,7 @@ export default function ThemeSettingsRoute() {
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
                 accessibilityLabel={`${o.label}. ${o.sub}`}
-                style={({ pressed }) => [
+                style={[
                   {
                     borderRadius: 22,
                     borderWidth: selected ? 2 : 1,
@@ -142,7 +142,6 @@ export default function ThemeSettingsRoute() {
                     shadowOffset: { width: 0, height: 8 },
                     elevation: 6,
                   },
-                  pressed && { transform: [{ scale: 0.985 }] },
                 ]}
               >
                 {/* Preview */}

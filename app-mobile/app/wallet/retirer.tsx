@@ -9,6 +9,7 @@ import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
 import { Chip } from '../../src/components/primitives/Chip';
 import { TopBar } from '../../src/components/nav/TopBar';
+import { Image } from 'expo-image';
 import { StickyBottom } from '../../src/components/nav/StickyBottom';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { Input } from '../../src/components/primitives/Input';
@@ -25,9 +26,9 @@ type Operator = 'Orange Money' | 'MTN Mobile Money';
 
 // Brand tints for the two rails so the picker reads at a glance (was a generic
 // grey phone icon for both — visually identical, easy to mis-tap).
-const OPERATORS: { id: Operator; short: string; tint: string }[] = [
-  { id: 'Orange Money', short: 'Orange', tint: '#FF7900' },
-  { id: 'MTN Mobile Money', short: 'MTN', tint: '#FFCC00' },
+const OPERATORS: { id: Operator; short: string; tint: string; logo: number }[] = [
+  { id: 'Orange Money', short: 'Orange', tint: '#FF7900', logo: require('../../assets/images/pay-orange-money.png') },
+  { id: 'MTN Mobile Money', short: 'MTN', tint: '#FFCC00', logo: require('../../assets/images/pay-mtn-momo.png') },
 ];
 
 const QUICK_AMOUNTS = [50_000, 100_000, 200_000, 500_000];
@@ -65,7 +66,8 @@ function OperatorRow({
       accessibilityRole="radio"
       accessibilityState={{ selected: active }}
       accessibilityLabel={op.id}
-      style={({ pressed }) => ({
+      android_ripple={{ color: colors.border }}
+      style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
@@ -73,20 +75,23 @@ function OperatorRow({
         paddingVertical: 14,
         borderBottomWidth: divider ? 1 : 0,
         borderBottomColor: colors.border,
-        backgroundColor: pressed ? colors.bg : colors.card,
-      })}
+        backgroundColor: colors.card,
+      }}
     >
       <View
         style={{
           width: 38,
           height: 38,
           borderRadius: 10,
-          backgroundColor: op.tint,
+          // Fond blanc : les marques des operateurs sont dessinees pour un fond
+          // clair, la fleche Orange disparaitrait sur le theme sombre.
+          backgroundColor: '#FFFFFF',
+          overflow: 'hidden',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <Text style={{ color: '#1A1205', fontSize: 12, fontWeight: '800', letterSpacing: 0.2 }}>{op.short}</Text>
+        <Image source={op.logo} style={{ width: '100%', height: '100%' }} contentFit="cover" />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{op.id}</Text>
@@ -301,15 +306,22 @@ export default function RetirerRoute() {
             <Chip label={t('wallet.retirer.allChip')} variant="soft" active={amount === balance} onPress={() => setAmount(balance)} />
           </View>
 
-          <Text
-            variant="caption"
-            tone="muted"
-            style={{ marginTop: 12, letterSpacing: 0, color: exceedsBalance ? colors.danger : undefined }}
-          >
-            {exceedsBalance
-              ? t('wallet.retirer.insufficient', { balance: formatGNF(balance) })
-              : t('wallet.retirer.remainingAfter', { remaining: formatGNF(balance - amount) })}
-          </Text>
+          {/* Tant qu'aucun montant n'est saisi, « il te restera X » enonce le
+              solde inchange : une phrase qui a l'air de repondre a une question
+              que personne n'a posee, et qui use la confiance sur un ecran ou
+              chaque chiffre doit se justifier. On ne l'affiche qu'une fois un
+              montant reellement demande. */}
+          {(amount > 0 || exceedsBalance) && (
+            <Text
+              variant="caption"
+              tone="muted"
+              style={{ marginTop: 12, letterSpacing: 0, color: exceedsBalance ? colors.danger : undefined }}
+            >
+              {exceedsBalance
+                ? t('wallet.retirer.insufficient', { balance: formatGNF(balance) })
+                : t('wallet.retirer.remainingAfter', { remaining: formatGNF(balance - amount) })}
+            </Text>
+          )}
 
           {/* Destination — operator + the number money is actually sent to */}
           <View style={{ marginTop: 22 }}>

@@ -32,7 +32,8 @@ export function SettingsRow({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({
+      android_ripple={{ color: colors.border }}
+      style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
@@ -40,8 +41,8 @@ export function SettingsRow({
         paddingVertical: 12,
         borderBottomWidth: divider ? 1 : 0,
         borderBottomColor: colors.border,
-        backgroundColor: pressed ? colors.bg : colors.card,
-      })}
+        backgroundColor: colors.card,
+      }}
     >
       {Icon && (
         <View
