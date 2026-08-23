@@ -345,19 +345,13 @@ export default function OrderRoute() {
               </Card>
             </View>
 
-            {/* Secondary fallback : hand-carry / no-livreur orders still
-                use the buyer-self-scan path (seller prints QR on package,
-                buyer scans here). Both confirms are mutually exclusive
-                via the order status gate — whichever fires first wins. */}
+            {/* Client 2026-08-22 : « le client ne scanne jamais un QR, il
+                genere seulement un QR pour sa commande ». Le bouton
+                « Scanner le QR du colis » qui se trouvait ici a donc ete
+                retire. L'acheteur AFFICHE, celui qui remet la marchandise
+                SCANNE — le livreur pour une livraison, le vendeur pour un
+                retrait (seller-confirm-pickup). */}
             <View style={{ marginTop: 14 }}>
-              <Button
-                variant="outline"
-                block
-                label={t('order.scanPackageQrCta')}
-                leading={<I.qr size={16} color={colors.text} />}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /scan typedRoute regenerates next start
-                onPress={() => router.push('/scan' as any)}
-              />
               <Button
                 variant="ghost"
                 size="sm"
@@ -371,53 +365,43 @@ export default function OrderRoute() {
           </>
         )}
 
-        {isSeller && inHandoffWindow && qrPayload && (
+        {/* VENDEUR — client 2026-08-22 : il ne montre plus un QR a scanner, il
+            SCANNE celui affiche sur le telephone de l'acheteur. C'est ce qui
+            garantit la remise : le code n'existe que sur l'ecran de l'acheteur,
+            donc le vendeur ne peut liberer les fonds qu'en sa presence. Si un
+            livreur est assigne, le serveur refuse (LIVREUR_ASSIGNED) — c'est
+            lui qui confirme. Le QR affiche par le vendeur, vestige du chemin ou
+            l'acheteur scannait, a ete retire. */}
+        {isSeller && inHandoffWindow && (
           <View style={{ marginTop: 18 }}>
             <MicroLabel label={t('order.deliveryCodeLabel')} />
             <Card padding={20}>
-              <View
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}
-              >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <I.qr size={16} color={colors.text} />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-                  {t('order.receiveCodeTitle')}
+                  Confirmer la remise
                 </Text>
               </View>
-              <View
-                style={{
-                  alignSelf: 'center',
-                  padding: 14,
-                  borderRadius: 14,
-                  backgroundColor: '#FFFFFF',
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
-                <QRCode value={qrPayload} size={180} backgroundColor="#FFFFFF" color="#0E1311" />
-              </View>
-              <Text
-                variant="micro"
-                tone="muted"
-                style={{
-                  alignSelf: 'center',
-                  marginTop: 10,
-                  letterSpacing: 0,
-                  textTransform: 'none',
-                }}
-              >
-                #{order.reference}
-              </Text>
               <Text
                 style={{
-                  marginTop: 14,
                   fontSize: 12.5,
                   color: colors.textMuted,
                   lineHeight: 18,
-                  textAlign: 'center',
+                  marginBottom: 14,
                 }}
               >
-                {t('order.receiveCodeBody')}
+                Au moment de remettre la commande, demande à l&apos;acheteur d&apos;ouvrir sa
+                commande dans Linky et scanne le QR affiché sur son écran. Les fonds sont
+                libérés immédiatement.
               </Text>
+              <Button
+                variant="primary"
+                block
+                label={"Scanner le QR de l'acheteur"}
+                leading={<I.qr size={16} color="#FFFFFF" />}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /scan typedRoute regenerates next start
+                onPress={() => router.push('/scan' as any)}
+              />
             </Card>
           </View>
         )}

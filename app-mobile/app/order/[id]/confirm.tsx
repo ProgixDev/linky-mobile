@@ -13,7 +13,7 @@ import { TopBar } from '../../../src/components/nav/TopBar';
 import { I } from '../../../src/icons/Icon';
 import { formatGNF } from '../../../src/lib/format';
 import { toToastMessage } from '../../../src/lib/api';
-import { useOrder, useConfirmReception } from '../../../src/data/queries';
+import { useOrder, useConfirmReception, useSellerConfirmPickup } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useAuth } from '../../../src/stores/auth';
 
@@ -38,6 +38,7 @@ export default function OrderConfirmRoute() {
   const { t } = useTranslation();
   const { data: order, isLoading } = useOrder(id);
   const confirm = useConfirmReception();
+  const sellerConfirm = useSellerConfirmPickup();
   const { show } = useToast();
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
 
@@ -46,8 +47,13 @@ export default function OrderConfirmRoute() {
   }
 
   const isBuyer = !!meId && meId === order.buyerId;
+  // Client 2026-08-22 : l'acheteur ne scanne plus. C'est desormais le VENDEUR
+  // qui arrive ici, en scannant le QR affiche sur le telephone de l'acheteur,
+  // pour les remises sans livreur. Le chemin acheteur reste accepte : un lien
+  // profond ancien pourrait encore y mener, et le serveur reste seul juge.
+  const isSeller = !!meId && meId === order.sellerId;
 
-  if (!isBuyer) {
+  if (!isBuyer && !isSeller) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
         <TopBar title={t('order.confirmHeader')} back />
@@ -155,7 +161,9 @@ export default function OrderConfirmRoute() {
             <View style={{ marginTop: 18 }}>
               <HoldToConfirmButton
                 onConfirm={() => {
-                  confirm.mutate(
+                  // Le vendeur passe par sa propre porte serveur : elle refuse
+                  // toute commande deja confiee a un livreur.
+                  (isSeller ? sellerConfirm : confirm).mutate(
                     { orderId: order.id, scanToken: token },
                     {
                       onSuccess: () => {

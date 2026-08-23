@@ -818,5 +818,8 @@ verify_jwt = false
 [functions.session-revoke]
 verify_jwt = false
 
+[functions.seller-confirm-pickup]
+verify_jwt = false
+
 [functions.place-orders-batch]
 verify_jwt = false

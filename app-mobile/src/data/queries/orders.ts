@@ -305,6 +305,30 @@ export function useConfirmReception() {
   });
 }
 
+// Le VENDEUR confirme une remise en scannant le QR affiche par l'acheteur.
+// Client 2026-08-22 : l'acheteur ne scanne plus jamais rien. Ce chemin couvre
+// les remises SANS livreur (retrait en boutique, portage a la main) ; quand un
+// livreur est assigne, c'est lui qui confirme depuis l'app livreur, et le
+// serveur refuse ici avec LIVREUR_ASSIGNED.
+export function useSellerConfirmPickup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: ConfirmReceptionInput): Promise<void> => {
+      await apiPost<{ order_status: string }>({
+        path: '/seller-confirm-pickup',
+        body: { order_id: input.orderId, scan_token: input.scanToken },
+      });
+    },
+    onSuccess: (_res, input) => {
+      qc.invalidateQueries({ queryKey: ['order', input.orderId] });
+      qc.invalidateQueries({ queryKey: ['seller-orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders'] });
+      qc.invalidateQueries({ queryKey: ['my-orders-infinite'] });
+      qc.invalidateQueries({ queryKey: ['wallet'] });
+    },
+  });
+}
+
 export type DisputeReason = 'damaged' | 'wrong' | 'not_received';
 
 export interface DisputeOrderInput {

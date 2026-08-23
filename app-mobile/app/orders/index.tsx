@@ -18,7 +18,6 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
-import { I } from '../../src/icons/Icon';
 import { haptic } from '../../src/lib/haptics';
 import { useMyOrders } from '../../src/data/queries';
 import { formatGNF } from '../../src/lib/format';
@@ -75,30 +74,9 @@ export default function OrdersIndex() {
         <ScreenHeader
           title={t('orders.title')}
           subtitle={t('orders.subtitle')}
-          trailing={
-            <Pressable
-              onPress={() => {
-                haptic.light();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- new route, regenerates on next expo start
-                router.push('/scan' as any);
-              }}
-              accessibilityLabel={t('orders.scanQr')}
-              style={{
-                height: 40,
-                paddingHorizontal: 14,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.card,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <I.qr size={14} color={colors.text} />
-              <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.text }}>{t('orders.scan')}</Text>
-            </Pressable>
-          }
+          /* Client 2026-08-22 : plus aucun scanner cote acheteur. Il AFFICHE
+             son QR sur l'ecran de sa commande ; c'est le livreur — ou le
+             vendeur pour un retrait — qui le scanne. */
         />
 
         {/* Filter chips */}

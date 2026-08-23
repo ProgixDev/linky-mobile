@@ -43,7 +43,7 @@ export default function ScanRoute() {
       // knows to ask the seller for a freshly-printed code rather than think
       // the scanner is broken.
       if (isObsoleteQr(data)) {
-        setError("Ce QR est obsolète. Demande au vendeur de générer un nouveau code.");
+        setError("Ce QR est obsolète. Demande au client de rouvrir sa commande dans Linky.");
       } else {
         setError('Ce QR ne correspond pas à une commande Linky.');
       }
@@ -70,7 +70,7 @@ export default function ScanRoute() {
           Autorisez l&apos;appareil photo
         </Text>
         <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', lineHeight: 19 }}>
-          Linky a besoin d&apos;accéder à la caméra pour scanner le QR code collé sur le colis.
+          Linky a besoin d&apos;accéder à la caméra pour scanner le QR affiché par le client.
         </Text>
         <Button variant="primary" block label="Autoriser" onPress={() => requestPermission()} />
         <Button
