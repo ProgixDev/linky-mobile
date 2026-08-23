@@ -1212,9 +1212,12 @@
       "orangeMoneyHint": "Available very soon",
       "mtnMoney": "MTN Mobile Money",
       "mtnMoneyHint": "Available very soon",
-      "mobileMoneyNote": "Orange Money and MTN Mobile Money are coming very soon. Card payments work today."
+      "mobileMoneyNote": "Payment opens in a secure page where you pick Orange Money or MTN, then confirm with the code sent by SMS.",
+      "mobileMoney": "Orange Money or MTN",
+      "mobileMoneyHint": "You pick your operator on the next step"
     },
-    "confirmOpenPayment": "Open the payment page"
+    "confirmOpenPayment": "Open the payment page",
+    "infoMobile": "You will receive an SMS code on your number to confirm the payment."
   },
   "orders": {
     "title": "My orders",

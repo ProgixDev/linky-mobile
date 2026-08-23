@@ -23,26 +23,6 @@ import { DELIVERY_FEE_GNF, type DeliveryMode } from '../../src/lib/delivery';
 import type { PaymentMethod, Product } from '../../src/data/types';
 import { useToast } from '../../src/components/feedback/Toast';
 
-interface MethodOption {
-  id: PaymentMethod;
-  name: string;
-  hint: string;
-  badge: string;
-  badgeColor: string;
-  /** Foreground of the fallback badge. MTN's mark is black-on-yellow; white
-   *  text on that yellow is barely readable and looks nothing like the brand. */
-  badgeFg?: string;
-  /** Real brand artwork. Drop the file in assets/images and point `logo` at it
-   *  (require('...')) — the tile then renders the logo instead of the lettered
-   *  badge, with no other change. Left unset until the client supplies the
-   *  official Orange Money / MTN MoMo files; approximating a trademark by hand
-   *  would look worse than the clean badge and misrepresent their brand. */
-  logo?: number;
-  iconKey?: IconKey;
-  /** Mobile-money rails go live once the client signs the Lengopay contract.
-   *  Until then they're shown but not selectable — card is the active path. */
-  comingSoon?: boolean;
-}
 
 // Google Pay test mode must follow the KEY, not a hardcoded flag — otherwise
 // the prod key swap would silently leave Google Pay in test mode.
@@ -53,33 +33,30 @@ const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').
 // 2026-07-07 — Lengopay merchant account live (licence verified against the
 // production API), rails un-dimmed: place-order returns the hosted
 // payment_url the buyer approves on.
-const METHOD_DEFS: { id: PaymentMethod; nameKey: string; hintKey: string; badge: string; badgeColor: string; badgeFg?: string; logo?: number; comingSoon?: boolean }[] = [
-  // Brand colours are the official ones: Orange #FF7900 (white mark), MTN
-  // #FFCB05 with a BLACK wordmark — MTN is never written in white.
-  { id: 'orange-money', nameKey: 'checkout.rails.orangeMoney', hintKey: 'checkout.rails.orangeMoneyHint', badge: 'OM', badgeColor: '#FF7900', logo: require('../../assets/images/pay-orange-money.png') },
-  { id: 'mtn-money', nameKey: 'checkout.rails.mtnMoney', hintKey: 'checkout.rails.mtnMoneyHint', badge: 'MTN', badgeColor: '#FFCB05', badgeFg: '#000000', logo: require('../../assets/images/pay-mtn-momo.png') },
+// Client 2026-08-23 : UNE seule carte pour le mobile money, portant les deux
+// logos. Choisir Orange ou MTN ici n'avait aucun effet — les deux ouvrent la
+// MEME page hebergee Lengopay, ou l'operateur se choisit vraiment. Le choix
+// etait donc pose deux fois, et le premier ne servait a rien : au mieux du
+// bruit, au pire un acheteur convaincu d'avoir deja designe son operateur.
+const MOBILE_MONEY_LOGOS: number[] = [
+  require('../../assets/images/pay-orange-money.png'),
+  require('../../assets/images/pay-mtn-momo.png'),
 ];
+
+// Valeur transmise au serveur. La page hebergee laissant le payeur choisir son
+// operateur, cette etiquette n'est qu'une reference portee par l'intention de
+// paiement — booking-sign-pay procede deja exactement ainsi.
+const MOBILE_MONEY_METHOD: PaymentMethod = 'orange-money';
 
 export default function CheckoutRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   // Default to mobile money — the real Guinea rail. Card (Stripe) is hidden
   // (client 2026-07-26: Guinean cards are refused by Stripe).
-  const [selected, setSelected] = useState<PaymentMethod>('orange-money');
-  const METHODS: MethodOption[] = useMemo(
-    () =>
-      METHOD_DEFS.map((m) => ({
-        id: m.id,
-        name: t(m.nameKey),
-        hint: t(m.hintKey),
-        badge: m.badge,
-        badgeColor: m.badgeColor,
-        badgeFg: m.badgeFg,
-        logo: m.logo,
-        comingSoon: m.comingSoon,
-      })),
-    [t],
-  );
+  const [selected, setSelected] = useState<PaymentMethod>(MOBILE_MONEY_METHOD);
+  // 'mtn-money' peut encore arriver d'un etat conserve par une version
+  // precedente : les deux valeurs designent la meme carte.
+  const mobileMoneySelected = selected === 'orange-money' || selected === 'mtn-money';
   // Client 2026-08-21 : le panier se regle en UNE fois, meme avec plusieurs
   // boutiques. On traite donc TOUJOURS le panier entier. Le parametre shopId
   // n'est plus emis nulle part ; on l'accepte encore pour qu'un lien profond
@@ -362,100 +339,59 @@ export default function CheckoutRoute() {
         )}
 
         <MicroLabel label={t('checkout.sectionMobileMoney')} />
-        <Card padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
-          {METHODS.map((m, i) => {
-            const sel = selected === m.id;
-            return (
-              <Pressable
-                key={m.id}
-                onPress={() => {
-                  if (m.comingSoon) {
-                    show(t('checkout.comingSoonToast'), 'info');
-                    return;
-                  }
-                  setSelected(m.id);
-                }}
-                style={{
-                  padding: 14,
-                  flexDirection: 'row',
-                  gap: 12,
-                  alignItems: 'center',
-                  borderBottomWidth: i < METHODS.length - 1 ? 1 : 0,
-                  borderBottomColor: colors.border,
-                  opacity: m.comingSoon ? 0.55 : 1,
-                }}
-              >
-                {m.logo ? (
-                  // Artwork fills the tile edge to edge (client 2026-08-07) —
-                  // no inner padding, `cover` rather than `contain`. Both files
-                  // are square, so cover crops nothing. `overflow: hidden` is
-                  // what keeps the corners rounded once the image bleeds out.
-                  // The white ground still shows through any transparency:
-                  // operator logos are drawn for light backgrounds and the
-                  // Orange mark would otherwise vanish on the dark theme.
+        <Pressable onPress={() => setSelected(MOBILE_MONEY_METHOD)}>
+          <Card padding={14} style={{ marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+              {/* Les deux logos cote a cote : c'est ce qui dit, sans phrase,
+                  que ce bouton couvre Orange ET MTN. Fond blanc conserve — les
+                  marques des operateurs sont dessinees pour un fond clair et la
+                  fleche Orange disparaitrait sur le theme sombre. */}
+              <View style={{ flexDirection: 'row' }}>
+                {MOBILE_MONEY_LOGOS.map((logo, i) => (
                   <View
+                    key={i}
                     style={{
                       width: 40,
                       height: 40,
                       borderRadius: 10,
                       backgroundColor: '#FFFFFF',
                       overflow: 'hidden',
+                      marginLeft: i === 0 ? 0 : -10,
+                      borderWidth: 1,
+                      borderColor: colors.border,
                     }}
                   >
-                    <Image
-                      source={m.logo}
-                      style={{ width: '100%', height: '100%' }}
-                      contentFit="cover"
-                    />
+                    <Image source={logo} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                   </View>
-                ) : (
-                  <View
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 10,
-                      backgroundColor: m.badgeColor,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text style={{ color: m.badgeFg ?? '#FFFFFF', fontWeight: '800', fontSize: m.badge.length > 2 ? 12 : 14, letterSpacing: 0.2 }}>
-                      {m.badge}
-                    </Text>
-                  </View>
+                ))}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.rails.mobileMoney')}</Text>
+                <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                  {t('checkout.rails.mobileMoneyHint')}
+                </Text>
+              </View>
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 999,
+                  backgroundColor: mobileMoneySelected ? colors.primary : 'transparent',
+                  borderWidth: mobileMoneySelected ? 0 : 1.5,
+                  borderColor: colors.borderStrong,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {mobileMoneySelected && (
+                  <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />
                 )}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600' }}>{m.name}</Text>
-                  <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', fontVariant: ['tabular-nums'] }}>
-                    {m.hint}
-                  </Text>
-                </View>
-                {m.comingSoon ? (
-                  <View style={{ paddingHorizontal: 10, height: 22, borderRadius: 999, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: colors.accentText }}>{t('checkout.comingSoonBadge')}</Text>
-                  </View>
-                ) : (
-                  <View
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 999,
-                      backgroundColor: sel ? colors.primary : 'transparent',
-                      borderWidth: sel ? 0 : 1.5,
-                      borderColor: colors.borderStrong,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {sel && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </Card>
+              </View>
+            </View>
+          </Card>
+        </Pressable>
 
-        <Text variant="micro" tone="muted" style={{ marginTop: -8, marginBottom: 16, paddingHorizontal: 4, letterSpacing: 0, textTransform: 'none', lineHeight: 15 }}>
+        <Text variant="micro" tone="muted" style={{ marginBottom: 16, paddingHorizontal: 4, letterSpacing: 0, textTransform: 'none', lineHeight: 15 }}>
           {t('checkout.rails.mobileMoneyNote')}
         </Text>
 
@@ -511,11 +447,7 @@ export default function CheckoutRoute() {
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
             <I.info size={16} color={colors.primary} />
             <Text variant="micro" tone="muted" style={{ flex: 1, lineHeight: 16, letterSpacing: 0, textTransform: 'none' }}>
-              {selected === 'card'
-                ? t('checkout.infoCard')
-                : selected === 'mtn-money'
-                  ? t('checkout.infoMobileMtn')
-                  : t('checkout.infoMobileOrange')}
+              {t('checkout.infoMobile')}
             </Text>
           </View>
         </Card>
