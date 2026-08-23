@@ -359,7 +359,12 @@
     "filterVisit": "Visitas",
     "filterBooking": "Reservas",
     "filterPromo": "Promos",
-    "markAllRead": "Marcar todo como leído"
+    "markAllRead": "Marcar todo como leído",
+    "timeNow": "Ahora mismo",
+    "timeMinutes": "Hace {{count}} min",
+    "timeHours": "Hace {{count}} h",
+    "timeYesterday": "Ayer",
+    "timeDays": "Hace {{count}} d"
   },
   "messages": {
     "title": "Mensajes",

@@ -359,7 +359,12 @@
     "filterVisit": "Visits",
     "filterBooking": "Bookings",
     "filterPromo": "Promos",
-    "markAllRead": "Mark all read"
+    "markAllRead": "Mark all read",
+    "timeNow": "Just now",
+    "timeMinutes": "{{count}} min ago",
+    "timeHours": "{{count}} h ago",
+    "timeYesterday": "Yesterday",
+    "timeDays": "{{count}} d ago"
   },
   "messages": {
     "title": "Messages",
