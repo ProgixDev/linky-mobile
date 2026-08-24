@@ -1087,7 +1087,9 @@
     "sellerSection": "Vendeur",
     "soldOut": "Indisponible",
     "reserved": "Réservé",
-    "related": "Vous pourriez aimer"
+    "related": "Vous pourriez aimer",
+    "outOfStockBadge": "RUPTURE DE STOCK",
+    "outOfStockToast": "Cet article est en rupture de stock."
   },
   "property": {
     "fallbackTitle": "Bien immobilier",

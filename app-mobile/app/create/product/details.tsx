@@ -126,7 +126,15 @@ export default function CreateProductDetailsRoute() {
                 <Input
                   label={t('create.fieldQuantity')}
                   value={String(state.quantity)}
-                  onChangeText={(txt) => state.set('quantity', Number(txt.replace(/\D/g, '')) || 1)}
+                  // `|| 1` reecrivait silencieusement le 0 en 1 : un vendeur qui
+                  // declarait « aucun exemplaire » se retrouvait avec un article
+                  // achetable. Un champ vide vaut 1 (on ne peut pas publier une
+                  // annonce sans rien a vendre), mais un 0 explicite est conserve
+                  // et l'annonce s'affiche en rupture.
+                  onChangeText={(txt) => {
+                    const digits = txt.replace(/\D/g, '');
+                    state.set('quantity', digits === '' ? 1 : Number(digits));
+                  }}
                   keyboardType="number-pad"
                 />
               </View>

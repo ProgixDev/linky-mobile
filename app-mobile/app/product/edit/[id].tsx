@@ -522,7 +522,17 @@ export default function ProductEditRoute() {
               onChangeText={(txt) => setStock(txt.replace(/\D/g, ''))}
               keyboardType="number-pad"
               placeholder="Illimitée"
-              helperText="Laisse vide pour ne pas limiter. L'acheteur ne pourra pas en commander plus."
+              // Le texte d'aide dit l'etat COURANT, pas la regle generale. Un
+              // champ vide vaut « illimite » et non « zero » : c'est exactement
+              // la confusion qui a fait croire a un article en rupture alors
+              // qu'il restait commandable (client 2026-08-24).
+              helperText={
+                stock.trim() === ''
+                  ? 'Vide = quantité illimitée. L’acheteur pourra en commander autant qu’il veut.'
+                  : Number(stock) === 0
+                    ? '0 = rupture de stock. L’article reste visible mais ne peut plus être commandé.'
+                    : `L’acheteur ne pourra pas en commander plus de ${Number(stock)}.`
+              }
             />
 
             <View>

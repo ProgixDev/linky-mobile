@@ -1087,7 +1087,9 @@
     "sellerSection": "Vendedor",
     "soldOut": "No disponible",
     "reserved": "Reservado",
-    "related": "Podría gustarle"
+    "related": "Podría gustarle",
+    "outOfStockBadge": "SIN EXISTENCIAS",
+    "outOfStockToast": "Este artículo está agotado."
   },
   "property": {
     "fallbackTitle": "Propiedad",

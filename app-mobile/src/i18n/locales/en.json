@@ -1087,7 +1087,9 @@
     "sellerSection": "Seller",
     "soldOut": "Unavailable",
     "reserved": "Reserved",
-    "related": "You might like"
+    "related": "You might like",
+    "outOfStockBadge": "OUT OF STOCK",
+    "outOfStockToast": "This item is out of stock."
   },
   "property": {
     "fallbackTitle": "Property",

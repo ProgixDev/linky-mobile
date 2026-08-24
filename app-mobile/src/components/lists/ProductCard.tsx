@@ -1,6 +1,7 @@
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { Badge } from '../primitives/Badge';
@@ -21,6 +22,7 @@ export function ProductCard({
   compact?: boolean;
 }) {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const isFav = useFavorites((s) => s.productIds.has(product.id));
   const toggleFav = useFavorites((s) => s.toggleProduct);
   const sold = product.status === 'sold';
@@ -35,7 +37,7 @@ export function ProductCard({
   const onQuickAdd = () => {
     haptic.light();
     if (outOfStock) {
-      toast.show('Cet article est en rupture de stock.', 'info');
+      toast.show(t('product.outOfStockToast'), 'info');
       return;
     }
     addToCart(product.id, product.shopId);
@@ -140,19 +142,37 @@ export function ProductCard({
             paiement. Distinct de VENDU, qui est un statut pose a la main par le
             vendeur — ici l'article peut revenir des qu'il reapprovisionne. */}
         {!sold && outOfStock && (
-          <View
-            style={{
-              position: 'absolute',
-              top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.45)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontWeight: '700', letterSpacing: 1, fontSize: 15 }}>
-              RUPTURE
-            </Text>
-          </View>
+          <>
+            {/* Voile sombre pour eteindre la photo, ET une etiquette ROUGE
+                (client 2026-08-24). Le voile seul se confondait avec une image
+                sombre ; le rouge dit sans ambiguite que l'article n'est pas
+                achetable. Distinct de VENDU, statut pose a la main par le
+                vendeur — ici l'article revient des qu'il reapprovisionne. */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.45)',
+              }}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                top: 8,
+                left: 8,
+                paddingHorizontal: 8,
+                height: 22,
+                borderRadius: 6,
+                backgroundColor: colors.danger,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 10, letterSpacing: 0.4 }}>
+                {t('product.outOfStockBadge')}
+              </Text>
+            </View>
+          </>
         )}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
