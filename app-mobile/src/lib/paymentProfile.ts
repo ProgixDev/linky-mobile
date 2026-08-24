@@ -18,9 +18,16 @@
 //     qui paie pour la famille : numero etranger et carte etrangere vont
 //     ensemble.
 //
-// REPLI SUR LA GUINEE quand le numero manque : c'est le cas majoritaire, et une
-// carte guineenne refusee par Stripe est un echec bien plus deroutant que
-// l'inverse.
+// AUCUN NUMERO = ETRANGER, et ce n'est pas un repli arbitraire. L'application
+// pose deja la question a la connexion, dans ses propres mots :
+//     onboarding.authChoice.phoneTitle = « I'm in Guinea »  (Phone & Mobile Money)
+//     onboarding.authChoice.emailTitle = « I'm abroad »     (Email & Card)
+// Un compte sans numero n'a donc qu'une seule origine possible : le parcours
+// email, celui que l'ecran nomme « I'm abroad ». Le classer en Guinee
+// contredirait ce que l'utilisateur a lui-meme declare en s'inscrivant.
+//
+// Mesure faite le 2026-08-24 : 15 comptes sur 20 n'ont AUCUN numero. Un repli
+// sur la Guinee se serait donc trompe sur trois comptes sur quatre.
 import { useMemo } from 'react';
 import { useMyPhones } from '../data/queries/phones';
 
@@ -31,7 +38,8 @@ export const GUINEA_DIAL_CODE = '+224';
 
 /** Regle pure, testable sans hook ni reseau. */
 export function profileFromPhone(e164: string | null | undefined): PaymentProfile {
-  if (!e164) return 'guinea';
+  // Pas de numero = inscription par email = parcours « I'm abroad ».
+  if (!e164) return 'abroad';
   // On normalise : certains enregistrements anciens portent des espaces.
   const n = e164.replace(/\s/g, '');
   return n.startsWith(GUINEA_DIAL_CODE) ? 'guinea' : 'abroad';
