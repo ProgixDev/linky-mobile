@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 
@@ -61,10 +60,13 @@ function ToastItem({ item, onDismiss }: { item: ToastMsg; onDismiss: () => void 
   const bg =
     item.tone === 'success' ? colors.success : item.tone === 'danger' ? colors.danger : colors.text;
   const fg = item.tone === 'info' ? colors.bg : '#FFFFFF';
+  // Client 2026-08-25 : « arreter l'animation d'erreur pour tout type
+  // d'alerte, definitivement ». C'etait le glissement d'entree/sortie
+  // (SlideInDown/SlideOutDown) sur ce meme composant partage par TOUTES les
+  // alertes de l'app — succes, info, erreur. Retire ici une fois : elles
+  // apparaissent et disparaissent desormais sans transition, partout.
   return (
-    <Animated.View
-      entering={SlideInDown.springify().damping(15)}
-      exiting={SlideOutDown.duration(180)}
+    <View
       style={{
         backgroundColor: bg,
         paddingVertical: 12,
@@ -73,7 +75,7 @@ function ToastItem({ item, onDismiss }: { item: ToastMsg; onDismiss: () => void 
       }}
     >
       <Text style={{ color: fg, fontSize: 13 }}>{item.message}</Text>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -83,5 +85,3 @@ export function useToast() {
   return c;
 }
 
-// Re-export for fade animations used elsewhere
-export { FadeIn, FadeOut };
