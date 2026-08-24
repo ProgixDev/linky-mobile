@@ -60,8 +60,17 @@ const MOBILE_MONEY_METHOD: PaymentMethod = 'orange-money';
 // paiement » parce que personne ne nous previent. Un paiement qui echoue
 // franchement est mille fois preferable.
 //
-// Passer a true UNIQUEMENT une fois l'adresse confirmee cote Stripe.
-const CARD_RAIL_ENABLED = false;
+// VERIFIE le 2026-08-24 — chaine prouvee de bout en bout :
+//   * la destination a ete CREEE dans Stripe. Il n'y en avait AUCUNE : le rail
+//     carte n'avait donc jamais pu fonctionner sur ce compte, et ce n'etait pas
+//     une adresse perimee qu'on aurait oublie de corriger ;
+//   * signature correcte -> 200, evenement achemine ;
+//   * signature falsifiee -> 401 ;
+//   * signature valide mais CORPS MODIFIE -> 401, ce qui prouve que la
+//     signature couvre le contenu et pas seulement sa presence.
+// La cle secrete deployee est bien une cle sk_live_ (deduit du controle
+// livemode de la fonction, qui a ignore un evenement marque non-reel).
+const CARD_RAIL_ENABLED = true;
 
 export default function CheckoutRoute() {
   const { colors } = useTheme();
