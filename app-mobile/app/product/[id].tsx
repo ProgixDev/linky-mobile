@@ -31,6 +31,7 @@ import { useProduct, useProducts, useToggleFavorite, useTrackView, useFindOrCrea
 import { useShop } from '../../src/data/queries/shops';
 import { useFavorites } from '../../src/stores/favorites';
 import { useCart } from '../../src/stores/cart';
+import { useStockGate } from '../../src/lib/stockGate';
 import { useAuth } from '../../src/stores/auth';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
@@ -66,6 +67,10 @@ export default function ProductDetailRoute() {
   }, [id]);
   const addToCart = useCart((s) => s.add);
   const replaceCart = useCart((s) => s.replaceWith);
+  // Declare AVANT le retour anticipe de la ligne 97 : un hook ne peut pas etre
+  // appele conditionnellement. Tant que le produit charge, la garde porte sur
+  // un identifiant vide et laisse passer — sans effet, l'ecran n'est pas rendu.
+  const gate = useStockGate({ id: product?.id ?? '', stock: product?.stock });
   const { show } = useToast();
   const [photoIdx, setPhotoIdx] = useState(0);
   const { data: shop } = useShop(product?.shopId);
@@ -713,7 +718,19 @@ export default function ProductDetailRoute() {
                   // Le panier accepte plusieurs boutiques depuis 2026-08-13. Une
                   // COMMANDE reste mono-boutique (1 escrow = 1 vendeur = 1 QR) :
                   // l'ecran du panier regroupe par boutique et on paie un groupe
-                  // a la fois. Il n'y a donc plus rien a refuser ici.
+                  // a la fois. Il n'y a donc rien a refuser POUR CETTE raison.
+                  //
+                  // En revanche cet ecran n'avait AUCUNE garde de stock — ni
+                  // rupture, ni plafond — alors que la carte de liste en avait
+                  // une. Les deux chemins avaient diverge (client 2026-08-24).
+                  if (gate.outOfStock) {
+                    show(t('product.outOfStockToast'), 'info');
+                    return;
+                  }
+                  if (gate.capReached) {
+                    show(t('product.stockCapToast', { count: gate.declared ?? 0 }), 'info');
+                    return;
+                  }
                   addToCart(product.id, product.shopId);
                   show(t('product.addedToCart'), 'success');
                 }}
@@ -721,7 +738,7 @@ export default function ProductDetailRoute() {
                   flex: 1,
                   height: 52,
                   borderRadius: 999,
-                  backgroundColor: colors.primary,
+                  backgroundColor: gate.canAdd ? colors.primary : colors.borderStrong,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',

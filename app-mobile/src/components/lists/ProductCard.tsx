@@ -10,6 +10,7 @@ import { formatGNF } from '../../lib/format';
 import { haptic } from '../../lib/haptics';
 import { useFavorites } from '../../stores/favorites';
 import { useCart } from '../../stores/cart';
+import { useStockGate } from '../../lib/stockGate';
 import { useToast } from '../feedback/Toast';
 import { useDataSaverImageProps } from '../../lib/dataSaver';
 import type { Product } from '../../data/types';
@@ -29,15 +30,24 @@ export function ProductCard({
   const imgProps = useDataSaverImageProps();
   const addToCart = useCart((s) => s.add);
   const toast = useToast();
-  const outOfStock = product.stock != null && product.stock <= 0;
+  // Le stock ET ce qui est deja au panier : sans le second, chaque appui
+  // ajoutait un exemplaire de plus, sans limite.
+  const gate = useStockGate(product);
+  const outOfStock = gate.outOfStock;
 
   /** Ajout rapide depuis la liste (client 2026-08-13). Le panier accepte
    *  desormais plusieurs boutiques : plus aucun refus ici, le regroupement et le
    *  paiement boutique par boutique se font a l'ecran du panier. */
   const onQuickAdd = () => {
     haptic.light();
-    if (outOfStock) {
+    if (gate.outOfStock) {
       toast.show(t('product.outOfStockToast'), 'info');
+      return;
+    }
+    // Deja au maximum disponible : on le DIT, avec le chiffre. Un bouton qui
+    // ne fait rien sans explication se lit comme une panne.
+    if (gate.capReached) {
+      toast.show(t('product.stockCapToast', { count: gate.declared ?? 0 }), 'info');
       return;
     }
     addToCart(product.id, product.shopId);
@@ -90,6 +100,28 @@ export function ProductCard({
         {product.boosted && (
           <View style={{ position: 'absolute', top: 8, left: 8 }}>
             <Badge tone="boost" />
+          </View>
+        )}
+        {/* « Plus que N ». Sans ce reperage, le bouton d'ajout devient gris sans
+            raison visible et se lit comme une panne. On ne l'affiche qu'a stock
+            faible : au-dela, le chiffre n'apprend rien et encombre la vignette. */}
+        {!gate.outOfStock && gate.declared !== null && gate.declared <= 5 && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 8,
+              left: 8,
+              paddingHorizontal: 7,
+              height: 20,
+              borderRadius: 6,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 9.5, letterSpacing: 0.3 }}>
+              {t('product.stockLeft', { count: gate.declared })}
+            </Text>
           </View>
         )}
         {!product.boosted && product.condition && (
@@ -219,11 +251,11 @@ export function ProductCard({
               borderRadius: 999,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: outOfStock ? colors.bgSunken : colors.primary,
+              backgroundColor: gate.canAdd ? colors.primary : colors.bgSunken,
               marginTop: 2,
             }}
           >
-            <I.cart size={16} color={outOfStock ? colors.textFaint : '#FFFFFF'} />
+            <I.cart size={16} color={gate.canAdd ? '#FFFFFF' : colors.textFaint} />
           </Pressable>
         )}
       </View>

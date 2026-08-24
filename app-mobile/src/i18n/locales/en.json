@@ -1089,7 +1089,9 @@
     "reserved": "Reserved",
     "related": "You might like",
     "outOfStockBadge": "OUT OF STOCK",
-    "outOfStockToast": "This item is out of stock."
+    "outOfStockToast": "This item is out of stock.",
+    "stockCapToast": "Only {{count}} available — it’s already in your cart.",
+    "stockLeft": "Only {{count}} left"
   },
   "property": {
     "fallbackTitle": "Property",

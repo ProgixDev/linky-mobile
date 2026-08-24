@@ -1089,7 +1089,9 @@
     "reserved": "Reservado",
     "related": "Podría gustarle",
     "outOfStockBadge": "SIN EXISTENCIAS",
-    "outOfStockToast": "Este artículo está agotado."
+    "outOfStockToast": "Este artículo está agotado.",
+    "stockCapToast": "Solo quedan {{count}} — ya está en tu carrito.",
+    "stockLeft": "Quedan {{count}}"
   },
   "property": {
     "fallbackTitle": "Propiedad",

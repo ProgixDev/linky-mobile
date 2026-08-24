@@ -1089,7 +1089,9 @@
     "reserved": "Réservé",
     "related": "Vous pourriez aimer",
     "outOfStockBadge": "RUPTURE DE STOCK",
-    "outOfStockToast": "Cet article est en rupture de stock."
+    "outOfStockToast": "Cet article est en rupture de stock.",
+    "stockCapToast": "Il n’en reste que {{count}} — tu l’as déjà dans ton panier.",
+    "stockLeft": "Plus que {{count}}"
   },
   "property": {
     "fallbackTitle": "Bien immobilier",
