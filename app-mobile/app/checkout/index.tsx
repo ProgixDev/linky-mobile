@@ -20,6 +20,7 @@ import { apiPost } from '../../src/lib/api';
 import { usePlaceOrder, usePlaceOrdersBatch, useWallet } from '../../src/data/queries';
 import { useMyAddresses } from '../../src/data/queries/addresses';
 import { DELIVERY_FEE_GNF, type DeliveryMode } from '../../src/lib/delivery';
+import { usePaymentProfile } from '../../src/lib/paymentProfile';
 import type { PaymentMethod, Product } from '../../src/data/types';
 import { useToast } from '../../src/components/feedback/Toast';
 
@@ -48,6 +49,20 @@ const MOBILE_MONEY_LOGOS: number[] = [
 // paiement — booking-sign-pay procede deja exactement ainsi.
 const MOBILE_MONEY_METHOD: PaymentMethod = 'orange-money';
 
+// ─── Rail CARTE — pose mais ETEINT (client 2026-08-24) ──────────────────────
+// Le compte Stripe existe (americain, cle pk_live active), le code du paiement
+// carte est intact et le webhook repond correctement a nos sondes. Il manque UNE
+// chose : la certitude que l'adresse enregistree DANS le tableau de bord Stripe
+// pointe sur le serveur actuel et non sur le projet decommissionne en juillet.
+//
+// Tant que ce n'est pas verifie, activer ce bouton produirait le pire scenario
+// possible : Stripe encaisse reellement, et la commande reste « en attente de
+// paiement » parce que personne ne nous previent. Un paiement qui echoue
+// franchement est mille fois preferable.
+//
+// Passer a true UNIQUEMENT une fois l'adresse confirmee cote Stripe.
+const CARD_RAIL_ENABLED = false;
+
 export default function CheckoutRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -57,6 +72,12 @@ export default function CheckoutRoute() {
   // 'mtn-money' peut encore arriver d'un etat conserve par une version
   // precedente : les deux valeurs designent la meme carte.
   const mobileMoneySelected = selected === 'orange-money' || selected === 'mtn-money';
+  // Guinee ou etranger, deduit de l'indicatif du numero principal. Decide quel
+  // rail carte proposer : Stripe a l'etranger, Carte/Wallet Lengopay en Guinee.
+  const { profile: payProfile, loading: payProfileLoading } = usePaymentProfile();
+  // Le rail Lengopay carte n'est pas encore integre : on ne propose donc la
+  // carte qu'aux profils etrangers, et seulement si le rail est allume.
+  const showCardRail = CARD_RAIL_ENABLED && !payProfileLoading && payProfile === 'abroad';
   // Client 2026-08-21 : le panier se regle en UNE fois, meme avec plusieurs
   // boutiques. On traite donc TOUJOURS le panier entier. Le parametre shopId
   // n'est plus emis nulle part ; on l'accepte encore pour qu'un lien profond
@@ -336,6 +357,57 @@ export default function CheckoutRoute() {
               </View>
             </Card>
           </Pressable>
+        )}
+
+        {/* CARTE — visible seulement pour un profil etranger, et seulement si le
+            rail est allume. Un profil guineen ne la voit pas : le rail
+            Carte/Wallet Lengopay n'est pas encore integre, et proposer un bouton
+            qui echouerait repeterait l'erreur du « paiement par carte fonctionne
+            deja » qu'on vient tout juste de retirer. */}
+        {showCardRail && (
+          <>
+            <MicroLabel label={t('checkout.sectionCard')} />
+            <Pressable onPress={() => setSelected('card')}>
+              <Card padding={14} style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      backgroundColor: colors.bgSunken,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <I.card size={18} color={colors.text} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.cardName')}</Text>
+                    <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                      {t('checkout.cardHint')}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 999,
+                      backgroundColor: selected === 'card' ? colors.primary : 'transparent',
+                      borderWidth: selected === 'card' ? 0 : 1.5,
+                      borderColor: colors.borderStrong,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {selected === 'card' && (
+                      <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />
+                    )}
+                  </View>
+                </View>
+              </Card>
+            </Pressable>
+          </>
         )}
 
         <MicroLabel label={t('checkout.sectionMobileMoney')} />

@@ -1226,7 +1226,10 @@
       "mobileMoneyHint": "Tu choisis ton opérateur à l’étape suivante"
     },
     "confirmOpenPayment": "Ouvrir la page de paiement",
-    "infoMobile": "Tu recevras un code SMS sur ton numéro pour confirmer le paiement."
+    "infoMobile": "Tu recevras un code SMS sur ton numéro pour confirmer le paiement.",
+    "sectionCard": "CARTE BANCAIRE",
+    "cardName": "Carte bancaire",
+    "cardHint": "Visa, Mastercard — paiement sécurisé"
   },
   "orders": {
     "title": "Mes commandes",
