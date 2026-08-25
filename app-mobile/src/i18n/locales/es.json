@@ -1230,7 +1230,11 @@
     "sectionCard": "TARJETA",
     "cardName": "Tarjeta bancaria",
     "cardHint": "Visa, Mastercard — pago seguro",
-    "payCanceled": "Pago cancelado."
+    "payCanceled": "Pago cancelado.",
+    "payerPhoneLabel": "Número para el pago",
+    "payerPhonePlaceholder": "6XX XX XX XX",
+    "payerPhoneHint": "No hay número en tu cuenta — indica el que recibirá el código de confirmación.",
+    "payerPhoneInvalid": "Número inválido (9 dígitos, empieza por 6)."
   },
   "orders": {
     "title": "Mis pedidos",

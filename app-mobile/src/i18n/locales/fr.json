@@ -1230,7 +1230,11 @@
     "sectionCard": "CARTE BANCAIRE",
     "cardName": "Carte bancaire",
     "cardHint": "Visa, Mastercard — paiement sécurisé",
-    "payCanceled": "Paiement annulé."
+    "payCanceled": "Paiement annulé.",
+    "payerPhoneLabel": "Numéro pour le paiement",
+    "payerPhonePlaceholder": "6XX XX XX XX",
+    "payerPhoneHint": "Aucun numéro sur ton compte — indique celui qui recevra le code de confirmation.",
+    "payerPhoneInvalid": "Numéro invalide (9 chiffres, commence par 6)."
   },
   "orders": {
     "title": "Mes commandes",

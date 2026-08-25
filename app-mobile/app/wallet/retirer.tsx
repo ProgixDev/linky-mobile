@@ -13,6 +13,7 @@ import { Image } from 'expo-image';
 import { StickyBottom } from '../../src/components/nav/StickyBottom';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { Input } from '../../src/components/primitives/Input';
+import { normalizeGnPhone, formatGnPhone, isValidGnPhone } from '../../src/lib/gnPhone';
 import { EmptyState, ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { I } from '../../src/icons/Icon';
@@ -33,16 +34,8 @@ const OPERATORS: { id: Operator; short: string; tint: string; logo: number }[] =
 
 const QUICK_AMOUNTS = [50_000, 100_000, 200_000, 500_000];
 
-// Guinea mobile numbers are 9 digits beginning with 6. Strip a pasted +224 /
-// 224 country code so the user can paste from anywhere.
-function normalizeGnPhone(input: string): string {
-  let d = input.replace(/\D/g, '');
-  if (d.startsWith('224')) d = d.slice(3);
-  return d.slice(0, 9);
-}
-function formatGnPhone(d: string): string {
-  return [d.slice(0, 3), d.slice(3, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(' ');
-}
+// normalizeGnPhone / formatGnPhone deplaces dans src/lib/gnPhone.ts —
+// un second appelant en avait besoin le 2026-08-25.
 
 function OperatorRow({
   op,
@@ -148,7 +141,7 @@ export default function RetirerRoute() {
   }, [primaryPhone?.e164]);
 
   const balance = walletQuery.data?.balanceGnf ?? 0;
-  const phoneValid = phone.length === 9 && phone.startsWith('6');
+  const phoneValid = isValidGnPhone(phone);
   const exceedsBalance = amount > balance;
   const canSubmit = amount > 0 && !exceedsBalance && phoneValid && !withdraw.isPending;
 

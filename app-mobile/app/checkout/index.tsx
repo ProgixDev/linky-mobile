@@ -13,6 +13,7 @@ import { Button } from '../../src/components/primitives/Button';
 import { TopBar } from '../../src/components/nav/TopBar';
 import { StickyBottom } from '../../src/components/nav/StickyBottom';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
+import { Input } from '../../src/components/primitives/Input';
 import { I, type IconKey } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useCart } from '../../src/stores/cart';
@@ -21,6 +22,7 @@ import { usePlaceOrder, usePlaceOrdersBatch, useWallet, useCancelPendingPayment 
 import { useMyAddresses } from '../../src/data/queries/addresses';
 import { DELIVERY_FEE_GNF, type DeliveryMode } from '../../src/lib/delivery';
 import { usePaymentProfile } from '../../src/lib/paymentProfile';
+import { normalizeGnPhone, formatGnPhone, isValidGnPhone } from '../../src/lib/gnPhone';
 import type { PaymentMethod, Product } from '../../src/data/types';
 import { useToast } from '../../src/components/feedback/Toast';
 
@@ -83,7 +85,15 @@ export default function CheckoutRoute() {
   const mobileMoneySelected = selected === 'orange-money' || selected === 'mtn-money';
   // Guinee ou etranger, deduit de l'indicatif du numero principal. Decide quel
   // rail carte proposer : Stripe a l'etranger, Carte/Wallet Lengopay en Guinee.
-  const { profile: payProfile, loading: payProfileLoading } = usePaymentProfile();
+  const { profile: payProfile, loading: payProfileLoading, e164: onFilePhone } = usePaymentProfile();
+  // Un compte inscrit par email n'a AUCUN numero enregistre — 15 comptes sur
+  // 20, mesure le 2026-08-24. Le serveur exige pourtant un payer_phone pour
+  // router Orange/MTN : sans ce champ, ces comptes recevaient un rejet sec
+  // (« Numero de paiement requis ») sans aucun moyen d'agir dessus.
+  const needsPayerPhone = !payProfileLoading && !onFilePhone;
+  const [payerPhoneInput, setPayerPhoneInput] = useState('');
+  const payerPhoneValid = !needsPayerPhone || isValidGnPhone(payerPhoneInput);
+  const payerPhoneE164 = payerPhoneInput ? `+224${payerPhoneInput}` : undefined;
   // Le rail Lengopay carte n'est pas encore integre : on ne propose donc la
   // carte qu'aux profils etrangers, et seulement si le rail est allume.
   const showCardRail = CARD_RAIL_ENABLED && !payProfileLoading && payProfile === 'abroad';
@@ -516,6 +526,28 @@ export default function CheckoutRoute() {
           {t('checkout.rails.mobileMoneyNote')}
         </Text>
 
+        {/* Compte sans numero (inscrit par email). Sans ce champ, ces comptes
+            recevaient un rejet sec du serveur — « Numero de paiement requis »
+            — sans aucun moyen d'agir dessus (client 2026-08-25). */}
+        {mobileMoneySelected && needsPayerPhone && (
+          <View style={{ marginBottom: 16 }}>
+            <Input
+              label={t('checkout.payerPhoneLabel')}
+              leadingIcon="phone"
+              keyboardType="phone-pad"
+              placeholder={t('checkout.payerPhonePlaceholder')}
+              value={formatGnPhone(payerPhoneInput)}
+              onChangeText={(txt) => setPayerPhoneInput(normalizeGnPhone(txt))}
+              errorText={
+                payerPhoneInput.length > 0 && !payerPhoneValid
+                  ? t('checkout.payerPhoneInvalid')
+                  : undefined
+              }
+              helperText={payerPhoneInput.length === 0 ? t('checkout.payerPhoneHint') : undefined}
+            />
+          </View>
+        )}
+
         {/* « Autre » = wallet only. Card (Stripe) removed from the UI — it
             doesn't work for Guinean cards (client 2026-07-26). The section only
             shows when the wallet has a spendable balance. */}
@@ -600,7 +632,7 @@ export default function CheckoutRoute() {
           size="lg"
           block
           loading={placeOrder.isPending || placeBatch.isPending || cardFlowBusy}
-          disabled={placeOrder.isPending || placeBatch.isPending || cardFlowBusy || (!allLoaded && !loadFailed) || lines.length === 0 || addressGateLoading}
+          disabled={placeOrder.isPending || placeBatch.isPending || cardFlowBusy || (!allLoaded && !loadFailed) || lines.length === 0 || addressGateLoading || (mobileMoneySelected && needsPayerPhone && !payerPhoneValid)}
           label={
             placeOrder.isPending || placeBatch.isPending || cardFlowBusy
               ? t('checkout.payingCta')
@@ -640,6 +672,7 @@ export default function CheckoutRoute() {
                   items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
                   paymentMethod: selected,
                   deliveryMode,
+                  ...(payerPhoneE164 ? { payerPhone: payerPhoneE164 } : {}),
                 },
                 {
                   onSuccess: (res) => {
@@ -674,6 +707,7 @@ export default function CheckoutRoute() {
                 items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
                 paymentMethod: selected,
                 deliveryMode,
+                ...(payerPhoneE164 ? { payerPhone: payerPhoneE164 } : {}),
               },
               {
                 onSuccess: ({ order, intent }) => {
