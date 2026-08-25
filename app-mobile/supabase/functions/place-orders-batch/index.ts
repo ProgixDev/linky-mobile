@@ -25,18 +25,25 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { initPayment } from '@shared/lengopay.ts';
 import { DELIVERY_FEE_MINOR } from '@shared/delivery.ts';
+import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 
 interface ItemInput { product_id: string; quantity: number }
 
 interface Body {
   items: ItemInput[];
-  payment_method: 'wallet' | 'orange-money' | 'mtn-money';
+  payment_method: 'wallet' | 'orange-money' | 'mtn-money' | 'card';
   delivery_mode?: 'pickup' | 'delivery';
   payer_phone?: string;
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
-const METHODS = ['wallet', 'orange-money', 'mtn-money'];
+// 'card' ajoute le 2026-08-24 : le bouton Carte, active la veille pour les
+// profils a l'etranger, appelait encore place-order (mono-boutique) — un
+// panier a deux boutiques echouait avec MULTIPLE_SELLERS. La carte n'avait
+// jamais ete construite pour le panier multi-boutiques du 21 aout, faute
+// d'avoir jamais ete testee : elle etait masquee dans l'interface jusqu'a
+// avant-hier.
+const METHODS = ['wallet', 'orange-money', 'mtn-money', 'card'];
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -56,6 +63,13 @@ function valid(b: unknown): b is Body {
 
 Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
+
+  // Meme garde qu'en mono-boutique (place-order) : refuser AVANT de creer la
+  // moindre commande, pas apres — un lot a moitie constitue qu'aucun rail ne
+  // peut plus regler serait pire qu'un refus immediat.
+  if (body.payment_method === 'card' && !stripeConfigured()) {
+    throwApi('STRIPE_NOT_CONFIGURED', 503, 'Le paiement par carte arrive bientôt.');
+  }
 
   const deliveryMode = body.delivery_mode ?? 'delivery';
   // Le frais de livraison est decide ICI, cote serveur, et UNE SEULE FOIS pour
@@ -110,6 +124,94 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
   // Portefeuille : place_orders_batch a deja debite et alimente le sequestre.
   if (body.payment_method === 'wallet') {
     return { body: { batch_id: batchId, orders, paid: true } };
+  }
+
+  // ─── Rail CARTE (Stripe) — un seul PaymentIntent pour tout le lot ─────────
+  // Decalque exact de la branche carte de place-order, au montant pres : la
+  // meme somme relue en base (batch_total_minor), jamais calculee ici. La
+  // page de paiement Stripe s'ouvre UNE fois pour l'ensemble du lot, comme
+  // pour Orange/MTN.
+  if (body.payment_method === 'card') {
+    const { data: totalMinor, error: totalErr } = await sb.rpc('batch_total_minor', { p_batch_id: batchId });
+    if (totalErr || typeof totalMinor !== 'number' || totalMinor <= 0) {
+      console.error('[place-orders-batch] batch_total_minor error:', totalErr, totalMinor);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur calcul du montant');
+    }
+
+    const placeholderId = `pending-init-${crypto.randomUUID()}`;
+    const { data: intentRow, error: intentErr } = await sb
+      .from('payment_intents')
+      .insert({
+        batch_id:       batchId,
+        rail:           'stripe',
+        rail_intent_id: placeholderId,
+        method:         'card',
+        currency:       'GNF',
+        amount_minor:   totalMinor,
+        payer_phone:    null,
+      })
+      .select('id')
+      .single();
+    if (intentErr || !intentRow) {
+      await sb.from('orders')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('batch_id', batchId).eq('status', 'placed');
+      console.error('[place-orders-batch] stripe intent insert error:', intentErr);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur intent de paiement');
+    }
+
+    let stripeIntent;
+    try {
+      stripeIntent = await stripeClient().paymentIntents.create({
+        amount: Number(totalMinor),
+        currency: 'gnf',
+        automatic_payment_methods: { enabled: true },
+        metadata: { batch_id: batchId, intent_id: intentRow.id, user_id: userId },
+      });
+      if (!stripeIntent.client_secret) throw new Error('missing client_secret');
+    } catch (e) {
+      console.error('[place-orders-batch] stripe init error:', e);
+      await sb.rpc('process_batch_intent_outcome', {
+        p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'init_failed',
+        p_error_code: 'RAIL_INIT_FAILED',
+        p_error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
+      });
+      throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
+    }
+
+    const { error: updErr } = await sb
+      .from('payment_intents')
+      .update({ rail_intent_id: stripeIntent.id, rail_status: stripeIntent.status, updated_at: new Date().toISOString() })
+      .eq('id', intentRow.id);
+    if (updErr) {
+      console.error('[place-orders-batch] CRITICAL stripe intent UPDATE failed post-init', {
+        intent_id: intentRow.id, stripe_pi: stripeIntent.id, error: updErr,
+      });
+      try {
+        await stripeClient().paymentIntents.cancel(stripeIntent.id);
+      } catch (cancelErr) {
+        console.error('[place-orders-batch] CRITICAL stripe PI cancel also failed — manual reconcile needed', {
+          stripe_pi: stripeIntent.id, error: cancelErr,
+        });
+      }
+      await sb.rpc('process_batch_intent_outcome', {
+        p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: stripeIntent.status,
+        p_error_code: 'INTENT_UPDATE_FAILED',
+        p_error_message: `stripe_pi=${stripeIntent.id} update_err=${updErr.message}`.slice(0, 500),
+      });
+      throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
+    }
+
+    return {
+      body: {
+        batch_id: batchId,
+        orders,
+        payment: {
+          client_secret: stripeIntent.client_secret,
+          publishable_key: stripePublishableKey(),
+        },
+      },
+    };
   }
 
   // ─── Rail mobile money ────────────────────────────────────────────────────

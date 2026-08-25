@@ -198,8 +198,10 @@ export function usePlaceOrder() {
 export interface PlaceOrdersBatchInput {
   /** Le panier ENTIER, toutes boutiques confondues. Le serveur regroupe. */
   items: { productId: string; quantity: number }[];
-  /** Pas de 'card' ici : Stripe est abandonne (2026-07-26). */
-  paymentMethod: 'wallet' | 'orange-money' | 'mtn-money';
+  /** 'card' ajoute le 2026-08-24 : le bouton Carte, reactive la veille pour les
+   *  profils a l'etranger, appelait encore le chemin mono-boutique — un panier
+   *  a plusieurs boutiques echouait avec MULTIPLE_SELLERS. */
+  paymentMethod: 'wallet' | 'orange-money' | 'mtn-money' | 'card';
   deliveryMode?: 'pickup' | 'delivery';
   payerPhone?: string;
 }
@@ -213,6 +215,8 @@ export interface PlaceOrdersBatchResult {
   /** Rail mobile money : montant total du lot + page hebergee Lengopay. */
   total_minor?: number;
   payment_url?: string;
+  /** Rail carte : un seul PaymentIntent Stripe pour tout le lot. */
+  payment?: { client_secret: string; publishable_key: string };
 }
 
 export function usePlaceOrdersBatch() {

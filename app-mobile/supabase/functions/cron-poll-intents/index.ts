@@ -247,6 +247,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
             p_error_code: null, p_error_message: null,
           });
           if (oErr) throw new Error(`process_batch_intent_outcome failed: ${oErr.message}`);
+          // Trou trouve le 2026-08-24 en cablant la carte pour les lots : cette
+          // branche ne notifiait jamais les vendeurs d'un lot Lengopay paye —
+          // notifyOrderPaid est desormais capable de lot (voir order-paid-push.ts).
+          await notifyOrderPaid(sb, intent.id);
           baCompleted++;
         } else if (status.status === 'failed' || status.status === 'cancelled') {
           await sb.rpc('process_batch_intent_outcome', {

@@ -144,15 +144,32 @@ export default function CheckoutRoute() {
     if (lines.length === 0) return;
     setCardFlowBusy(true);
     try {
-      // The WHOLE cart goes into one order — every article shares the same shop,
-      // so it stays one escrow, one delivery, one QR (client 2026-08-05).
-      const { order, payment } = await placeOrder.mutateAsync({
-        items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
-        paymentMethod: 'card',
-        deliveryMode,
-      });
+      // Panier multi-boutiques (2026-08-24) : le chemin mono-boutique
+      // MULTIPLE_SELLERS-erait des le premier lot a deux vendeurs. isBatch
+      // decide la meme porte que pour le mobile money et le portefeuille.
+      let orderIdForConfirm: string;
+      let payment: { client_secret: string; publishable_key: string } | undefined;
+      if (isBatch) {
+        const res = await placeBatch.mutateAsync({
+          items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          paymentMethod: 'card',
+          deliveryMode,
+        });
+        const firstOrder = res.orders[0];
+        if (!firstOrder) { show(t('checkout.payErrorFallback'), 'danger'); return; }
+        orderIdForConfirm = firstOrder.id;
+        payment = res.payment;
+      } else {
+        const res = await placeOrder.mutateAsync({
+          items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          paymentMethod: 'card',
+          deliveryMode,
+        });
+        orderIdForConfirm = res.order.id;
+        payment = res.payment;
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
-      const confirmRoute = `/checkout/confirm/${order.id}` as any;
+      const confirmRoute = `/checkout/confirm/${orderIdForConfirm}` as any;
       if (!payment) {
         router.replace(confirmRoute);
         return;

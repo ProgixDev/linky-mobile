@@ -290,9 +290,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ received: true, booking: outcome }, 200);
   }
 
+  // batch_id ajoute le 2026-08-24 : une intention de lot (panier
+  // multi-boutiques payé par carte) n'a pas d'order_id, seulement un
+  // batch_id. Sans lui selectionner, le webhook ne pouvait pas distinguer
+  // les deux formes plus bas.
   const { data: intent, error: lookupErr } = await sb
     .from('payment_intents')
-    .select('id, status, amount_minor')
+    .select('id, status, amount_minor, batch_id')
     .eq('rail', 'stripe')
     .eq('rail_intent_id', pi.id)
     .maybeSingle();
@@ -344,13 +348,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const terminal = event.type === 'payment_intent.succeeded' ? 'completed' : 'cancelled';
-  const { error: rpcErr } = await sb.rpc('process_intent_outcome', {
-    p_intent_id:       intent.id,
-    p_terminal_status: terminal,
-    p_rail_status:     pi.status,
-    p_error_code:      terminal === 'cancelled' ? 'STRIPE_CANCELED' : null,
-    p_error_message:   terminal === 'cancelled' ? (pi.cancellation_reason ?? null) : null,
-  });
+  // Lot ou commande unique : deux fonctions distinctes cote base, chacune avec
+  // sa propre garde d'egalite comptable. process_batch_intent_outcome refuse
+  // toute intention sans batch_id (NOT_A_BATCH_INTENT) — l'inverse serait
+  // pareillement faux — donc le choix doit se faire ICI, pas se deviner.
+  const { error: rpcErr } = await sb.rpc(
+    intent.batch_id ? 'process_batch_intent_outcome' : 'process_intent_outcome',
+    {
+      p_intent_id:       intent.id,
+      p_terminal_status: terminal,
+      p_rail_status:     pi.status,
+      p_error_code:      terminal === 'cancelled' ? 'STRIPE_CANCELED' : null,
+      p_error_message:   terminal === 'cancelled' ? (pi.cancellation_reason ?? null) : null,
+    },
+  );
   if (rpcErr) {
     console.error('[stripe-webhook] process_intent_outcome failed:', rpcErr);
     return json({ error: 'outcome_failed' }, 500);
