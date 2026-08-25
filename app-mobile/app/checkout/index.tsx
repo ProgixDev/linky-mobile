@@ -204,8 +204,10 @@ export default function CheckoutRoute() {
           router.replace(confirmRoute);
           return;
         }
+        // On reste sur l'ecran de paiement : fermer le formulaire ne doit rien
+        // declencher de plus que ca. router.back() renvoyait au panier, un
+        // saut que rien ne demandait.
         show(t('checkout.payCanceled'), 'info');
-        router.back();
         return;
       }
       if (payErr) {
