@@ -224,6 +224,11 @@ export function mapOrder(
     createdAt: r.created_at,
     releaseAt: r.release_at ?? undefined,
     scanToken: opts?.includeScanToken ? r.scan_token : undefined,
+    // Non nul => cette commande fait partie d'un panier multi-boutiques
+    // (2026-08-21) — meme paiement, N commandes. get-order en tire le montant
+    // total du lot ; les autres endpoints qui ne selectionnent pas batch_id
+    // renvoient simplement null ici, sans effet.
+    batchId: r.batch_id ?? null,
   };
 }
 

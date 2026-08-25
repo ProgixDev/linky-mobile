@@ -198,6 +198,14 @@ export interface Order {
   createdAt: string;
   events: Array<{ at: string; label: string }>;
   releaseAt?: string;
+  /** Non nul => panier multi-boutiques (2026-08-21) : cette commande est l'une
+   *  de plusieurs payees en un seul geste. Seul get-order le renvoie. */
+  batchId?: string | null;
+  /** Montant total du LOT quand batchId est pose — a utiliser a la place de
+   *  totalGnf partout ou l'ecran ne montre qu'UNE commande d'un panier qui en
+   *  contient plusieurs (succes, suivi). null si batchId est nul, ou si le
+   *  calcul a echoue cote serveur (repli sur totalGnf dans ce cas). */
+  batchTotalGnf?: number | null;
   /** Delivery summary — present on get-order responses for order participants.
    *  Name only (no livreur phone/PII). Drives the seller's pick/change UI. */
   delivery?: OrderDelivery | null;

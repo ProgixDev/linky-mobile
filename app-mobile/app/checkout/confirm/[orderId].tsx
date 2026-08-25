@@ -210,7 +210,7 @@ export default function CheckoutConfirmRoute() {
                 value={maskPhone(intent.payerPhone)}
               />
             )}
-            <Row label={t('checkout.confirmRowAmount')} value={formatGNF(order.totalGnf)} />
+            <Row label={t('checkout.confirmRowAmount')} value={formatGNF(intent.amountGnf)} />
           </Card>
 
           {isCard ? (
@@ -219,7 +219,7 @@ export default function CheckoutConfirmRoute() {
                 {t('checkout.confirmCardConfirmingTitle')}
               </Text>
               <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
-                {t('checkout.confirmCardConfirmingBodyPlain', { amount: formatGNF(order.totalGnf) })}
+                {t('checkout.confirmCardConfirmingBodyPlain', { amount: formatGNF(intent.amountGnf) })}
               </Text>
               {cardSlow && (
                 <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 12, lineHeight: 19 }}>
@@ -233,7 +233,7 @@ export default function CheckoutConfirmRoute() {
               {t('checkout.confirmCheckPhoneTitle')}
             </Text>
             <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
-              {t('checkout.confirmCheckPhoneBody', { amount: formatGNF(order.totalGnf) })}
+              {t('checkout.confirmCheckPhoneBody', { amount: formatGNF(intent.amountGnf) })}
             </Text>
             {/* Lengopay hosted page — the buyer approves the payment there.
                 Reconstructed from the pay_id (railIntentId) so it survives a

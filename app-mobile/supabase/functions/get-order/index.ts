@@ -181,13 +181,30 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
     amountGnf: Number(i.amount_minor),
   }));
 
+  // Montant TOTAL du lot, quand cette commande en fait partie. Relu en base
+  // (batch_total_minor — la meme source que celle que le webhook Stripe et le
+  // cron Lengopay verifient au reglement), jamais recalcule ici en sommant les
+  // commandes a la main : deux calculs independants du meme total finiraient
+  // par diverger d'un franc a l'autre bout.
+  //
+  // Sans ce champ, un ecran de succes ou de suivi qui n'affiche qu'UNE
+  // commande d'un lot montre un montant PARTIEL a l'acheteur — exactement le
+  // meme genre de defaut que « un seul bouton de paiement » etait cense
+  // fermer le 21 aout.
+  let batchTotalMinor: number | null = null;
+  if (r.batch_id) {
+    const { data: bt, error: btErr } = await sb.rpc('batch_total_minor', { p_batch_id: r.batch_id });
+    if (btErr) console.error('[get-order] batch_total_minor error:', btErr);
+    else if (typeof bt === 'number') batchTotalMinor = bt;
+  }
+
   return {
     body: {
       // PII opt-in (Phase LIVREUR) : both buyer and seller receive scan_token.
       // Buyer needs it to render their own on-screen QR for livreur handoff ;
       // seller still gets it for the legacy printed-QR path. Non-participants
       // never reach this branch (FORBIDDEN above).
-      order:  { ...mapOrder(r, { includeScanToken: isParticipant }), delivery, hasReviewed: !!myReview, items },
+      order:  { ...mapOrder(r, { includeScanToken: isParticipant }), delivery, hasReviewed: !!myReview, items, batchTotalGnf: batchTotalMinor },
       intent: intentRow ? mapPaymentIntent(intentRow as PaymentIntentRow) : null,
     },
   };

@@ -54,6 +54,15 @@ export default function CheckoutSuccess() {
 
   if (!order) return <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }} />;
 
+  // Panier multi-boutiques (2026-08-21) : cet ecran ne reçoit que la PREMIERE
+  // commande du lot (la navigation post-paiement en a besoin, mais la carte
+  // n'affichait jusqu'ici que sa part — un panier de deux boutiques payait
+  // 257 520 300 GNF et voyait ecrit le sous-total d'une seule. Meme defaut que
+  // celui que « un seul bouton de paiement » etait cense fermer.
+  const displayTotalGnf = order.batchId && order.batchTotalGnf != null
+    ? order.batchTotalGnf
+    : order.totalGnf;
+
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
@@ -170,7 +179,7 @@ export default function CheckoutSuccess() {
             <SummaryLine
               Icon={Receipt}
               label={t('checkout.successTotal')}
-              value={formatGNF(order.totalGnf)}
+              value={formatGNF(displayTotalGnf)}
               valueBold
             />
             <SummaryLine
