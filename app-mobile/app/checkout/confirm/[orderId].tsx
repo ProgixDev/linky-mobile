@@ -277,7 +277,12 @@ export default function CheckoutConfirmRoute() {
   const copyKeys = TERMINAL_COPY_KEYS[stateClass as TerminalState];
   const copyTitle = t(copyKeys.titleKey);
   const copyMessage = t(copyKeys.messageKey);
-  const failMessage = stateClass === 'FAIL' && intent.lastErrorMessage ? intent.lastErrorMessage : copyMessage;
+  // Client 2026-08-25 : jamais de texte brut a l'ecran, quelle que soit la
+  // panne. `intent.lastErrorMessage` restait affiche verbatim a l'acheteur —
+  // ce jour-la, une cle Stripe partiellement masquee dans un message
+  // d'erreur du SDK. Ce champ reste dans nos journaux pour le diagnostic
+  // (visible en base), il ne doit simplement plus jamais atteindre l'ecran.
+  const failMessage = copyMessage;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
