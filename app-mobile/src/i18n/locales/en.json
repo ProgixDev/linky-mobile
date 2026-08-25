@@ -1229,7 +1229,8 @@
     "infoMobile": "You will receive an SMS code on your number to confirm the payment.",
     "sectionCard": "BANK CARD",
     "cardName": "Bank card",
-    "cardHint": "Visa, Mastercard — secure payment"
+    "cardHint": "Visa, Mastercard — secure payment",
+    "payCanceled": "Payment canceled."
   },
   "orders": {
     "title": "My orders",

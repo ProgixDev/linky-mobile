@@ -17,7 +17,7 @@ import { I, type IconKey } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useCart } from '../../src/stores/cart';
 import { apiPost } from '../../src/lib/api';
-import { usePlaceOrder, usePlaceOrdersBatch, useWallet } from '../../src/data/queries';
+import { usePlaceOrder, usePlaceOrdersBatch, useWallet, useCancelPendingPayment } from '../../src/data/queries';
 import { useMyAddresses } from '../../src/data/queries/addresses';
 import { DELIVERY_FEE_GNF, type DeliveryMode } from '../../src/lib/delivery';
 import { usePaymentProfile } from '../../src/lib/paymentProfile';
@@ -95,6 +95,7 @@ export default function CheckoutRoute() {
   const allLines = useCart((s) => s.lines);
   const lines = shopId ? allLines.filter((l) => l.shopId === shopId) : allLines;
   const placeOrder = usePlaceOrder();
+  const cancelPending = useCancelPendingPayment();
   const placeBatch = usePlaceOrdersBatch();
   const { show } = useToast();
   // Mode de réception (client 2026-07-30). Livraison Linky par défaut (frais
@@ -186,12 +187,32 @@ export default function CheckoutRoute() {
         return;
       }
       const { error: payErr } = await presentPaymentSheet();
-      if (payErr && payErr.code !== PaymentSheetError.Canceled) {
+      // Client 2026-08-25 : fermer la feuille sans payer envoyait quand meme
+      // vers l'ecran « Ta banque confirme… » — un mensonge, puisqu'aucun
+      // paiement n'avait ete tente. L'intention restait en plus pendante
+      // jusqu'a 15 minutes (le balayage TTL), pour rien. Une annulation
+      // EXPLICITE se traite maintenant a part : on l'annule tout de suite
+      // cote serveur et on revient au panier, message honnete a l'appui.
+      if (payErr && payErr.code === PaymentSheetError.Canceled) {
+        try {
+          await cancelPending.mutateAsync({ orderId: orderIdForConfirm });
+        } catch (e) {
+          // Le paiement a pu aboutir entre l'annulation du buyer et cet appel
+          // (cancel-pending-payment le detecte et refuse) — rare, mais dans
+          // ce cas l'ecran de confirmation reste la bonne destination.
+          console.error('[checkout] cancel-pending after sheet cancel failed:', e);
+          router.replace(confirmRoute);
+          return;
+        }
+        show(t('checkout.payCanceled'), 'info');
+        router.back();
+        return;
+      }
+      if (payErr) {
         show(payErr.message || 'Paiement échoué', 'danger');
       }
       // Success : webhook flips the order to paid in ~1-3s, the confirmation
-      // screen polls until then. Cancel : order stays placed + intent pending,
-      // same screen offers « Annuler le paiement ».
+      // screen polls until then.
       router.replace(confirmRoute);
     } catch (err: unknown) {
       const msg = (err as { message?: string })?.message ?? 'Erreur paiement';
