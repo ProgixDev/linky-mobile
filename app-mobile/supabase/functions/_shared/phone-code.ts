@@ -1,5 +1,4 @@
-// Delivering a 6-digit code to a PHONE — Prelude first, then Twilio SMS, then
-// Twilio WhatsApp.
+// Delivering a 6-digit code to a PHONE — Prelude first, then Twilio SMS.
 //
 // The problem all of this exists for: Guinean carriers reject any SMS whose
 // alphanumeric sender was not pre-registered WITH THEM (Twilio error 30008 —
@@ -9,8 +8,8 @@
 //
 // Prelude (client 2026-08-07) is an OTP-only provider that **operates the sender
 // registrations itself** across 230+ countries and falls back between channels
-// on its own (WhatsApp → SMS). That is precisely the work we are otherwise
-// blocked on, which is why it goes FIRST when configured.
+// on its own. That is precisely the work we are otherwise blocked on, which is
+// why it goes FIRST when configured.
 //
 // We keep generating and verifying our own code and merely ask Prelude to
 // deliver it (`custom_code`). Handing verification to Prelude as well would mean
@@ -19,19 +18,21 @@
 // scoping, user_id binding). Not worth reopening before launch. The cost of that
 // choice: no Prelude anti-fraud scoring or silent verification for now.
 //
-// Twilio WhatsApp stays as a hand-rolled fallback for the case where Prelude is
-// unavailable; Meta approves that sender, not MTN, so it also bypasses the
-// carriers.
+// Twilio WhatsApp used to be a hand-rolled fallback here (client 2026-08-07:
+// WhatsApp is not wanted as OUR channel; removed 2026-08-31 — it was never
+// configured in prod anyway, TWILIO_WHATSAPP_FROM was never set). Prelude may
+// still itself route through WhatsApp/RCS/etc. on countries where that is the
+// only working channel — that is its call to make, not ours, and unrelated to
+// the rail removed here.
 //
 // Every rail has its own kill switch — flip one from the dashboard, no redeploy:
 //   LINKY_PRELUDE_DELIVERY_ENABLED=0   → skip Prelude
 //   LINKY_SMS_DELIVERY_ENABLED=0       → skip Twilio SMS  (currently 0)
-//   LINKY_WHATSAPP_DELIVERY_ENABLED=0  → skip Twilio WhatsApp
 import { throwApi } from './errors.ts';
 import { hmacHex, timingSafeEqual } from './hmac.ts';
 
-/** Which rail actually carried the code. Prelude picks between SMS and WhatsApp
- *  itself, so we read the channel back off its response rather than guessing. */
+/** Which rail actually carried the code. Prelude can route through non-SMS
+ *  channels on its own (WhatsApp, RCS, …) — see preludeChannelToDelivery. */
 export type PhoneDelivery = 'sms' | 'whatsapp';
 
 /** Who holds the code and can say whether the user typed it right.
@@ -120,46 +121,6 @@ export async function sendCodeBySms(to: string, code: string, kind: CodeKind = '
   } catch (e) {
     console.error('[phone-code] sms delivery failed:', (e as Error).message);
     throwApi('OTP_DELIVERY_FAILED', 502, 'Envoi du code par SMS impossible. Réessaie plus tard.');
-  }
-}
-
-/** WhatsApp. Returns false when the rail is off or unconfigured. */
-export async function sendCodeByWhatsapp(to: string, code: string, kind: CodeKind = 'signin'): Promise<boolean> {
-  const auth = twilioAuth();
-  const rawFrom = Deno.env.get('TWILIO_WHATSAPP_FROM');
-  if (!auth || !rawFrom) return false;
-  if (Deno.env.get('LINKY_WHATSAPP_DELIVERY_ENABLED') === '0') return false;
-
-  // Accept the number with or without the prefix — 'whatsapp:+14155238886' and
-  // '+14155238886' both work, so a copy-paste from the Twilio console can't
-  // silently produce 'whatsapp:whatsapp:+…'.
-  const withPrefix = (n: string) => (n.startsWith('whatsapp:') ? n : `whatsapp:${n}`);
-  const params = new URLSearchParams({ From: withPrefix(rawFrom), To: withPrefix(to) });
-
-  // A business-initiated WhatsApp message outside the 24h customer-service
-  // window MUST use an approved template, so production needs
-  // TWILIO_WHATSAPP_CONTENT_SID (an authentication template, HX…). Without it we
-  // fall back to a plain body, which is what the Twilio sandbox accepts — that
-  // is the cheap way to prove delivery to a Guinean number before committing to
-  // the Meta onboarding. Sending free-form on a real sender fails with 63016.
-  const contentSid = Deno.env.get('TWILIO_WHATSAPP_CONTENT_SID');
-  if (contentSid) {
-    params.set('ContentSid', contentSid);
-    // Authentication templates take the code as variable {{1}}; the copy-code
-    // button reuses the same value, so one variable covers both.
-    params.set('ContentVariables', JSON.stringify({ '1': code }));
-  } else {
-    params.set('Body', messageFor(kind, code));
-  }
-  const statusCb = Deno.env.get('TWILIO_STATUS_CALLBACK_URL');
-  if (statusCb) params.set('StatusCallback', statusCb);
-
-  try {
-    await postToTwilio(auth.sid, auth.token, params);
-    return true;
-  } catch (e) {
-    console.error('[phone-code] whatsapp delivery failed:', (e as Error).message);
-    throwApi('OTP_DELIVERY_FAILED', 502, 'Envoi du code par WhatsApp impossible. Réessaie plus tard.');
   }
 }
 
@@ -271,9 +232,8 @@ export async function sendCodeToPhone(
 ): Promise<PhoneSendResult | null> {
   const viaPrelude = await sendCodeByPrelude(to, code, kind);
   if (viaPrelude) return viaPrelude;
-  // The Twilio rails always carry OUR code, so they always verify locally.
+  // Twilio SMS always carries OUR code, so it always verifies locally.
   if (await sendCodeBySms(to, code, kind)) return { delivery: 'sms', verifier: 'local' };
-  if (await sendCodeByWhatsapp(to, code, kind)) return { delivery: 'whatsapp', verifier: 'local' };
   return null;
 }
 

@@ -99,9 +99,7 @@ Deno.serve(makePost<Body>('/v1/phones/add-request', valid, async ({ sb, body, re
   // never returned or logged in production; a pre-prod echo requires an explicit
   // LINKY_DEV_OTP_ECHO=1 (must stay unset in prod).
   //
-  // Rails live in @shared/phone-code.ts: SMS first, then WhatsApp. Guinean
-  // carriers reject our SMS until the "LINKY" sender is registered with them,
-  // so WhatsApp is what actually delivers today.
+  // Rails live in @shared/phone-code.ts: Prelude first, then Twilio SMS.
   const sent = await sendCodeToPhone(target, code, 'verification');
   if (sent) {
     if (sent.verifier === 'prelude') {

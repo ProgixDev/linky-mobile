@@ -116,12 +116,11 @@ Deno.serve(makePost<Body>('/v1/otp/request', valid, async ({ sb, body }) => {
   const emailSecret = Deno.env.get('OTP_EMAIL_SECRET');
   const canDeliverEmail = !!landingUrl && !!emailSecret;
 
-  // Phone: SMS first, then WhatsApp. Guinean carriers reject our SMS until the
-  // "LINKY" sender is registered with them, so WhatsApp is what actually
-  // delivers today — see @shared/phone-code.ts for the full reasoning and the
-  // two kill switches. `delivery` goes back to the app so the code screen can
-  // say WhatsApp instead of SMS ; otherwise people stare at their messages app
-  // waiting for something that arrived elsewhere.
+  // Phone: Prelude first, then Twilio SMS — see @shared/phone-code.ts for the
+  // full reasoning and the kill switches. `delivery` goes back to the app so
+  // the code screen can say WhatsApp instead of SMS when Prelude itself routed
+  // that way ; otherwise people stare at their messages app waiting for
+  // something that arrived elsewhere.
   if (body.channel === 'phone') {
     const sent = await sendCodeToPhone(target, code);
     if (sent) {

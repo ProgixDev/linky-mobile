@@ -109,11 +109,9 @@ Deno.serve(makePost<Body>('/v1/auth/password-change-request', valid, async ({ sb
   if (e3 || !inserted) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
 
   if (body.channel === 'phone') {
-    // Phone rails live in @shared/phone-code.ts (SMS first, then WhatsApp).
-    // Guinean carriers reject our SMS until the "LINKY" sender is registered
-    // with them, so WhatsApp is what actually delivers today. Still FAILS
-    // CLOSED when neither rail is configured — see the header on why the code
-    // must never come back in the response.
+    // Phone rails live in @shared/phone-code.ts (Prelude first, then Twilio
+    // SMS). Still FAILS CLOSED when neither rail is configured — see the
+    // header on why the code must never come back in the response.
     const sent = await sendCodeToPhone(target, code, 'verification');
     if (sent) {
       if (sent.verifier === 'prelude') {
