@@ -27,6 +27,8 @@
 -- Applique en prod (mkaddhcjneilvwqethjo) via l'editeur SQL.
 -- ============================================================================
 
+drop function if exists public.pick_stale_stripe_intents(int);
+
 create or replace function public.pick_stale_stripe_intents(p_limit int default 50)
 returns table (
   id              uuid,
