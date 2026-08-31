@@ -285,7 +285,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (stripePickErr) {
     console.error('[cron-poll-intents] stripe pick error:', stripePickErr);
   } else {
-    for (const row of (staleStripe ?? []) as { id: string; rail_intent_id: string }[]) {
+    for (const row of (staleStripe ?? []) as { id: string; batch_id: string | null; rail_intent_id: string }[]) {
       stripeSwept++;
       try {
         // (a) Cancel the PI on Stripe FIRST. paymentIntents.cancel is
@@ -307,9 +307,42 @@ Deno.serve(async (req: Request): Promise<Response> => {
         }
 
         if (piStatus === 'succeeded') {
-          // (c) Webhook is about to flip / already flipped to completed. Don't
-          // touch the local intent — the cron picker won't see this row next
-          // tick because the webhook will have set status='completed'.
+          // Filet de securite ajoute le 2026-08-25, en reponse a un incident
+          // reel : Stripe a signale 4 echecs de livraison de webhook sur ce
+          // compte. AVANT ce correctif, cette branche se contentait de sauter
+          // la ligne — « le webhook va s'en charger ». Si le webhook echoue a
+          // livrer cet evenement, pour n'importe quelle raison, la commande
+          // restait bloquee indefiniment en 'placed' : l'argent reellement
+          // preleve sur la carte du client, jamais entre en sequestre, le
+          // vendeur jamais prevenu. Personne ne s'en apercevait avant une
+          // reclamation du client.
+          //
+          // On regle donc l'intention ICI, immediatement — sans attendre le
+          // webhook. Les deux RPC sont idempotentes (elles verifient
+          // status = 'pending' avant d'agir) : si le webhook finit par livrer
+          // l'evenement malgre tout, son appel ne fait rien de plus, sans
+          // risque de credit double.
+          const { error: reconcileErr } = await sb.rpc(
+            row.batch_id ? 'process_batch_intent_outcome' : 'process_intent_outcome',
+            {
+              p_intent_id: row.id, p_terminal_status: 'completed', p_rail_status: piStatus,
+              p_error_code: null, p_error_message: null,
+            },
+          );
+          if (reconcileErr) {
+            // Cas CRITIQUE : l'argent est chez Stripe, notre reglement echoue.
+            // Ne PAS marquer stripeAlreadyTerminal — le prochain passage du
+            // cron (5 secondes) reessaiera cette meme ligne.
+            console.error('[cron-poll-intents] CRITICAL stripe succeeded-reconcile failed — retry next tick', {
+              id: row.id, batch_id: row.batch_id, pi: row.rail_intent_id, reconcileErr,
+            });
+            stripeSkipped++;
+            continue;
+          }
+          // Meme notification que le webhook aurait envoyee au vendeur — sans
+          // elle, un paiement regle par ce filet de secours resterait
+          // silencieux pour lui.
+          await notifyOrderPaid(sb, row.id);
           stripeAlreadyTerminal++;
           continue;
         }
