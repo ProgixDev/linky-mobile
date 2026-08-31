@@ -12,11 +12,14 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { Button } from '../../../src/components/primitives/Button';
+import { Input } from '../../../src/components/primitives/Input';
 import { TopBar } from '../../../src/components/nav/TopBar';
 import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
+import { usePaymentProfile } from '../../../src/lib/paymentProfile';
+import { normalizeGnPhone, formatGnPhone, isValidGnPhone } from '../../../src/lib/gnPhone';
 import {
   useBoosts,
   useCreateBoost,
@@ -88,6 +91,15 @@ export default function BoostNewRoute() {
   const [days, setDays] = useState<number | null>(null);
   const selectedTier = tiers.find((x) => x.days === days) ?? null;
   const [method, setMethod] = useState<BoostPayMethod>('wallet');
+  // Compte inscrit par email, sans numero enregistre — meme trou que corrige
+  // cote commandes le 2026-08-25 (create-boost l'exigeait deja cote serveur,
+  // useCreateBoost savait deja l'envoyer, mais rien a l'ecran ne le demandait).
+  const { e164: onFilePhone, loading: payProfileLoading } = usePaymentProfile();
+  const mobileMoneySelected = method === 'orange-money' || method === 'mtn-money';
+  const needsPayerPhone = mobileMoneySelected && !payProfileLoading && !onFilePhone;
+  const [payerPhoneInput, setPayerPhoneInput] = useState('');
+  const payerPhoneValid = !needsPayerPhone || isValidGnPhone(payerPhoneInput);
+  const payerPhoneE164 = payerPhoneInput ? `+224${payerPhoneInput}` : undefined;
 
   const onPay = async () => {
     if (!selected || !selectedTier || create.isPending) return;
@@ -97,7 +109,7 @@ export default function BoostNewRoute() {
         selected.kind === 'property'
           ? { propertyId: selected.id }
           : { productId: selected.id };
-      const res = await create.mutateAsync({ ...target, days: selectedTier.days, method });
+      const res = await create.mutateAsync({ ...target, days: selectedTier.days, method, payerPhone: payerPhoneE164 });
 
       // Mobile money : rien n'est paye a cet instant. On ouvre la page Lengopay
       // dans l'app ; le boost ne s'activera qu'au retour, quand le cron aura vu
@@ -234,6 +246,26 @@ export default function BoostNewRoute() {
           </View>
         )}
 
+        {/* Compte sans numero (inscrit par email) : sans ce champ, create-boost
+            rejetait sec avec « Numero de paiement requis » et rien a l'ecran
+            ne permettait d'agir dessus. */}
+        {hasListings && needsPayerPhone && (
+          <Input
+            label={t('checkout.payerPhoneLabel')}
+            leadingIcon="phone"
+            keyboardType="phone-pad"
+            placeholder={t('checkout.payerPhonePlaceholder')}
+            value={formatGnPhone(payerPhoneInput)}
+            onChangeText={(txt) => setPayerPhoneInput(normalizeGnPhone(txt))}
+            errorText={
+              payerPhoneInput.length > 0 && !payerPhoneValid
+                ? t('checkout.payerPhoneInvalid')
+                : undefined
+            }
+            helperText={payerPhoneInput.length === 0 ? t('checkout.payerPhoneHint') : undefined}
+          />
+        )}
+
         {hasListings && (
           <Button
             label={
@@ -243,7 +275,7 @@ export default function BoostNewRoute() {
             }
             block
             variant="primary"
-            disabled={!selected || !selectedTier || create.isPending}
+            disabled={!selected || !selectedTier || create.isPending || !payerPhoneValid}
             loading={create.isPending}
             onPress={() => void onPay()}
           />
