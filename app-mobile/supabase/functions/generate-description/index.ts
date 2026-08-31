@@ -1,8 +1,11 @@
 // AI product-description generator — writes a short French marketing description from
-// the product's title / category / condition / keywords via the Google Gemini API
-// (free tier). Authed (requireUser). Rate-limited (8/min, 60/day per user) to stay well
-// inside the free quota. Gated on GEMINI_API_KEY: returns AI_UNAVAILABLE until the key
-// is configured as a Supabase secret. Deno → raw HTTPS (no SDK).
+// the product's title / category / condition / keywords via the Groq API (OpenAI-
+// compatible chat completions, fast Llama inference). Authed (requireUser).
+// Rate-limited (8/min, 60/day per user). Gated on GROQ_API_KEY: returns AI_UNAVAILABLE
+// until the key is configured as a Supabase secret. Deno → raw HTTPS (no SDK).
+//
+// Was Gemini until 2026-08-31 — swapped on request, same rate limits and prompt,
+// only the HTTP call and response shape changed.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
@@ -14,8 +17,9 @@ interface Body {
   keywords?: string;
 }
 
-// Free-tier Gemini flash model. Swap here if Google renames the model.
-const GEMINI_MODEL = 'gemini-2.0-flash';
+// Swap here if Groq deprecates the model. llama-3.3-70b-versatile is the
+// current general-purpose default (fast, no reasoning/JSON-mode needed here).
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -33,7 +37,7 @@ Deno.serve(
   makePost<Body>('/v1/ai/generate-description', valid, async ({ req, body, sb }) => {
     const userId = await requireUser(req);
 
-    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    const apiKey = Deno.env.get('GROQ_API_KEY');
     if (!apiKey) {
       throwApi('AI_UNAVAILABLE', 503, "La génération par IA n'est pas encore activée.");
     }
@@ -57,9 +61,9 @@ Deno.serve(
       throwApi('AI_RATE_LIMITED', 429, 'Limite quotidienne de générations atteinte.');
     }
 
-    // Reserve the slot BEFORE the Gemini call (count attempts, not just
+    // Reserve the slot BEFORE the Groq call (count attempts, not just
     // successes). Inserting after the call let N concurrent requests all pass
-    // the pre-write count and all hit Gemini — cost amplification against the
+    // the pre-write count and all hit Groq — cost amplification against the
     // owner's key. Reserving here shrinks the race window from the whole call
     // (~seconds) to a couple of DB round-trips.
     await sb.from('ai_generation_log').insert({ user_id: userId });
@@ -81,29 +85,28 @@ Deno.serve(
       `${facts}\n\nDescription :`;
 
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 500, temperature: 0.7 },
-          }),
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${apiKey}`,
         },
-      );
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 500,
+          temperature: 0.7,
+        }),
+      });
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
-        console.error('[generate-description] gemini error:', res.status, detail);
+        console.error('[generate-description] groq error:', res.status, detail);
         throwApi('AI_FAILED', 502, 'Génération impossible pour le moment. Réessaie.');
       }
       const json = (await res.json()) as {
-        candidates?: { content?: { parts?: { text?: string }[] } }[];
+        choices?: { message?: { content?: string } }[];
       };
-      const text = (json.candidates?.[0]?.content?.parts ?? [])
-        .map((p) => p.text ?? '')
-        .join('')
-        .trim();
+      const text = (json.choices?.[0]?.message?.content ?? '').trim();
       if (!text) throwApi('AI_FAILED', 502, 'La génération est revenue vide. Réessaie.');
       // (Slot already reserved before the call — see the insert above.)
       return { body: { description: text } };
