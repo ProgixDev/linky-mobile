@@ -1,54 +1,54 @@
 # Où vit l'APK derrière `linkygroup.com/linky.apk`
 
-## État au 7 août 2026 — provisoire, avec une date de péremption
+## État actuel (depuis le 17 août 2026) — stable, pas de date de péremption
 
-`/linky.apk` **redirige vers l'artefact EAS**, pas vers Vercel Blob.
+`/linky.apk` **redirige vers la release GitHub la plus récente** du dépôt public
+`ProgixDev/linky-downloads` :
 
-Pourquoi : le magasin Blob `njii6olstwjlpvas` est **suspendu** par Vercel
-(`BlobStoreSuspendedError`, en lecture *et* en écriture). Le bouton de
-téléchargement du site renvoyait `Your store is blocked` — donc plus personne ne
-pouvait installer l'application. La redirection vers EAS rétablit le
-téléchargement sans rien coûter, Expo hébergeant déjà le fichier.
+```
+https://github.com/ProgixDev/linky-downloads/releases/latest/download/linky.apk
+```
 
-> **L'artefact EAS expire le 21 août 2026.** Passé cette date le lien meurt et le
-> bouton casse à nouveau. Ce n'est pas une solution durable.
+`releases/latest` résout automatiquement vers la dernière release publiée (non-brouillon,
+non-prérelease) — publier une nouvelle release suffit, aucune modification de
+`vercel.json` n'est nécessaire.
 
-## Remettre les choses d'aplomb
+## Publier un nouveau build
 
-Par ordre de préférence :
+```
+eas build --platform android --profile preview
+# puis, une fois le .apk telecharge :
+gh release create vX.Y.Z <chemin-vers-le.apk>#linky.apk \
+  --repo ProgixDev/linky-downloads \
+  --title "Linky X.Y.Z (Android) — <resume court>" \
+  --notes "<notes de version>"
+```
 
-1. **Publier sur le Play Store.** Google héberge la distribution gratuitement et
-   le problème de bande passante disparaît définitivement. C'est prévu au contrat.
-2. **Débloquer le magasin Blob** sur vercel.com (Storage → le magasin →
-   la raison de la suspension y est affichée ; côté facturation, voir
-   Settings → Billing → Spend Management). Ensuite :
-   ```
-   BLOB_READ_WRITE_TOKEN=… node scripts/upload-apk.mjs <chemin-du.apk>
-   ```
-   puis remettre `https://njii6olstwjlpvas.public.blob.vercel-storage.com/linky.apk`
-   comme destination dans `vercel.json`. L'URL Blob est stable d'un build à
-   l'autre — contrairement à l'URL EAS, qui change à chaque build et impose de
-   modifier `vercel.json` puis de redéployer.
+Le nom de l'asset doit rester exactement `linky.apk` (c'est ce que le lien
+`releases/latest/download/linky.apk` demande).
 
-## Ce qui a été corrigé au passage
+## Historique — pourquoi ce n'est ni Vercel Blob ni un artefact EAS
 
-`/linky.apk` et `/linky-driver.apk` étaient des **rewrites**. Vercel *relayait*
-donc le fichier : il sortait du stockage **puis** repassait par le réseau Vercel,
-soit deux transferts facturés pour un seul téléchargement. Ce sont maintenant des
-**redirections** (302) : le navigateur va chercher le fichier directement, un
-seul transfert.
+1. **Vercel Blob** (`njii6olstwjlpvas`) a été **suspendu** par Vercel
+   (`BlobStoreSuspendedError`) — plus personne ne pouvait télécharger l'application.
+2. **Repli provisoire (7 août)** : redirection vers l'artefact EAS du dernier
+   build. Ça marchait, mais un artefact EAS **expire 30 jours après le
+   build** — pas une solution durable, il aurait fallu republier avant chaque
+   expiration.
+3. **Solution actuelle (17 août)** : une release GitHub par build, le lien
+   pointe toujours sur "latest". Ni expiration, ni dépendance à un store
+   tiers, ni modification de code à chaque nouveau build.
 
-Combiné à l'abandon des architectures x86/x86_64 dans l'APK (emulateur
-uniquement, 103 Mo de poids mort — voir `android/gradle.properties`), le coût
-d'un téléchargement passe de 502 Mo à 137 Mo.
-
-Les en-têtes `Content-Disposition` / `Content-Type` de ces deux chemins ne
-s'appliquent plus depuis le passage en redirection — ils portent sur la réponse
-302, pas sur le fichier. Le type MIME vient désormais de l'hébergeur ; le script
-d'envoi le fixe explicitement à l'upload.
+Au passage, `/linky.apk` est une **redirection (302)**, pas un *rewrite* : le
+navigateur va chercher le fichier directement chez GitHub (un seul transfert,
+pas de relais facturé par Vercel). Combiné à l'abandon des architectures
+x86/x86_64 dans l'APK (émulateur uniquement, 103 Mo de poids mort — voir
+`android/gradle.properties`), le poids d'un téléchargement est passé de 502 Mo
+à 137 Mo.
 
 ## `/linky-driver.apk` est toujours cassé
 
-Il pointe encore vers le magasin suspendu, et il n'existe pas d'artefact EAS
+Il pointe encore vers le magasin Blob suspendu, et il n'existe pas d'artefact
 récent pour l'application livreur (construite depuis un dépôt séparé). À
-reconnecter quand le magasin sera débloqué ou qu'un nouveau build livreur sortira.
+reconnecter le jour où un build livreur sort — même mécanisme (release GitHub)
+recommandé plutôt que de rouvrir Blob.
