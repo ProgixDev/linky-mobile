@@ -36,6 +36,7 @@
       }
     },
     "production": {
+      "environment": "production",
       "channel": "production",
       "autoIncrement": true,
       "android": {
@@ -44,7 +45,8 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://mkaddhcjneilvwqethjo.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_imvOZli1yEDOhQ0xjOkBug_SGi_j9M2",
-        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoibGlua3kyMDI2IiwiYSI6ImNtcjQxZGRwdzA4NTIyeXNhbmkyeGo4dDYifQ.d7iWc6darW_rMRCDG-s_PQ"
+        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1IjoibGlua3kyMDI2IiwiYSI6ImNtcjQxZGRwdzA4NTIyeXNhbmkyeGo4dDYifQ.d7iWc6darW_rMRCDG-s_PQ",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_live_51TstuxCZb0Mjdd8GQxdDdCB6SookPALEjI59m6nzO6ForYvwpE2cRMg34vphPBuzTfYwl4kCoFJoQsJSOOirkUwv00F1PslRqb"
       }
     },
     "ios-simulator": {
