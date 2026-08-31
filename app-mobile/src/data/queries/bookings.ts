@@ -105,10 +105,17 @@ export function useRespondBooking() {
 // 'paid' once the rail confirms. (Was Stripe — dropped in Guinea.)
 export function useBookingSignPay() {
   return useMutation({
-    mutationFn: async (bookingId: string) => {
+    // payerPhone : compte inscrit par email, sans numero enregistre — meme
+    // trou que celui corrige cote commandes le 2026-08-25 (15 comptes sur 20
+    // n'ont aucun numero). Sans ce champ, le serveur rejette avec
+    // PAYER_PHONE_REQUIRED et rien dans l'ecran ne permettait d'agir dessus.
+    mutationFn: async (input: { bookingId: string; payerPhone?: string }) => {
       return apiPost<{ booking_id: string; payment_url: string }>({
         path: '/booking-sign-pay',
-        body: { booking_id: bookingId },
+        body: {
+          booking_id: input.bookingId,
+          ...(input.payerPhone ? { payer_phone: input.payerPhone } : {}),
+        },
       });
     },
   });

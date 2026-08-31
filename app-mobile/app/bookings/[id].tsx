@@ -9,6 +9,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
+import { Input } from '../../src/components/primitives/Input';
 import { HoldToConfirmButton } from '../../src/components/primitives/HoldToConfirmButton';
 import { TopBar } from '../../src/components/nav/TopBar';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
@@ -19,6 +20,8 @@ import { useMyBookings, useBookingSignPay, useCancelBooking, useConfirmCheckin }
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { formatGNF } from '../../src/lib/format';
+import { usePaymentProfile } from '../../src/lib/paymentProfile';
+import { normalizeGnPhone, formatGnPhone, isValidGnPhone } from '../../src/lib/gnPhone';
 
 export default function BookingDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,6 +32,13 @@ export default function BookingDetailRoute() {
   const cancel = useCancelBooking();
   const checkin = useConfirmCheckin();
   const [payBusy, setPayBusy] = useState(false);
+  // Compte inscrit par email, sans numero enregistre (meme trou que corrige
+  // cote commandes le 2026-08-25 — jamais reporte ici jusqu'ici).
+  const { e164: onFilePhone, loading: payProfileLoading } = usePaymentProfile();
+  const needsPayerPhone = !payProfileLoading && !onFilePhone;
+  const [payerPhoneInput, setPayerPhoneInput] = useState('');
+  const payerPhoneValid = !needsPayerPhone || isValidGnPhone(payerPhoneInput);
+  const payerPhoneE164 = payerPhoneInput ? `+224${payerPhoneInput}` : undefined;
 
   const booking = (q.data ?? []).find((b) => b.id === id);
 
@@ -44,7 +54,7 @@ export default function BookingDetailRoute() {
       // signature n'est posee ici : client 2026-08-22, « la signature APRES le
       // paiement, pas avant ». C'est le cron qui, a la confirmation du rail,
       // bascule la reservation en 'paid' ET appose la signature du locataire.
-      const { payment_url } = await signPay.mutateAsync(booking.id);
+      const { payment_url } = await signPay.mutateAsync({ bookingId: booking.id, payerPhone: payerPhoneE164 });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`; /checkout/pay exists on disk (same cast as checkout/index + confirm).
       router.push({ pathname: '/checkout/pay', params: { url: payment_url, bookingId: booking.id } } as any);
     } catch (e) {
@@ -90,6 +100,30 @@ export default function BookingDetailRoute() {
           <BookingTimeline booking={booking} />
         </View>
 
+        {/* Compte sans numero (inscrit par email) : sans ce champ, le
+            paiement echouait sec avec « Numero de paiement requis » et rien
+            a l'ecran ne permettait d'agir dessus. */}
+        {booking.status === 'accepted' && needsPayerPhone && (
+          <Input
+            label="Numéro pour le paiement"
+            leadingIcon="phone"
+            keyboardType="phone-pad"
+            placeholder="6XX XX XX XX"
+            value={formatGnPhone(payerPhoneInput)}
+            onChangeText={(txt) => setPayerPhoneInput(normalizeGnPhone(txt))}
+            errorText={
+              payerPhoneInput.length > 0 && !payerPhoneValid
+                ? 'Numéro invalide (9 chiffres, commence par 6).'
+                : undefined
+            }
+            helperText={
+              payerPhoneInput.length === 0
+                ? 'Aucun numéro sur ton compte — indique celui qui recevra le code de confirmation.'
+                : undefined
+            }
+          />
+        )}
+
         {/* Stage actions */}
         {booking.status === 'accepted' && (
           <HoldToConfirmButton
@@ -97,7 +131,7 @@ export default function BookingDetailRoute() {
             // label stops the text from crowding the 56px pill.
             label={payBusy ? 'Paiement en cours…' : 'Maintenir pour payer'}
             onConfirm={onSignPay}
-            disabled={payBusy}
+            disabled={payBusy || !payerPhoneValid}
           />
         )}
         {booking.status === 'paid' && (
