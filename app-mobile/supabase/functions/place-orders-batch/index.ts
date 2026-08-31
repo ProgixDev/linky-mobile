@@ -23,9 +23,10 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { initPayment } from '@shared/lengopay.ts';
+import { initPayment, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
 import { DELIVERY_FEE_MINOR } from '@shared/delivery.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
+import { formatGNF } from '@shared/push.ts';
 
 interface ItemInput { product_id: string; quantity: number }
 
@@ -229,6 +230,18 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
   if (totalErr || typeof totalMinor !== 'number' || totalMinor <= 0) {
     console.error('[place-orders-batch] batch_total_minor error:', totalErr, totalMinor);
     throwApi('INTERNAL_ERROR', 500, 'Erreur calcul du montant');
+  }
+
+  // Plafond Lengopay (25/08, cf. lengopay.ts) : rien n'a encore ete tente au
+  // rail, mais les N commandes du lot existent deja (etape 1) — meme geste
+  // d'annulation que l'echec d'insertion d'intention plus bas, pour ne pas
+  // les laisser 'placed' sans intention de paiement.
+  if (totalMinor > LENGOPAY_MAX_AMOUNT_MINOR) {
+    await sb.from('orders')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('batch_id', batchId).eq('status', 'placed');
+    throwApi('LENGOPAY_AMOUNT_LIMIT', 400,
+      `Ce montant (${formatGNF(totalMinor)}) dépasse le plafond autorisé pour Orange Money/MTN (${formatGNF(LENGOPAY_MAX_AMOUNT_MINOR)}). Merci de nous contacter pour un autre moyen de paiement.`);
   }
 
   const placeholderId = `pending-init-${crypto.randomUUID()}`;

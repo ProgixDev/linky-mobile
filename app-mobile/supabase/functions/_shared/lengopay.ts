@@ -62,6 +62,14 @@ export function lengopayConfigured(): boolean {
   return !!Deno.env.get('LINKY_LENGOPAY_LICENSE_KEY') && !!websiteId();
 }
 
+// Plafond par transaction signale par le client (25/08 : reunion Lengopay) :
+// Orange Money / MTN via Lengopay refuse au-dela de 15 000 000 GNF. Le
+// decoupage automatique en plusieurs encaissements est une demande separee,
+// non construite ici (cf. message client) — ce garde-fou empeche seulement
+// une tentative vouee a l'echec cote Lengopay de partir sans prevenir
+// l'acheteur pourquoi.
+export const LENGOPAY_MAX_AMOUNT_MINOR = 15_000_000;
+
 export async function initPayment(req: LengopayInitRequest): Promise<LengopayInitResponse> {
   const res = await fetchWithTimeout(`${baseUrl()}/api/v1/payments`, {
     method: 'POST',

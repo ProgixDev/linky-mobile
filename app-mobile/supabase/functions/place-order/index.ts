@@ -18,7 +18,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from '@shared/catalog.ts';
-import { initPayment } from '@shared/lengopay.ts';
+import { initPayment, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 import { DELIVERY_FEE_MINOR } from '@shared/delivery.ts';
@@ -317,6 +317,18 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
 
   const orderRow = row as OrderRow;
   const intentCurrency = orderRow.currency;  // NOT NULL with default 'GNF' per Phase I.1
+
+  // Plafond Lengopay (25/08, cf. lengopay.ts) : rien n'a encore ete tente au
+  // rail — meme geste d'annulation pre-intention que la garde devise
+  // juste au-dessus, pour ne pas laisser la commande 'placed' pour rien.
+  if (orderRow.total_minor > LENGOPAY_MAX_AMOUNT_MINOR) {
+    await sb.from('orders').update({
+      status: 'cancelled',
+      updated_at: new Date().toISOString(),
+    }).eq('id', orderRow.id);
+    throwApi('LENGOPAY_AMOUNT_LIMIT', 400,
+      `Ce montant (${formatGNF(orderRow.total_minor)}) dépasse le plafond autorisé pour Orange Money/MTN (${formatGNF(LENGOPAY_MAX_AMOUNT_MINOR)}). Merci de nous contacter pour un autre moyen de paiement.`);
+  }
 
   // S2 Step 1: insert payment_intent FIRST with a placeholder rail_intent_id.
   // Unique constraint on (rail, rail_intent_id) requires placeholder uniqueness,

@@ -13,7 +13,8 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { initPayment } from '@shared/lengopay.ts';
+import { initPayment, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
+import { formatGNF } from '@shared/push.ts';
 
 interface Body {
   booking_id: string;
@@ -57,6 +58,13 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
     payerPhone = phoneRow?.e164 ?? undefined;
   }
   if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
+
+  // Plafond Lengopay (25/08, cf. lengopay.ts). La reservation reste 'accepted'
+  // (aucune intention creee encore) — le locataire peut reessayer.
+  if (Number(bk.total_minor) > LENGOPAY_MAX_AMOUNT_MINOR) {
+    throwApi('LENGOPAY_AMOUNT_LIMIT', 400,
+      `Ce montant (${formatGNF(Number(bk.total_minor))}) dépasse le plafond autorisé pour Orange Money/MTN (${formatGNF(LENGOPAY_MAX_AMOUNT_MINOR)}). Merci de nous contacter pour un autre moyen de paiement.`);
+  }
 
   // S2 step 1: intent FIRST with a unique placeholder rail_intent_id.
   const placeholderId = `pending-init-${crypto.randomUUID()}`;
