@@ -40,21 +40,23 @@ export default function LeaseDetailRoute() {
       },
     );
 
+  const isSale = booking.period === 'sale';
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Bail" back />
+      <TopBar title={isSale ? 'Vente' : 'Bail'} back />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 16 }}>
         <View style={{ gap: 8 }}>
           <Text style={{ fontSize: 18, fontWeight: '700' }}>{booking.property?.title}</Text>
           <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-            {bookingPeriodText(booking)} · Locataire : {booking.counterpartyName ?? '—'}
+            {bookingPeriodText(booking)} · {isSale ? 'Acheteur' : 'Locataire'} : {booking.counterpartyName ?? '—'}
           </Text>
           <BookingStatusChip status={booking.status} />
         </View>
 
         {booking.note.trim().length > 0 && (
           <View>
-            <MicroLabel label="Message du locataire" />
+            <MicroLabel label={isSale ? "Message de l'acheteur" : 'Message du locataire'} />
             <Text style={{ fontSize: 13.5, color: colors.text, lineHeight: 20, letterSpacing: 0 }}>{booking.note}</Text>
           </View>
         )}
@@ -63,7 +65,9 @@ export default function LeaseDetailRoute() {
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
               <Text style={{ fontWeight: '700' }}>En acceptant, tu signes le contrat ci-dessous. </Text>
-              Le locataire devra ensuite signer et payer {formatGNF(booking.totalGnf)} — l'argent reste en séquestre jusqu'à son emménagement, puis {formatGNF(booking.amountGnf)} te sont versés.
+              {isSale
+                ? `L'acheteur devra ensuite signer et payer ${formatGNF(booking.totalGnf)} — l'argent reste en séquestre jusqu'à la remise du bien, puis ${formatGNF(booking.amountGnf)} te sont versés.`
+                : `Le locataire devra ensuite signer et payer ${formatGNF(booking.totalGnf)} — l'argent reste en séquestre jusqu'à son emménagement, puis ${formatGNF(booking.amountGnf)} te sont versés.`}
             </Text>
           </TrustStrip>
         )}

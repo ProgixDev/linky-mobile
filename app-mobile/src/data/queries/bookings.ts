@@ -6,8 +6,8 @@ import type { Booking } from '../types';
 
 export interface RequestBookingInput {
   propertyId: string;
-  period: 'day' | 'month';
-  startDate: string;      // YYYY-MM-DD
+  period: 'day' | 'month' | 'sale';
+  startDate: string;      // YYYY-MM-DD — for 'sale', a formality (today)
   endDate?: string;       // daily only (exclusive check-out)
   months?: number;        // monthly only
   note?: string;

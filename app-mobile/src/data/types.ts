@@ -243,7 +243,7 @@ export interface BookingContract {
   tenant_name: string;
   property_title: string;
   property_location: string;
-  period: 'day' | 'month';
+  period: 'day' | 'month' | 'sale';
   start_date: string;
   end_date: string | null;
   months: number | null;
@@ -258,7 +258,7 @@ export interface BookingContract {
 export interface Booking {
   id: ID;
   propertyId: ID;
-  period: 'day' | 'month';
+  period: 'day' | 'month' | 'sale';
   startDate: string;
   endDate: string | null;
   months: number | null;

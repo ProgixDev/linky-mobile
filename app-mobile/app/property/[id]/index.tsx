@@ -312,17 +312,6 @@ export default function PropertyDetailRoute() {
             />
           )}
 
-          {isTerrain && (
-            <View style={{ marginTop: 14 }}>
-              <TrustStrip tone="accent">
-                <Text style={{ color: colors.accentText, fontSize: 12 }}>
-                  Les transactions de terrains se font <Text style={{ fontWeight: '700' }}>hors application</Text>. Linky
-                  ne traite ni le paiement, ni les documents notariés.
-                </Text>
-              </TrustStrip>
-            </View>
-          )}
-
           {/* Description — moved up (client 2026-07-22) so buyers read what the
               place is before the details / map, instead of at the very bottom. */}
           {prop.description.trim().length > 0 && (
@@ -403,25 +392,23 @@ export default function PropertyDetailRoute() {
             </Card>
           </View>
 
-          {!isTerrain && (
-            <View style={{ marginTop: 14 }}>
-              {prop.type === 'location' ? (
-                <TrustStrip tone="primary">
-                  <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-                    <Text style={{ fontWeight: '700' }}>Réservation sécurisée. </Text>
-                    Ton paiement reste en séquestre jusqu'à ton emménagement. La visite est possible avant de réserver, mais optionnelle.
-                  </Text>
-                </TrustStrip>
-              ) : (
-                <TrustStrip tone="primary">
-                  <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-                    <Text style={{ fontWeight: '700' }}>Visite obligatoire. </Text>
-                    Pour un achat, la visite du bien est obligatoire avant toute transaction sur l'application.
-                  </Text>
-                </TrustStrip>
-              )}
-            </View>
-          )}
+          <View style={{ marginTop: 14 }}>
+            {prop.type === 'location' ? (
+              <TrustStrip tone="primary">
+                <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
+                  <Text style={{ fontWeight: '700' }}>Réservation sécurisée. </Text>
+                  Ton paiement reste en séquestre jusqu'à ton emménagement. La visite est possible avant de réserver, mais optionnelle.
+                </Text>
+              </TrustStrip>
+            ) : (
+              <TrustStrip tone="primary">
+                <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
+                  <Text style={{ fontWeight: '700' }}>Visite obligatoire. </Text>
+                  Pour acheter via l'application, la visite du bien doit être effectuée et confirmée par le propriétaire au préalable. Ton paiement reste ensuite en séquestre jusqu'à la remise du bien.
+                </Text>
+              </TrustStrip>
+            )}
+          </View>
 
           {/* ===== Agence card — links to the agency page (client 2026-08-03) ===== */}
           {agency && (
@@ -485,15 +472,6 @@ export default function PropertyDetailRoute() {
             leading={<I.edit size={16} color={colors.text} />}
             onPress={() => router.push(`/property/edit/${prop.id}`)}
           />
-        ) : isTerrain ? (
-          <Button
-            variant="outline"
-            style={{ flex: 1 }}
-            label="Contacter"
-            leading={<I.msg size={16} color={colors.text} />}
-            onPress={onChatPress}
-            disabled={findOrCreate.isPending || !prop.ownerId}
-          />
         ) : prop.type === 'location' ? (
           // Booking flow (client 2026-07) : renting is the primary action ;
           // the visit stays available but OPTIONAL for rentals.
@@ -522,22 +500,35 @@ export default function PropertyDetailRoute() {
             </View>
           </View>
         ) : (
-          // Achat/vente : la visite est OBLIGATOIRE avant toute transaction.
-          <>
+          // Achat/vente ET terrain (client 2026-08-31 : payer via l'appli OU
+          // voir avec le propriétaire directement — les deux restent
+          // disponibles). La visite reste OBLIGATOIRE avant tout achat
+          // en ligne ; le serveur refuse sinon (VISIT_REQUIRED), avec un
+          // message clair plutôt qu'un blocage silencieux côté UI.
+          <View style={{ flex: 1, gap: 8 }}>
             <Button
-              variant="outline"
-              style={{ flex: 1 }}
-              label="Contacter"
-              leading={<I.msg size={16} color={colors.text} />}
-              onPress={onChatPress}
-              disabled={findOrCreate.isPending || !prop.ownerId}
+              size="lg"
+              block
+              label="Acheter via l'application"
+              onPress={() => router.push(`/property/${prop.id}/buy` as never)}
             />
-            <Button
-              style={{ flex: 1.4 }}
-              label="Visiter"
-              onPress={() => router.push(`/property/${prop.id}/visit`)}
-            />
-          </>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Button
+                variant="outline"
+                style={{ flex: 1 }}
+                label="Contacter"
+                leading={<I.msg size={16} color={colors.text} />}
+                onPress={onChatPress}
+                disabled={findOrCreate.isPending || !prop.ownerId}
+              />
+              <Button
+                variant="outline"
+                style={{ flex: 1 }}
+                label="Visiter"
+                onPress={() => router.push(`/property/${prop.id}/visit`)}
+              />
+            </View>
+          </View>
         )}
       </StickyBottom>
     </View>

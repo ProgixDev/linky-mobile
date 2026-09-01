@@ -64,14 +64,16 @@ export default function BookingDetailRoute() {
     }
   };
 
+  const isSale = booking.period === 'sale';
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Réservation" back />
+      <TopBar title={isSale ? 'Achat' : 'Réservation'} back />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 16 }}>
         <View style={{ gap: 8 }}>
           <Text style={{ fontSize: 18, fontWeight: '700' }}>{booking.property?.title}</Text>
           <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-            {bookingPeriodText(booking)} · Propriétaire : {booking.counterpartyName ?? '—'}
+            {bookingPeriodText(booking)} · {isSale ? 'Vendeur' : 'Propriétaire'} : {booking.counterpartyName ?? '—'}
           </Text>
           <BookingStatusChip status={booking.status} />
         </View>
@@ -79,8 +81,10 @@ export default function BookingDetailRoute() {
         {booking.status === 'accepted' && (
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-              <Text style={{ fontWeight: '700' }}>Le propriétaire a signé. </Text>
-              Relis le contrat ci-dessous, puis signe et paie {formatGNF(booking.totalGnf)} — l'argent reste en séquestre jusqu'à ton emménagement.
+              <Text style={{ fontWeight: '700' }}>{isSale ? 'Le vendeur a signé. ' : 'Le propriétaire a signé. '}</Text>
+              {isSale
+                ? `Relis le contrat ci-dessous, puis signe et paie ${formatGNF(booking.totalGnf)} — l'argent reste en séquestre jusqu'à la remise du bien.`
+                : `Relis le contrat ci-dessous, puis signe et paie ${formatGNF(booking.totalGnf)} — l'argent reste en séquestre jusqu'à ton emménagement.`}
             </Text>
           </TrustStrip>
         )}
@@ -88,7 +92,9 @@ export default function BookingDetailRoute() {
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
               <Text style={{ fontWeight: '700' }}>Contrat signé, argent en séquestre. </Text>
-              Le jour de la remise des clés, confirme ton emménagement pour verser le loyer au propriétaire.
+              {isSale
+                ? 'Le jour de la remise du bien, confirme la réception pour verser le montant au vendeur.'
+                : 'Le jour de la remise des clés, confirme ton emménagement pour verser le loyer au propriétaire.'}
             </Text>
           </TrustStrip>
         )}
@@ -136,10 +142,14 @@ export default function BookingDetailRoute() {
         )}
         {booking.status === 'paid' && (
           <HoldToConfirmButton
-            label="Maintenir pour confirmer l'emménagement"
+            label={isSale ? 'Maintenir pour confirmer la remise du bien' : "Maintenir pour confirmer l'emménagement"}
             onConfirm={() =>
               checkin.mutate(booking.id, {
-                onSuccess: () => show('Emménagement confirmé — loyer versé au propriétaire ✅', 'success'),
+                onSuccess: () =>
+                  show(
+                    isSale ? 'Remise confirmée — montant versé au vendeur ✅' : 'Emménagement confirmé — loyer versé au propriétaire ✅',
+                    'success',
+                  ),
                 onError: (e) => show(toToastMessage(e, 'Impossible de confirmer.'), 'danger'),
               })
             }
