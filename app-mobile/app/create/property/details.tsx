@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { Platform, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { Sparkles } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -15,6 +16,9 @@ import { TopBar } from '../../../src/components/nav/TopBar';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { CitySelectField } from '../../../src/components/forms/CitySelectField';
 import { useCreateListing } from '../../../src/stores/createListing';
+import { useGenerateDescription } from '../../../src/data/queries';
+import { useToast } from '../../../src/components/feedback/Toast';
+import { toToastMessage } from '../../../src/lib/api';
 
 const PROPERTY_TYPE_DEFS = [
   { id: 'location' as const, labelKey: 'create.typeLocation' },
@@ -26,11 +30,37 @@ export default function CreatePropertyDetailsRoute() {
   const { colors, radii } = useTheme();
   const { t } = useTranslation();
   const state = useCreateListing();
+  const gen = useGenerateDescription();
+  const toast = useToast();
   const PROPERTY_TYPES = useMemo(
     () => PROPERTY_TYPE_DEFS.map((tp) => ({ ...tp, label: t(tp.labelKey) })),
     [t],
   );
   const isTerrain = state.propertyType === 'terrain';
+  // Meme fonction que l'annonce produit (Groq) — jamais reliee cote immo
+  // jusqu'ici. Mots-cles = le contexte que le titre seul ne porte pas
+  // (ville, quartier, pieces, surface) pour une description plus pertinente.
+  const onGenerate = async () => {
+    if (gen.isPending || state.title.trim().length < 2) return;
+    const category = PROPERTY_TYPES.find((tp) => tp.id === state.propertyType)?.label;
+    const keywords = [
+      state.city,
+      state.district,
+      !isTerrain && state.rooms ? `${state.rooms} pièces` : '',
+      state.areaSqm ? `${state.areaSqm}m²` : '',
+    ].filter(Boolean).join(', ');
+    try {
+      const desc = await gen.mutateAsync({
+        title: state.title,
+        category,
+        condition: !isTerrain && state.furnished ? 'Meublé' : undefined,
+        keywords: keywords || undefined,
+      });
+      state.set('description', desc.slice(0, 600));
+    } catch (e) {
+      toast.show(toToastMessage(e, 'Génération impossible. Réessaie.'), 'danger');
+    }
+  };
   // Switching to terrain clears the fields that don't apply to land, so a
   // listing that started as a flat never ships stale rooms / furnished /
   // amenities to the backend.
@@ -98,13 +128,36 @@ export default function CreatePropertyDetailsRoute() {
                 listing shipped with an empty description. Whole box is tappable
                 (Input wraps a Pressable that focuses the multiline field). */}
             <View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                 <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>
                   {t('create.fieldDescription')}
                 </Text>
-                <Text variant="micro" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
-                  {state.description.length} / 600
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  {state.title.trim().length >= 2 ? (
+                    <Pressable
+                      onPress={onGenerate}
+                      disabled={gen.isPending}
+                      hitSlop={6}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    >
+                      <Sparkles size={13} color={colors.primary} />
+                      <Text
+                        variant="micro"
+                        style={{
+                          color: colors.primary,
+                          textTransform: 'none',
+                          letterSpacing: 0,
+                          fontWeight: '600',
+                        }}
+                      >
+                        {gen.isPending ? 'Génération…' : 'Générer avec l’IA'}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  <Text variant="micro" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
+                    {state.description.length} / 600
+                  </Text>
+                </View>
               </View>
               <Input
                 multiline
