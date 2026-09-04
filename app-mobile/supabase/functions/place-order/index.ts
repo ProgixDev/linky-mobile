@@ -21,7 +21,7 @@ import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from
 import { initPayment, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
-import { DELIVERY_FEE_MINOR } from '@shared/delivery.ts';
+import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.ts';
 
 interface OrderItemInput { product_id: string; quantity: number }
 
@@ -96,7 +96,6 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   // livraison forfaitaire est décidé côté serveur (le body ne porte JAMAIS le
   // montant) ; retrait sur place = 0.
   const deliveryMode = body.delivery_mode ?? 'delivery';
-  const deliveryFeeMinor = deliveryMode === 'delivery' ? DELIVERY_FEE_MINOR : 0;
 
   // One RPC per shape. place_order_multi enforces the same-seller rule itself,
   // so a tampered payload mixing shops is rejected in the database, not only
@@ -104,6 +103,41 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   const items: OrderItemInput[] = body.items ?? [
     { product_id: body.product_id as string, quantity: body.quantity as number },
   ];
+
+  // Tarif a la distance (client 2026-09-03 : « 1 km = 2000 GNF »).
+  //
+  // Calcule ici plutot que dans le RPC — contrairement au lot multi-boutiques,
+  // une commande simple n'a QU'UNE boutique, donc le scalaire que place_order_multi
+  // accepte deja suffit : aucune signature de fonction sur le chemin de l'argent
+  // n'a besoin de changer. delivery_fee_for_shop rend NULL quand la geometrie
+  // n'est pas fiable, et on retombe alors sur le forfait.
+  let deliveryFeeMinor = deliveryMode === 'delivery' ? DELIVERY_FEE_MINOR : 0;
+  if (deliveryMode === 'delivery') {
+    const addressId = await resolveDeliveryAddressId(sb, userId);
+    if (addressId) {
+      // La boutique se deduit du premier article : place_order_multi refuse de
+      // toute façon un panier melangeant deux vendeurs (MULTIPLE_SELLERS), donc
+      // tous les articles partagent forcement cette boutique.
+      const { data: prod } = await sb
+        .from('products')
+        .select('shop_id')
+        .eq('id', items[0]?.product_id)
+        .maybeSingle();
+      if (prod?.shop_id) {
+        const { data: distanceFee, error: eFee } = await sb.rpc('delivery_fee_for_shop', {
+          p_shop_id: prod.shop_id,
+          p_address_id: addressId,
+        });
+        if (eFee) {
+          // Jamais bloquant : un calcul de distance en echec coute le forfait,
+          // pas la commande.
+          console.error('[place-order] delivery_fee_for_shop failed:', eFee);
+        } else if (typeof distanceFee === 'number') {
+          deliveryFeeMinor = distanceFee;
+        }
+      }
+    }
+  }
   const { data: newId, error: rpcErr } = await sb.rpc('place_order_multi', {
     p_buyer_id: userId,
     p_items: items,

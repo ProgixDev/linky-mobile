@@ -823,3 +823,6 @@ verify_jwt = false
 
 [functions.place-orders-batch]
 verify_jwt = false
+
+[functions.delivery-quote]
+verify_jwt = false

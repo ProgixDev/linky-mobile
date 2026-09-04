@@ -18,7 +18,7 @@ import { I, type IconKey } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
 import { useCart } from '../../src/stores/cart';
 import { apiPost } from '../../src/lib/api';
-import { usePlaceOrder, usePlaceOrdersBatch, useWallet, useCancelPendingPayment } from '../../src/data/queries';
+import { usePlaceOrder, usePlaceOrdersBatch, useWallet, useCancelPendingPayment, useDeliveryQuote } from '../../src/data/queries';
 import { useMyAddresses } from '../../src/data/queries/addresses';
 import { DELIVERY_FEE_GNF, type DeliveryMode } from '../../src/lib/delivery';
 import { usePaymentProfile } from '../../src/lib/paymentProfile';
@@ -308,7 +308,29 @@ export default function CheckoutRoute() {
   // chiffre, mais c'est bien leur somme. shopIds.size vaut 1 pour un panier
   // mono-boutique, donc la formule couvre les deux cas sans branche.
   const shopCount = Math.max(shopIds.size, 1);
-  const deliveryFee = deliveryMode === 'delivery' ? DELIVERY_FEE_GNF * shopCount : 0;
+  // Depuis 2026-09-03 le tarif depend de la DISTANCE (client : « 1 km = 2000
+  // GNF »), calculee a partir de coordonnees et d'une grille qui ne sortent pas
+  // du serveur. On demande donc un devis plutot que de multiplier un forfait :
+  // sans ça l'ecran afficherait un montant et le serveur en prelverait un
+  // autre. Tant que le devis n'a pas repondu — ou quand la geometrie n'est pas
+  // fiable — le forfait reste la valeur montree, et c'est aussi celle que le
+  // serveur appliquera.
+  const deliveryQuote = useDeliveryQuote({
+    productIds: lines.map((l) => l.productId),
+    deliveryMode,
+    addressId: defaultAddress?.id,
+    enabled: lines.length > 0,
+  });
+  // Tant que le devis n'a pas repondu, le montant affiche est le forfait — donc
+  // potentiellement PAS celui qui sera preleve. On bloque le bouton jusqu'a ce
+  // qu'il ait repondu, exactement comme addressGateLoading bloque tant que la
+  // porte adresse n'est pas tranchee. Sans ça, le cache partage des produits
+  // rend l'ecran « pret » avant la reponse du devis, et un acheteur rapide
+  // validerait 5 000 pendant que le serveur facture la distance.
+  const deliveryQuoteLoading = deliveryMode === 'delivery' && !deliveryQuote.isSuccess;
+  const deliveryFee = deliveryMode === 'delivery'
+    ? (deliveryQuote.data?.total_minor ?? DELIVERY_FEE_GNF * shopCount)
+    : 0;
   const total = subtotal + serviceFee + deliveryFee;
 
   return (
@@ -324,7 +346,7 @@ export default function CheckoutRoute() {
               presentation only — 'delivery' stays the default selection. */}
           {([
             { mode: 'pickup' as DeliveryMode, icon: 'store' as IconKey, title: 'Retrait sur place', hint: 'Vous récupérez à la boutique — Gratuit' },
-            { mode: 'delivery' as DeliveryMode, icon: 'truck' as IconKey, title: 'Livraison à domicile', hint: `Linky vous livre — ${formatGNF(DELIVERY_FEE_GNF * shopCount)}${shopCount > 1 ? ` (${shopCount} colis)` : ''}` },
+            { mode: 'delivery' as DeliveryMode, icon: 'truck' as IconKey, title: 'Livraison à domicile', hint: `Linky vous livre — ${formatGNF(deliveryQuote.data?.total_minor ?? DELIVERY_FEE_GNF * shopCount)}${shopCount > 1 ? ` (${shopCount} colis)` : ''}` },
           ]).map((opt, i) => {
             const sel = deliveryMode === opt.mode;
             const Ico = I[opt.icon];
@@ -632,7 +654,7 @@ export default function CheckoutRoute() {
           size="lg"
           block
           loading={placeOrder.isPending || placeBatch.isPending || cardFlowBusy}
-          disabled={placeOrder.isPending || placeBatch.isPending || cardFlowBusy || (!allLoaded && !loadFailed) || lines.length === 0 || addressGateLoading || (mobileMoneySelected && needsPayerPhone && !payerPhoneValid)}
+          disabled={placeOrder.isPending || placeBatch.isPending || cardFlowBusy || (!allLoaded && !loadFailed) || lines.length === 0 || addressGateLoading || (deliveryQuoteLoading && !loadFailed && !needsAddress) || (mobileMoneySelected && needsPayerPhone && !payerPhoneValid)}
           label={
             placeOrder.isPending || placeBatch.isPending || cardFlowBusy
               ? t('checkout.payingCta')

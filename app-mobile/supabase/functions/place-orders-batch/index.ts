@@ -24,7 +24,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { initPayment, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
-import { DELIVERY_FEE_MINOR } from '@shared/delivery.ts';
+import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 import { formatGNF } from '@shared/push.ts';
 
@@ -73,9 +73,14 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
   }
 
   const deliveryMode = body.delivery_mode ?? 'delivery';
-  // Le frais de livraison est decide ICI, cote serveur, et UNE SEULE FOIS pour
-  // tout le lot — le corps de la requete ne porte jamais de montant.
+  // Le frais de livraison est decide cote serveur — le corps de la requete ne
+  // porte jamais de montant. Depuis 2026-09-03 le RPC calcule la distance PAR
+  // BOUTIQUE quand l'adresse est connue ET que les deux points sont de vrais
+  // points sur la carte ; ce forfait reste le repli dans tous les autres cas.
   const deliveryFeeMinor = deliveryMode === 'delivery' ? DELIVERY_FEE_MINOR : 0;
+  const addressId = deliveryMode === 'delivery'
+    ? await resolveDeliveryAddressId(sb, userId)
+    : null;
 
   const { data: batchId, error: rpcErr } = await sb.rpc('place_orders_batch', {
     p_buyer_id:           userId,
@@ -83,6 +88,7 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     p_payment_method:     body.payment_method,
     p_delivery_mode:      deliveryMode,
     p_delivery_fee_minor: deliveryFeeMinor,
+    p_address_id:         addressId,
   });
   if (rpcErr || !batchId) {
     const msg = (rpcErr as { message?: string } | null)?.message ?? '';
