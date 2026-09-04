@@ -1581,7 +1581,10 @@
       "codeSent": "Code envoyé.",
       "requestError": "Impossible d'envoyer le code.",
       "confirmError": "Code invalide ou expiré.",
-      "addOk": "Numéro ajouté."
+      "addOk": "Numéro ajouté.",
+      "edit": "Modifier",
+      "editSheetTitle": "Modifier le numéro",
+      "editOk": "Numéro modifié."
     },
     "privacy": {
       "title": "Confidentialité",

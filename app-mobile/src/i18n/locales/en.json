@@ -1581,7 +1581,10 @@
       "codeSent": "Code sent.",
       "requestError": "Could not send the code.",
       "confirmError": "Invalid or expired code.",
-      "addOk": "Number added."
+      "addOk": "Number added.",
+      "edit": "Edit",
+      "editSheetTitle": "Change the number",
+      "editOk": "Number updated."
     },
     "privacy": {
       "title": "Privacy",

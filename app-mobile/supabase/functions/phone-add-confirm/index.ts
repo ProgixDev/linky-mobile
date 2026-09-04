@@ -14,11 +14,20 @@ import { requireUser } from '@shared/auth.ts';
 import { matchesOtpCode } from '@shared/phone-code.ts';
 import { detectCarrier } from '@shared/validate.ts';
 
-interface Body { otp_id: string; code: string }
+interface Body {
+  otp_id: string;
+  code: string;
+  /** Modification d'un numero : l'ancien est retire APRES que le nouveau soit
+   *  pose. Voir le bloc « REMPLACEMENT » plus bas pour l'ordre et pourquoi. */
+  replaces_phone_id?: string;
+}
 function valid(b: unknown): b is Body {
   const x = b as Body;
-  return !!x && typeof x.otp_id === 'string' && /^[0-9a-f-]{36}$/i.test(x.otp_id)
-    && typeof x.code === 'string' && /^\d{6}$/.test(x.code);
+  if (!x || typeof x.otp_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.otp_id)) return false;
+  if (typeof x.code !== 'string' || !/^\d{6}$/.test(x.code)) return false;
+  if (x.replaces_phone_id !== undefined
+      && (typeof x.replaces_phone_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.replaces_phone_id))) return false;
+  return true;
 }
 
 const MAX_ATTEMPTS = 5;
@@ -69,14 +78,47 @@ Deno.serve(makePost<Body>('/v1/phones/add-confirm', valid, async ({ sb, body, re
   if (eCons) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   if (!consumed) throwApi('OTP_ALREADY_USED', 410, 'Code déjà utilisé');
 
+  // ── REMPLACEMENT (client 2026-09-03 : « pouvoir modifier son numero ») ────
+  // On ne met JAMAIS a jour phones.e164 en place. Un numero est un moyen de
+  // connexion (find_or_create_user_with_phone et phone-signin resolvent le
+  // compte par e164) : une modification directe permettrait a une session
+  // volee de rediriger l'identite de connexion vers le numero de l'attaquant,
+  // sans jamais prouver qu'il le possede. Ici la possession du NOUVEAU numero
+  // est deja prouvee — l'OTP vient d'etre valide juste au-dessus.
+  //
+  // ORDRE VOLONTAIRE : inserer le nouveau, PUIS supprimer l'ancien, PUIS
+  // promouvoir. A aucun instant le compte ne se retrouve sans numero, donc un
+  // echec au milieu ne peut pas enfermer l'utilisateur dehors. L'inverse
+  // (supprimer d'abord) laisserait une fenetre ou un echec d'insertion vide le
+  // compte de tout moyen de connexion.
+  let replacing: { id: string; is_primary: boolean } | null = null;
+  if (body.replaces_phone_id) {
+    const { data: oldRow, error: eOld } = await sb
+      .from('phones')
+      .select('id, user_id, is_primary')
+      .eq('id', body.replaces_phone_id)
+      .maybeSingle();
+    if (eOld) {
+      console.error('[phone-add-confirm] replace lookup error:', eOld);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+    }
+    if (!oldRow || oldRow.user_id !== userId) {
+      throwApi('PHONE_NOT_FOUND', 404, 'Numéro à remplacer introuvable');
+    }
+    replacing = { id: oldRow.id, is_primary: oldRow.is_primary };
+  }
+
   // Client 2026-07-22: the FIRST phone a user links becomes primary automatically
   // (a lone number is de facto the default — mobile-money payouts need one set).
   // Later adds stay non-primary ; switching primary remains an explicit action.
+  // Sur un remplacement on insere TOUJOURS en non-principal : l'ancien porte
+  // encore le drapeau a cet instant (index unique un-seul-principal), la
+  // promotion se fait apres sa suppression.
   const { count: existingPhones } = await sb
     .from('phones')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId);
-  const makePrimary = (existingPhones ?? 0) === 0;
+  const makePrimary = !replacing && (existingPhones ?? 0) === 0;
 
   // Final insert. The e164 UNIQUE constraint is the last line of defense:
   // even if two confirms race past the add-request "already linked" check
@@ -100,16 +142,49 @@ Deno.serve(makePost<Body>('/v1/phones/add-confirm', valid, async ({ sb, body, re
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
 
+  // Le nouveau numero est en place et verifie : on peut retirer l'ancien.
+  // Au-dela d'ici, plus rien ne doit faire echouer la requete — le
+  // remplacement a deja reussi du point de vue de l'utilisateur, et rendre une
+  // erreur lui ferait croire le contraire alors que son nouveau numero est
+  // bien enregistre. Les echecs restants sont journalises en CRITICAL.
+  let isPrimary = row.is_primary;
+  if (replacing) {
+    const { error: eDel } = await sb
+      .from('phones')
+      .delete()
+      .eq('id', replacing.id)
+      .eq('user_id', userId);
+    if (eDel) {
+      console.error('[phone-add-confirm] CRITICAL old phone not removed after replace', {
+        userId, old: replacing.id, added: row.id, eDel,
+      });
+    } else if (replacing.is_primary) {
+      const { error: ePromote } = await sb
+        .from('phones')
+        .update({ is_primary: true })
+        .eq('id', row.id)
+        .eq('user_id', userId);
+      if (ePromote) {
+        console.error('[phone-add-confirm] CRITICAL primary not carried over after replace', {
+          userId, added: row.id, ePromote,
+        });
+      } else {
+        isPrimary = true;
+      }
+    }
+  }
+
   return {
     body: {
       phone: {
         id: row.id,
         e164: row.e164,
         carrier: row.carrier,
-        is_primary: row.is_primary,
+        is_primary: isPrimary,
         verified: row.verified_at !== null,
         created_at: row.created_at,
       },
+      replaced_phone_id: replacing?.id ?? null,
     },
   };
 }));

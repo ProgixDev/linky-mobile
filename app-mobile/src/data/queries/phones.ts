@@ -38,7 +38,12 @@ export function useRequestAddPhone() {
 export function useConfirmAddPhone() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { otp_id: string; code: string }): Promise<{ phone: UserPhone }> => {
+    // replaces_phone_id : modification d'un numero. Le serveur pose le nouveau
+    // AVANT de retirer l'ancien (jamais de mise a jour en place — un numero
+    // est un moyen de connexion, cf. phone-add-confirm).
+    mutationFn: async (
+      input: { otp_id: string; code: string; replaces_phone_id?: string },
+    ): Promise<{ phone: UserPhone; replaced_phone_id: string | null }> => {
       return apiPost({ path: '/phone-add-confirm', body: input });
     },
     onSuccess: () => {

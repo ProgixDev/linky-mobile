@@ -43,15 +43,18 @@ export default function PhonesRoute() {
   const removePhone = useRemovePhone();
   const setPrimary = useSetPrimaryPhone();
 
-  const [addOpen, setAddOpen] = useState(false);
+  // `replacing` porte le numero en cours de modification : la meme feuille
+  // sert a ajouter et a modifier, la difference tient au numero remplace.
+  const [addOpen, setAddOpen] = useState<{ replacing: UserPhone | null } | null>(null);
 
   const phones = phonesQuery.data ?? [];
 
   const onPressRemove = (p: UserPhone) => {
-    if (p.is_primary) {
-      toast.show(t('settings.phones.cannotRemovePrimary'), 'danger');
-      return;
-    }
+    // Plus de garde « principal » ici (client 2026-09-03) : elle rendait le
+    // bouton inutilisable sur tout compte cree par telephone, qui n'a qu'un
+    // seul numero, forcement principal. La vraie contrainte — qu'il reste un
+    // moyen de connexion — est verifiee par le serveur, qui seul connait les
+    // emails du compte ; son message (LAST_LOGIN_METHOD) s'affiche tel quel.
     Alert.alert(
       t('settings.phones.removeTitle'),
       t('settings.phones.removeBody', { phone: formatE164ForDisplay(p.e164) }),
@@ -155,6 +158,10 @@ export default function PhonesRoute() {
                   phone={p}
                   onMakePrimary={() => onPressMakePrimary(p)}
                   onRemove={() => onPressRemove(p)}
+                  onEdit={() => {
+                    haptic.light();
+                    setAddOpen({ replacing: p });
+                  }}
                   busy={removePhone.isPending || setPrimary.isPending}
                 />
               ))}
@@ -170,7 +177,7 @@ export default function PhonesRoute() {
               label={t('settings.phones.addCta')}
               onPress={() => {
                 haptic.light();
-                setAddOpen(true);
+                setAddOpen({ replacing: null });
               }}
             />
           </View>
@@ -202,7 +209,11 @@ export default function PhonesRoute() {
         </View>
       </ScrollView>
 
-      <AddPhoneSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddPhoneSheet
+        open={addOpen !== null}
+        replacing={addOpen?.replacing ?? null}
+        onClose={() => setAddOpen(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -211,11 +222,13 @@ function PhoneCard({
   phone,
   onMakePrimary,
   onRemove,
+  onEdit,
   busy,
 }: {
   phone: UserPhone;
   onMakePrimary: () => void;
   onRemove: () => void;
+  onEdit: () => void;
   busy: boolean;
 }) {
   const { colors } = useTheme();
@@ -320,35 +333,70 @@ function PhoneCard({
             </Text>
           </Pressable>
         )}
-        {!phone.is_primary && (
-          <Pressable
-            onPress={onRemove}
-            disabled={busy}
-            style={{
-              height: 36,
-              paddingHorizontal: 14,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: 'rgba(209,79,60,0.3)',
-              backgroundColor: 'rgba(209,79,60,0.06)',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              opacity: busy ? 0.5 : 1,
-            }}
-          >
-            <Trash2 size={13} color={colors.danger} strokeWidth={2} />
-            <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.danger }}>
-              {t('settings.phones.remove')}
-            </Text>
-          </Pressable>
-        )}
+        {/* Modifier — remplacement verifie : on demande un code sur le NOUVEAU
+            numero avant de retirer l'ancien (jamais de modification en place,
+            cf. phone-add-confirm). */}
+        <Pressable
+          onPress={onEdit}
+          disabled={busy}
+          style={{
+            flex: phone.is_primary ? 1 : 0,
+            height: 36,
+            paddingHorizontal: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.bg,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: busy ? 0.5 : 1,
+          }}
+        >
+          <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.text }}>
+            {t('settings.phones.edit')}
+          </Text>
+        </Pressable>
+        {/* Retirer — plus conditionne au « non principal » (client 2026-09-03).
+            Un compte cree par telephone n'a qu'un numero, principal : le bouton
+            n'apparaissait donc jamais. Le serveur refuse seulement si c'est le
+            dernier moyen de connexion. */}
+        <Pressable
+          onPress={onRemove}
+          disabled={busy}
+          style={{
+            height: 36,
+            paddingHorizontal: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: 'rgba(209,79,60,0.3)',
+            backgroundColor: 'rgba(209,79,60,0.06)',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            opacity: busy ? 0.5 : 1,
+          }}
+        >
+          <Trash2 size={13} color={colors.danger} strokeWidth={2} />
+          <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.danger }}>
+            {t('settings.phones.remove')}
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
 }
 
-function AddPhoneSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AddPhoneSheet({
+  open,
+  replacing,
+  onClose,
+}: {
+  open: boolean;
+  /** Non nul = modification : ce numero sera retire APRES validation du
+   *  nouveau. Nul = simple ajout. */
+  replacing: UserPhone | null;
+  onClose: () => void;
+}) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const toast = useToast();
@@ -395,10 +443,17 @@ function AddPhoneSheet({ open, onClose }: { open: boolean; onClose: () => void }
   const onConfirm = () => {
     if (!otpId || code.length !== 6 || confirmAdd.isPending) return;
     confirmAdd.mutate(
-      { otp_id: otpId, code },
+      {
+        otp_id: otpId,
+        code,
+        ...(replacing ? { replaces_phone_id: replacing.id } : {}),
+      },
       {
         onSuccess: () => {
-          toast.show(t('settings.phones.addOk'), 'success');
+          toast.show(
+            replacing ? t('settings.phones.editOk') : t('settings.phones.addOk'),
+            'success',
+          );
           onClose();
         },
         onError: (e) => toast.show(toToastMessage(e, t('settings.phones.confirmError')), 'danger'),
@@ -436,7 +491,11 @@ function AddPhoneSheet({ open, onClose }: { open: boolean; onClose: () => void }
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>
-              {step === 'enter' ? t('settings.phones.addSheetTitle') : t('settings.phones.verifySheetTitle')}
+              {step === 'verify'
+                ? t('settings.phones.verifySheetTitle')
+                : replacing
+                  ? t('settings.phones.editSheetTitle')
+                  : t('settings.phones.addSheetTitle')}
             </Text>
             <Pressable
               onPress={onClose}

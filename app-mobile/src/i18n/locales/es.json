@@ -1581,7 +1581,10 @@
       "codeSent": "Código enviado.",
       "requestError": "No se pudo enviar el código.",
       "confirmError": "Código no válido o caducado.",
-      "addOk": "Número añadido."
+      "addOk": "Número añadido.",
+      "edit": "Modificar",
+      "editSheetTitle": "Modificar el número",
+      "editOk": "Número modificado."
     },
     "privacy": {
       "title": "Privacidad",
