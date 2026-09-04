@@ -27,7 +27,18 @@
 -- sur le centre de Conakry. Aucune adresse ne peut donc se retrouver sans
 -- coordonnees.
 --
--- Applique en prod (mkaddhcjneilvwqethjo) via l'editeur SQL.
+-- ⚠️ JAMAIS APPLIQUEE EN PROD — en-tete corrige le 2026-09-03.
+-- Cette ligne annonçait « Applique en prod » ; c'etait faux. Verifie par
+-- requete sur mkaddhcjneilvwqethjo : ni haversine_km, ni delivery_distance_km,
+-- ni delivery_fee_for_km n'existent. La migration 20260903_01 a d'abord echoue
+-- dessus (42883) avant qu'on s'en aperçoive.
+--
+-- 20260903_01 recree elle-meme haversine_km et delivery_distance_km (les deux
+-- seules dont elle a besoin) : elle n'attend plus rien de ce fichier. Ce qui
+-- reste ici et n'a jamais tourne : delivery_tariffs + delivery_fee_for_km, le
+-- modele PAR TRANCHES — remplace par la regle LINEAIRE du client (2000 GNF/km,
+-- delivery_pricing + delivery_fee_linear). A appliquer seulement si un jour on
+-- revient a une grille par tranches.
 -- ============================================================================
 
 -- ─── 1. Distance a vol d'oiseau, en kilometres ──────────────────────────────

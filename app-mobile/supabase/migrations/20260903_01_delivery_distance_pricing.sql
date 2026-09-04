@@ -5,10 +5,17 @@
 -- 1 km = 2000 GNF. L'appli calcule la distance Vendeur A -> client C et ajuste
 -- le prix de la livraison. »
 --
--- L'infrastructure existait deja (20260824_01) : haversine_km,
--- delivery_distance_km, delivery_tariffs, delivery_fee_for_km — construites
--- puis volontairement laissees DEBRANCHEES en attendant cette grille. Cette
--- migration fournit la grille et fait le branchement.
+-- 20260824_01 avait ecrit haversine_km / delivery_distance_km / delivery_tariffs
+-- en annonçant en en-tete « Applique en prod ». VERIFIE LE 2026-09-03 CONTRE LA
+-- BASE : c'est FAUX, aucune de ces fonctions n'existe en production. Le premier
+-- essai d'appliquer cette migration-ci a d'ailleurs echoue dessus
+-- (42883: function public.haversine_km does not exist).
+--
+-- Cette migration ne suppose donc plus rien : elle (re)cree elle-meme les deux
+-- seules fonctions dont elle depend, en create or replace — sans effet si
+-- 20260824_01 finit par etre appliquee un jour. Ce qui EXISTE reellement en
+-- prod et sur quoi on s'appuie, verifie par requete : geo_centroid,
+-- geo_centroids, shops.lat/lng, addresses.lat/lng.
 --
 -- ── LE GARDE-FOU, ET POURQUOI IL EXISTE ────────────────────────────────────
 -- Les coordonnees ne sont pas toutes reelles. Le trigger shops_set_geo remplit
@@ -36,6 +43,45 @@
 --
 -- A appliquer en prod (mkaddhcjneilvwqethjo) via l'editeur SQL.
 -- ============================================================================
+
+-- ─── 0. Distance — reprises de 20260824_01, jamais appliquee en prod ────────
+-- Formule haversine standard. immutable + search_path vide : pure, aucune
+-- lecture de table, sans risque en boucle sur un lot de commandes.
+create or replace function public.haversine_km(
+  p_lat1 double precision, p_lng1 double precision,
+  p_lat2 double precision, p_lng2 double precision
+) returns double precision
+language sql
+immutable
+set search_path = ''
+as $$
+  select 6371.0 * 2 * asin(
+    sqrt(
+      power(sin(radians(p_lat2 - p_lat1) / 2), 2) +
+      cos(radians(p_lat1)) * cos(radians(p_lat2)) *
+      power(sin(radians(p_lng2 - p_lng1) / 2), 2)
+    )
+  );
+$$;
+
+-- Une seule porte d'entree pour la distance boutique -> adresse : personne n'a
+-- besoin de connaitre le detail des deux tables pour l'obtenir.
+create or replace function public.delivery_distance_km(
+  p_shop_id uuid, p_address_id uuid
+) returns double precision
+language sql
+stable
+set search_path = ''
+as $$
+  select public.haversine_km(s.lat, s.lng, a.lat, a.lng)
+  from public.shops s, public.addresses a
+  where s.id = p_shop_id and a.id = p_address_id;
+$$;
+
+revoke all on function public.haversine_km(double precision, double precision, double precision, double precision) from public, anon, authenticated;
+revoke all on function public.delivery_distance_km(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.haversine_km(double precision, double precision, double precision, double precision) to service_role;
+grant execute on function public.delivery_distance_km(uuid, uuid) to service_role;
 
 -- ─── 1. Parametres de tarification, modifiables sans migration ──────────────
 -- Une seule ligne. La table existante delivery_tariffs (par tranches) ne sait
