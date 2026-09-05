@@ -7,6 +7,7 @@ import {
   Download,
   Trash2,
   Lock,
+  Globe,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +38,7 @@ export default function PrivacyRoute() {
   const signIn = useAuth((s) => s.signIn);
   const profilePublic = currentUser?.profile_public ?? true;
   const personalize = currentUser?.personalize_feed ?? true;
+  const paymentAbroad = currentUser?.payment_abroad_override ?? false;
   const updateProfile = useUpdateProfile();
   const onToggleProfilePublic = async (next: boolean) => {
     try {
@@ -49,6 +51,16 @@ export default function PrivacyRoute() {
   const onTogglePersonalize = async (next: boolean) => {
     try {
       const res = await updateProfile.mutateAsync({ personalize_feed: next });
+      if (currentUser) signIn({ ...currentUser, ...res.user });
+    } catch (e) {
+      toast.show(toToastMessage(e, t('settings.privacy.deleteMailError')), 'danger');
+    }
+  };
+  // Diaspora override (2026-09-05) — see src/lib/paymentProfile.ts for why the
+  // phone-based Guinea/abroad rule needs an escape hatch.
+  const onTogglePaymentAbroad = async (next: boolean) => {
+    try {
+      const res = await updateProfile.mutateAsync({ payment_abroad_override: next });
       if (currentUser) signIn({ ...currentUser, ...res.user });
     } catch (e) {
       toast.show(toToastMessage(e, t('settings.privacy.deleteMailError')), 'danger');
@@ -118,6 +130,18 @@ export default function PrivacyRoute() {
           title={t('settings.privacy.title')}
           subtitle={t('settings.privacy.subtitle')}
         />
+
+        <SectionLabel label={t('settings.privacy.sectionPayment')} />
+        <Card>
+          <ToggleRow
+            Icon={Globe}
+            label={t('settings.privacy.togglePaymentAbroad')}
+            sub={t('settings.privacy.togglePaymentAbroadSub')}
+            value={paymentAbroad}
+            onChange={(v) => void onTogglePaymentAbroad(v)}
+            last
+          />
+        </Card>
 
         <SectionLabel label={t('settings.privacy.sectionData')} />
         <Card>

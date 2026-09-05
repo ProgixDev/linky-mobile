@@ -1597,6 +1597,9 @@
     "privacy": {
       "title": "Privacy",
       "subtitle": "You decide what Linky can do with your data.",
+      "sectionPayment": "Payment",
+      "togglePaymentAbroad": "I live abroad",
+      "togglePaymentAbroadSub": "Your number is Guinean but you live abroad? Turn this on to see card payment.",
       "sectionData": "Data",
       "sectionProfile": "Profile",
       "sectionMyData": "My data",

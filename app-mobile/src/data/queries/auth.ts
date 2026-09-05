@@ -26,6 +26,10 @@ export interface AuthUser {
   // then — see settings/privacy.tsx.
   profile_public?: boolean;
   personalize_feed?: boolean;
+  // Diaspora override — forces usePaymentProfile() to 'abroad' regardless of a
+  // Guinean (+224) phone number. Undefined/false = the phone-based rule applies
+  // (see src/lib/paymentProfile.ts). Set via settings/privacy.tsx.
+  payment_abroad_override?: boolean;
 }
 
 export interface TokenBundle {
@@ -164,6 +168,9 @@ export interface UpdateProfileInput {
   // false = Découvrir stays purely chronological ; true nudges it by the
   // caller's own favorites (client 2026-08-06).
   personalize_feed?: boolean;
+  // true forces the 'abroad' payment profile regardless of phone dial code —
+  // for a diaspora account that kept a +224 number (2026-09-05).
+  payment_abroad_override?: boolean;
 }
 export function useUpdateProfile() {
   return useMutation({

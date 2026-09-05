@@ -27,6 +27,11 @@ interface Body {
   // « Recommandations personnalisées » (client 2026-08-06). false = discover-feed
   // stays purely chronological ; true nudges it by the caller's own favorites.
   personalize_feed?: boolean;
+  // Diaspora override (2026-09-05): usePaymentProfile() infers Guinea/abroad from
+  // the phone's dial code, which misclassifies a +224 number kept while living
+  // abroad. true forces the 'abroad' payment profile client-side regardless of
+  // phone; false (default) keeps the phone-based rule.
+  payment_abroad_override?: boolean;
 }
 
 const V1_ROLES = new Set(['buyer', 'seller', 'agent', 'livreur']);
@@ -58,6 +63,7 @@ function valid(b: unknown): b is Body {
   }
   if (x.profile_public !== undefined && typeof x.profile_public !== 'boolean') return false;
   if (x.personalize_feed !== undefined && typeof x.personalize_feed !== 'boolean') return false;
+  if (x.payment_abroad_override !== undefined && typeof x.payment_abroad_override !== 'boolean') return false;
   // At least one updatable field must be present — otherwise this is a no-op
   // that wastes an idempotency key.
   if (
@@ -66,7 +72,8 @@ function valid(b: unknown): b is Body {
     x.roles === undefined &&
     x.avatar_url === undefined &&
     x.profile_public === undefined &&
-    x.personalize_feed === undefined
+    x.personalize_feed === undefined &&
+    x.payment_abroad_override === undefined
   ) {
     return false;
   }
@@ -131,6 +138,9 @@ Deno.serve(makePost<Body>('/v1/profile/update', valid, async ({ sb, body, req })
   if (body.personalize_feed !== undefined) {
     patch.personalize_feed = body.personalize_feed;
   }
+  if (body.payment_abroad_override !== undefined) {
+    patch.payment_abroad_override = body.payment_abroad_override;
+  }
 
   const { error: eUpd } = await sb
     .from('users')
@@ -147,7 +157,7 @@ Deno.serve(makePost<Body>('/v1/profile/update', valid, async ({ sb, body, req })
 
   const { data: user, error: eSel } = await sb
     .from('users')
-    .select('id, display_name, avatar_url, locale, kyc_status, city, roles, is_admin, profile_public, personalize_feed')
+    .select('id, display_name, avatar_url, locale, kyc_status, city, roles, is_admin, profile_public, personalize_feed, payment_abroad_override')
     .eq('id', userId)
     .single();
   if (eSel || !user) {

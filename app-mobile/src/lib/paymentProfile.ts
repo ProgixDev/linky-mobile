@@ -28,8 +28,14 @@
 //
 // Mesure faite le 2026-08-24 : 15 comptes sur 20 n'ont AUCUN numero. Un repli
 // sur la Guinee se serait donc trompe sur trois comptes sur quatre.
+//
+// CAS NON COUVERT PAR LA REGLE, ET C'EST VOULU : la diaspora qui a GARDE sa
+// carte SIM guinieenne en vivant a l'etranger. Plutot que de deviner encore
+// plus fort, users.payment_abroad_override (reglable dans Reglages >
+// Confidentialite) laisse la personne le declarer elle-meme.
 import { useMemo } from 'react';
 import { useMyPhones } from '../data/queries/phones';
+import { useAuth } from '../stores/auth';
 
 export type PaymentProfile = 'guinea' | 'abroad';
 
@@ -55,11 +61,19 @@ export interface PaymentProfileState {
 
 export function usePaymentProfile(): PaymentProfileState {
   const { data: phones, isLoading } = useMyPhones();
+  // Diaspora escape hatch (2026-09-05) : un numero +224 garde en vivant a
+  // l'etranger classait a tort en 'guinea' sans aucun moyen de corriger.
+  // Reglable dans Reglages > Confidentialite ; false = comportement inchange.
+  const abroadOverride = useAuth((s) => s.user?.payment_abroad_override) ?? false;
   return useMemo(() => {
     const list = phones ?? [];
     // Le numero principal fait foi ; a defaut, le premier verifie.
     const primary = list.find((p) => p.is_primary) ?? list[0] ?? null;
     const e164 = primary?.e164 ?? null;
-    return { profile: profileFromPhone(e164), loading: isLoading, e164 };
-  }, [phones, isLoading]);
+    return {
+      profile: abroadOverride ? 'abroad' : profileFromPhone(e164),
+      loading: isLoading,
+      e164,
+    };
+  }, [phones, isLoading, abroadOverride]);
 }
