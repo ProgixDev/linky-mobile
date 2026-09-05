@@ -36,6 +36,8 @@ export interface AdminDelivery {
     productSnapshot: { title: string; photo: string; priceGnf: number } | null;
     amountGnf: number;
     buyerCity: string | null;
+    /** Shared by every per-shop order a multi-shop cart batch creates; null otherwise. */
+    batchId: string | null;
   } | null;
   createdAt: string;
 }

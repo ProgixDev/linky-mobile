@@ -63,6 +63,7 @@ interface DeliveryRow {
     amount_minor: number | string;
     total_minor: number | string;
     status: string;
+    batch_id: string | null;
   } | null;
 }
 
@@ -72,7 +73,7 @@ Deno.serve(makePost<Body>('/v1/deliveries/list-livreur', valid, async ({ sb, bod
 
   let q = sb
     .from('deliveries')
-    .select('id, order_id, livreur_id, status, delivery_address, assigned_at, pickup_at, delivered_at, notes, created_at, updated_at, order:orders!inner(id, reference, buyer_id, seller_id, product_snapshot, quantity, amount_minor, total_minor, status)')
+    .select('id, order_id, livreur_id, status, delivery_address, assigned_at, pickup_at, delivered_at, notes, created_at, updated_at, order:orders!inner(id, reference, buyer_id, seller_id, product_snapshot, quantity, amount_minor, total_minor, status, batch_id)')
     .eq('livreur_id', userId);
 
   if (body.status) q = q.eq('status', body.status);
@@ -118,6 +119,10 @@ Deno.serve(makePost<Body>('/v1/deliveries/list-livreur', valid, async ({ sb, bod
       amountGnf: Number(r.order.amount_minor),
       totalGnf: Number(r.order.total_minor),
       status: r.order.status,
+      // Shared across a multi-shop cart batch's per-shop orders — null for a
+      // single-shop order. Not consumed by the driver app yet; exposed so a
+      // future grouped-trip view there doesn't need a backend round-trip.
+      batchId: r.order.batch_id ?? null,
     } : null,
   }));
 

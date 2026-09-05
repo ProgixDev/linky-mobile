@@ -55,6 +55,7 @@ interface DeliveryRow {
     amount_minor: number | string;
     buyer_id: string;
     status: string;
+    batch_id: string | null;
   } | null;
 }
 
@@ -67,7 +68,7 @@ Deno.serve(makePost<Body>('/v1/admin/deliveries/list', valid, async ({ sb, body,
 
   let q = sb
     .from('deliveries')
-    .select('id, order_id, livreur_id, status, delivery_address, created_at, order:orders!inner(reference, product_snapshot, amount_minor, buyer_id, status)')
+    .select('id, order_id, livreur_id, status, delivery_address, created_at, order:orders!inner(reference, product_snapshot, amount_minor, buyer_id, status, batch_id)')
     .eq('status', status);
 
   // The "À assigner" queue must only surface deliveries the admin can ACTUALLY
@@ -124,6 +125,11 @@ Deno.serve(makePost<Body>('/v1/admin/deliveries/list', valid, async ({ sb, body,
           productSnapshot: r.order.product_snapshot,
           amountGnf: Number(r.order.amount_minor),
           buyerCity: cityByUser.get(r.order.buyer_id) ?? null,
+          // Shared across the N per-shop orders a multi-shop cart batch creates
+          // (place_orders_batch) — null for a single-shop order. Lets the admin
+          // console group same-batch deliveries so they don't get split across
+          // two different livreurs without anyone noticing.
+          batchId: r.order.batch_id ?? null,
         }
       : null,
     createdAt: r.created_at,

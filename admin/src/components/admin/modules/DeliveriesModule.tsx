@@ -48,7 +48,7 @@ function fmtDate(iso: string): string {
 
 export function DeliveriesModule() {
   const [tab, setTab] = useState<Tab>('aassigner');
-  const [picker, setPicker] = useState<AdminDelivery | null>(null);
+  const [picker, setPicker] = useState<AdminDelivery[] | null>(null);
 
   const unassigned = useAdminDeliveries('unassigned', tab === 'aassigner');
   const assigned = useAdminDeliveries('assigned', tab === 'encours');
@@ -70,11 +70,47 @@ export function DeliveriesModule() {
     }));
   }, [tab, unassigned.data, assigned.data, inTransit.data]);
 
+  // Same-batch deliveries (a buyer's multi-shop cart — place_orders_batch
+  // creates one order, and so one delivery, per shop) currently have zero
+  // visible link: an admin could assign them to two different livreurs
+  // without ever realizing it's one buyer's order. Group by batchId (within
+  // the current tab's rows only — a delivery already assigned out of this
+  // view naturally falls out of its group) so the table can flag it and the
+  // picker can assign the whole group in one action.
+  const groupByDeliveryId = useMemo(() => {
+    const byBatch = new Map<string, Row[]>();
+    for (const r of rows) {
+      const batchId = r.order?.batchId;
+      if (!batchId) continue;
+      const list = byBatch.get(batchId) ?? [];
+      list.push(r);
+      byBatch.set(batchId, list);
+    }
+    const map = new Map<string, Row[]>();
+    for (const group of byBatch.values()) {
+      if (group.length < 2) continue;
+      for (const r of group) map.set(r.id, group);
+    }
+    return map;
+  }, [rows]);
+
   const columns: ColumnDef<Row>[] = [
     {
       id: 'reference',
       header: 'Réf. commande',
-      cell: ({ row }) => <span className="font-bold tabular-nums">{row.original.order?.reference ?? '—'}</span>,
+      cell: ({ row }) => {
+        const group = groupByDeliveryId.get(row.original.id);
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="font-bold tabular-nums">{row.original.order?.reference ?? '—'}</span>
+            {group && (
+              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-text">
+                <Package size={10} /> Panier groupé · {group.length} boutiques
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: 'address',
@@ -128,7 +164,7 @@ export function DeliveriesModule() {
       cell: ({ row }) => (
         <div className="flex justify-end">
           <button
-            onClick={() => setPicker(row.original)}
+            onClick={() => setPicker(groupByDeliveryId.get(row.original.id) ?? [row.original])}
             className="inline-flex items-center gap-1.5 rounded-lg bg-black px-3 py-1.5 text-xs font-bold text-white hover:opacity-90"
           >
             <Truck size={13} />
@@ -163,7 +199,7 @@ export function DeliveriesModule() {
         />
       )}
 
-      {picker && <LivreurPicker delivery={picker} onClose={() => setPicker(null)} />}
+      {picker && <LivreurPicker deliveries={picker} onClose={() => setPicker(null)} />}
     </div>
   );
 }
@@ -181,19 +217,43 @@ function TabBtn({ label, active, onClick }: { label: string; active: boolean; on
   );
 }
 
-function LivreurPicker({ delivery, onClose }: { delivery: AdminDelivery; onClose: () => void }) {
+function LivreurPicker({ deliveries, onClose }: { deliveries: AdminDelivery[]; onClose: () => void }) {
   const { data: livreurs, isLoading, isError } = useAdminLivreurs(true);
   const assign = useAssignDelivery();
-  const [selected, setSelected] = useState<string | null>(delivery.assignedLivreur?.id ?? null);
+  const isGroup = deliveries.length > 1;
+  // Only preselect when every delivery in the group already shares the exact
+  // same livreur — otherwise showing one of several conflicting assignments
+  // as "current" would be misleading.
+  const commonLivreurId = deliveries.every((d) => d.assignedLivreur?.id === deliveries[0].assignedLivreur?.id)
+    ? (deliveries[0].assignedLivreur?.id ?? null)
+    : null;
+  const [selected, setSelected] = useState<string | null>(commonLivreurId);
+  const [assigning, setAssigning] = useState(false);
+
+  async function confirm() {
+    if (!selected || assigning) return;
+    setAssigning(true);
+    // allSettled — one delivery failing (e.g. reassigned by someone else in the
+    // meantime) must not stop the others in the group from going through.
+    await Promise.allSettled(
+      deliveries.map((d) => assign.mutateAsync({ delivery_id: d.id, livreur_id: selected })),
+    );
+    setAssigning(false);
+    onClose();
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow-pop)]">
         <header className="flex items-start justify-between gap-3 border-b border-line p-5">
           <div className="min-w-0">
-            <div className="font-display text-lg font-bold">Assigner un livreur</div>
+            <div className="font-display text-lg font-bold">
+              {isGroup ? `Assigner un livreur · ${deliveries.length} boutiques` : 'Assigner un livreur'}
+            </div>
             <div className="mt-0.5 text-xs text-muted">
-              Commande {delivery.order?.reference ?? '—'} · {addressOf(delivery)}
+              {isGroup
+                ? `Commandes ${deliveries.map((d) => d.order?.reference ?? '—').join(', ')} · même panier`
+                : `Commande ${deliveries[0].order?.reference ?? '—'} · ${addressOf(deliveries[0])}`}
             </div>
           </div>
           <button onClick={onClose} className="rounded-md p-1 text-muted hover:bg-sunken" aria-label="Fermer">
@@ -219,7 +279,7 @@ function LivreurPicker({ delivery, onClose }: { delivery: AdminDelivery; onClose
           ) : (
             (livreurs ?? []).map((l) => {
               const isSel = selected === l.id;
-              const isCurrent = delivery.assignedLivreur?.id === l.id;
+              const isCurrent = commonLivreurId === l.id;
               return (
                 <button
                   key={l.id}
@@ -264,22 +324,19 @@ function LivreurPicker({ delivery, onClose }: { delivery: AdminDelivery; onClose
         <footer className="flex gap-3 border-t border-line p-4">
           <button
             onClick={onClose}
-            disabled={assign.isPending}
+            disabled={assigning}
             className="flex h-11 flex-1 items-center justify-center rounded-xl bg-sunken text-sm font-bold text-muted hover:bg-sunken/70 disabled:opacity-50"
           >
             Annuler
           </button>
           <button
-            onClick={() => {
-              if (!selected) return;
-              assign.mutate({ delivery_id: delivery.id, livreur_id: selected }, { onSuccess: onClose });
-            }}
-            disabled={assign.isPending || !selected || selected === delivery.assignedLivreur?.id}
+            onClick={confirm}
+            disabled={assigning || !selected || selected === commonLivreurId}
             className="flex h-11 items-center justify-center gap-2 rounded-xl bg-black text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
             style={{ flex: '1.5 1 0' }}
           >
-            {assign.isPending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} strokeWidth={2.25} />}
-            Confirmer l’assignation
+            {assigning ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} strokeWidth={2.25} />}
+            {isGroup ? `Confirmer pour les ${deliveries.length} boutiques` : 'Confirmer l’assignation'}
           </button>
         </footer>
       </div>
