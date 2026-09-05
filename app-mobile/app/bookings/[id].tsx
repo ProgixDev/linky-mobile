@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
+import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -17,11 +18,13 @@ import { TrustStrip } from '../../src/components/primitives/TrustStrip';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 import { BookingStatusChip, ContractView, BookingTimeline, bookingPeriodText } from '../../src/components/booking/BookingUI';
 import { useMyBookings, useBookingSignPay, useCancelBooking, useConfirmCheckin } from '../../src/data/queries';
+import { PaymentMethodPicker, LENGOPAY_METHOD } from '../../src/components/payment/PaymentMethodPicker';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { formatGNF } from '../../src/lib/format';
 import { usePaymentProfile } from '../../src/lib/paymentProfile';
 import { normalizeGnPhone, formatGnPhone, isValidGnPhone } from '../../src/lib/gnPhone';
+import type { PaymentMethod } from '../../src/data/types';
 
 export default function BookingDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,10 +35,19 @@ export default function BookingDetailRoute() {
   const cancel = useCancelBooking();
   const checkin = useConfirmCheckin();
   const [payBusy, setPayBusy] = useState(false);
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   // Compte inscrit par email, sans numero enregistre (meme trou que corrige
   // cote commandes le 2026-08-25 — jamais reporte ici jusqu'ici).
-  const { e164: onFilePhone, loading: payProfileLoading } = usePaymentProfile();
-  const needsPayerPhone = !payProfileLoading && !onFilePhone;
+  const { e164: onFilePhone, loading: payProfileLoading, profile: payProfile } = usePaymentProfile();
+  // Client 2026-09-04 : la reservation n'offrait AUCUN choix de paiement, elle
+  // sautait droit au champ telephone. Meme selecteur que le panier desormais.
+  // Le portefeuille n'est PAS propose ici : confirm_booking_payment fait un
+  // credit a sens unique vers le sequestre (l'argent vient du rail), donc s'en
+  // servir pour un paiement portefeuille creerait de la monnaie. Ce rail-la
+  // demande son propre RPC, pas un raccourci.
+  const [method, setMethod] = useState<PaymentMethod>(LENGOPAY_METHOD);
+  const isCard = method === 'card';
+  const needsPayerPhone = !isCard && !payProfileLoading && !onFilePhone;
   const [payerPhoneInput, setPayerPhoneInput] = useState('');
   const payerPhoneValid = !needsPayerPhone || isValidGnPhone(payerPhoneInput);
   const payerPhoneE164 = payerPhoneInput ? `+224${payerPhoneInput}` : undefined;
@@ -50,13 +62,53 @@ export default function BookingDetailRoute() {
     if (payBusy) return;
     setPayBusy(true);
     try {
-      // Ouvre la page Lengopay (Orange/MTN) dans la WebView interne. Aucune
-      // signature n'est posee ici : client 2026-08-22, « la signature APRES le
-      // paiement, pas avant ». C'est le cron qui, a la confirmation du rail,
-      // bascule la reservation en 'paid' ET appose la signature du locataire.
-      const { payment_url } = await signPay.mutateAsync({ bookingId: booking.id, payerPhone: payerPhoneE164 });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`; /checkout/pay exists on disk (same cast as checkout/index + confirm).
-      router.push({ pathname: '/checkout/pay', params: { url: payment_url, bookingId: booking.id } } as any);
+      // Aucune signature n'est posee ici : client 2026-08-22, « la signature
+      // APRES le paiement, pas avant ». C'est confirm_booking_payment qui, a la
+      // confirmation du rail, bascule la reservation en 'paid' ET appose la
+      // signature du locataire — quel que soit le rail emprunte.
+      const res = await signPay.mutateAsync({
+        bookingId: booking.id,
+        payerPhone: payerPhoneE164,
+        paymentMethod: method === 'card' ? 'card' : 'orange-money',
+      });
+
+      // Carte : feuille Stripe native, exactement comme le panier.
+      if (res.payment) {
+        const { error: initErr } = await initPaymentSheet({
+          merchantDisplayName: 'Linky',
+          paymentIntentClientSecret: res.payment.client_secret,
+          returnURL: 'linky://stripe-redirect',
+        });
+        if (initErr) {
+          show('Impossible de préparer le paiement', 'danger');
+          return;
+        }
+        const { error: payErr } = await presentPaymentSheet();
+        if (payErr) {
+          // Fermer la feuille ne doit rien declencher d'autre que sa propre
+          // fermeture — meme correctif que le panier le 2026-08-25, ou un
+          // abandon envoyait vers un faux ecran d'attente.
+          if (payErr.code === PaymentSheetError.Canceled) {
+            show('Paiement annulé.', 'info');
+            return;
+          }
+          show(payErr.message || 'Paiement échoué', 'danger');
+          return;
+        }
+        // Le webhook Stripe (metadata.kind='booking') bascule la reservation en
+        // 'paid' en quelques secondes ; la liste se rafraichit toute seule.
+        show('Paiement reçu — contrat signé ✅', 'success');
+        void q.refetch();
+        return;
+      }
+
+      // Lengopay : page hebergee (carte, wallet ou mobile money) dans la WebView.
+      if (res.payment_url) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`; /checkout/pay exists on disk (same cast as checkout/index + confirm).
+        router.push({ pathname: '/checkout/pay', params: { url: res.payment_url, bookingId: booking.id } } as any);
+        return;
+      }
+      show('Réponse inattendue du serveur.', 'danger');
     } catch (e) {
       show(toToastMessage(e, 'Le paiement a échoué.'), 'danger');
     } finally {
@@ -106,9 +158,20 @@ export default function BookingDetailRoute() {
           <BookingTimeline booking={booking} />
         </View>
 
+        {/* Choix du moyen de paiement — meme composant que le panier et le
+            boost (client 2026-09-04 : « unifier les methodes de paiement »).
+            Il n'y en avait AUCUN ici : l'ecran sautait droit au champ
+            telephone, ce qui bloquait net un payeur de la diaspora. */}
+        {booking.status === 'accepted' && (
+          <View>
+            <MicroLabel label="Moyen de paiement" />
+            <PaymentMethodPicker value={method} onChange={setMethod} />
+          </View>
+        )}
+
         {/* Compte sans numero (inscrit par email) : sans ce champ, le
             paiement echouait sec avec « Numero de paiement requis » et rien
-            a l'ecran ne permettait d'agir dessus. */}
+            a l'ecran ne permettait d'agir dessus. Inutile pour la carte. */}
         {booking.status === 'accepted' && needsPayerPhone && (
           <Input
             label="Numéro pour le paiement"

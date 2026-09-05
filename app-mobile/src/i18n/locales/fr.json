@@ -1223,7 +1223,9 @@
       "mtnMoneyHint": "Disponible très bientôt",
       "mobileMoneyNote": "Le paiement s’ouvre dans une page sécurisée où tu choisis Orange Money ou MTN, puis confirmes avec le code reçu par SMS.",
       "mobileMoney": "Orange Money ou MTN",
-      "mobileMoneyHint": "Tu choisis ton opérateur à l’étape suivante"
+      "mobileMoneyHint": "Tu choisis ton opérateur à l’étape suivante",
+      "lengopayGuinea": "Carte bancaire, Wallet ou Mobile Money",
+      "lengopayGuineaHint": "Paycard, Kulu, Soutra, Orange Money ou MTN — tu choisis à l’étape suivante"
     },
     "confirmOpenPayment": "Ouvrir la page de paiement",
     "infoMobile": "Tu recevras un code SMS sur ton numéro pour confirmer le paiement.",

@@ -109,12 +109,26 @@ export function useBookingSignPay() {
     // trou que celui corrige cote commandes le 2026-08-25 (15 comptes sur 20
     // n'ont aucun numero). Sans ce champ, le serveur rejette avec
     // PAYER_PHONE_REQUIRED et rien dans l'ecran ne permettait d'agir dessus.
-    mutationFn: async (input: { bookingId: string; payerPhone?: string }) => {
-      return apiPost<{ booking_id: string; payment_url: string }>({
+    //
+    // paymentMethod (2026-09-04) : 'card' renvoie un client_secret Stripe
+    // (profils etranger), sinon une payment_url Lengopay. Les deux formes de
+    // reponse sont volontairement distinctes pour que l'ecran ne puisse pas
+    // confondre « ouvrir la feuille Stripe » et « ouvrir la page hebergee ».
+    mutationFn: async (input: {
+      bookingId: string;
+      payerPhone?: string;
+      paymentMethod?: 'card' | 'orange-money' | 'mtn-money';
+    }) => {
+      return apiPost<{
+        booking_id: string;
+        payment_url?: string;
+        payment?: { client_secret: string; publishable_key: string };
+      }>({
         path: '/booking-sign-pay',
         body: {
           booking_id: input.bookingId,
           ...(input.payerPhone ? { payer_phone: input.payerPhone } : {}),
+          ...(input.paymentMethod ? { payment_method: input.paymentMethod } : {}),
         },
       });
     },

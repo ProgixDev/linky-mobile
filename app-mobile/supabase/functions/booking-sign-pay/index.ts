@@ -15,21 +15,29 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { initPayment, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
 import { formatGNF } from '@shared/push.ts';
+import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 
 interface Body {
   booking_id: string;
   /** Optional: the mobile-money number for reference. Falls back to primary phone. */
   payer_phone?: string;
+  /** 'card' = Stripe (profils etranger) ; sinon page hebergee Lengopay.
+   *  Absent = lengopay, pour que les installations anterieures continuent de
+   *  fonctionner exactement comme avant. */
+  payment_method?: 'card' | 'orange-money' | 'mtn-money';
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 const PHONE_RE = /^\+224\d{9}$/;
+const METHODS = ['card', 'orange-money', 'mtn-money'];
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
   const x = b as Record<string, unknown>;
   if (typeof x.booking_id !== 'string' || !UUID_RE.test(x.booking_id)) return false;
   if (x.payer_phone !== undefined && (typeof x.payer_phone !== 'string' || !PHONE_RE.test(x.payer_phone))) return false;
+  if (x.payment_method !== undefined
+      && (typeof x.payment_method !== 'string' || !METHODS.includes(x.payment_method))) return false;
   return true;
 }
 
@@ -50,6 +58,94 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
       : "Le propriétaire n'a pas encore signé cette réservation.");
   }
 
+  const method = body.payment_method ?? 'orange-money';
+
+  // ── RAIL CARTE (Stripe) — profils a l'etranger ────────────────────────────
+  // Client 2026-09-04 : « l'appli me demande de saisir un numero de telephone
+  // avant de payer et signer le contrat », alors qu'un payeur de la diaspora
+  // n'a par definition PAS de numero guineen. C'etait le seul chemin possible :
+  // la reservation etait cablee en dur sur Lengopay. Le numero n'est donc plus
+  // exige que la ou il sert vraiment, le rail mobile money.
+  //
+  // Le reglement existe DEJA cote webhook : stripe-webhook traite
+  // metadata.kind==='booking' (verification du montant/devise, idempotence,
+  // duplicata) et appelle confirm_booking_payment. Rien a construire de ce
+  // cote — il n'y avait simplement aucun emetteur.
+  if (method === 'card') {
+    if (!stripeConfigured()) {
+      throwApi('STRIPE_NOT_CONFIGURED', 503, 'Le paiement par carte arrive bientôt.');
+    }
+    // GNF-only, meme garde que place-order : le montant est envoye tel quel en
+    // 'gnf' (zero-decimale). Un montant EUR facture en GNF serait une erreur
+    // silencieuse d'un facteur ~9000.
+    if (bk.currency !== 'GNF') {
+      console.error('[booking-sign-pay] card branch refused non-GNF booking', { booking_id: bk.id, currency: bk.currency });
+      throwApi('CURRENCY_NOT_SUPPORTED', 400, 'Devise non supportée pour la carte.');
+    }
+
+    const cardPlaceholder = `pending-init-${crypto.randomUUID()}`;
+    const { data: cardIntent, error: cardIntentErr } = await sb
+      .from('payment_intents')
+      .insert({
+        booking_id:     bk.id,
+        rail:           'stripe',
+        rail_intent_id: cardPlaceholder,
+        method:         'card',
+        currency:       bk.currency,
+        amount_minor:   bk.total_minor,
+        payer_phone:    null,
+      })
+      .select('id')
+      .single();
+    if (cardIntentErr || !cardIntent) {
+      console.error('[booking-sign-pay] stripe intent insert error:', cardIntentErr);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur intent de paiement');
+    }
+
+    let stripeIntent;
+    try {
+      stripeIntent = await stripeClient().paymentIntents.create({
+        amount: Number(bk.total_minor),
+        currency: 'gnf',
+        automatic_payment_methods: { enabled: true },
+        // kind='booking' est ce que stripe-webhook attend pour router vers
+        // confirm_booking_payment plutot que vers le RPC des commandes.
+        metadata: { kind: 'booking', booking_id: bk.id, intent_id: cardIntent.id, user_id: tenantId },
+      });
+      if (!stripeIntent.client_secret) throw new Error('missing client_secret');
+    } catch (e) {
+      console.error('[booking-sign-pay] stripe init error:', e);
+      await sb.rpc('process_booking_intent_outcome', {
+        p_intent_id: cardIntent.id, p_terminal_status: 'failed', p_rail_status: 'init_failed',
+        p_error_code: 'RAIL_INIT_FAILED', p_error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
+      });
+      throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
+    }
+
+    const { error: cardUpdErr } = await sb
+      .from('payment_intents')
+      .update({ rail_intent_id: stripeIntent.id, rail_status: stripeIntent.status, updated_at: new Date().toISOString() })
+      .eq('id', cardIntent.id);
+    if (cardUpdErr) {
+      console.error('[booking-sign-pay] CRITICAL stripe intent UPDATE failed post-init', {
+        intent_id: cardIntent.id, stripe_pi: stripeIntent.id, error: cardUpdErr,
+      });
+      await sb.rpc('process_booking_intent_outcome', {
+        p_intent_id: cardIntent.id, p_terminal_status: 'failed', p_rail_status: stripeIntent.status,
+        p_error_code: 'INTENT_UPDATE_FAILED', p_error_message: `pi=${stripeIntent.id} ${cardUpdErr.message}`.slice(0, 500),
+      });
+      throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
+    }
+
+    return {
+      body: {
+        booking_id: bk.id,
+        payment: { client_secret: stripeIntent.client_secret, publishable_key: stripePublishableKey() },
+      },
+    };
+  }
+
+  // ── RAIL LENGOPAY (page hebergee : carte, wallet, mobile money) ───────────
   // Payer phone (reference on the intent) — body override, else primary phone.
   let payerPhone = body.payer_phone;
   if (!payerPhone) {
