@@ -39,6 +39,9 @@ export interface AdminDelivery {
     /** Shared by every per-shop order a multi-shop cart batch creates; null otherwise. */
     batchId: string | null;
   } | null;
+  /** Suggested pickup order + total distance for this delivery's batch group —
+   *  only present when every shop and the drop-off have a real map pin. */
+  groupRoute: { orderedRefs: string[]; totalKm: number } | null;
   createdAt: string;
 }
 

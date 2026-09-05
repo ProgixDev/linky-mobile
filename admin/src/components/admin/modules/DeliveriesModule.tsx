@@ -106,6 +106,7 @@ export function DeliveriesModule() {
             {group && (
               <span className="inline-flex w-fit items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-text">
                 <Package size={10} /> Panier groupé · {group.length} boutiques
+                {row.original.groupRoute && ` · ~${row.original.groupRoute.totalKm.toFixed(1)} km`}
               </span>
             )}
           </div>
@@ -255,6 +256,13 @@ function LivreurPicker({ deliveries, onClose }: { deliveries: AdminDelivery[]; o
                 ? `Commandes ${deliveries.map((d) => d.order?.reference ?? '—').join(', ')} · même panier`
                 : `Commande ${deliveries[0].order?.reference ?? '—'} · ${addressOf(deliveries[0])}`}
             </div>
+            {isGroup && deliveries[0].groupRoute && (
+              <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-accent-text">
+                <MapPin size={12} />
+                Ordre suggéré : {deliveries[0].groupRoute.orderedRefs.join(' → ')} · ~
+                {deliveries[0].groupRoute.totalKm.toFixed(1)} km au total
+              </div>
+            )}
           </div>
           <button onClick={onClose} className="rounded-md p-1 text-muted hover:bg-sunken" aria-label="Fermer">
             <X size={16} />
