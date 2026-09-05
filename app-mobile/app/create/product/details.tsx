@@ -14,7 +14,7 @@ import { TopBar } from '../../../src/components/nav/TopBar';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { CitySelectField } from '../../../src/components/forms/CitySelectField';
 import { useCreateListing } from '../../../src/stores/createListing';
-import { useGenerateDescription } from '../../../src/data/queries';
+import { useGenerateDescription, useMyShop } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 import { gnfToEur } from '../../../src/lib/currency';
@@ -25,6 +25,11 @@ export default function CreateProductDetailsRoute() {
   const state = useCreateListing();
   const gen = useGenerateDescription();
   const toast = useToast();
+  // No shop yet => product-create will auto-mint one; send the seller through
+  // the location step first so it doesn't land on the city centroid. A seller
+  // who already has a boutique skips straight to photos, same as before.
+  const myShop = useMyShop('shop');
+  const hasShop = !!myShop.data;
 
   const onGenerate = async () => {
     if (gen.isPending || state.title.trim().length < 2) return;
@@ -178,8 +183,10 @@ export default function CreateProductDetailsRoute() {
           <Button
             label={t('create.continue')}
             style={{ flex: 1 }}
-            disabled={!state.title.trim() || state.priceGnf <= 0 || !state.city.trim()}
-            onPress={() => router.push('/create/product/photos')}
+            disabled={!state.title.trim() || state.priceGnf <= 0 || !state.city.trim() || myShop.isLoading}
+            onPress={() =>
+              router.push(hasShop ? '/create/product/photos' : '/create/product/location')
+            }
           />
         </StickyBottom>
       </KeyboardAvoidingView>

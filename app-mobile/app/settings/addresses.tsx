@@ -406,7 +406,17 @@ function AddressSheet({
   const trimmedLabel = label.trim();
   const labelValid = trimmedLabel.length > 0 && trimmedLabel.length <= 60;
   const cityValid = city.trim().length > 0;
-  const canSave = labelValid && cityValid && !addAddress.isPending && !updateAddress.isPending;
+  // A pin is required for a brand-new address (client decision 2026-09-05) so
+  // delivery pricing can actually price it by distance from day one. Editing
+  // an existing, already-saved address never re-forces it — a non-blocking
+  // banner nudges the owner instead (see below).
+  const pinValid = !!editing || (lat != null && lng != null);
+  const canSave = labelValid && cityValid && pinValid && !addAddress.isPending && !updateAddress.isPending;
+  // Same "trust a pin moved this session" rule as the shop-edit screen: once
+  // the owner touches the map, treat it as pinned immediately instead of
+  // waiting for a refetch of the server's geo_is_pinned verdict.
+  const addrPinChanged = lat !== (editing?.lat ?? null) || lng !== (editing?.lng ?? null);
+  const addrIsPinned = addrPinChanged ? lat != null && lng != null : !!editing?.pinned;
 
   if (!state.open) return null;
 
@@ -522,7 +532,7 @@ function AddressSheet({
 
             <CitySelectField label={t('settings.addresses.cityLabel')} value={city} onChange={setCity} />
 
-            <FieldLabel text="Point de livraison exact" />
+            <FieldLabel text={t('settings.addresses.locationLabel')} />
             <LocationMapPicker
               lat={lat}
               lng={lng}
@@ -532,6 +542,23 @@ function AddressSheet({
               }}
               testID="address-location-picker"
             />
+            {editing && !addrIsPinned && (
+              <View
+                style={{
+                  padding: 10,
+                  borderRadius: 12,
+                  backgroundColor: colors.bgSunken,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <MapPin size={14} color={colors.textMuted} />
+                <Text variant="micro" tone="muted" style={{ flex: 1, textTransform: 'none', letterSpacing: 0 }}>
+                  {t('settings.addresses.locationBannerNotPinned')}
+                </Text>
+              </View>
+            )}
 
             <FieldLabel text={t('settings.addresses.districtLabel')} />
             <TextInput

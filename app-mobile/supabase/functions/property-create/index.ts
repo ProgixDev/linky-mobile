@@ -135,9 +135,15 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
       // generic « Mon agence »). Falls back when the name is unset.
       const firstName = String(caller.display_name ?? '').trim().split(/\s+/)[0];
       const shopName = firstName ? `Agence de ${firstName}` : 'Mon agence';
+      // The property location step already requires a real pin (client-side
+      // gate in create/property/location.tsx) — reuse it for the agency shop
+      // itself instead of leaving it on the city centroid. No new UI needed.
       const { data: created, error: eIns } = await sb
         .from('shops')
-        .insert({ owner_id: userId, name: shopName, city: body.city.trim(), about: '', kind: 'agency' })
+        .insert({
+          owner_id: userId, name: shopName, city: body.city.trim(), about: '', kind: 'agency',
+          lat: body.lat ?? null, lng: body.lng ?? null,
+        })
         .select('id').single();
       if (eIns || !created) {
         console.error('[property-create] auto-shop insert error:', eIns);

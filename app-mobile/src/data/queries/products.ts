@@ -36,6 +36,10 @@ export interface CreateProductInput {
   video_url?: string;
   city: string;
   district?: string;
+  stock?: number | null;
+  /** Only meaningful when the caller has no shop yet — see create/product/location.tsx. */
+  shop_lat?: number;
+  shop_lng?: number;
 }
 
 export interface UpdateProductInput {

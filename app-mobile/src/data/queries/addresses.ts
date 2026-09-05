@@ -15,6 +15,8 @@ export interface UserAddress {
   /** Exact delivery point (picked on the map; falls back to the city centroid). */
   lat: number | null;
   lng: number | null;
+  /** True once lat/lng are a real point, not the city/district centroid fallback. */
+  pinned: boolean;
   is_default: boolean;
   created_at: string;
 }

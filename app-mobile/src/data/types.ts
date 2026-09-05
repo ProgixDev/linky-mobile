@@ -75,6 +75,12 @@ export interface Shop {
   // list-shops and anonymous reads. Stays optional so existing mock data
   // (which doesn't set it) keeps typechecking.
   isFollowing?: boolean;
+  // Owner-only (shop-get-mine) — the exact point stays private otherwise, so
+  // these are null/false on the public get-shop/list-shops responses.
+  lat?: number | null;
+  lng?: number | null;
+  /** True once lat/lng are a real point, not the city-centroid fallback. */
+  pinned?: boolean;
 }
 
 export interface Product {

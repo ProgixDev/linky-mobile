@@ -24,6 +24,7 @@ import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { CitySelectField } from '../../src/components/forms/CitySelectField';
 import { LocationMapPicker } from '../../src/components/location/LocationMapPicker';
+import { I } from '../../src/icons/Icon';
 import { useMyShop, useUpsertShop } from '../../src/data/queries';
 import { useUploadAvatar } from '../../src/data/queries/auth';
 import { useToast } from '../../src/components/feedback/Toast';
@@ -62,9 +63,9 @@ export default function ShopEditRoute() {
   const [about, setAbout] = useState('');
   const [avatar, setAvatar] = useState('');
   const [cover, setCover] = useState('');
-  // Exact shop point — picked on the map. The shop list view doesn't return lat/lng,
-  // so we can't pre-fill the saved pin; we only SEND coords when the seller actually
-  // picks one (shop-upsert preserves the existing pin when lat/lng is omitted).
+  // Exact shop point — picked on the map, pre-filled from the saved shop. We only
+  // SEND coords when they actually changed (see `dirty` below); shop-upsert
+  // preserves the existing pin when lat/lng is omitted from the payload.
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   // Opening hours. hoursEnabled off => no schedule (opening_hours null). Defaults
@@ -83,6 +84,8 @@ export default function ShopEditRoute() {
     setAbout(shop.about ?? '');
     setAvatar(shop.avatar ?? '');
     setCover(shop.cover ?? '');
+    setLat(shop.lat ?? null);
+    setLng(shop.lng ?? null);
     if (shop.openingHours) {
       setHoursEnabled(true);
       setAlwaysOpen(shop.openingHours.alwaysOpen);
@@ -136,8 +139,14 @@ export default function ShopEditRoute() {
       avatar !== (shop?.avatar ?? '') ||
       cover !== (shop?.cover ?? '') ||
       hoursDirty ||
-      (lat != null && lng != null));
+      lat !== (shop?.lat ?? null) ||
+      lng !== (shop?.lng ?? null));
   const canSave = dirty && !!name.trim() && name.trim().length >= 2 && !!city.trim() && !busy && hoursValid;
+  // Non-blocking nudge only (client decision 2026-09-05): a seller who moved
+  // the pin THIS session is trusted as pinned immediately ; otherwise fall
+  // back to the server's geo_is_pinned verdict on the saved point.
+  const pinChanged = lat !== (shop?.lat ?? null) || lng !== (shop?.lng ?? null);
+  const isPinned = pinChanged ? lat != null && lng != null : !!shop?.pinned;
 
   async function pick(kind: 'logo' | 'cover') {
     const m = kind === 'logo' ? uploadLogo : uploadCover;
@@ -175,7 +184,7 @@ export default function ShopEditRoute() {
         avatar_url: avatar || null,
         cover_url: cover || null,
         opening_hours: hoursPayload,
-        ...(lat != null && lng != null ? { lat, lng } : {}),
+        ...(lat !== (shop.lat ?? null) || lng !== (shop.lng ?? null) ? { lat, lng } : {}),
       });
       toast.show(tk('successToast'), 'success');
       if (router.canGoBack()) router.back();
@@ -281,9 +290,9 @@ export default function ShopEditRoute() {
           {label(t('shopEdit.cityLabel'))}
           <CitySelectField label="" value={city} onChange={setCity} />
 
-          {label('LOCALISATION EXACTE')}
+          {label(tk('locationLabel'))}
           <Text variant="micro" tone="muted" style={{ marginTop: -4, marginBottom: 8, textTransform: 'none', letterSpacing: 0 }}>
-            Place le point exact de ta boutique sur la carte (sinon, le centre de ta ville est utilisé).
+            {tk('locationHelp')}
           </Text>
           <LocationMapPicker
             lat={lat}
@@ -294,6 +303,24 @@ export default function ShopEditRoute() {
             }}
             testID="shop-location-picker"
           />
+          {!isPinned && (
+            <View
+              style={{
+                marginTop: 8,
+                padding: 10,
+                borderRadius: 12,
+                backgroundColor: colors.bgSunken,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <I.pin size={14} color={colors.textMuted} />
+              <Text variant="micro" tone="muted" style={{ flex: 1, textTransform: 'none', letterSpacing: 0 }}>
+                {tk('locationBannerNotPinned')}
+              </Text>
+            </View>
+          )}
 
           {label(t('shopEdit.aboutLabel'))}
           <TextInput

@@ -16,6 +16,8 @@ interface AddressRow {
   city: string;
   district: string | null;
   details: string | null;
+  lat: number | null;
+  lng: number | null;
   is_default: boolean;
   created_at: string;
 }
@@ -32,5 +34,15 @@ Deno.serve(makePost<Body>('/v1/addresses/list', valid, async ({ sb, req }) => {
     console.error('[list-my-addresses] query error:', error);
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
-  return { body: { addresses: data as AddressRow[] } };
+  const rows = data as AddressRow[] ?? [];
+  // Tells the address book apart a real pin from the city/district centroid
+  // fallback (addresses_set_geo trigger) — small address book (a handful of
+  // rows per user), so a per-row RPC call is plenty fast.
+  const withPinned = await Promise.all(rows.map(async (r) => {
+    const { data: pinned } = await sb.rpc('geo_is_pinned', {
+      p_lat: r.lat, p_lng: r.lng, p_city: r.city, p_district: r.district,
+    });
+    return { ...r, pinned: pinned ?? false };
+  }));
+  return { body: { addresses: withPinned } };
 }));

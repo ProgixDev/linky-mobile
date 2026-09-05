@@ -49,6 +49,13 @@ export interface ShopRow {
   // Separate profiles per user since 2026-08-07.
   kind?: 'shop' | 'agency';
   created_at: string;
+  // Owner-only fields (never selected by the public get-shop/list-shops
+  // endpoints — the exact point stays private to avoid trilateration, same
+  // reasoning as delivery-quote never returning raw distance). `pinned` is
+  // computed by the caller (geo_is_pinned RPC) and attached before mapping.
+  lat?: number | null;
+  lng?: number | null;
+  pinned?: boolean;
 }
 
 export function mapProduct(r: ProductRow) {
@@ -312,6 +319,11 @@ export function mapShop(r: ShopRow) {
     ownerId: r.owner_id,
     kind: r.kind ?? 'shop',
     propertyCount: r.property_count ?? 0,
+    // Owner-only — undefined on rows from the public endpoints, which never
+    // select lat/lng/pinned in the first place.
+    lat: r.lat ?? null,
+    lng: r.lng ?? null,
+    pinned: r.pinned ?? false,
     name: r.name,
     cover: r.cover_url ?? '',
     avatar: r.avatar_url ?? '',

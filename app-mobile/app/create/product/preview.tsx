@@ -90,6 +90,10 @@ export default function CreatePreviewRoute() {
                 // (client 2026-08-13, capture d'un panier a 7 Range Rover).
                 stock: state.quantity,
                 // Geography simplified per 2026-05-29 client meeting: cities only, no districts.
+                // Only reaches product-create's auto-mint branch (no shop yet) —
+                // undefined for a seller who already has a boutique, and product-create
+                // ignores them once a shop already exists.
+                ...(state.lat != null && state.lng != null ? { shop_lat: state.lat, shop_lng: state.lng } : {}),
               };
               await createProduct.mutateAsync(body);
               show(t('create.publishSuccess'), 'success');

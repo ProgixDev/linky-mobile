@@ -20,6 +20,11 @@ interface Body {
   city: string;
   district?: string;
   stock?: number | null;
+  // Only meaningful the first time a seller publishes (no shop yet) — the
+  // pin picked on the new create/product/location step, threaded through so
+  // the auto-created shop doesn't land on the city centroid.
+  shop_lat?: number;
+  shop_lng?: number;
 }
 
 const URL_RE = /^https?:\/\/[^\s]{8,500}$/i;
@@ -45,6 +50,8 @@ function valid(b: unknown): b is Body {
   // Quantite disponible. null/absent = non renseignee, donc sans plafond.
   if (x.stock !== undefined && x.stock !== null &&
       (typeof x.stock !== 'number' || !Number.isInteger(x.stock) || x.stock < 0 || x.stock > 100000)) return false;
+  if (x.shop_lat !== undefined && (typeof x.shop_lat !== 'number' || x.shop_lat < -90 || x.shop_lat > 90)) return false;
+  if (x.shop_lng !== undefined && (typeof x.shop_lng !== 'number' || x.shop_lng < -180 || x.shop_lng > 180)) return false;
   return true;
 }
 
@@ -97,7 +104,10 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
       const shopName = firstName ? `Boutique de ${firstName}` : 'Ma boutique';
       const { data: created, error: eIns } = await sb
         .from('shops')
-        .insert({ owner_id: userId, name: shopName, city: body.city.trim(), about: '', kind: 'shop' })
+        .insert({
+          owner_id: userId, name: shopName, city: body.city.trim(), about: '', kind: 'shop',
+          lat: body.shop_lat ?? null, lng: body.shop_lng ?? null,
+        })
         .select('id').single();
       if (eIns || !created) {
         console.error('[product-create] auto-shop insert error:', eIns);
