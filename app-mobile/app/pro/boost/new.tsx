@@ -2,7 +2,7 @@
 // pick a duration tier, pay from the wallet. Price is server-authoritative
 // (create-boost re-derives it from days); this screen only sends
 // { productId | propertyId, days }. Insufficient balance surfaces a message.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -84,6 +84,16 @@ export default function BoostNewRoute() {
   const [days, setDays] = useState<number | null>(null);
   const selectedTier = tiers.find((x) => x.days === days) ?? null;
   const [method, setMethod] = useState<BoostPayMethod>('wallet');
+  // Le portefeuille est le choix par defaut, mais le selecteur partage ne
+  // l'AFFICHE que s'il peut reellement payer (solde > 0). Sans ce rattrapage,
+  // un vendeur au solde vide — le cas meme pour lequel le rail mobile money a
+  // ete ouvert en aout — voyait une liste sans rien de selectionne, puis un
+  // « Solde insuffisant » au moment de payer, pour un moyen de paiement qu'il
+  // n'avait jamais choisi. Le panier a exactement ce garde-fou depuis toujours.
+  const walletPayable = (wallet.data?.balanceGnf ?? 0) > 0;
+  useEffect(() => {
+    if (method === 'wallet' && !wallet.isLoading && !walletPayable) setMethod('orange-money');
+  }, [method, wallet.isLoading, walletPayable]);
   // Compte inscrit par email, sans numero enregistre — meme trou que corrige
   // cote commandes le 2026-08-25 (create-boost l'exigeait deja cote serveur,
   // useCreateBoost savait deja l'envoyer, mais rien a l'ecran ne le demandait).

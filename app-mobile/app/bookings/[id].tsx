@@ -95,9 +95,13 @@ export default function BookingDetailRoute() {
           show(payErr.message || 'Paiement échoué', 'danger');
           return;
         }
-        // Le webhook Stripe (metadata.kind='booking') bascule la reservation en
-        // 'paid' en quelques secondes ; la liste se rafraichit toute seule.
-        show('Paiement reçu — contrat signé ✅', 'success');
+        // NE PAS annoncer « contrat signe » ici : a cet instant la reservation
+        // est encore 'accepted'. C'est le webhook Stripe qui la bascule en
+        // 'paid', une a deux secondes plus tard. Annoncer la signature avant
+        // que le serveur l'ait posee, c'est exactement le mensonge d'ecran
+        // corrige le 2026-08-25 sur le panier (« ta banque confirme » alors
+        // qu'aucun paiement n'avait ete tente).
+        show('Paiement envoyé — confirmation en cours…', 'info');
         void q.refetch();
         return;
       }

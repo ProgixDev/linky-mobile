@@ -83,58 +83,66 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
       throwApi('CURRENCY_NOT_SUPPORTED', 400, 'Devise non supportée pour la carte.');
     }
 
-    const cardPlaceholder = `pending-init-${crypto.randomUUID()}`;
-    const { data: cardIntent, error: cardIntentErr } = await sb
-      .from('payment_intents')
-      .insert({
-        booking_id:     bk.id,
-        rail:           'stripe',
-        rail_intent_id: cardPlaceholder,
-        method:         'card',
-        currency:       bk.currency,
-        amount_minor:   bk.total_minor,
-        payer_phone:    null,
-      })
-      .select('id')
-      .single();
-    if (cardIntentErr || !cardIntent) {
-      console.error('[booking-sign-pay] stripe intent insert error:', cardIntentErr);
-      throwApi('INTERNAL_ERROR', 500, 'Erreur intent de paiement');
-    }
-
+    // AUCUNE ligne payment_intents pour ce rail, DELIBEREMENT.
+    //
+    // Le reglement carte d'une reservation ne passe pas par les intentions :
+    // stripe-webhook lit metadata.kind='booking' et appelle directement
+    // confirm_booking_payment — son propre commentaire dit qu'il est ecrit pour
+    // un monde « sans ligne payment_intents ». En ajouter une creait une
+    // orpheline que PERSONNE ne reglait : pick_stale_stripe_intents l'exclut
+    // desormais, pick_booking_intents_to_poll et expire_stale_booking_intents
+    // exigent rail='lengopay', et le webhook rend la main avant de la lire.
+    // Elle serait restee 'pending' pour toujours.
+    //
+    // Ce qui tient lieu de suivi, c'est bookings.stripe_pi_id — et il porte
+    // TROIS garde-fous qu'il ne faut pas laisser tomber :
+    //   * pick_stale_booking_pis (20260707_03) annule chez Stripe une PI
+    //     abandonnee au bout de 24 h — mais seulement `where stripe_pi_id is
+    //     not null` ;
+    //   * expire_stale_bookings (20260711_01) n'annule une reservation en
+    //     souffrance que `where stripe_pi_id is null`, c'est-a-dire jamais
+    //     quand de l'argent est en vol ;
+    //   * delete-account refuse de purger une reservation dont la PI vit
+    //     encore (`.is('stripe_pi_id', null)`).
+    // Sans ce tampon, les trois se desactivent en silence.
     let stripeIntent;
     try {
-      stripeIntent = await stripeClient().paymentIntents.create({
-        amount: Number(bk.total_minor),
-        currency: 'gnf',
-        automatic_payment_methods: { enabled: true },
-        // kind='booking' est ce que stripe-webhook attend pour router vers
-        // confirm_booking_payment plutot que vers le RPC des commandes.
-        metadata: { kind: 'booking', booking_id: bk.id, intent_id: cardIntent.id, user_id: tenantId },
-      });
+      stripeIntent = await stripeClient().paymentIntents.create(
+        {
+          amount: Number(bk.total_minor),
+          currency: 'gnf',
+          automatic_payment_methods: { enabled: true },
+          // kind='booking' est ce que stripe-webhook attend pour router vers
+          // confirm_booking_payment plutot que vers le RPC des commandes.
+          metadata: { kind: 'booking', booking_id: bk.id, user_id: tenantId },
+        },
+        // Cle d'idempotence derivee de la reservation (garde anti-double-debit,
+        // DEFECT-2 de la revue du 2026-07-06). Deux appuis successifs sur
+        // « payer » — le cas est reel, la reservation reste 'accepted' le temps
+        // que le webhook arrive — renvoient la MEME PaymentIntent au lieu d'en
+        // creer une seconde et de debiter deux fois.
+        { idempotencyKey: `booking-pi-${bk.id}` },
+      );
       if (!stripeIntent.client_secret) throw new Error('missing client_secret');
     } catch (e) {
       console.error('[booking-sign-pay] stripe init error:', e);
-      await sb.rpc('process_booking_intent_outcome', {
-        p_intent_id: cardIntent.id, p_terminal_status: 'failed', p_rail_status: 'init_failed',
-        p_error_code: 'RAIL_INIT_FAILED', p_error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
-      });
       throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
     }
 
-    const { error: cardUpdErr } = await sb
-      .from('payment_intents')
-      .update({ rail_intent_id: stripeIntent.id, rail_status: stripeIntent.status, updated_at: new Date().toISOString() })
-      .eq('id', cardIntent.id);
-    if (cardUpdErr) {
-      console.error('[booking-sign-pay] CRITICAL stripe intent UPDATE failed post-init', {
-        intent_id: cardIntent.id, stripe_pi: stripeIntent.id, error: cardUpdErr,
+    const { error: stampErr } = await sb
+      .from('bookings')
+      .update({ stripe_pi_id: stripeIntent.id, updated_at: new Date().toISOString() })
+      .eq('id', bk.id)
+      .eq('status', 'accepted');
+    if (stampErr) {
+      // Sans le tampon, les trois garde-fous ci-dessus sont aveugles a une PI
+      // pourtant vivante. On refuse plutot que de rendre un client_secret
+      // qu'on ne saurait plus suivre ; l'idempotence fait que reessayer
+      // retombera sur la MEME PI, donc rien n'est perdu.
+      console.error('[booking-sign-pay] CRITICAL stripe_pi_id stamp failed', {
+        booking_id: bk.id, stripe_pi: stripeIntent.id, stampErr,
       });
-      await sb.rpc('process_booking_intent_outcome', {
-        p_intent_id: cardIntent.id, p_terminal_status: 'failed', p_rail_status: stripeIntent.status,
-        p_error_code: 'INTENT_UPDATE_FAILED', p_error_message: `pi=${stripeIntent.id} ${cardUpdErr.message}`.slice(0, 500),
-      });
-      throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
+      throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement du paiement');
     }
 
     return {
