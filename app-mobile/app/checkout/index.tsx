@@ -22,7 +22,8 @@ import { usePlaceOrder, usePlaceOrdersBatch, useWallet, useCancelPendingPayment,
 import { useMyAddresses } from '../../src/data/queries/addresses';
 import { DELIVERY_FEE_GNF, type DeliveryMode } from '../../src/lib/delivery';
 import { usePaymentProfile } from '../../src/lib/paymentProfile';
-import { normalizeGnPhone, formatGnPhone, isValidGnPhone } from '../../src/lib/gnPhone';
+import { formatGnPhone } from '../../src/lib/gnPhone';
+import { usePayerPhone } from '../../src/lib/payerPhone';
 import type { PaymentMethod, Product } from '../../src/data/types';
 import { useToast } from '../../src/components/feedback/Toast';
 
@@ -85,15 +86,13 @@ export default function CheckoutRoute() {
   const mobileMoneySelected = selected === 'orange-money' || selected === 'mtn-money';
   // Guinee ou etranger, deduit de l'indicatif du numero principal. Decide quel
   // rail carte proposer : Stripe a l'etranger, Carte/Wallet Lengopay en Guinee.
-  const { profile: payProfile, loading: payProfileLoading, e164: onFilePhone } = usePaymentProfile();
-  // Un compte inscrit par email n'a AUCUN numero enregistre — 15 comptes sur
-  // 20, mesure le 2026-08-24. Le serveur exige pourtant un payer_phone pour
-  // router Orange/MTN : sans ce champ, ces comptes recevaient un rejet sec
-  // (« Numero de paiement requis ») sans aucun moyen d'agir dessus.
-  const needsPayerPhone = !payProfileLoading && !onFilePhone;
-  const [payerPhoneInput, setPayerPhoneInput] = useState('');
-  const payerPhoneValid = !needsPayerPhone || isValidGnPhone(payerPhoneInput);
-  const payerPhoneE164 = payerPhoneInput ? `+224${payerPhoneInput}` : undefined;
+  const { profile: payProfile, loading: payProfileLoading } = usePaymentProfile();
+  // Le numero QUI PAIE — voir src/lib/payerPhone.ts pour le pourquoi (diaspora
+  // pilotant un compte OM/MTN guineen depuis l'etranger, client 2026-09-05).
+  const payerPhone = usePayerPhone();
+  const payerPhoneDigits = payerPhone.digits;
+  const payerPhoneValid = payerPhone.valid;
+  const payerPhoneE164 = payerPhone.e164;
   // Le rail Lengopay carte n'est pas encore integre : on ne propose donc la
   // carte qu'aux profils etrangers, et seulement si le rail est allume.
   const showCardRail = CARD_RAIL_ENABLED && !payProfileLoading && payProfile === 'abroad';
@@ -346,7 +345,10 @@ export default function CheckoutRoute() {
               presentation only — 'delivery' stays the default selection. */}
           {([
             { mode: 'pickup' as DeliveryMode, icon: 'store' as IconKey, title: 'Retrait sur place', hint: 'Vous récupérez à la boutique — Gratuit' },
-            { mode: 'delivery' as DeliveryMode, icon: 'truck' as IconKey, title: 'Livraison à domicile', hint: `Linky vous livre — ${formatGNF(deliveryQuote.data?.total_minor ?? DELIVERY_FEE_GNF * shopCount)}${shopCount > 1 ? ` (${shopCount} colis)` : ''}` },
+            // « trajet groupé » : quand les boutiques sont sur le même chemin, le
+            // livreur enchaîne les ramassages et le total est déjà réduit (client
+            // 2026-09-05). On le dit, sinon la baisse de prix paraît arbitraire.
+            { mode: 'delivery' as DeliveryMode, icon: 'truck' as IconKey, title: 'Livraison à domicile', hint: `Linky vous livre — ${formatGNF(deliveryQuote.data?.total_minor ?? DELIVERY_FEE_GNF * shopCount)}${shopCount > 1 ? (deliveryQuote.data?.grouped ? ` (${shopCount} colis, trajet groupé)` : ` (${shopCount} colis)`) : ''}` },
           ]).map((opt, i) => {
             const sel = deliveryMode === opt.mode;
             const Ico = I[opt.icon];
@@ -514,24 +516,26 @@ export default function CheckoutRoute() {
           {t('checkout.rails.mobileMoneyNote')}
         </Text>
 
-        {/* Compte sans numero (inscrit par email). Sans ce champ, ces comptes
-            recevaient un rejet sec du serveur — « Numero de paiement requis »
-            — sans aucun moyen d'agir dessus (client 2026-08-25). */}
-        {mobileMoneySelected && needsPayerPhone && (
+        {/* Numero qui paie — toujours affiche pour Orange/MTN, pre-rempli avec
+            celui du compte s'il est guineen. Il ne suffit plus d'avoir UN
+            numero au compte : la diaspora paie depuis un compte OM/MTN
+            guineen qui n'est pas forcement le numero de connexion (client
+            2026-09-05), et Lengopay v2 exige un numero local. */}
+        {mobileMoneySelected && (
           <View style={{ marginBottom: 16 }}>
             <Input
               label={t('checkout.payerPhoneLabel')}
               leadingIcon="phone"
               keyboardType="phone-pad"
               placeholder={t('checkout.payerPhonePlaceholder')}
-              value={formatGnPhone(payerPhoneInput)}
-              onChangeText={(txt) => setPayerPhoneInput(normalizeGnPhone(txt))}
+              value={formatGnPhone(payerPhoneDigits)}
+              onChangeText={payerPhone.onChange}
               errorText={
-                payerPhoneInput.length > 0 && !payerPhoneValid
+                payerPhoneDigits.length > 0 && !payerPhoneValid
                   ? t('checkout.payerPhoneInvalid')
                   : undefined
               }
-              helperText={payerPhoneInput.length === 0 ? t('checkout.payerPhoneHint') : undefined}
+              helperText={payerPhoneDigits.length === 0 ? t('checkout.payerPhoneHint') : undefined}
             />
           </View>
         )}
@@ -620,7 +624,7 @@ export default function CheckoutRoute() {
           size="lg"
           block
           loading={placeOrder.isPending || placeBatch.isPending || cardFlowBusy}
-          disabled={placeOrder.isPending || placeBatch.isPending || cardFlowBusy || (!allLoaded && !loadFailed) || lines.length === 0 || addressGateLoading || (deliveryQuoteLoading && !loadFailed && !needsAddress) || (mobileMoneySelected && needsPayerPhone && !payerPhoneValid)}
+          disabled={placeOrder.isPending || placeBatch.isPending || cardFlowBusy || (!allLoaded && !loadFailed) || lines.length === 0 || addressGateLoading || (deliveryQuoteLoading && !loadFailed && !needsAddress) || (mobileMoneySelected && !payerPhoneValid)}
           label={
             placeOrder.isPending || placeBatch.isPending || cardFlowBusy
               ? t('checkout.payingCta')

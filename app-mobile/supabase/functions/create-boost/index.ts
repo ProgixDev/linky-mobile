@@ -10,7 +10,7 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapBoost, type BoostRow } from '@shared/catalog.ts';
 import { boostPrice } from '@shared/boost.ts';
-import { initPaymentV2, toLocalGnAccount } from '@shared/lengopay.ts';
+import { initPaymentV2, toLocalGnAccount, isGnE164 } from '@shared/lengopay.ts';
 
 interface Body {
   product_id?: string;
@@ -83,6 +83,7 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       payerPhone = phoneRow?.e164 ?? undefined;
     }
     if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
+    if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, 'Indique le numéro Orange Money / MTN qui paie (9 chiffres, commence par 6).');
 
     const { data: boostId, error: pendErr } = await sb.rpc('create_pending_boost', {
       p_product_id:   body.product_id ?? null,

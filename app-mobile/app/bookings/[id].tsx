@@ -22,8 +22,8 @@ import { PaymentMethodPicker, LENGOPAY_METHOD } from '../../src/components/payme
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { formatGNF } from '../../src/lib/format';
-import { usePaymentProfile } from '../../src/lib/paymentProfile';
-import { normalizeGnPhone, formatGnPhone, isValidGnPhone } from '../../src/lib/gnPhone';
+import { formatGnPhone } from '../../src/lib/gnPhone';
+import { usePayerPhone } from '../../src/lib/payerPhone';
 import type { PaymentMethod } from '../../src/data/types';
 
 export default function BookingDetailRoute() {
@@ -36,9 +36,6 @@ export default function BookingDetailRoute() {
   const checkin = useConfirmCheckin();
   const [payBusy, setPayBusy] = useState(false);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
-  // Compte inscrit par email, sans numero enregistre (meme trou que corrige
-  // cote commandes le 2026-08-25 — jamais reporte ici jusqu'ici).
-  const { e164: onFilePhone, loading: payProfileLoading, profile: payProfile } = usePaymentProfile();
   // Client 2026-09-04 : la reservation n'offrait AUCUN choix de paiement, elle
   // sautait droit au champ telephone. Meme selecteur que le panier desormais.
   // Le portefeuille n'est PAS propose ici : confirm_booking_payment fait un
@@ -47,10 +44,13 @@ export default function BookingDetailRoute() {
   // demande son propre RPC, pas un raccourci.
   const [method, setMethod] = useState<PaymentMethod>(LENGOPAY_METHOD);
   const isCard = method === 'card';
-  const needsPayerPhone = !isCard && !payProfileLoading && !onFilePhone;
-  const [payerPhoneInput, setPayerPhoneInput] = useState('');
-  const payerPhoneValid = !needsPayerPhone || isValidGnPhone(payerPhoneInput);
-  const payerPhoneE164 = payerPhoneInput ? `+224${payerPhoneInput}` : undefined;
+  // Le numero QUI PAIE — voir src/lib/payerPhone.ts. Toujours propose pour le
+  // mobile money (la diaspora paie avec un compte OM/MTN guineen qui n'est pas
+  // forcement le numero du compte, client 2026-09-05), jamais pour la carte.
+  const payerPhone = usePayerPhone();
+  const needsPayerPhone = !isCard && !payerPhone.loading;
+  const payerPhoneValid = isCard || payerPhone.valid;
+  const payerPhoneE164 = payerPhone.e164;
 
   const booking = (q.data ?? []).find((b) => b.id === id);
 
@@ -173,25 +173,25 @@ export default function BookingDetailRoute() {
           </View>
         )}
 
-        {/* Compte sans numero (inscrit par email) : sans ce champ, le
-            paiement echouait sec avec « Numero de paiement requis » et rien
-            a l'ecran ne permettait d'agir dessus. Inutile pour la carte. */}
+        {/* Numero qui paie — pre-rempli avec celui du compte s'il est guineen,
+            modifiable sinon (la diaspora regle avec un compte OM/MTN guineen
+            pilote a distance). Inutile pour la carte. */}
         {booking.status === 'accepted' && needsPayerPhone && (
           <Input
             label="Numéro pour le paiement"
             leadingIcon="phone"
             keyboardType="phone-pad"
             placeholder="6XX XX XX XX"
-            value={formatGnPhone(payerPhoneInput)}
-            onChangeText={(txt) => setPayerPhoneInput(normalizeGnPhone(txt))}
+            value={formatGnPhone(payerPhone.digits)}
+            onChangeText={payerPhone.onChange}
             errorText={
-              payerPhoneInput.length > 0 && !payerPhoneValid
+              payerPhone.digits.length > 0 && !payerPhone.valid
                 ? 'Numéro invalide (9 chiffres, commence par 6).'
                 : undefined
             }
             helperText={
-              payerPhoneInput.length === 0
-                ? 'Aucun numéro sur ton compte — indique celui qui recevra le code de confirmation.'
+              payerPhone.digits.length === 0
+                ? 'Indique le numéro Orange Money / MTN qui recevra la demande de confirmation.'
                 : undefined
             }
           />

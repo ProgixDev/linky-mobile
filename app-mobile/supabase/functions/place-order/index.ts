@@ -18,7 +18,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from '@shared/catalog.ts';
-import { initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
+import { initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164 } from '@shared/lengopay.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.ts';
@@ -348,6 +348,10 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     payerPhone = phoneRow?.e164 ?? undefined;
   }
   if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
+  // Lengopay v2 encaisse sur un compte OM/MTN GUINEEN : un numero etranger
+  // (diaspora dont le compte porte un +33) doit recevoir une erreur qui dit
+  // quoi faire, pas un « echec de l'initialisation » venu du rail.
+  if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, 'Indique le numéro Orange Money / MTN qui paie (9 chiffres, commence par 6).');
 
   const orderRow = row as OrderRow;
   const intentCurrency = orderRow.currency;  // NOT NULL with default 'GNF' per Phase I.1

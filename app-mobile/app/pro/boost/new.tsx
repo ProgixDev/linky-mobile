@@ -18,8 +18,8 @@ import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
-import { usePaymentProfile } from '../../../src/lib/paymentProfile';
-import { normalizeGnPhone, formatGnPhone, isValidGnPhone } from '../../../src/lib/gnPhone';
+import { formatGnPhone } from '../../../src/lib/gnPhone';
+import { usePayerPhone } from '../../../src/lib/payerPhone';
 import { PaymentMethodPicker } from '../../../src/components/payment/PaymentMethodPicker';
 import {
   useBoosts,
@@ -97,12 +97,14 @@ export default function BoostNewRoute() {
   // Compte inscrit par email, sans numero enregistre — meme trou que corrige
   // cote commandes le 2026-08-25 (create-boost l'exigeait deja cote serveur,
   // useCreateBoost savait deja l'envoyer, mais rien a l'ecran ne le demandait).
-  const { e164: onFilePhone, loading: payProfileLoading } = usePaymentProfile();
   const mobileMoneySelected = method === 'orange-money' || method === 'mtn-money';
-  const needsPayerPhone = mobileMoneySelected && !payProfileLoading && !onFilePhone;
-  const [payerPhoneInput, setPayerPhoneInput] = useState('');
-  const payerPhoneValid = !needsPayerPhone || isValidGnPhone(payerPhoneInput);
-  const payerPhoneE164 = payerPhoneInput ? `+224${payerPhoneInput}` : undefined;
+  // Le numero QUI PAIE — voir src/lib/payerPhone.ts. Toujours propose pour le
+  // mobile money (la diaspora pilote un compte OM/MTN guineen a distance,
+  // client 2026-09-05), pre-rempli avec celui du compte s'il est guineen.
+  const payerPhone = usePayerPhone();
+  const needsPayerPhone = mobileMoneySelected && !payerPhone.loading;
+  const payerPhoneValid = !mobileMoneySelected || payerPhone.valid;
+  const payerPhoneE164 = payerPhone.e164;
 
   const onPay = async () => {
     if (!selected || !selectedTier || create.isPending) return;
@@ -257,14 +259,14 @@ export default function BoostNewRoute() {
             leadingIcon="phone"
             keyboardType="phone-pad"
             placeholder={t('checkout.payerPhonePlaceholder')}
-            value={formatGnPhone(payerPhoneInput)}
-            onChangeText={(txt) => setPayerPhoneInput(normalizeGnPhone(txt))}
+            value={formatGnPhone(payerPhone.digits)}
+            onChangeText={payerPhone.onChange}
             errorText={
-              payerPhoneInput.length > 0 && !payerPhoneValid
+              payerPhone.digits.length > 0 && !payerPhone.valid
                 ? t('checkout.payerPhoneInvalid')
                 : undefined
             }
-            helperText={payerPhoneInput.length === 0 ? t('checkout.payerPhoneHint') : undefined}
+            helperText={payerPhone.digits.length === 0 ? t('checkout.payerPhoneHint') : undefined}
           />
         )}
 

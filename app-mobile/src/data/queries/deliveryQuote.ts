@@ -20,6 +20,12 @@ export interface DeliveryQuote {
   total_minor: number;
   shops: DeliveryQuoteShop[];
   priced_by_distance: boolean;
+  /** true quand le panier couvre plusieurs boutiques SUR LE MEME CHEMIN : le
+   *  livreur enchaine les ramassages (A -> B -> client) au lieu de faire deux
+   *  courses, et total_minor est deja le prix réduit correspondant (client
+   *  2026-09-05). Les lignes par boutique restent affichables telles quelles :
+   *  leur somme est alors superieure au total, c'est la remise. */
+  grouped?: boolean;
 }
 
 export function useDeliveryQuote({

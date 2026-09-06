@@ -72,8 +72,10 @@ export interface LengopayStatusResponse {
 //
 // This iteration only implements lp-om-gn / lp-momo-gn (the two Abdoulaye
 // asked for in-app). lp-card-gn / lp-kulu-gn / lp-soutramoney-gn are typed
-// for completeness but have no calling code yet — see initPaymentV2's throw
-// if a response ever carries requires_otp/webview_url unexpectedly.
+// for completeness but have no calling code yet — if one of their extra steps
+// ever came back on an OM/MTN call, initPaymentV2 logs loudly and still keeps
+// the pay_id (never cancels the order — the buyer may still be confirming on
+// their phone; see the comment there).
 export type LengopayV2TypeAccount = 'lp-om-gn' | 'lp-momo-gn' | 'lp-card-gn' | 'lp-kulu-gn' | 'lp-soutramoney-gn';
 
 export interface LengopayV2InitRequest {

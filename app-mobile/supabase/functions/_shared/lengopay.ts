@@ -120,7 +120,15 @@ export function paymentUrlFor(payId: string): string {
 // ─── v2 — in-app Orange Money / MTN (no hosted page) ────────────────────────
 // See lengopay-types.ts header for the full wire shapes retrieved 2026-09-05.
 
-/** +224XXXXXXXXX (what this codebase stores) -> XXXXXXXXX (what v2's `account` wants). */
+/** Un numero utilisable comme compte Orange Money / MTN guineen. */
+export function isGnE164(phone: string | null | undefined): boolean {
+  return typeof phone === 'string' && /^\+224\d{9}$/.test(phone);
+}
+
+/** +224XXXXXXXXX (what this codebase stores) -> XXXXXXXXX (what v2's `account` wants).
+ *  Les appelants doivent avoir filtre avec isGnE164 AVANT (et rendre alors une
+ *  erreur comprehensible a l'acheteur) : ce throw-ci n'est qu'un dernier
+ *  garde-fou, il produirait un « echec de l'initialisation » opaque. */
 export function toLocalGnAccount(e164: string): string {
   const m = /^\+224(\d{9})$/.exec(e164);
   if (!m) throw new Error(`toLocalGnAccount: not a Guinea E.164 number: ${e164}`);
@@ -149,11 +157,23 @@ export async function initPaymentV2(req: LengopayV2InitRequest): Promise<Lengopa
   if (!raw.success || !payId) {
     throw new Error(`Lengopay v2 init malformed/failed response: ${JSON.stringify(raw).slice(0, 300)}`);
   }
-  // lp-om-gn/lp-momo-gn are documented as single-step (no OTP, no webview).
-  // If either shows up anyway, fail loudly rather than silently dropping the
-  // step the buyer would have needed — Kulu/Soutra Money aren't wired yet.
-  if (raw.requires_otp || raw.data?.requires_otp || raw.webview_url || raw.data?.webview_url) {
-    throw new Error(`Lengopay v2 init: unexpected extra step for orange/mtn: ${JSON.stringify(raw).slice(0, 300)}`);
+  // lp-om-gn/lp-momo-gn sont documentes comme finalisables en un seul appel
+  // (seuls Kulu et Soutra Money ont une 2e etape). Si une etape supplementaire
+  // remonte quand meme, on NE JETTE PAS : Lengopay a deja la demande, et le
+  // client (message du 2026-09-05) decrit bien un « code de validation » recu
+  // par l'acheteur pour OM et MTN. Jeter ici annulerait la commande cote Linky
+  // alors que l'acheteur peut encore confirmer sur son telephone — argent
+  // preleve, commande annulee, exactement ce que l'ordre S2 existe pour eviter.
+  // On garde donc le pay_id, on laisse le sondage trancher (succes s'il
+  // confirme, expiration a 15 min sinon), et on journalise fort pour qu'on le
+  // voie tout de suite dans les logs si ce cas se produit vraiment.
+  const extraStep = raw.requires_otp ?? raw.data?.requires_otp
+    ? 'requires_otp'
+    : (raw.webview_url ?? raw.data?.webview_url) ? 'webview_url' : null;
+  if (extraStep) {
+    console.warn('[lengopay] v2 init: etape supplementaire inattendue pour orange/mtn', {
+      pay_id: payId, extraStep, raw: JSON.stringify(raw).slice(0, 300),
+    });
   }
   return { pay_id: payId };
 }

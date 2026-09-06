@@ -82,8 +82,18 @@ Deno.serve(makePost<Body>('/v1/delivery/quote', valid, async ({ sb, body, req })
 
   const shops = (quote ?? []) as {
     shop_id: string; fee_minor: number; distance_km: number | null; priced_by_distance: boolean;
+    group_total_minor: number | null;
   }[];
-  const total = shops.reduce((s, r) => s + Number(r.fee_minor), 0);
+  // Livraison groupee (client 2026-09-05) : quand les boutiques du panier sont
+  // sur le meme chemin, le trajet enchaine A -> B -> client coute moins que la
+  // somme des allers-retours, et c'est LUI qu'on facture. group_total_minor est
+  // constant sur toutes les lignes (NULL = pas groupable : une seule boutique,
+  // ou un point sans vrai pin) ; place_orders_batch applique exactement le meme
+  // calcul, donc l'affichage ne peut pas diverger du prelevement.
+  const groupTotal = shops.length > 0 && shops[0].group_total_minor != null
+    ? Number(shops[0].group_total_minor)
+    : null;
+  const total = groupTotal ?? shops.reduce((s, r) => s + Number(r.fee_minor), 0);
 
   // La distance n'est PAS renvoyee, volontairement. L'ecran ne l'affiche pas,
   // et l'exposer ferait de cet endpoint un oracle : en changeant son adresse et
@@ -99,6 +109,10 @@ Deno.serve(makePost<Body>('/v1/delivery/quote', valid, async ({ sb, body, req })
         priced_by_distance: r.priced_by_distance,
       })),
       priced_by_distance: shops.some((r) => r.priced_by_distance),
+      /** true quand le trajet groupe a fait BAISSER le total par rapport a la
+       *  somme boutique-par-boutique — l'ecran peut le dire a l'acheteur. */
+      grouped: groupTotal != null
+        && groupTotal < shops.reduce((s, r) => s + Number(r.fee_minor), 0),
     },
   };
 }));
