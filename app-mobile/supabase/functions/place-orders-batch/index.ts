@@ -23,7 +23,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { initPayment, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
+import { initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
 import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 import { formatGNF } from '@shared/push.ts';
@@ -275,7 +275,12 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
 
   let initResp;
   try {
-    initResp = await initPayment({ amount_minor: Number(totalMinor), currency: 'GNF' });
+    initResp = await initPaymentV2({
+      amount_minor: Number(totalMinor),
+      currency: 'GNF',
+      type_account: body.payment_method === 'mtn-money' ? 'lp-momo-gn' : 'lp-om-gn',
+      account: toLocalGnAccount(payerPhone),
+    });
   } catch (e) {
     console.error('[place-orders-batch] lengopay init error:', e);
     await sb.rpc('process_batch_intent_outcome', {
@@ -288,7 +293,7 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
 
   const { error: updErr } = await sb
     .from('payment_intents')
-    .update({ rail_intent_id: initResp.pay_id, rail_status: initResp.status, updated_at: new Date().toISOString() })
+    .update({ rail_intent_id: initResp.pay_id, rail_status: 'pending', updated_at: new Date().toISOString() })
     .eq('id', intentRow.id);
   if (updErr) {
     // Le paiement existe chez Lengopay mais on ne saurait plus le relier : on
@@ -298,19 +303,20 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
       intent_id: intentRow.id, pay_id: initResp.pay_id, error: updErr,
     });
     await sb.rpc('process_batch_intent_outcome', {
-      p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: initResp.status,
+      p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'pending',
       p_error_code: 'INTENT_UPDATE_FAILED',
       p_error_message: `pay_id=${initResp.pay_id} ${updErr.message}`.slice(0, 500),
     });
     throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
   }
 
+  // Plus de payment_url (v2 est in-app) — le client va directement a l'ecran
+  // de confirmation/attente.
   return {
     body: {
       batch_id:     batchId,
       orders,
       total_minor:  totalMinor,
-      payment_url:  initResp.payment_url,
     },
   };
 }));

@@ -35,7 +35,11 @@
 //           polled in step 1 anyway ; the next sweep will retry.
 
 import { serviceClient } from '@shared/db.ts';
-import { getPaymentStatus } from '@shared/lengopay.ts';
+// v2 depuis le 2026-09-05 : les intentions Lengopay sont desormais creees par
+// /api/v2/payments (paiement in-app), donc on sonde /api/v2/transaction/status.
+// Aucune intention v1 ne peut survivre au deploiement : le balayage TTL de
+// 15 min les termine proprement, comme un paiement abandonne.
+import { getPaymentStatusV2 as getPaymentStatus } from '@shared/lengopay.ts';
 import { notifyOrderPaid } from '@shared/order-paid-push.ts';
 import { stripeClient } from '@shared/stripe.ts';
 

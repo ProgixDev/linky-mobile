@@ -491,58 +491,24 @@ export default function CheckoutRoute() {
           </>
         )}
 
+        {/* Orange et MTN sont deux lignes distinctes depuis Lengopay v2
+            (2026-09-05) : l'operateur part avec la requete (type_account), il
+            n'y a plus de page hebergee ou l'acheteur le choisirait. */}
         <MicroLabel label={t('checkout.sectionMobileMoney')} />
-        <Pressable onPress={() => setSelected(MOBILE_MONEY_METHOD)}>
-          <Card padding={14} style={{ marginBottom: 10 }}>
-            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-              {/* Les deux logos cote a cote : c'est ce qui dit, sans phrase,
-                  que ce bouton couvre Orange ET MTN. Fond blanc conserve — les
-                  marques des operateurs sont dessinees pour un fond clair et la
-                  fleche Orange disparaitrait sur le theme sombre. */}
-              <View style={{ flexDirection: 'row' }}>
-                {MOBILE_MONEY_LOGOS.map((logo, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 10,
-                      backgroundColor: '#FFFFFF',
-                      overflow: 'hidden',
-                      marginLeft: i === 0 ? 0 : -10,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    <Image source={logo} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                  </View>
-                ))}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.rails.mobileMoney')}</Text>
-                <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                  {t('checkout.rails.mobileMoneyHint')}
-                </Text>
-              </View>
-              <View
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 999,
-                  backgroundColor: mobileMoneySelected ? colors.primary : 'transparent',
-                  borderWidth: mobileMoneySelected ? 0 : 1.5,
-                  borderColor: colors.borderStrong,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {mobileMoneySelected && (
-                  <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />
-                )}
-              </View>
-            </View>
-          </Card>
-        </Pressable>
+        <OperatorRow
+          logo={MOBILE_MONEY_LOGOS[0]}
+          title={t('checkout.rails.orangeMoney')}
+          hint={t('checkout.rails.orangeMoneyHint')}
+          selected={selected === 'orange-money'}
+          onPress={() => setSelected('orange-money')}
+        />
+        <OperatorRow
+          logo={MOBILE_MONEY_LOGOS[1]}
+          title={t('checkout.rails.mtnMoney')}
+          hint={t('checkout.rails.mtnMoneyHint')}
+          selected={selected === 'mtn-money'}
+          onPress={() => setSelected('mtn-money')}
+        />
 
         <Text variant="micro" tone="muted" style={{ marginBottom: 16, paddingHorizontal: 4, letterSpacing: 0, textTransform: 'none', lineHeight: 15 }}>
           {t('checkout.rails.mobileMoneyNote')}
@@ -703,10 +669,7 @@ export default function CheckoutRoute() {
                       show(t('checkout.payErrorFallback'), 'danger');
                       return;
                     }
-                    if (res.payment_url) {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
-                      router.replace({ pathname: '/checkout/pay', params: { url: res.payment_url, orderId: firstOrder.id } } as any);
-                    } else if (res.paid) {
+                    if (res.paid) {
                       // Portefeuille : debit et sequestre deja faits, rien ne
                       // peut plus echouer cote acheteur → on vide le panier.
                       useCart.getState().clear();
@@ -734,19 +697,14 @@ export default function CheckoutRoute() {
               {
                 onSuccess: ({ order, intent }) => {
                   if (intent) {
-                    // Rail path: the Lengopay page (Orange/MTN) opens IN-APP in
-                    // a WebView (client 2026-07-26) — no external browser. The
-                    // pay screen routes on to the confirmation screen, which
-                    // polls until the cron flips the intent.
-                    // Phase U.3 — DO NOT clear cart yet ; the rail can still
-                    // fail or be cancelled. Clear lives in the SUCCESS branch
-                    // of confirm/[orderId].tsx.
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; routes exist on disk.
-                    if (intent.paymentUrl) {
-                      router.replace({ pathname: '/checkout/pay', params: { url: intent.paymentUrl, orderId: order.id } } as any);
-                    } else {
-                      router.replace(`/checkout/confirm/${order.id}` as any);
-                    }
+                    // Rail Orange/MTN : depuis Lengopay v2 (2026-09-05) le
+                    // paiement se declenche cote operateur sans quitter l'appli
+                    // — plus de WebView. On va droit a l'ecran de confirmation,
+                    // qui sonde jusqu'a ce que le cron bascule l'intention.
+                    // Phase U.3 — NE PAS vider le panier ici ; le rail peut
+                    // encore echouer ou etre annule. Le vidage vit dans la
+                    // branche SUCCESS de confirm/[orderId].tsx.
+                    router.replace(`/checkout/confirm/${order.id}`);
                   } else {
                     // Wallet path (no intent): order already at status='paid'.
                     // Phase U.3 — wallet payment is instant + non-cancellable
@@ -770,6 +728,66 @@ export default function CheckoutRoute() {
         />
       </StickyBottom>
     </SafeAreaView>
+  );
+}
+
+// Une ligne opérateur (Orange / MTN). Fond blanc conservé sous le logo : les
+// marques des opérateurs sont dessinées pour un fond clair et la flèche Orange
+// disparaîtrait sur le thème sombre.
+function OperatorRow({
+  logo,
+  title,
+  hint,
+  selected,
+  onPress,
+}: {
+  logo: number;
+  title: string;
+  hint: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable onPress={onPress}>
+      <Card padding={14} style={{ marginBottom: 10 }}>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              backgroundColor: '#FFFFFF',
+              overflow: 'hidden',
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Image source={logo} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600' }}>{title}</Text>
+            <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+              {hint}
+            </Text>
+          </View>
+          <View
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 999,
+              backgroundColor: selected ? colors.primary : 'transparent',
+              borderWidth: selected ? 0 : 1.5,
+              borderColor: colors.borderStrong,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {selected && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
+          </View>
+        </View>
+      </Card>
+    </Pressable>
   );
 }
 

@@ -114,12 +114,13 @@ export default function BoostNewRoute() {
           : { productId: selected.id };
       const res = await create.mutateAsync({ ...target, days: selectedTier.days, method, payerPhone: payerPhoneE164 });
 
-      // Mobile money : rien n'est paye a cet instant. On ouvre la page Lengopay
-      // dans l'app ; le boost ne s'activera qu'au retour, quand le cron aura vu
-      // l'encaissement. Surtout pas de toast de succes ici.
-      if (res.kind === 'redirect') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
-        router.replace({ pathname: '/checkout/pay', params: { url: res.paymentUrl, boostId: res.boostId } } as any);
+      // Mobile money : rien n'est paye a cet instant. Depuis Lengopay v2
+      // (2026-09-05) la demande part directement chez l'operateur — le vendeur
+      // confirme sur son telephone et le boost ne s'activera que quand le cron
+      // aura vu l'encaissement. Surtout pas de toast de succes ici.
+      if (res.kind === 'pending') {
+        toast.show(t('pro.boostPendingToast'), 'info');
+        router.replace('/pro/boost?pending=1');
         return;
       }
 

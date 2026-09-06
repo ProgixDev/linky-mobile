@@ -7,22 +7,25 @@
 // propre liste ecrite a la main ; c'est desormais ce composant, et lui seul.
 //
 // CE QUE CHAQUE PROFIL VOIT — la regle vient du client :
-//   etranger : Carte bancaire (Stripe) + Mobile money (Lengopay)
-//   Guinee   : page Lengopay (Carte bancaire + Wallet Paycard/Kulu/Soutra +
-//              Mobile money) — Stripe n'accepte pas les cartes guineennes
+//   etranger : Carte bancaire (Stripe) + Orange Money / MTN (Lengopay)
+//   Guinee   : Orange Money / MTN (Lengopay) — Stripe n'accepte pas les cartes
+//              guineennes ; la Carte/Wallet Lengopay reste a construire (voir
+//              plus bas)
 //   + le Portefeuille Linky quand il est approvisionne, sur les deux profils.
 //
-// POURQUOI UN SEUL BOUTON LENGOPAY EN GUINEE, ET PAS DEUX. Le client en
-// demandait deux : une page carte/wallet d'un cote, un bouton mobile money avec
-// saisie du numero et code SMS de l'autre. Le second suppose l'encaissement
-// DIRECT (cashin_request), que Lengopay dit desormais possible mais dont nous
-// n'avons ni le contrat exact ni les codes operateur — la documentation est
-// derriere une « Auth key doc » que nous n'avons pas. Aujourd'hui les deux
-// chemins aboutissent litteralement a la MEME page hebergee, ou l'acheteur
-// choisit lui-meme entre Carte, Wallet et Mobile Money : afficher deux boutons
-// menant au meme endroit mentirait sur ce qui se passe ensuite. Un seul bouton,
-// qui dit ce que la page contient vraiment. Le jour ou cashin_request est
-// documente, ce fichier est le seul a modifier pour les separer.
+// ORANGE ET MTN SONT DEUX BOUTONS DEPUIS LE 2026-09-05. Ils n'en faisaient
+// qu'un tant que le paiement passait par la page hebergee Lengopay v1 : c'est
+// l'acheteur qui y choisissait son operateur, donc afficher deux boutons menant
+// au meme endroit aurait menti sur la suite. La doc Lengopay v2 (recuperee dans
+// la console marchand ce jour-la) a debloque l'encaissement DIRECT : le
+// type_account (lp-om-gn / lp-momo-gn) doit desormais partir avec la requete,
+// donc l'operateur doit etre connu AVANT — d'ou deux lignes distinctes.
+//
+// La partie Carte/Wallet Lengopay pour la Guinee (Paycard, Kulu, Soutra) n'est
+// PAS encore branchee : la doc v2 ne decrit rien de specifique pour lp-card-gn,
+// et deviner le comportement d'un rail carte avec de l'argent reel serait
+// imprudent. Tant que ce n'est pas clarifie, un profil Guinee voit Orange/MTN
+// (+ le portefeuille) — jamais un bouton carte qui echouerait.
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
@@ -35,16 +38,12 @@ import { formatGNF } from '../../lib/format';
 import { usePaymentProfile } from '../../lib/paymentProfile';
 import type { PaymentMethod } from '../../data/types';
 
-const MOBILE_MONEY_LOGOS: number[] = [
-  require('../../../assets/images/pay-orange-money.png'),
-  require('../../../assets/images/pay-mtn-momo.png'),
-];
+const ORANGE_LOGO: number = require('../../../assets/images/pay-orange-money.png');
+const MTN_LOGO: number = require('../../../assets/images/pay-mtn-momo.png');
 
-/** Valeur envoyee au serveur pour le rail Lengopay (page hebergee).
- *  'orange-money' est conserve tel quel : c'est ce que les trois fonctions edge
- *  acceptent deja, et l'operateur reel se choisit sur la page. Introduire une
- *  nouvelle valeur imposerait de toucher METHODS cote serveur ET les contraintes
- *  CHECK en base, pour un rail dont le comportement est identique. */
+/** Valeur par defaut du rail mobile money quand un ecran doit en pre-selectionner
+ *  une (l'acheteur choisit ensuite Orange ou MTN explicitement — Lengopay v2 a
+ *  besoin de l'operateur des le depart, il n'y a plus de page ou le choisir). */
 export const LENGOPAY_METHOD: PaymentMethod = 'orange-money';
 
 export interface PaymentMethodPickerProps {
@@ -93,11 +92,18 @@ export function PaymentMethodPicker({
 
       <MicroLabel label={t('checkout.sectionMobileMoney')} />
       <MethodRow
-        selected={value === LENGOPAY_METHOD || value === 'mtn-money'}
-        onPress={() => onChange(LENGOPAY_METHOD)}
-        title={profile === 'guinea' ? t('checkout.rails.lengopayGuinea') : t('checkout.rails.mobileMoney')}
-        hint={profile === 'guinea' ? t('checkout.rails.lengopayGuineaHint') : t('checkout.rails.mobileMoneyHint')}
-        logos={MOBILE_MONEY_LOGOS}
+        selected={value === 'orange-money'}
+        onPress={() => onChange('orange-money')}
+        title={t('checkout.rails.orangeMoney')}
+        hint={t('checkout.rails.orangeMoneyHint')}
+        logos={[ORANGE_LOGO]}
+      />
+      <MethodRow
+        selected={value === 'mtn-money'}
+        onPress={() => onChange('mtn-money')}
+        title={t('checkout.rails.mtnMoney')}
+        hint={t('checkout.rails.mtnMoneyHint')}
+        logos={[MTN_LOGO]}
       />
 
       {showWallet && (

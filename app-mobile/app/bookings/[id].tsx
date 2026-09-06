@@ -106,13 +106,13 @@ export default function BookingDetailRoute() {
         return;
       }
 
-      // Lengopay : page hebergee (carte, wallet ou mobile money) dans la WebView.
-      if (res.payment_url) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`; /checkout/pay exists on disk (same cast as checkout/index + confirm).
-        router.push({ pathname: '/checkout/pay', params: { url: res.payment_url, bookingId: booking.id } } as any);
-        return;
-      }
-      show('Réponse inattendue du serveur.', 'danger');
+      // Orange/MTN via Lengopay v2 (2026-09-05) : plus de page hebergee — la
+      // demande part chez l'operateur, le locataire confirme sur son telephone.
+      // On reste sur l'ecran, qui sonde jusqu'a ce que le cron passe la
+      // reservation en 'paid'. Meme prudence que le rail carte juste au-dessus :
+      // ne rien annoncer comme paye tant que le serveur ne l'a pas acte.
+      show('Demande envoyée — confirme sur ton téléphone.', 'info');
+      void q.refetch();
     } catch (e) {
       show(toToastMessage(e, 'Le paiement a échoué.'), 'danger');
     } finally {

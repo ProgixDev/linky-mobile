@@ -37,13 +37,14 @@ export interface CreateBoostInput {
 export type BoostPayMethod = 'wallet' | 'orange-money' | 'mtn-money';
 
 /** Portefeuille : le boost est actif immédiatement (débit atomique côté serveur).
- *  Mobile money : rien n'est actif encore — l'argent doit d'abord transiter par
- *  la page Lengopay, et c'est le cron qui activera. Les deux issues sont donc
- *  volontairement de formes différentes, pour que l'écran ne puisse pas
+ *  Mobile money : rien n'est actif encore — depuis Lengopay v2 (2026-09-05) la
+ *  demande part directement chez l'opérateur (plus de page hébergée), le
+ *  vendeur confirme sur son téléphone et c'est le cron qui activera. Les deux
+ *  issues restent de formes différentes, pour que l'écran ne puisse pas
  *  confondre « payé » et « à payer ». */
 export type CreateBoostResult =
   | { kind: 'active'; boost: Boost }
-  | { kind: 'redirect'; boostId: string; paymentUrl: string };
+  | { kind: 'pending'; boostId: string };
 
 export function useCreateBoost() {
   const qc = useQueryClient();
@@ -52,12 +53,12 @@ export function useCreateBoost() {
       productId, propertyId, days, method = 'wallet', payerPhone,
     }: CreateBoostInput): Promise<CreateBoostResult> => {
       const target = propertyId ? { property_id: propertyId } : { product_id: productId };
-      const res = await apiPost<{ boost?: Boost; boost_id?: string; payment_url?: string }>({
+      const res = await apiPost<{ boost?: Boost; boost_id?: string }>({
         path: '/create-boost',
         body: { ...target, days, method, ...(payerPhone ? { payer_phone: payerPhone } : {}) },
       });
-      if (res.payment_url && res.boost_id) {
-        return { kind: 'redirect', boostId: res.boost_id, paymentUrl: res.payment_url };
+      if (!res.boost && res.boost_id) {
+        return { kind: 'pending', boostId: res.boost_id };
       }
       if (!res.boost) throw new Error('Réponse inattendue du serveur');
       return { kind: 'active', boost: res.boost };

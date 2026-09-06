@@ -50,6 +50,44 @@ export interface LengopayStatusResponse {
  * SUCCESS, FAILED, CANCELLED/CANCELED, EXPIRED. Some deployments return
  * numeric statuses — treat non-strings as pending.
  */
+// Lengopay v2 — retrieved live from portal.lengopay.com > Mode developpeur on
+// 2026-09-05. Same auth (Authorization: Basic {licence}) and websiteid as v1,
+// but the buyer's account is passed directly (no hosted page) and the
+// behavior branches by type_account:
+//
+//   Create : POST https://portal.lengopay.com/api/v2/payments
+//            body   { amount (STRING, e.g. "2000"), currency, websiteid,
+//                      type_account, account, callback_url? }
+//            200 →  { success:true, pay_id, account, date }              -- lp-om-gn / lp-momo-gn / lp-card-gn (assumed same shape as the generic example ; no OTP/webview per the doc)
+//                    { success:true, pay_id, requires_otp:true, ... }    -- lp-kulu-gn (confirm via /api/v2/authenticate)
+//                    { success:true, pay_id, webview_url, ... }          -- lp-soutramoney-gn (buyer finishes in a webview)
+//   Confirm: POST https://portal.lengopay.com/api/v2/authenticate  { pay_id, code }   -- Kulu OTP only
+//   Status : POST https://portal.lengopay.com/api/v2/transaction/status  -- exact body NOT verified from the doc,
+//            assumed { pay_id, websiteid } (same as v1) pending a real test.
+//   Callback (optional, not used here — no signature shown in the doc, so an
+//   inbound POST can't be trusted without one) : { pay_id, status, amount, message, Client }.
+//
+// account is the LOCAL Guinea number, WITHOUT the +224 prefix (e.g. "620124578"),
+// unlike everywhere else in this codebase which stores E.164.
+//
+// This iteration only implements lp-om-gn / lp-momo-gn (the two Abdoulaye
+// asked for in-app). lp-card-gn / lp-kulu-gn / lp-soutramoney-gn are typed
+// for completeness but have no calling code yet — see initPaymentV2's throw
+// if a response ever carries requires_otp/webview_url unexpectedly.
+export type LengopayV2TypeAccount = 'lp-om-gn' | 'lp-momo-gn' | 'lp-card-gn' | 'lp-kulu-gn' | 'lp-soutramoney-gn';
+
+export interface LengopayV2InitRequest {
+  amount_minor: number;
+  currency: LengopayCurrency;
+  type_account: 'lp-om-gn' | 'lp-momo-gn';
+  /** Local Guinea number, no +224 — see toLocalGnAccount(). */
+  account: string;
+}
+
+export interface LengopayV2InitResponse {
+  pay_id: string;
+}
+
 export function normalizeLengopayStatus(raw: unknown): LengopayIntentStatus {
   if (typeof raw !== 'string') return 'pending';
   switch (raw.toUpperCase()) {

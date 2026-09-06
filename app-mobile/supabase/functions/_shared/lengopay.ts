@@ -9,6 +9,13 @@
 // transaction/status until SUCCESS/FAILED, the 15-min TTL sweep cancels
 // abandoned links.
 //
+// v2 added 2026-09-05 (initPaymentV2/getPaymentStatusV2, below): in-app
+// Orange Money / MTN, no hosted page — the buyer's number is sent directly
+// and Linky's own screens poll for the outcome instead of a WebView. v1
+// stays as-is for now (nothing still calls it after this change, but it's
+// not deleted — Card/Kulu/Soutra Money would extend the v2 client, not
+// resurrect v1).
+//
 // Env:
 //   LINKY_LENGOPAY_BASE_URL     — default https://portal.lengopay.com
 //                                 (point at the mock fn base only for tests)
@@ -20,6 +27,8 @@ import {
   type LengopayInitRequest,
   type LengopayInitResponse,
   type LengopayStatusResponse,
+  type LengopayV2InitRequest,
+  type LengopayV2InitResponse,
 } from '@shared/lengopay-types.ts';
 
 // B (resilience): hard-cap rail HTTP calls. Status should be sub-second; if
@@ -106,4 +115,65 @@ export async function getPaymentStatus(payId: string): Promise<LengopayStatusRes
 /** Hosted payment page for a pay_id — reconstructable client-side too. */
 export function paymentUrlFor(payId: string): string {
   return `https://payment.lengopay.com/${payId}`;
+}
+
+// ─── v2 — in-app Orange Money / MTN (no hosted page) ────────────────────────
+// See lengopay-types.ts header for the full wire shapes retrieved 2026-09-05.
+
+/** +224XXXXXXXXX (what this codebase stores) -> XXXXXXXXX (what v2's `account` wants). */
+export function toLocalGnAccount(e164: string): string {
+  const m = /^\+224(\d{9})$/.exec(e164);
+  if (!m) throw new Error(`toLocalGnAccount: not a Guinea E.164 number: ${e164}`);
+  return m[1];
+}
+
+export async function initPaymentV2(req: LengopayV2InitRequest): Promise<LengopayV2InitResponse> {
+  const res = await fetchWithTimeout(`${baseUrl()}/api/v2/payments`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      amount: String(req.amount_minor),
+      currency: req.currency,
+      websiteid: websiteId(),
+      type_account: req.type_account,
+      account: req.account,
+    }),
+  });
+  if (!res.ok) throw new Error(`Lengopay v2 init ${res.status}: ${await res.text()}`);
+  const raw = await res.json() as {
+    success?: boolean; pay_id?: string; message?: string;
+    requires_otp?: boolean; webview_url?: string;
+    data?: { pay_id?: string; requires_otp?: boolean; webview_url?: string };
+  };
+  const payId = raw.pay_id ?? raw.data?.pay_id;
+  if (!raw.success || !payId) {
+    throw new Error(`Lengopay v2 init malformed/failed response: ${JSON.stringify(raw).slice(0, 300)}`);
+  }
+  // lp-om-gn/lp-momo-gn are documented as single-step (no OTP, no webview).
+  // If either shows up anyway, fail loudly rather than silently dropping the
+  // step the buyer would have needed — Kulu/Soutra Money aren't wired yet.
+  if (raw.requires_otp || raw.data?.requires_otp || raw.webview_url || raw.data?.webview_url) {
+    throw new Error(`Lengopay v2 init: unexpected extra step for orange/mtn: ${JSON.stringify(raw).slice(0, 300)}`);
+  }
+  return { pay_id: payId };
+}
+
+/** Status body shape assumed identical to v1 ({pay_id, websiteid}) — the v2
+ *  doc only mentioned this endpoint in passing, not verified. Safe either
+ *  way: normalizeLengopayStatus() defaults anything unrecognized to
+ *  'pending', so a wrong assumption here means a slower confirmation (until
+ *  the 15-min TTL sweep), never a wrong SUCCESS/FAILED shown to the buyer. */
+export async function getPaymentStatusV2(payId: string): Promise<LengopayStatusResponse> {
+  const res = await fetchWithTimeout(`${baseUrl()}/api/v2/transaction/status`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ pay_id: payId, websiteid: websiteId() }),
+  });
+  if (!res.ok) throw new Error(`Lengopay v2 status ${res.status}: ${await res.text()}`);
+  const raw = await res.json() as { status?: unknown; pay_id?: string; message?: string };
+  return {
+    pay_id: raw.pay_id ?? payId,
+    status: normalizeLengopayStatus(raw.status),
+    message: typeof raw.message === 'string' ? raw.message : '',
+  };
 }

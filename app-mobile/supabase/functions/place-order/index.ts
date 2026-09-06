@@ -18,7 +18,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from '@shared/catalog.ts';
-import { initPayment, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
+import { initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.ts';
@@ -394,15 +394,16 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
 
   // S2 Step 2: call Lengopay init. On failure, transition intent → failed,
   // which cancels the order atomically via process_intent_outcome.
-  // Lengopay v1 hosted-page flow (verified 2026-07-07): init returns a
-  // payment_url where the buyer picks Orange/MTN themselves — no phone or
-  // gateway code goes in the init call (payer_phone stays stored on the
-  // intent for support/reference).
+  // Lengopay v2 in-app flow (2026-09-05, replaces the v1 hosted page): the
+  // buyer's number goes straight into the init call, no WebView/payment_url —
+  // the client polls get-order like it already does for Stripe.
   let initResp;
   try {
-    initResp = await initPayment({
+    initResp = await initPaymentV2({
       amount_minor: Number(orderRow.total_minor),
       currency:     intentCurrency as 'GNF' | 'EUR',
+      type_account: body.payment_method === 'mtn-money' ? 'lp-momo-gn' : 'lp-om-gn',
+      account:      toLocalGnAccount(payerPhone),
     });
   } catch (e) {
     console.error('[place-order] lengopay init error:', e);
@@ -421,7 +422,7 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     .from('payment_intents')
     .update({
       rail_intent_id: initResp.pay_id,
-      rail_status:    initResp.status,
+      rail_status:    'pending',
       updated_at:     new Date().toISOString(),
     })
     .eq('id', intentRow.id);
@@ -436,7 +437,7 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     await sb.rpc('process_intent_outcome', {
       p_intent_id:       intentRow.id,
       p_terminal_status: 'failed',
-      p_rail_status:     initResp.status,
+      p_rail_status:     'pending',
       p_error_code:      'INTENT_UPDATE_FAILED',
       p_error_message:   `pay_id=${initResp.pay_id} update_err=${updateErr.message}`.slice(0, 500),
     });
@@ -447,15 +448,15 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   const finalIntent: PaymentIntentRow = {
     ...(intentRow as PaymentIntentRow),
     rail_intent_id: initResp.pay_id,
-    rail_status: initResp.status,
+    rail_status: 'pending',
   };
   // Buyer-only response path (rail flow); never add scan_token to the SELECT
-  // or pass opts to mapOrder — scanToken stays undefined. paymentUrl is the
-  // Lengopay hosted page the app opens for the buyer to approve.
+  // or pass opts to mapOrder — scanToken stays undefined. No paymentUrl any
+  // more (v2 is in-app) — the client goes straight to the confirm/poll screen.
   return {
     body: {
       order: mapOrder(orderRow),
-      intent: { ...mapPaymentIntent(finalIntent), paymentUrl: initResp.payment_url },
+      intent: mapPaymentIntent(finalIntent),
     },
   };
 }, stripPaymentSecret));

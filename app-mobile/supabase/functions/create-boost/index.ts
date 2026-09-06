@@ -10,7 +10,7 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapBoost, type BoostRow } from '@shared/catalog.ts';
 import { boostPrice } from '@shared/boost.ts';
-import { initPayment } from '@shared/lengopay.ts';
+import { initPaymentV2, toLocalGnAccount } from '@shared/lengopay.ts';
 
 interface Body {
   product_id?: string;
@@ -116,7 +116,12 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
 
     let initResp;
     try {
-      initResp = await initPayment({ amount_minor: amount, currency: 'GNF' });
+      initResp = await initPaymentV2({
+        amount_minor: amount,
+        currency: 'GNF',
+        type_account: method === 'mtn-money' ? 'lp-momo-gn' : 'lp-om-gn',
+        account: toLocalGnAccount(payerPhone),
+      });
     } catch (e) {
       console.error('[create-boost] lengopay init error:', e);
       await sb.rpc('process_boost_intent_outcome', {
@@ -128,7 +133,7 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
 
     const { error: updErr } = await sb
       .from('payment_intents')
-      .update({ rail_intent_id: initResp.pay_id, rail_status: initResp.status, updated_at: new Date().toISOString() })
+      .update({ rail_intent_id: initResp.pay_id, rail_status: 'pending', updated_at: new Date().toISOString() })
       .eq('id', intentRow.id);
     if (updErr) {
       // Le paiement existe chez Lengopay mais on ne saurait plus le relier :
@@ -136,13 +141,14 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       // cron sonderait avec un identifiant provisoire.
       console.error('[create-boost] CRITICAL intent UPDATE failed post-init', { intent_id: intentRow.id, pay_id: initResp.pay_id, error: updErr });
       await sb.rpc('process_boost_intent_outcome', {
-        p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: initResp.status,
+        p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'pending',
         p_error_code: 'INTENT_UPDATE_FAILED', p_error_message: `pay_id=${initResp.pay_id} ${updErr.message}`.slice(0, 500),
       });
       throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
     }
 
-    return { body: { boost_id: boostId, payment_url: initResp.payment_url } };
+    // Plus de payment_url (v2 est in-app) — le client attend/poll directement.
+    return { body: { boost_id: boostId } };
   }
 
   // ─── Rail portefeuille (inchange) ─────────────────────────────────────────

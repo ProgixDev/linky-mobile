@@ -1,10 +1,11 @@
-// Tenant signs the contract (hold-to-confirm client-side) and pays via the
-// Orange/MTN (Lengopay) hosted page — the SAME rail product orders use. (Was
-// Stripe, dropped in Guinea → payments always failed; client 2026-07-29.)
+// Tenant signs the contract (hold-to-confirm client-side) and pays via
+// Orange/MTN through Lengopay v2, in-app (2026-09-05 — no more hosted page;
+// was Stripe before that, dropped in Guinea → payments always failed;
+// client 2026-07-29).
 //
 // S2 orphan-safe ordering, mirrors place-order's lengopay branch:
 //   1. insert payment_intents (booking_id, placeholder rail_intent_id)
-//   2. Lengopay init → payment_url
+//   2. Lengopay v2 init (tenant's number goes straight in, no payment_url)
 //   3. update intent with the real pay_id
 //   On init/update failure: process_booking_intent_outcome(failed) — the booking
 //   stays 'accepted' so the tenant can retry. The cron (cron-poll-intents,
@@ -13,7 +14,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { initPayment, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
+import { initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR } from '@shared/lengopay.ts';
 import { formatGNF } from '@shared/push.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 
@@ -153,7 +154,7 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
     };
   }
 
-  // ── RAIL LENGOPAY (page hebergee : carte, wallet, mobile money) ───────────
+  // ── RAIL LENGOPAY v2 (in-app Orange/MTN, plus de page hebergee) ───────────
   // Payer phone (reference on the intent) — body override, else primary phone.
   let payerPhone = body.payer_phone;
   if (!payerPhone) {
@@ -178,7 +179,9 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
       booking_id:     bk.id,
       rail:           'lengopay',
       rail_intent_id: placeholderId,
-      method:         'orange-money', // hosted page lets the tenant pick Orange/MTN
+      // v2 needs to know which operator up front (no hosted page to pick on
+      // anymore) — 'method' is already narrowed to orange-money/mtn-money here.
+      method,
       currency:       bk.currency,
       amount_minor:   bk.total_minor,
       payer_phone:    payerPhone,
@@ -190,12 +193,14 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
     throwApi('INTERNAL_ERROR', 500, 'Erreur intent de paiement');
   }
 
-  // S2 step 2: Lengopay init (hosted-page flow — payer picks Orange/MTN there).
+  // S2 step 2: Lengopay v2 init — in-app, the tenant's number goes straight in.
   let initResp;
   try {
-    initResp = await initPayment({
+    initResp = await initPaymentV2({
       amount_minor: Number(bk.total_minor),
       currency:     bk.currency as 'GNF' | 'EUR',
+      type_account: method === 'mtn-money' ? 'lp-momo-gn' : 'lp-om-gn',
+      account:      toLocalGnAccount(payerPhone),
     });
   } catch (e) {
     console.error('[booking-sign-pay] lengopay init error:', e);
@@ -209,12 +214,12 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
   // S2 step 3: UPDATE intent with the real pay_id from Lengopay.
   const { error: updErr } = await sb
     .from('payment_intents')
-    .update({ rail_intent_id: initResp.pay_id, rail_status: initResp.status, updated_at: new Date().toISOString() })
+    .update({ rail_intent_id: initResp.pay_id, rail_status: 'pending', updated_at: new Date().toISOString() })
     .eq('id', intentRow.id);
   if (updErr) {
     console.error('[booking-sign-pay] CRITICAL intent UPDATE failed post-init', { intent_id: intentRow.id, pay_id: initResp.pay_id, error: updErr });
     await sb.rpc('process_booking_intent_outcome', {
-      p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: initResp.status,
+      p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'pending',
       p_error_code: 'INTENT_UPDATE_FAILED', p_error_message: `pay_id=${initResp.pay_id} ${updErr.message}`.slice(0, 500),
     });
     throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
@@ -234,5 +239,7 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
   // `tenant_signed_at = coalesce(tenant_signed_at, now())` a la confirmation du
   // paiement (migration 20260707_02). Aucune migration necessaire : il suffisait
   // de retirer le tampon anticipe.
-  return { body: { booking_id: bk.id, payment_url: initResp.payment_url } };
+  // Plus de payment_url (v2 est in-app) — le client va directement a l'ecran
+  // de confirmation/attente.
+  return { body: { booking_id: bk.id } };
 }));

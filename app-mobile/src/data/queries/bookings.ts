@@ -111,9 +111,9 @@ export function useBookingSignPay() {
     // PAYER_PHONE_REQUIRED et rien dans l'ecran ne permettait d'agir dessus.
     //
     // paymentMethod (2026-09-04) : 'card' renvoie un client_secret Stripe
-    // (profils etranger), sinon une payment_url Lengopay. Les deux formes de
-    // reponse sont volontairement distinctes pour que l'ecran ne puisse pas
-    // confondre « ouvrir la feuille Stripe » et « ouvrir la page hebergee ».
+    // (profils etranger). Orange/MTN ne renvoient plus rien a ouvrir depuis
+    // Lengopay v2 (2026-09-05) : le paiement part in-app, l'ecran sonde la
+    // reservation jusqu'a ce que le cron la bascule en 'paid'.
     mutationFn: async (input: {
       bookingId: string;
       payerPhone?: string;
@@ -121,7 +121,6 @@ export function useBookingSignPay() {
     }) => {
       return apiPost<{
         booking_id: string;
-        payment_url?: string;
         payment?: { client_secret: string; publishable_key: string };
       }>({
         path: '/booking-sign-pay',

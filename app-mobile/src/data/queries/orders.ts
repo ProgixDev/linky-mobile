@@ -212,9 +212,9 @@ export interface PlaceOrdersBatchResult {
   orders: { id: string; total_minor: number; status: string }[];
   /** Portefeuille : true, les commandes naissent deja payees. */
   paid?: boolean;
-  /** Rail mobile money : montant total du lot + page hebergee Lengopay. */
+  /** Rail mobile money : montant total du lot. Plus de page hebergee depuis
+   *  Lengopay v2 (2026-09-05) — le paiement se declenche in-app. */
   total_minor?: number;
-  payment_url?: string;
   /** Rail carte : un seul PaymentIntent Stripe pour tout le lot. */
   payment?: { client_secret: string; publishable_key: string };
 }
