@@ -439,6 +439,64 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
+  // ─── Balayage des PaymentIntents de BOOST abandonnees (2026-09-07) ─────────
+  // Meme mecanique que les reservations juste au-dessus, meme TTL de 24 h (la
+  // cle d'idempotence Stripe 'boost-pi-<id>' rejoue pendant ~24 h : annuler la
+  // PI avant rendrait au vendeur qui revient la MEME PI, annulee). Sans ce
+  // balayage, une feuille de paiement abandonnee resterait encaissable
+  // indefiniment — le boost carte ne cree aucune ligne payment_intents, donc
+  // aucun des balayages existants ne le voit.
+  let boostSwept = 0, boostCancelled = 0, boostAlreadyTerminal = 0, boostSkipped = 0;
+  const { data: staleBoostPis, error: boostPickErr } = await sb.rpc('pick_stale_boost_pis', { p_limit: 20 });
+  if (boostPickErr) {
+    console.error('[cron-poll-intents] boost pick error:', boostPickErr);
+  } else {
+    for (const row of (staleBoostPis ?? []) as { boost_id: string; stripe_pi_id: string; status: string }[]) {
+      boostSwept++;
+      try {
+        let piStatus: string | null = null;
+        try {
+          const cancelledPi = await stripeClient().paymentIntents.cancel(row.stripe_pi_id);
+          piStatus = cancelledPi.status;
+        } catch (_cancelErr) {
+          try {
+            piStatus = (await stripeClient().paymentIntents.retrieve(row.stripe_pi_id)).status;
+          } catch (retrieveErr) {
+            console.error('[cron-poll-intents] boost PI retrieve error:', { boost: row.boost_id, pi: row.stripe_pi_id, retrieveErr });
+            boostSkipped++;
+            continue;
+          }
+        }
+
+        if (piStatus === 'succeeded') {
+          // Le webhook est proprietaire de ce paiement (confirm_boost_payment
+          // est idempotente). Rien a faire ici.
+          boostAlreadyTerminal++;
+          continue;
+        }
+        if (piStatus !== 'canceled') {
+          console.error('[cron-poll-intents] boost PI in unexpected post-cancel state', { boost: row.boost_id, pi: row.stripe_pi_id, pi_status: piStatus });
+          boostSkipped++;
+          continue;
+        }
+
+        // Fenetre d'encaissement fermee chez Stripe — on detache la PI. Le
+        // statut du boost n'est PAS touche : 'pending_payment' reste payable
+        // par un nouvel appel, qui creera une PI neuve.
+        const { error: clearErr } = await sb.rpc('clear_boost_stripe_pi', { p_boost_id: row.boost_id });
+        if (clearErr) {
+          console.error('[cron-poll-intents] boost PI clear error:', { boost: row.boost_id, clearErr });
+          boostSkipped++;
+          continue;
+        }
+        boostCancelled++;
+      } catch (e) {
+        console.error('[cron-poll-intents] boost sweep iteration error:', { boost: row.boost_id, e });
+        boostSkipped++;
+      }
+    }
+  }
+
   return new Response(JSON.stringify({
     polled, completed, failed, cancelled, stillPending, errors, expired: expiredCount ?? 0,
     bkPolled, bkCompleted, bkFailed, bkCancelled, bkPending, bkErrors, bkExpired: bkExpired ?? 0,
@@ -446,5 +504,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     baPolled, baCompleted, baFailed, baCancelled, baPending, baErrors, baExpired: baExpired ?? 0,
     stripeSwept, stripeCancelled, stripeAlreadyTerminal, stripeSkipped,
     bookingSwept, bookingCancelled, bookingAlreadyTerminal, bookingSkipped,
+    boostSwept, boostCancelled, boostAlreadyTerminal, boostSkipped,
   }), { status: 200, headers: { 'content-type': 'application/json' } });
 });

@@ -34,7 +34,7 @@ export interface CreateBoostInput {
   payerPhone?: string;
 }
 
-export type BoostPayMethod = 'wallet' | 'orange-money' | 'mtn-money';
+export type BoostPayMethod = 'wallet' | 'orange-money' | 'mtn-money' | 'card';
 
 /** Portefeuille : le boost est actif immédiatement (débit atomique côté serveur).
  *  Mobile money : rien n'est actif encore — depuis Lengopay v2 (2026-09-05) la
@@ -44,7 +44,11 @@ export type BoostPayMethod = 'wallet' | 'orange-money' | 'mtn-money';
  *  confondre « payé » et « à payer ». */
 export type CreateBoostResult =
   | { kind: 'active'; boost: Boost }
-  | { kind: 'pending'; boostId: string };
+  | { kind: 'pending'; boostId: string }
+  /** Carte bancaire (2026-09-07) : rien n'est payé tant que la feuille Stripe
+   *  n'a pas abouti. Le boost reste 'pending_payment' et c'est le webhook qui
+   *  l'activera — même prudence que la réservation. */
+  | { kind: 'card'; boostId: string; clientSecret: string; publishableKey: string };
 
 export function useCreateBoost() {
   const qc = useQueryClient();
@@ -53,10 +57,22 @@ export function useCreateBoost() {
       productId, propertyId, days, method = 'wallet', payerPhone,
     }: CreateBoostInput): Promise<CreateBoostResult> => {
       const target = propertyId ? { property_id: propertyId } : { product_id: productId };
-      const res = await apiPost<{ boost?: Boost; boost_id?: string }>({
+      const res = await apiPost<{
+        boost?: Boost;
+        boost_id?: string;
+        payment?: { client_secret: string; publishable_key: string };
+      }>({
         path: '/create-boost',
         body: { ...target, days, method, ...(payerPhone ? { payer_phone: payerPhone } : {}) },
       });
+      if (res.payment && res.boost_id) {
+        return {
+          kind: 'card',
+          boostId: res.boost_id,
+          clientSecret: res.payment.client_secret,
+          publishableKey: res.payment.publishable_key,
+        };
+      }
       if (!res.boost && res.boost_id) {
         return { kind: 'pending', boostId: res.boost_id };
       }

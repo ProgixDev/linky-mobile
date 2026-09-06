@@ -32,7 +32,7 @@ export interface NotifyInput {
   iconHint?: string;
   /** expo-router path the app navigates to on tap, e.g. '/order/LK-2026-10027' */
   deeplink?: string;
-  refType?: 'order' | 'conversation' | 'visit_request' | 'booking';
+  refType?: 'order' | 'conversation' | 'visit_request' | 'booking' | 'boost';
   refId?: string;
   /**
    * Restrict the Expo push to tokens registered by THIS app (push_tokens.app).

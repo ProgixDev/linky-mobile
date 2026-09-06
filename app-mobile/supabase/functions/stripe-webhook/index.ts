@@ -212,6 +212,78 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Rental booking payment (booking-sign-pay) tags metadata.kind='booking'.
   // Mirrors the topup branch : no payment_intents row — the money lands via
   // confirm_booking_payment (idempotent, one-sided escrow credit + status flip).
+  // ─── BOOST paye par carte (2026-09-07) ─────────────────────────────────────
+  // Decalque de la branche 'booking' juste en dessous, pour la meme raison : le
+  // boost carte ne cree AUCUNE ligne payment_intents (elle serait orpheline —
+  // cf. migration 20260907_01), donc le suivi passe par boosts.stripe_pi_id et
+  // le reglement par ce kind. confirm_boost_payment est deja idempotente.
+  if (pi.metadata?.kind === 'boost') {
+    const boostId = pi.metadata.boost_id;
+    if (!boostId) {
+      console.error('[stripe-webhook] boost PI missing boost_id', pi.id);
+      return json({ received: true, ignored: true }, 200);
+    }
+    const { data: bo, error: boErr } = await sb
+      .from('boosts')
+      .select('amount_minor, status, seller_id, stripe_pi_id')
+      .eq('id', boostId)
+      .maybeSingle();
+    if (boErr) {
+      console.error('[stripe-webhook] boost lookup failed:', boErr);
+      return json({ error: 'boost_lookup_failed' }, 500);
+    }
+    if (!bo) {
+      console.error('[stripe-webhook] no boosts row for', boostId, pi.id);
+      return json({ received: true, ignored: true }, 200);
+    }
+    // Integrite du reglement — le montant encaisse DOIT egaler le prix enregistre.
+    if (pi.amount !== Number(bo.amount_minor) || pi.currency !== 'gnf') {
+      console.error('[stripe-webhook] CRITICAL boost amount/currency mismatch — NOT credited', {
+        stripe_pi: pi.id, boost_id: boostId,
+        pi_amount: pi.amount, pi_currency: pi.currency, rec_amount: bo.amount_minor,
+      });
+      return json({ received: true, mismatch: true }, 200);
+    }
+    if (event.type !== 'payment_intent.succeeded') {
+      return json({ received: true, boost_noncomplete: true }, 200);
+    }
+    if (bo.status !== 'pending_payment') {
+      // Stripe livre payment_intent.succeeded au moins une fois. Le cas courant
+      // est un DOUBLON benin de la PI deja reglee (boost passe en 'active' a la
+      // premiere livraison) : meme PI, aucun probleme d'argent → accuse de
+      // reception silencieux.
+      if (bo.stripe_pi_id === pi.id) {
+        return json({ received: true, boost_already_paid: true }, 200);
+      }
+      // Une AUTRE PI aboutie sur un boost deja regle veut dire que Stripe
+      // detient de l'argent que nous n'avons pas credite : remboursement manuel.
+      console.error('[stripe-webhook] CRITICAL boost charge via unexpected PI on settled boost — manual refund required', {
+        stripe_pi: pi.id, boost_id: boostId, boost_status: bo.status,
+        settled_pi: bo.stripe_pi_id, amount: pi.amount,
+      });
+      return json({ received: true, boost_already: true }, 200);
+    }
+    const { data: outcome, error: cbErr } = await sb.rpc('confirm_boost_payment', { p_boost_id: boostId });
+    if (cbErr) {
+      console.error('[stripe-webhook] confirm_boost_payment failed:', cbErr);
+      return json({ error: 'boost_confirm_failed' }, 500); // 500 → Stripe reessaie
+    }
+    if (outcome === 'confirmed') {
+      notifyDetached(sb, {
+        userIds: [bo.seller_id as string],
+        category: 'order',
+        title: 'Boost activé',
+        body: 'Ton annonce est mise en avant — le paiement est confirmé.',
+        iconHint: 'bolt',
+        deeplink: '/pro/boost',
+        refType: 'boost',
+        refId: boostId,
+        app: 'marketplace',
+      });
+    }
+    return json({ received: true, boost: outcome }, 200);
+  }
+
   if (pi.metadata?.kind === 'booking') {
     const bookingId = pi.metadata.booking_id;
     if (!bookingId) {

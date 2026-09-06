@@ -11,19 +11,21 @@ import { requireUser } from '@shared/auth.ts';
 import { mapBoost, type BoostRow } from '@shared/catalog.ts';
 import { boostPrice } from '@shared/boost.ts';
 import { initPaymentV2, toLocalGnAccount, isGnE164 } from '@shared/lengopay.ts';
+import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 
 interface Body {
   product_id?: string;
   property_id?: string;
   days: number;
   /** Défaut 'wallet' — c'était le seul rail avant le 2026-08-12, et les anciennes
-   *  versions de l'app n'envoient pas ce champ. */
-  method?: 'wallet' | 'orange-money' | 'mtn-money';
+   *  versions de l'app n'envoient pas ce champ. 'card' ajouté le 2026-09-07
+   *  (client : « Pareil pour le boost aussi »). */
+  method?: 'wallet' | 'orange-money' | 'mtn-money' | 'card';
   payer_phone?: string;
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
-const METHODS = ['wallet', 'orange-money', 'mtn-money'];
+const METHODS = ['wallet', 'orange-money', 'mtn-money', 'card'];
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -58,6 +60,18 @@ function throwBoostError(msg: string, where: string, error: unknown): never {
   throwApi('INTERNAL_ERROR', 500, 'Erreur lors du boost.');
 }
 
+// Filtre du cache d'idempotence (contrat de wrap.ts, meme idee que dans
+// place-order) : le client_secret Stripe ne doit PAS rester dans
+// idempotency_keys.response_body pendant 24 h — une lecture service_role
+// rejouerait un identifiant de paiement encore vivant. Un appel idempotent
+// rejoue recoit la reponse sans le bloc `payment` ; la reponse initiale, elle,
+// n'est pas affectee.
+function stripPaymentSecret(body: unknown): unknown {
+  if (!body || typeof body !== 'object') return body;
+  const { payment: _payment, ...rest } = body as Record<string, unknown>;
+  return rest;
+}
+
 Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
 
@@ -68,6 +82,80 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
 
   const isProperty = typeof body.property_id === 'string';
   const method = body.method ?? 'wallet';
+
+  // Refuser AVANT de reserver le boost : un secret manquant ne doit pas laisser
+  // une ligne 'pending_payment' que rien ne viendrait regler. Meme garde que
+  // place-order et booking-sign-pay.
+  if (method === 'card' && !stripeConfigured()) {
+    throwApi('STRIPE_NOT_CONFIGURED', 503, 'Le paiement par carte arrive bientôt.');
+  }
+
+  // ─── Rail CARTE (Stripe) ──────────────────────────────────────────────────
+  // AUCUNE ligne payment_intents, DELIBEREMENT — voir l'en-tete de la migration
+  // 20260907_01 : elle serait orpheline (aucun balayage ne la ramasse, le
+  // webhook ne sait router qu'entre commande et lot) et resterait 'pending'
+  // pour toujours. Le suivi passe par boosts.stripe_pi_id, exactement comme
+  // bookings.stripe_pi_id, et le reglement par metadata.kind='boost'.
+  if (method === 'card') {
+    const { data: boostId, error: pendErr } = await sb.rpc('create_pending_boost', {
+      p_product_id:   body.product_id ?? null,
+      p_property_id:  body.property_id ?? null,
+      p_seller_id:    userId,
+      p_days:         body.days,
+      p_amount_minor: amount,
+    });
+    if (pendErr || !boostId) {
+      throwBoostError((pendErr as { message?: string })?.message ?? '', 'create_pending_boost', pendErr);
+    }
+
+    let stripeIntent;
+    try {
+      stripeIntent = await stripeClient().paymentIntents.create(
+        {
+          amount: Number(amount),
+          currency: 'gnf',
+          automatic_payment_methods: { enabled: true },
+          // kind='boost' est ce que stripe-webhook attend pour router vers
+          // confirm_boost_payment plutot que vers le RPC des commandes.
+          metadata: { kind: 'boost', boost_id: boostId, user_id: userId },
+        },
+        // Cle d'idempotence derivee du boost : deux appuis successifs sur
+        // « payer » renvoient la MEME PaymentIntent au lieu d'en creer une
+        // seconde et de debiter deux fois (meme garde que booking-pi-<id>).
+        { idempotencyKey: `boost-pi-${boostId}` },
+      );
+      if (!stripeIntent.client_secret) throw new Error('missing client_secret');
+    } catch (e) {
+      console.error('[create-boost] stripe init error:', e);
+      // Le boost reserve n'a plus de chemin de reglement : on l'annule tout de
+      // suite plutot que de le laisser en 'pending_payment' indefiniment.
+      await sb.from('boosts').update({ status: 'cancelled' }).eq('id', boostId);
+      throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
+    }
+
+    const { error: stampErr } = await sb
+      .from('boosts')
+      .update({ stripe_pi_id: stripeIntent.id })
+      .eq('id', boostId)
+      .eq('status', 'pending_payment');
+    if (stampErr) {
+      // Sans le tampon, le balayage des PI abandonnees est aveugle a une PI
+      // pourtant vivante. On refuse plutot que de rendre un client_secret qu'on
+      // ne saurait plus suivre ; l'idempotence fait qu'un reessai retombera sur
+      // la MEME PI, donc rien n'est perdu.
+      console.error('[create-boost] CRITICAL stripe_pi_id stamp failed', {
+        boost_id: boostId, stripe_pi: stripeIntent.id, stampErr,
+      });
+      throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement du paiement');
+    }
+
+    return {
+      body: {
+        boost_id: boostId,
+        payment: { client_secret: stripeIntent.client_secret, publishable_key: stripePublishableKey() },
+      },
+    };
+  }
 
   // ─── Rail mobile money ────────────────────────────────────────────────────
   // L'argent n'existe pas encore : on reserve le boost en 'pending_payment' (il
@@ -180,4 +268,4 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
     throwApi('INTERNAL_ERROR', 500, 'Erreur lors du boost.');
   }
   return { body: { boost: mapBoost(row) } };
-}));
+}, stripPaymentSecret));

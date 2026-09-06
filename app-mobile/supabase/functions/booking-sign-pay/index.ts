@@ -42,6 +42,18 @@ function valid(b: unknown): b is Body {
   return true;
 }
 
+// Filtre du cache d'idempotence (contrat de wrap.ts, meme idee que dans
+// place-order) : le client_secret Stripe ne doit PAS rester dans
+// idempotency_keys.response_body pendant 24 h — une lecture service_role
+// rejouerait un identifiant de paiement encore vivant. Un appel idempotent
+// rejoue recoit la reponse sans le bloc `payment` ; la reponse initiale, elle,
+// n'est pas affectee.
+function stripPaymentSecret(body: unknown): unknown {
+  if (!body || typeof body !== 'object') return body;
+  const { payment: _payment, ...rest } = body as Record<string, unknown>;
+  return rest;
+}
+
 Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req }) => {
   const tenantId = await requireUser(req);
 
@@ -243,4 +255,4 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
   // Plus de payment_url (v2 est in-app) — le client va directement a l'ecran
   // de confirmation/attente.
   return { body: { booking_id: bk.id } };
-}));
+}, stripPaymentSecret));

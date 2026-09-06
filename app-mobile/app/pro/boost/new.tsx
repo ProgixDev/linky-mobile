@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
 import { Image } from 'expo-image';
 import { Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -68,6 +69,7 @@ export default function BoostNewRoute() {
   const tiers = boostData?.tiers ?? [];
   const wallet = useWallet();
   const create = useCreateBoost();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   // Pre-select when arriving from a listing's edit screen ("Booster cette
   // annonce"). Either productId or propertyId is passed; falls back to the
@@ -115,6 +117,37 @@ export default function BoostNewRoute() {
           ? { propertyId: selected.id }
           : { productId: selected.id };
       const res = await create.mutateAsync({ ...target, days: selectedTier.days, method, payerPhone: payerPhoneE164 });
+
+      // Carte : feuille Stripe native, exactement comme la reservation. Le
+      // boost reste 'pending_payment' — c'est le webhook qui l'activera.
+      if (res.kind === 'card') {
+        const { error: initErr } = await initPaymentSheet({
+          merchantDisplayName: 'Linky',
+          paymentIntentClientSecret: res.clientSecret,
+          returnURL: 'linky://stripe-redirect',
+        });
+        if (initErr) {
+          toast.show('Impossible de préparer le paiement', 'danger');
+          return;
+        }
+        const { error: payErr } = await presentPaymentSheet();
+        if (payErr) {
+          // Fermer la feuille ne doit rien declencher d'autre que sa propre
+          // fermeture — meme correctif que le panier le 2026-08-25.
+          if (payErr.code === PaymentSheetError.Canceled) {
+            toast.show('Paiement annulé.', 'info');
+            return;
+          }
+          toast.show(payErr.message || 'Paiement échoué', 'danger');
+          return;
+        }
+        // NE PAS annoncer « boost actif » ici : a cet instant le boost est
+        // encore 'pending_payment'. C'est le webhook qui l'activera, une a deux
+        // secondes plus tard.
+        toast.show(t('pro.boostPendingToast'), 'info');
+        router.replace('/pro/boost?pending=1');
+        return;
+      }
 
       // Mobile money : rien n'est paye a cet instant. Depuis Lengopay v2
       // (2026-09-05) la demande part directement chez l'operateur — le vendeur
@@ -235,9 +268,11 @@ export default function BoostNewRoute() {
                 alors que le panier avait deja fusionne les deux : le choix
                 d'operateur se fait sur la page Lengopay, le poser ici ne
                 servait a rien.
-                allowCard={false} : create-boost rejette 'card' (son allowlist
-                METHODS ne contient que wallet/orange-money/mtn-money), donc
-                afficher un bouton carte ici produirait un echec garanti. */}
+                La carte est ouverte depuis le 2026-09-07 (client : « Pareil
+                pour le boost aussi ») : create-boost accepte 'card' et rend un
+                client_secret Stripe, comme la reservation. Le selecteur ne la
+                montre qu'aux profils a l'etranger — un profil Guinee n'a pas
+                encore de rail carte. */}
             <PaymentMethodPicker
               value={method}
               onChange={(m) => {
@@ -245,7 +280,6 @@ export default function BoostNewRoute() {
                 setMethod(m as BoostPayMethod);
               }}
               walletBalanceGnf={wallet.data?.balanceGnf ?? null}
-              allowCard={false}
             />
           </View>
         )}
