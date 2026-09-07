@@ -5,7 +5,6 @@ import {
   Compass,
   ScanFace,
   ArrowUpRight,
-  Star,
 } from 'lucide-react';
 
 /**
@@ -32,9 +31,8 @@ export function Features() {
             </h2>
           </div>
           <p className="max-w-md text-[15px] leading-relaxed text-[#5e6864] md:justify-self-end md:text-right">
-            On a passé 18 mois à parler avec acheteurs, vendeurs et agents
-            guinéens. Chaque module ci-dessous résout un problème qu&apos;on a
-            entendu plus de cent fois.
+            Chaque module ci-dessous répond à un problème concret du commerce
+            en Guinée : la confiance entre inconnus, le paiement, la distance.
           </p>
         </div>
 
@@ -52,14 +50,6 @@ export function Features() {
                     Mode, électronique, maison, auto — vendeurs locaux et
                     boutiques vérifiées.
                   </h3>
-                </div>
-                <div className="hidden shrink-0 rounded-2xl bg-[#0e6e55] px-3 py-2 text-white sm:block">
-                  <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-                    Catalogue
-                  </div>
-                  <div className="font-display text-2xl font-bold leading-none">
-                    4 200+
-                  </div>
                 </div>
               </div>
 
@@ -83,16 +73,7 @@ export function Features() {
               </div>
 
               <div className="relative z-10 mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-[#5e6864]">
-                <span className="flex items-center gap-1.5">
-                  <Star size={13} fill="#e8a53d" className="text-[#e8a53d]" />
-                  <strong className="font-bold text-[#0E1311]">4,8</strong>
-                  &nbsp;moyenne vendeurs
-                </span>
-                <span className="h-1 w-1 rounded-full bg-[#D4CCBA]" />
-                <span>
-                  <strong className="font-bold text-[#0E1311]">17 villes</strong>{' '}
-                  couvertes
-                </span>
+                <span>Annonces dans toute la Guinée</span>
                 <span className="h-1 w-1 rounded-full bg-[#D4CCBA]" />
                 <span>Aucun frais de mise en ligne</span>
               </div>
@@ -114,14 +95,10 @@ export function Features() {
                 <ScanFace size={22} strokeWidth={1.75} />
               </div>
             </div>
-            <div className="mt-7 flex items-baseline gap-3">
-              <span className="font-display text-7xl font-bold leading-none tracking-tighter">
-                ×3
-              </span>
-              <span className="max-w-[180px] text-sm text-white/65">
-                de ventes en moyenne après obtention du badge « Vérifié »
-              </span>
-            </div>
+            <p className="mt-7 max-w-[280px] text-sm leading-relaxed text-white/65">
+              Pièce d&apos;identité et selfie, vérifiés par notre prestataire.
+              Tes acheteurs voient alors le badge « Vérifié » sur ta boutique.
+            </p>
             <div className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-[#e8a53d]">
               Voir le process
               <ArrowUpRight size={13} strokeWidth={2.5} />
@@ -144,7 +121,7 @@ export function Features() {
                 Recharge, paye, retire. Sans quitter l&apos;app.
               </h3>
               <div className="mt-6 flex flex-wrap items-center gap-2">
-                {['Orange Money', 'MTN', 'Visa', 'Mastercard'].map((p) => (
+                {['Orange Money', 'MTN', 'Kulu', 'Soutra Money', 'Carte bancaire'].map((p) => (
                   <span
                     key={p}
                     className="rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm ring-1 ring-white/15"
@@ -168,11 +145,11 @@ export function Features() {
                 </h3>
                 <p className="mt-3 max-w-md text-[15px] leading-relaxed text-[#5e6864]">
                   Swipe vertical entre articles et logements. Aime, sauvegarde,
-                  contacte. Conversion ×3 vs la grille classique.
+                  contacte.
                 </p>
                 <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-bold text-[#0e6e55]">
                   <Compass size={13} strokeWidth={2.25} />
-                  1,2 M de vues / mois
+                  Articles et logements dans le même fil
                 </div>
               </div>
               <div className="hidden sm:block">
@@ -213,11 +190,9 @@ export function Features() {
                 <ShieldCheck size={22} strokeWidth={1.75} />
               </div>
               <p className="text-[14px] leading-relaxed text-[#0A5240]/85">
-                Argent gardé en séquestre. Litige en 48 h s&apos;il y a un
-                problème.{' '}
-                <strong className="font-bold">
-                  98 % des litiges résolus à l&apos;amiable.
-                </strong>
+                Argent gardé en séquestre jusqu&apos;à ta confirmation. En cas
+                de problème, tu ouvres un litige depuis la commande et{' '}
+                <strong className="font-bold">un humain l&apos;examine.</strong>
               </p>
             </div>
           </article>

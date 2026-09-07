@@ -25,8 +25,15 @@ const SUPABASE_URL =
 const SUPABASE_ANON =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'sb_publishable_imvOZli1yEDOhQ0xjOkBug_SGi_j9M2';
 
-export const PLAY_STORE_URL =
-  'https://play.google.com/store/apps/details?id=com.linkygroup.app';
+// Ce lien de partage est la SEULE porte d'entree d'un visiteur qui recoit une
+// annonce Linky : sans l'appli, il tombe sur ce bouton. Il pointait vers une
+// fiche Play Store qui n'existe pas — l'appli n'a jamais ete soumise, donc le
+// visiteur atterrissait sur « Introuvable » et repartait.
+//
+// On l'envoie donc vers l'APK reellement telechargeable, servi par
+// /linky.apk (redirection vers la derniere release GitHub, cf. lib/download.ts).
+// A REMPLACER par l'URL Play Store le jour de la publication — et pas avant.
+export const PLAY_STORE_URL = '/linky.apk';
 
 interface Listing {
   title: string;

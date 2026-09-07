@@ -55,14 +55,9 @@ export default function CookiesPage() {
             body: (
               <>
                 <p>
-                  Avec ton accord, ces cookies nous aident à comprendre comment
-                  Linky est utilisé. Données anonymisées et agrégées.
+                  Nous n&apos;utilisons aucun outil de mesure d&apos;audience
+                  pour le moment. Si cela change, cette page le dira avant.
                 </p>
-                <ul>
-                  <li>
-                    <strong>_va</strong> — Vercel Analytics (durée : 1 an)
-                  </li>
-                </ul>
               </>
             ),
           },
@@ -80,8 +75,7 @@ export default function CookiesPage() {
             heading: 'Gérer tes préférences',
             body: (
               <p>
-                Tu peux à tout moment modifier ton choix via la barre de
-                consentement en bas de page ou dans les paramètres de ton
+                Tu peux gérer les cookies dans les paramètres de ton
                 navigateur (Chrome, Safari, Firefox).
               </p>
             ),

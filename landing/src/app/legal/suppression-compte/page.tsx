@@ -45,7 +45,7 @@ export default function AccountDeletionPage() {
                 <a href="mailto:support@linkygroup.com">support@linkygroup.com</a> depuis
                 l&apos;adresse e-mail (ou avec le numéro) de ton compte, avec
                 pour objet <strong>« Suppression de compte »</strong>. Nous
-                traitons la demande sous 30 jours.
+                traitons la demande dès réception.
               </p>
             ),
           },
@@ -53,7 +53,7 @@ export default function AccountDeletionPage() {
             heading: 'Ce qui est supprimé',
             body: (
               <ul>
-                <li>Ton profil (nom, ville, photo) — anonymisé.</li>
+                <li>Ton profil (nom, photo) — anonymisé.</li>
                 <li>Ton numéro de téléphone et ton e-mail — libérés.</li>
                 <li>Tes sessions et notifications.</li>
                 <li>Tes annonces en cours — retirées de la vente.</li>

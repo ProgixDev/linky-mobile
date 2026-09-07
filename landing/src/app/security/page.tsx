@@ -15,28 +15,28 @@ const PILLARS = [
   },
   {
     n: '02',
-    t: 'KYC obligatoire',
-    d: 'Tout vendeur doit fournir pièce d\'identité + selfie. Vérification humaine sous 48 h.',
+    t: 'Vérification d\'identité',
+    d: 'Un vendeur peut vérifier son identité (pièce d\'identité + selfie) via notre prestataire, et obtenir le badge « Vérifié ».',
   },
   {
     n: '03',
     t: 'Données chiffrées',
-    d: 'Chiffrement en transit (TLS 1.3) et au repos. Hébergement dans des datacenters certifiés ISO 27001.',
+    d: 'Chiffrement en transit et au repos, assuré par notre hébergeur cloud européen.',
   },
   {
     n: '04',
     t: 'Pas de stockage de cartes',
-    d: 'Les numéros de carte ne touchent jamais nos serveurs. Tout passe par Stripe (PCI-DSS niveau 1).',
+    d: 'Les numéros de carte ne touchent jamais nos serveurs : la saisie se fait chez notre prestataire de paiement — Lengopay pour les cartes en Guinée, Stripe depuis l\'étranger.',
   },
   {
     n: '05',
-    t: 'Authentification 2FA',
-    d: 'SMS pour la connexion, code biométrique optionnel pour les paiements > 500 k GNF.',
+    t: 'Connexion par code à usage unique',
+    d: 'Chaque connexion est confirmée par un code envoyé sur ton téléphone ou par email.',
   },
   {
     n: '06',
-    t: 'Audit annuel',
-    d: 'Pen-test externe annuel par un cabinet français spécialisé.',
+    t: 'Revues de sécurité',
+    d: 'Le code et l\'infrastructure sont relus régulièrement, avec des audits adverses avant chaque mise en production sensible.',
   },
 ];
 
@@ -75,11 +75,12 @@ export default function SecurityPage() {
               Programme bug bounty
             </div>
             <h2 className="font-display mt-3 text-2xl font-bold tracking-tight md:text-3xl">
-              Tu trouves une faille ? On te récompense.
+              Tu trouves une faille ? Écris-nous.
             </h2>
             <p className="mt-3 max-w-md text-white/70">
-              De 100 à 5 000 € selon la criticité. Réponse sous 48 h, fix sous
-              30 jours. Disclosure publique négociée.
+              Nous étudions chaque signalement et convenons avec toi des
+              modalités de publication. Décris la faille, comment la
+              reproduire, et ce qu\'elle permet.
             </p>
           </div>
           <a
@@ -97,9 +98,7 @@ export default function SecurityPage() {
       </h2>
       <ol className="mt-6 space-y-3">
         {[
-          'Change immédiatement ton mot de passe (Profil → Sécurité → Mot de passe).',
-          'Active la 2FA si ce n\'est pas déjà fait.',
-          'Vérifie l\'historique de connexion (Profil → Sécurité → Sessions).',
+          'Change immédiatement ton mot de passe (Profil → Modifier mon profil).',
           'Contacte support@linkygroup.com en précisant ton numéro de téléphone.',
         ].map((s, i) => (
           <li

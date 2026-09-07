@@ -22,7 +22,8 @@ export default function TermsPage() {
               <p>
                 En utilisant Linky, tu acceptes les présentes conditions
                 générales. Elles régissent ta relation avec{' '}
-                <strong>Linky SAS</strong>, société de droit guinéen.
+                l&apos;éditeur de Linky, dont les informations légales sont
+                publiées dans les <a href="/legal/notices">mentions légales</a>.
               </p>
             ),
           },
@@ -61,8 +62,8 @@ export default function TermsPage() {
             body: (
               <p>
                 En cas de désaccord, tu peux ouvrir un litige directement dans
-                l&apos;app. Notre équipe de médiation intervient sous 48 h pour
-                proposer une résolution.
+                l&apos;app. Nous examinons chaque litige et proposons une
+                résolution.
               </p>
             ),
           },

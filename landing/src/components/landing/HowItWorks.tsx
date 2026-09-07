@@ -29,7 +29,7 @@ const STEPS: Record<Audience, Step[]> = {
     {
       Icon: CreditCard,
       title: 'Paie en toute sécurité',
-      body: 'Orange Money, MTN, carte bancaire ou wallet Linky. Escrow inclus.',
+      body: 'Orange Money, MTN, Kulu, Soutra Money, carte bancaire ou wallet Linky. Escrow inclus.',
     },
     {
       Icon: PackageCheck,
@@ -46,12 +46,12 @@ const STEPS: Record<Audience, Step[]> = {
     {
       Icon: Megaphone,
       title: 'Booste tes ventes',
-      body: 'Mets en avant tes annonces pour 3× plus de vues sur 7 jours.',
+      body: 'Mets en avant tes annonces pendant 3 à 30 jours, à partir de 5 000 GNF.',
     },
     {
       Icon: Wallet,
       title: 'Encaisse rapide',
-      body: 'Versements Mobile Money dans les 48 h après confirmation.',
+      body: 'Retire ton solde vers Orange Money ou MTN.',
     },
   ],
 };

@@ -125,11 +125,11 @@ export function Hero() {
             </div>
             <div className="flex items-center gap-2">
               <Wallet size={15} className="text-[#0e6e55]" />
-              <span>Orange Money, MTN, carte bancaire</span>
+              <span>Orange Money, MTN, Kulu, Soutra Money, carte bancaire</span>
             </div>
             <div className="flex items-center gap-2">
               <ShieldCheck size={15} className="text-[#0e6e55]" />
-              <span>Vendeurs KYC vérifiés</span>
+              <span>Vérification d&apos;identité des vendeurs</span>
             </div>
           </motion.div>
         </div>

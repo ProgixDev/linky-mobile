@@ -66,16 +66,16 @@ export function Footer() {
               Construit avec amour à Conakry.
             </p>
 
+            {/* Les quatre icones pointaient toutes sur « # » : ni les
+                reseaux, ni Telegram, ni la chaine video n'existent. Seule
+                l'adresse email est reelle. */}
             <div className="mt-7 flex gap-2">
               {[
-                { Icon: AtSign, label: 'Email' },
-                { Icon: Hash, label: 'Réseaux sociaux' },
-                { Icon: Send, label: 'Telegram' },
-                { Icon: Play, label: 'Vidéos' },
-              ].map(({ Icon, label }) => (
+                { Icon: AtSign, label: 'Email', href: 'mailto:contact@linkygroup.com' },
+              ].map(({ Icon, label, href }) => (
                 <a
                   key={label}
-                  href="#"
+                  href={href}
                   aria-label={label}
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 transition-colors hover:bg-white/10 focus-visible:bg-white/10"
                 >
@@ -109,7 +109,7 @@ export function Footer() {
         </div>
 
         <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-8 text-xs text-white/45 md:flex-row md:items-center">
-          <div>© 2026 Linky SAS. Tous droits réservés.</div>
+          <div>© 2026 Linky. Tous droits réservés.</div>
           <div className="flex items-center gap-1.5">
             <span>Fait avec</span>
             <span className="text-danger">♥</span>

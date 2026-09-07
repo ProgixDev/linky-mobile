@@ -5,10 +5,10 @@ import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 
 const NAV_LINKS = [
-  { href: '#comment', label: 'Comment ça marche' },
-  { href: '#decouvrir', label: 'Découvrir' },
-  { href: '#diaspora', label: 'Diaspora' },
-  { href: '#faq', label: 'FAQ' },
+  { href: '/#comment', label: 'Comment ça marche' },
+  { href: '/#decouvrir', label: 'Découvrir' },
+  { href: '/#diaspora', label: 'Diaspora' },
+  { href: '/#faq', label: 'FAQ' },
 ];
 
 export function Nav() {
@@ -32,7 +32,7 @@ export function Nav() {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-10">
         <a
-          href="#"
+          href="/"
           aria-label="Linky — accueil"
           className="flex items-center gap-2.5 rounded-full"
         >

@@ -73,7 +73,7 @@ export default function PrivacyPage() {
                 demander leur suppression directement dans{' '}
                 <strong>Profil → Confidentialité</strong>. Pour obtenir une copie
                 de tes données (export), écris-nous à{' '}
-                <strong>privacy@linkygroup.com</strong> — nous répondons sous 30 jours.
+                <strong>privacy@linkygroup.com</strong>.
               </p>
             ),
           },
@@ -94,7 +94,7 @@ export default function PrivacyPage() {
               <p>
                 Tes données sont chiffrées en transit (TLS) et au repos. Les
                 mots de passe ne sont jamais stockés en clair. Nos serveurs
-                sont hébergés dans des datacenters certifiés ISO 27001.
+                sont hébergés chez un hébergeur cloud européen.
               </p>
             ),
           },
@@ -123,7 +123,6 @@ export default function PrivacyPage() {
             body: (
               <p>
                 Toute question sur tes données : <strong>privacy@linkygroup.com</strong>.
-                Notre Délégué à la Protection des Données répond sous 30 jours.
               </p>
             ),
           },

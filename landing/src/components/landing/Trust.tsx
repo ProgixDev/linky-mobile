@@ -15,18 +15,18 @@ const PILLARS: Pillar[] = [
   },
   {
     Icon: BadgeCheck,
-    title: 'KYC obligatoire',
-    body: 'Tout vendeur identifié et tout agent immobilier avec pièce d\'identité vérifiée.',
+    title: 'Vérification d\'identité',
+    body: 'Vendeurs et agents peuvent verifier leur pièce d\'identité pour obtenir le badge « Vérifié ».',
   },
   {
     Icon: Scale,
-    title: 'Litiges arbitrés en 48h',
-    body: 'Une équipe de médiation locale tranche les désaccords, en français.',
+    title: 'Litiges arbitrés',
+    body: 'Un litige s\'ouvre depuis la commande, et un humain l\'examine — en français.',
   },
   {
     Icon: ShieldCheck,
     title: 'Données chiffrées',
-    body: 'Conformité RGPD, données hébergées en datacenters certifiés ISO 27001.',
+    body: 'Données chiffrées en transit et au repos, hébergées chez un hébergeur cloud européen.',
   },
 ];
 
@@ -35,10 +35,10 @@ function PartnerLogo({ name }: { name: string }) {
   const map: Record<string, { bg: string; fg: string; abbr: string }> = {
     'Orange Money': { bg: '#FF7900', fg: '#fff', abbr: 'OM' },
     'MTN Mobile Money': { bg: '#FFC500', fg: '#0E1311', abbr: 'M' },
-    Visa: { bg: '#1A1F71', fg: '#fff', abbr: 'V' },
-    Mastercard: { bg: '#EB001B', fg: '#fff', abbr: 'MC' },
+    'Kulu': { bg: '#0E1311', fg: '#fff', abbr: 'K' },
+    'Soutra Money': { bg: '#118866', fg: '#fff', abbr: 'SM' },
+    Lengopay: { bg: '#0e6e55', fg: '#fff', abbr: 'LP' },
     Stripe: { bg: '#635BFF', fg: '#fff', abbr: 'S' },
-    'Apple Pay': { bg: '#0E1311', fg: '#fff', abbr: 'A' },
   };
   const m = map[name] ?? { bg: '#0E1311', fg: '#fff', abbr: '?' };
   return (
@@ -63,7 +63,7 @@ export function Trust() {
             Confiance
           </div>
           <h2 className="font-display mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
-            Pourquoi des milliers de Guinéens nous confient leur argent.
+            Pourquoi tu peux nous confier ton argent.
           </h2>
         </div>
 
@@ -95,6 +95,7 @@ export function Trust() {
             {[
               'Orange Money',
               'MTN Mobile Money',
+              'Lengopay',
               'Stripe',
             ].map((p) => (
               <PartnerLogo key={p} name={p} />

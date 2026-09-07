@@ -52,7 +52,7 @@ export function CTABand() {
             <div className="mx-auto mt-10 flex max-w-md flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-white/60">
               <span>🔒 Paiement escrow sécurisé</span>
               <span>·</span>
-              <span>Vendeurs vérifiés KYC</span>
+              <span>Badge « Vérifié » pour les vendeurs</span>
               <span>·</span>
               <span>100 % français</span>
             </div>

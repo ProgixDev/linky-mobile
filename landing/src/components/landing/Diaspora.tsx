@@ -14,7 +14,7 @@ const USES: Use[] = [
   {
     Icon: CreditCard,
     title: 'Paye en € depuis Paris ou Bruxelles',
-    body: 'Carte bancaire acceptée. Conversion EUR → GNF transparente, sans frais cachés.',
+    body: 'Carte bancaire internationale, ou le compte Orange Money / MTN guinéen que tu pilotes à distance.',
   },
   {
     Icon: Send,
@@ -58,11 +58,14 @@ export function Diaspora() {
                   <span className="text-accent">au pays.</span>
                 </h3>
               </div>
+              {/* Ces trois tuiles annonçaient « +15k diaspora utilisateurs »,
+                  « 12 pays supportés » et « support 24/7 » : aucun utilisateur,
+                  aucun pays, aucune permanence n'existe. */}
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { num: '+15k', label: 'Diaspora utilisateurs' },
-                  { num: '12', label: 'Pays supportés' },
-                  { num: '24/7', label: 'Support FR' },
+                  { num: '€', label: 'Paie depuis l’étranger' },
+                  { num: '⇄', label: 'Livré au quartier' },
+                  { num: '✉', label: 'Support par email' },
                 ].map((s) => (
                   <div key={s.label}>
                     <div className="font-display text-2xl font-bold">{s.num}</div>

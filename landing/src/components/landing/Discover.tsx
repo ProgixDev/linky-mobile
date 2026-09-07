@@ -36,10 +36,15 @@ export function Discover() {
 
           <div className="mt-10 grid gap-5 sm:grid-cols-2">
             {[
-              { num: '1.2M', label: 'Vues par mois' },
-              { num: '3×', label: 'Engagement vs scroll classique' },
-              { num: '+30 %', label: 'Conversion pour les boutiques' },
-              { num: '<2s', label: 'Temps de chargement' },
+              // Les quatre tuiles portaient des mesures (1,2 M de vues/mois,
+              // ×3 d'engagement, +30 % de conversion, <2 s de chargement) sur
+              // un fil qui n'a jamais servi un seul utilisateur reel, et sur
+              // une infrastructure ou rien ne mesure quoi que ce soit. On garde
+              // la forme, on y met ce qui est vrai : ce que le fil FAIT.
+              { num: '↕', label: 'Articles et logements dans le même fil' },
+              { num: '♥', label: 'Aime et sauvegarde en un geste' },
+              { num: '⌁', label: 'Contacte le vendeur sans quitter le fil' },
+              { num: '⤓', label: 'Pensé pour les connexions lentes' },
             ].map((s) => (
               <div
                 key={s.label}

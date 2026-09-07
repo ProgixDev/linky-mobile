@@ -9,11 +9,10 @@ export const metadata: Metadata = {
 
 // Facts kept strictly verifiable — no invented metrics, founders, or rounds.
 const FACTS = [
-  { l: 'Siège', v: 'Conakry, Guinée' },
-  { l: 'Lancement', v: '2026' },
+  { l: 'Lancement', v: 'À venir' },
   { l: 'Produit', v: 'Marketplace + immobilier' },
-  { l: 'Paiement', v: 'Mobile Money & carte, séquestre intégré' },
-  { l: 'Confiance', v: 'Vendeurs vérifiés (KYC)' },
+  { l: 'Paiement', v: 'Mobile Money (Orange, MTN, Kulu, Soutra), carte, séquestre intégré' },
+  { l: 'Confiance', v: 'Séquestre sur chaque commande, vérification d\'identité disponible' },
   { l: 'Langue', v: 'Français' },
 ];
 
@@ -22,7 +21,7 @@ export default function PressPage() {
     <PageShell
       eyebrow="Presse & médias"
       title="Tout ce qu'il faut pour parler de Linky."
-      subtitle="Logos officiels, captures d'écran haute résolution, faits clés et contact direct. Servez-vous."
+      subtitle="Faits clés et contact direct. Logos et captures d'écran sur demande."
     >
       {/* Quick contact */}
       <div className="rounded-3xl bg-[#0E1311] p-8 text-white md:p-10">
@@ -32,7 +31,7 @@ export default function PressPage() {
               Contact relations presse
             </h2>
             <p className="mt-2 max-w-md text-white/70">
-              On répond en moins de 24 h en semaine, en français ou en anglais.
+              Écris-nous, on revient vers toi en français.
             </p>
           </div>
           <a

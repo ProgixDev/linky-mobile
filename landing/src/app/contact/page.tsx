@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const CHANNELS = [
   {
     t: 'Support utilisateurs',
-    d: 'Pour acheteurs et vendeurs. Réponse < 1 h en semaine.',
+    d: 'Pour acheteurs et vendeurs.',
     addr: 'support@linkygroup.com',
     tag: 'support',
   },
@@ -39,27 +39,16 @@ export default function ContactPage() {
     <PageShell
       eyebrow="Contact"
       title="On t'écoute."
-      subtitle="Quatre canaux selon la nature de ta demande, plus un numéro direct pour les urgences."
+      subtitle="Quatre canaux selon la nature de ta demande."
     >
       {/* Phone + chat hero */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-3xl bg-white p-7 ring-1 ring-[#E5DED1]">
-          <div className="text-xs font-bold uppercase tracking-wider text-[#0e6e55]">
-            Téléphone · 9 h – 21 h
-          </div>
-          <div className="font-display mt-2 text-2xl font-bold tracking-tight tabular-nums sm:text-3xl">
-            +224 622 00 00 00
-          </div>
-          <p className="mt-2 text-sm text-[#5e6864]">
-            En français · 7 jours sur 7.
-          </p>
-        </div>
         <div className="rounded-3xl bg-[#0E1311] p-7 text-white">
           <div className="text-xs font-bold uppercase tracking-wider text-[#e8a53d]">
-            Chat en direct
+            Aide dans l&apos;app
           </div>
           <div className="font-display mt-2 text-3xl font-bold tracking-tight">
-            Disponible dans l&apos;app
+            Écris-nous
           </div>
           <p className="mt-2 text-sm text-white/65">
             Ouvre l&apos;app Linky → Profil → Aide & support.
@@ -91,20 +80,6 @@ export default function ContactPage() {
         ))}
       </div>
 
-      {/* Mailing address */}
-      <h2 className="font-display mt-16 text-3xl font-bold tracking-tight md:text-4xl">
-        Bureau.
-      </h2>
-      <div className="mt-6 rounded-2xl bg-white p-6 ring-1 ring-[#E5DED1] md:p-7">
-        <div className="font-bold">Linky SAS</div>
-        <p className="mt-1 text-sm leading-relaxed text-[#5e6864]">
-          Immeuble Kaloum Tower, 12<sup>ème</sup> étage
-          <br />
-          Avenue de la République
-          <br />
-          Conakry, Guinée
-        </p>
-      </div>
     </PageShell>
   );
 }

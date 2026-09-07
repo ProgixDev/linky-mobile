@@ -6,31 +6,31 @@ import { Plus, Minus } from 'lucide-react';
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Comment fonctionne le paiement sécurisé ?',
-    a: 'Quand tu achètes, ton paiement est gardé en escrow par Linky. Le vendeur n\'est crédité qu\'après ta confirmation de réception. Tu as 48 h pour confirmer ou ouvrir un litige.',
+    a: 'Quand tu achètes, ton paiement est gardé en escrow par Linky. Le vendeur n\'est crédité qu\'après ta confirmation de réception. Tu confirmes la réception depuis la commande, ou tu ouvres un litige.',
   },
   {
     q: 'Quels moyens de paiement sont acceptés ?',
-    a: 'Orange Money, MTN Mobile Money, Visa, Mastercard, Apple Pay et Google Pay. Tu peux aussi utiliser le solde de ton wallet Linky.',
+    a: 'En Guinée : Orange Money, MTN Mobile Money, Kulu, Soutra Money et la carte bancaire locale, via notre partenaire Lengopay. Depuis l\'étranger : carte bancaire internationale, plus Orange Money et MTN si tu pilotes un compte guinéen à distance. Dans les deux cas, tu peux aussi payer avec le solde de ton wallet Linky.',
   },
   {
     q: 'Combien coûtent les frais ?',
-    a: 'Linky prélève une commission transparente sur chaque transaction réussie. Aucun frais caché — le montant t\'est toujours indiqué avant validation. Les versements vers Mobile Money sont gratuits.',
+    a: 'Linky prélève une commission transparente sur chaque transaction réussie. Aucun frais caché — le montant t\'est toujours indiqué avant validation. Le montant t\'est toujours indiqué avant validation.',
   },
   {
     q: 'Que se passe-t-il en cas de problème avec un vendeur ?',
-    a: 'Tu ouvres un litige directement dans la commande. Notre équipe de médiation intervient en 48 h pour proposer une résolution : remboursement, retour ou contrepartie.',
+    a: 'Tu ouvres un litige directement dans la commande. Un membre de l\'équipe Linky l\'examine et propose une résolution : remboursement, retour ou contrepartie.',
   },
   {
     q: 'L\'app est-elle disponible pour la diaspora ?',
-    a: 'Oui. Tu peux télécharger Linky depuis n\'importe quel pays et payer en € avec une carte bancaire. Les livraisons se font dans les zones de couverture de nos partenaires en Guinée.',
+    a: 'Oui. Tu peux télécharger Linky depuis n\'importe quel pays et payer par carte bancaire, ou avec un compte Orange Money / MTN guinéen que tu pilotes à distance. La livraison se fait en Guinée.',
   },
   {
     q: 'Comment devenir vendeur vérifié ?',
-    a: 'Inscris-toi, choisis le rôle Vendeur ou Agent immobilier, puis fais la vérification KYC en 3 minutes : photo de ta pièce d\'identité, selfie, et c\'est validé sous 48 h.',
+    a: 'Inscris-toi, choisis le rôle Vendeur ou Agent immobilier, puis lance la vérification d\'identité : photo de ta pièce d\'identité et selfie. Une fois vérifiée, le badge « Vérifié » apparaît sur ta boutique.',
   },
   {
     q: 'Linky est gratuit ?',
-    a: 'L\'app et la création d\'annonces sont gratuites. Tu paies uniquement quand tu achètes ou quand tu réussis une vente. Les boosts d\'annonces sont en option, à partir de 8 000 GNF.',
+    a: 'L\'app et la création d\'annonces sont gratuites. Tu paies uniquement quand tu achètes ou quand tu réussis une vente. Les boosts d\'annonces sont en option, à partir de 5 000 GNF.',
   },
 ];
 
