@@ -24,6 +24,7 @@
 
 import {
   normalizeLengopayStatus,
+  type LengopayCurrency,
   type LengopayInitRequest,
   type LengopayInitResponse,
   type LengopayNextStep,
@@ -148,18 +149,40 @@ export function toLocalGnAccount(e164: string): string {
 // needsAccount : Orange, MTN et Kulu encaissent SUR un numero guineen (envoye
 // dans `account`). Soutra Money et la carte n'en veulent pas — l'acheteur
 // s'identifie sur la page que Lengopay renvoie.
+//
+// hostedPage : ce rail passe par la PAGE HEBERGEE (API v1), pas par l'API v2.
+//
+// POURQUOI LA CARTE NE PEUT PAS PASSER PAR LA v2 — constate en production le
+// 2026-09-07, apres six echecs d'Abdoulaye sur le bouton « Carte bancaire ».
+// La v2 lie la passerelle cote serveur (type_account) et clot le paiement dans
+// la foulee : nos quatre paiements v2 du jour, tous rails confondus, ressortent
+// avec is_finish=true sur /api/payment/page/<pay_id>. Pour Orange, MTN, Kulu et
+// Soutra ce n'est pas genant — la demande part vers l'operateur, ou une page
+// nous est rendue. Pour la CARTE il faut au contraire un formulaire securise, et
+// c'est /api/payment/card qui le delivre : appele sur un pay_id v2, il repond
+// « Ce paiement est deja termine ! ». La v2 n'a donc AUCUN chemin vers le
+// formulaire — ce n'etait pas une mauvaise configuration de notre cote, le rail
+// carte v2 est inexploitable tel quel.
+//
+// La page hebergee, elle, fonctionne : c'est celle que Lengopay sert a tous ses
+// marchands. Verifie le meme jour sur notre compte (structure « Linky ») —
+// passerelles activees et disponibles (status=0) : Orange Money (1), MTN (2),
+// PayCard (3), Carte bancaire (5), Crypto (6), Kulu (15), Soutra Money (16).
+// L'acheteur y choisit son moyen et Lengopay gere le formulaire et le 3-D
+// Secure. Bonus : PayCard — la carte prepayee guineenne a 9 chiffres que le
+// client nommait sans qu'on sache a quoi elle correspondait — y est offerte.
 export type LengopayMethod =
   | 'orange-money' | 'mtn-money' | 'kulu' | 'soutramoney' | 'lengopay-card';
 
 export const LENGOPAY_RAILS: Record<
   LengopayMethod,
-  { typeAccount: LengopayV2TypeAccount; needsAccount: boolean; label: string }
+  { typeAccount: LengopayV2TypeAccount; needsAccount: boolean; hostedPage: boolean; label: string }
 > = {
-  'orange-money':  { typeAccount: 'lp-om-gn',          needsAccount: true,  label: 'Orange Money' },
-  'mtn-money':     { typeAccount: 'lp-momo-gn',        needsAccount: true,  label: 'MTN MoMo' },
-  'kulu':          { typeAccount: 'lp-kulu-gn',        needsAccount: true,  label: 'Kulu' },
-  'soutramoney':   { typeAccount: 'lp-soutramoney-gn', needsAccount: false, label: 'Soutra Money' },
-  'lengopay-card': { typeAccount: 'lp-card-gn',        needsAccount: false, label: 'Carte bancaire' },
+  'orange-money':  { typeAccount: 'lp-om-gn',          needsAccount: true,  hostedPage: false, label: 'Orange Money' },
+  'mtn-money':     { typeAccount: 'lp-momo-gn',        needsAccount: true,  hostedPage: false, label: 'MTN MoMo' },
+  'kulu':          { typeAccount: 'lp-kulu-gn',        needsAccount: true,  hostedPage: false, label: 'Kulu' },
+  'soutramoney':   { typeAccount: 'lp-soutramoney-gn', needsAccount: false, hostedPage: false, label: 'Soutra Money' },
+  'lengopay-card': { typeAccount: 'lp-card-gn',        needsAccount: false, hostedPage: true,  label: 'Carte bancaire' },
 };
 
 // Hotes ou une page de paiement Lengopay a le droit de vivre. MIROIR EXACT de
@@ -187,7 +210,10 @@ const EXPECTED_STEP: Record<LengopayMethod, LengopayNextStep['kind'] | 'unknown'
   'mtn-money':     'poll',
   'kulu':          'otp',
   'soutramoney':   'webview',
-  'lengopay-card': 'unknown',
+  // Depuis le 2026-09-07 la carte passe par la page hebergee (hostedPage), donc
+  // elle ne traverse plus railNextStep : son etape est construite directement
+  // dans initForRail et vaut toujours 'webview'. L'entree reste par coherence.
+  'lengopay-card': 'webview',
 };
 
 /** Ce que l'acheteur doit encore faire apres l'init. Une etape inattendue est
@@ -271,6 +297,64 @@ export function railActionUrl(step: LengopayNextStep): string | null {
  */
 export function railIsDeadEnd(method: LengopayMethod, step: LengopayNextStep): boolean {
   return !LENGOPAY_RAILS[method].needsAccount && step.kind === 'poll';
+}
+
+/**
+ * LE point d'entree unique pour ouvrir un paiement Lengopay, quel que soit le
+ * rail. Il choisit l'API (v1 page hebergee pour la carte, v2 en direct pour les
+ * autres) et rend deja l'etape suivante, pour que les quatre appelants
+ * (place-order, place-orders-batch, booking-sign-pay, create-boost) n'aient
+ * plus a connaitre cette distinction — c'est exactement le genre de branche
+ * qui, dupliquee quatre fois, finit par diverger sur un seul des quatre.
+ */
+export interface RailInitResult {
+  payId: string;
+  step: LengopayNextStep;
+}
+
+export async function initForRail(
+  method: LengopayMethod,
+  req: { amount_minor: number; currency: LengopayCurrency; account?: string },
+): Promise<RailInitResult> {
+  const rail = LENGOPAY_RAILS[method];
+
+  if (rail.hostedPage) {
+    // v1 : Lengopay rend TOUJOURS une page (payment_url), ou il refuse. Il n'y
+    // a donc pas d'impasse possible ici, contrairement a la v2.
+    const v1 = await initPayment({ amount_minor: req.amount_minor, currency: req.currency });
+    if (!TRUSTED_ACTION_HOST.test(v1.payment_url)) {
+      // Meme prudence que railNextStep : une page qu'on ne chargerait pas vaut
+      // une absence de page. On ne la stocke pas, l'appelant traitera l'impasse.
+      console.error('[lengopay] v1 payment_url sur un hote NON autorise — page ignoree', {
+        method, pay_id: v1.pay_id, url: v1.payment_url.slice(0, 200),
+      });
+      return { payId: v1.pay_id, step: { kind: 'poll' } };
+    }
+    return { payId: v1.pay_id, step: { kind: 'webview', url: v1.payment_url } };
+  }
+
+  const v2 = await initPaymentV2({
+    amount_minor: req.amount_minor,
+    currency: req.currency,
+    type_account: rail.typeAccount,
+    ...(req.account ? { account: req.account } : {}),
+  });
+  return { payId: v2.pay_id, step: railNextStep(method, v2) };
+}
+
+/**
+ * Le statut d'un paiement, interroge sur la MEME API que celle qui l'a cree.
+ * Un pay_id ne du cote page hebergee (v1) ne se lit pas forcement sur
+ * /api/v2/transaction/status : router par le rail evite de decouvrir ca en
+ * production, sur un paiement reel qu'on ne saurait plus confirmer.
+ *
+ * Une methode inconnue (ligne ancienne, ou 'card' Stripe qui n'arrive jamais
+ * ici puisque rail='stripe') retombe sur la v2 : c'est l'API avec laquelle tout
+ * le reste a ete cree.
+ */
+export function getStatusForRail(method: string, payId: string): Promise<LengopayStatusResponse> {
+  const rail = (LENGOPAY_RAILS as Record<string, { hostedPage: boolean } | undefined>)[method];
+  return rail?.hostedPage ? getPaymentStatus(payId) : getPaymentStatusV2(payId);
 }
 
 /** Message unique pour cette impasse — le meme sur les quatre surfaces.

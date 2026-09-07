@@ -19,8 +19,8 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from '@shared/catalog.ts';
 import {
-  initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
-  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
+  initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
+  LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
@@ -461,10 +461,9 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   // the client polls get-order like it already does for Stripe.
   let initResp;
   try {
-    initResp = await initPaymentV2({
+    initResp = await initForRail(lengoMethod, {
       amount_minor: Number(orderRow.total_minor),
       currency:     intentCurrency as 'GNF' | 'EUR',
-      type_account: rail.typeAccount,
       ...(payerPhone ? { account: toLocalGnAccount(payerPhone) } : {}),
     });
   } catch (e) {
@@ -481,21 +480,21 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
 
   // Ce qu'il reste a faire a l'acheteur : rien (Orange/MTN — il confirme sur son
   // telephone), ouvrir une page (Soutra Money), ou saisir un code (Kulu).
-  const nextStep = railNextStep(lengoMethod, initResp);
+  const nextStep = initResp.step;
 
   // Impasse : un rail sans numero qui ne rend aucune page. Voir railIsDeadEnd —
   // rien n'a pu etre preleve, et laisser filer donnerait 15 min d'attente devant
   // un ecran ou il ne se passera jamais rien.
   if (railIsDeadEnd(lengoMethod, nextStep)) {
     console.error('[place-order] rail sans action exploitable', {
-      method: lengoMethod, pay_id: initResp.pay_id, order_id: orderRow.id,
+      method: lengoMethod, pay_id: initResp.payId, order_id: orderRow.id,
     });
     await sb.rpc('process_intent_outcome', {
       p_intent_id:       intentRow.id,
       p_terminal_status: 'failed',
       p_rail_status:     'no_action',
       p_error_code:      'RAIL_NO_ACTION',
-      p_error_message:   `pay_id=${initResp.pay_id} method=${lengoMethod}`,
+      p_error_message:   `pay_id=${initResp.payId} method=${lengoMethod}`,
     });
     throwApi('RAIL_NO_ACTION', 502, RAIL_NO_ACTION_MESSAGE);
   }
@@ -507,7 +506,7 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   const { error: updateErr } = await sb
     .from('payment_intents')
     .update({
-      rail_intent_id:  initResp.pay_id,
+      rail_intent_id:  initResp.payId,
       rail_status:     'pending',
       rail_action_url: railActionUrl(nextStep),
       updated_at:      new Date().toISOString(),
@@ -519,14 +518,14 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     // Mark intent failed + cancel order; log heavily so ops can manually
     // reconcile against Lengopay's pay_id.
     console.error('[place-order] CRITICAL intent UPDATE failed post-init', {
-      intent_id: intentRow.id, pay_id: initResp.pay_id, error: updateErr,
+      intent_id: intentRow.id, pay_id: initResp.payId, error: updateErr,
     });
     await sb.rpc('process_intent_outcome', {
       p_intent_id:       intentRow.id,
       p_terminal_status: 'failed',
       p_rail_status:     'pending',
       p_error_code:      'INTENT_UPDATE_FAILED',
-      p_error_message:   `pay_id=${initResp.pay_id} update_err=${updateErr.message}`.slice(0, 500),
+      p_error_message:   `pay_id=${initResp.payId} update_err=${updateErr.message}`.slice(0, 500),
     });
     throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
   }
@@ -534,7 +533,7 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   // Return the merged final intent (DB row + real rail_intent_id from response).
   const finalIntent: PaymentIntentRow = {
     ...(intentRow as PaymentIntentRow),
-    rail_intent_id: initResp.pay_id,
+    rail_intent_id: initResp.payId,
     rail_status: 'pending',
     rail_action_url: railActionUrl(nextStep),
   };

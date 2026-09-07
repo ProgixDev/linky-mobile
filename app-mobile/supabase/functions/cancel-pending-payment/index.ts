@@ -9,7 +9,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { stripeClient } from '@shared/stripe.ts';
-import { getPaymentStatusV2 } from '@shared/lengopay.ts';
+import { getStatusForRail } from '@shared/lengopay.ts';
 
 interface Body { order_id: string }
 
@@ -46,7 +46,7 @@ Deno.serve(makePost<Body>('/v1/payments/cancel-pending', valid, async ({ sb, bod
 
   const intentQuery = sb
     .from('payment_intents')
-    .select('id, rail, rail_intent_id');
+    .select('id, rail, rail_intent_id, method');
   const { data: intent } = await (isBatch
     ? intentQuery.eq('batch_id', order.batch_id)
     : intentQuery.eq('order_id', body.order_id))
@@ -95,7 +95,7 @@ Deno.serve(makePost<Body>('/v1/payments/cancel-pending', valid, async ({ sb, bod
   if (intent.rail === 'lengopay' && !intent.rail_intent_id.startsWith('pending-init-')) {
     let railStatus: string | undefined;
     try {
-      railStatus = (await getPaymentStatusV2(intent.rail_intent_id)).status;
+      railStatus = (await getStatusForRail(intent.method, intent.rail_intent_id)).status;
     } catch (e) {
       // Don't block cancel on a rail hiccup — the 15-min TTL sweep is the
       // backstop for a genuinely paid intent. Only swallow the fetch failure.

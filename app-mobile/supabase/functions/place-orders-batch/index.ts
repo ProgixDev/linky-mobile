@@ -24,8 +24,8 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import {
-  initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
-  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
+  initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
+  LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.ts';
@@ -356,10 +356,9 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
 
   let initResp;
   try {
-    initResp = await initPaymentV2({
+    initResp = await initForRail(lengoMethod, {
       amount_minor: Number(totalMinor),
       currency: 'GNF',
-      type_account: rail.typeAccount,
       ...(payerPhone ? { account: toLocalGnAccount(payerPhone) } : {}),
     });
   } catch (e) {
@@ -372,18 +371,18 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
   }
 
-  const nextStep = railNextStep(lengoMethod, initResp);
+  const nextStep = initResp.step;
 
   // Impasse : rail sans numero et sans page — voir railIsDeadEnd. Le lot entier
   // se referme (process_batch_intent_outcome annule les N commandes ensemble).
   if (railIsDeadEnd(lengoMethod, nextStep)) {
     console.error('[place-orders-batch] rail sans action exploitable', {
-      method: lengoMethod, pay_id: initResp.pay_id, batch_id: batchId,
+      method: lengoMethod, pay_id: initResp.payId, batch_id: batchId,
     });
     await sb.rpc('process_batch_intent_outcome', {
       p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'no_action',
       p_error_code: 'RAIL_NO_ACTION',
-      p_error_message: `pay_id=${initResp.pay_id} method=${lengoMethod}`,
+      p_error_message: `pay_id=${initResp.payId} method=${lengoMethod}`,
     });
     throwApi('RAIL_NO_ACTION', 502, RAIL_NO_ACTION_MESSAGE);
   }
@@ -391,7 +390,7 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
   const { error: updErr } = await sb
     .from('payment_intents')
     .update({
-      rail_intent_id:  initResp.pay_id,
+      rail_intent_id:  initResp.payId,
       rail_status:     'pending',
       rail_action_url: railActionUrl(nextStep),
       updated_at:      new Date().toISOString(),
@@ -402,12 +401,12 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     // ferme immediatement plutot que de laisser une ligne que le cron sonderait
     // avec un identifiant provisoire.
     console.error('[place-orders-batch] CRITICAL intent UPDATE failed post-init', {
-      intent_id: intentRow.id, pay_id: initResp.pay_id, error: updErr,
+      intent_id: intentRow.id, pay_id: initResp.payId, error: updErr,
     });
     await sb.rpc('process_batch_intent_outcome', {
       p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'pending',
       p_error_code: 'INTENT_UPDATE_FAILED',
-      p_error_message: `pay_id=${initResp.pay_id} ${updErr.message}`.slice(0, 500),
+      p_error_message: `pay_id=${initResp.payId} ${updErr.message}`.slice(0, 500),
     });
     throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
   }

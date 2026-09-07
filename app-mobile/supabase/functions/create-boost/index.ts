@@ -11,8 +11,8 @@ import { requireUser } from '@shared/auth.ts';
 import { mapBoost, type BoostRow } from '@shared/catalog.ts';
 import { boostPrice } from '@shared/boost.ts';
 import {
-  initPaymentV2, toLocalGnAccount, isGnE164,
-  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE, intentIsLive,
+  initForRail, toLocalGnAccount, isGnE164,
+  LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE, intentIsLive,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
@@ -279,10 +279,9 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
 
     let initResp;
     try {
-      initResp = await initPaymentV2({
+      initResp = await initForRail(lengoMethod, {
         amount_minor: amount,
         currency: 'GNF',
-        type_account: rail.typeAccount,
         ...(payerPhone ? { account: toLocalGnAccount(payerPhone) } : {}),
       });
     } catch (e) {
@@ -294,19 +293,19 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
     }
 
-    const nextStep = railNextStep(lengoMethod, initResp);
+    const nextStep = initResp.step;
 
     // Impasse : rail sans numero et sans page — voir railIsDeadEnd. Le boost
     // reserve n'a plus de chemin de reglement, on le referme tout de suite
     // (process_boost_intent_outcome annule l'intention ET le boost).
     if (railIsDeadEnd(lengoMethod, nextStep)) {
       console.error('[create-boost] rail sans action exploitable', {
-        method: lengoMethod, pay_id: initResp.pay_id, boost_id: boostId,
+        method: lengoMethod, pay_id: initResp.payId, boost_id: boostId,
       });
       await sb.rpc('process_boost_intent_outcome', {
         p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'no_action',
         p_error_code: 'RAIL_NO_ACTION',
-        p_error_message: `pay_id=${initResp.pay_id} method=${lengoMethod}`,
+        p_error_message: `pay_id=${initResp.payId} method=${lengoMethod}`,
       });
       throwApi('RAIL_NO_ACTION', 502, RAIL_NO_ACTION_MESSAGE);
     }
@@ -314,7 +313,7 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
     const { error: updErr } = await sb
       .from('payment_intents')
       .update({
-        rail_intent_id:  initResp.pay_id,
+        rail_intent_id:  initResp.payId,
         rail_status:     'pending',
         rail_action_url: railActionUrl(nextStep),
         updated_at:      new Date().toISOString(),
@@ -324,10 +323,10 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       // Le paiement existe chez Lengopay mais on ne saurait plus le relier :
       // on ferme tout de suite plutot que de laisser une ligne orpheline que le
       // cron sonderait avec un identifiant provisoire.
-      console.error('[create-boost] CRITICAL intent UPDATE failed post-init', { intent_id: intentRow.id, pay_id: initResp.pay_id, error: updErr });
+      console.error('[create-boost] CRITICAL intent UPDATE failed post-init', { intent_id: intentRow.id, pay_id: initResp.payId, error: updErr });
       await sb.rpc('process_boost_intent_outcome', {
         p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'pending',
-        p_error_code: 'INTENT_UPDATE_FAILED', p_error_message: `pay_id=${initResp.pay_id} ${updErr.message}`.slice(0, 500),
+        p_error_code: 'INTENT_UPDATE_FAILED', p_error_message: `pay_id=${initResp.payId} ${updErr.message}`.slice(0, 500),
       });
       throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
     }

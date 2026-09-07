@@ -7,7 +7,7 @@
 //
 // Tick body:
 //   1. pick_intents_to_poll(200) — backoff-aware FOR UPDATE SKIP LOCKED
-//   2. For each: getPaymentStatus(rail_intent_id)
+//   2. For each: getStatusForRail(method, rail_intent_id) — v1 pour la carte
 //        success → process_intent_outcome(completed) atomic
 //        failed/cancelled → process_intent_outcome(terminal) atomic
 //        pending (clean) → bump_intent_poll(rail_status='pending', error=null)
@@ -39,7 +39,7 @@ import { serviceClient } from '@shared/db.ts';
 // /api/v2/payments (paiement in-app), donc on sonde /api/v2/transaction/status.
 // Aucune intention v1 ne peut survivre au deploiement : le balayage TTL de
 // 15 min les termine proprement, comme un paiement abandonne.
-import { getPaymentStatusV2 as getPaymentStatus } from '@shared/lengopay.ts';
+import { getStatusForRail } from '@shared/lengopay.ts';
 import { notifyOrderPaid } from '@shared/order-paid-push.ts';
 import { stripeClient } from '@shared/stripe.ts';
 
@@ -47,6 +47,9 @@ interface PendingIntent {
   id: string;
   rail_intent_id: string;
   rail: string;
+  /** Decide l'API a interroger : la carte guineenne nait sur la page hebergee
+   *  (v1), tout le reste sur la v2. Voir getStatusForRail. */
+  method: string;
   attempts_count: number;
   status: string;
   rail_status: string | null;
@@ -78,7 +81,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   for (const intent of (intents ?? []) as PendingIntent[]) {
     polled++;
     try {
-      const status = await getPaymentStatus(intent.rail_intent_id);
+      const status = await getStatusForRail(intent.method, intent.rail_intent_id);
 
       if (status.status === 'success') {
         const { error: outcomeErr } = await sb.rpc('process_intent_outcome', {
@@ -154,7 +157,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     for (const intent of (bookingIntents ?? []) as PendingIntent[]) {
       bkPolled++;
       try {
-        const status = await getPaymentStatus(intent.rail_intent_id);
+        const status = await getStatusForRail(intent.method, intent.rail_intent_id);
         if (status.status === 'success') {
           const { error: oErr } = await sb.rpc('process_booking_intent_outcome', {
             p_intent_id: intent.id, p_terminal_status: 'completed', p_rail_status: status.status,
@@ -199,7 +202,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     for (const intent of (boostIntents ?? []) as PendingIntent[]) {
       boPolled++;
       try {
-        const status = await getPaymentStatus(intent.rail_intent_id);
+        const status = await getStatusForRail(intent.method, intent.rail_intent_id);
         if (status.status === 'success') {
           const { error: oErr } = await sb.rpc('process_boost_intent_outcome', {
             p_intent_id: intent.id, p_terminal_status: 'completed', p_rail_status: status.status,
@@ -244,7 +247,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     for (const intent of (batchIntents ?? []) as PendingIntent[]) {
       baPolled++;
       try {
-        const status = await getPaymentStatus(intent.rail_intent_id);
+        const status = await getStatusForRail(intent.method, intent.rail_intent_id);
         if (status.status === 'success') {
           const { error: oErr } = await sb.rpc('process_batch_intent_outcome', {
             p_intent_id: intent.id, p_terminal_status: 'completed', p_rail_status: status.status,
