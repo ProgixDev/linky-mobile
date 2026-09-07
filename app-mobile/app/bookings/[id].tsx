@@ -43,13 +43,15 @@ export default function BookingDetailRoute() {
   // servir pour un paiement portefeuille creerait de la monnaie. Ce rail-la
   // demande son propre RPC, pas un raccourci.
   const [method, setMethod] = useState<PaymentMethod>(LENGOPAY_METHOD);
-  const isCard = method === 'card';
   // Le numero QUI PAIE — voir src/lib/payerPhone.ts. Reclame UNIQUEMENT par les
   // rails qui encaissent sur un numero guineen (la diaspora paie avec un compte
   // OM/MTN guineen qui n'est pas forcement le numero du compte, client
   // 2026-09-05). Les cartes et Soutra Money identifient le locataire sur leur
   // propre page : leur reclamer un numero le bloquerait pour rien.
-  const needsAccountNumber = method === 'orange-money' || method === 'mtn-money';
+  // Doit rester d'accord avec LENGOPAY_RAILS[...].needsAccount cote serveur :
+  // Kulu encaisse SUR un numero, comme Orange et MTN.
+  const needsAccountNumber = method === 'orange-money' || method === 'mtn-money'
+    || method === 'kulu';
   const payerPhone = usePayerPhone();
   const needsPayerPhone = needsAccountNumber && !payerPhone.loading;
   const payerPhoneValid = !needsAccountNumber || payerPhone.valid;
@@ -127,6 +129,17 @@ export default function BookingDetailRoute() {
           pathname: '/checkout/pay',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
           params: { url: res.next_step.url, bookingId: booking.id },
+        } as any);
+        return;
+      }
+
+      // Kulu : le locataire recoit un code par SMS. Sans cet ecran il n'aurait
+      // aucun endroit ou le saisir.
+      if (res.next_step?.kind === 'otp') {
+        router.replace({
+          pathname: '/checkout/otp',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+          params: { payId: res.next_step.payId, bookingId: booking.id },
         } as any);
         return;
       }

@@ -1233,7 +1233,8 @@
       "lengopayGuineaHint": "Paycard, Kulu, Soutra, Orange Money o MTN — eliges en el siguiente paso",
       "soutraMoney": "Soutra Money",
       "soutraMoneyHint": "Terminas el pago en la página de Soutra Money",
-      "kulu": "Kulu"
+      "kulu": "Kulu",
+      "kuluHint": "Validas con un código recibido por SMS"
     },
     "confirmOpenPayment": "Abrir la página de pago",
     "infoMobile": "Recibirás un código SMS en tu número para confirmar el pago.",
@@ -1246,7 +1247,19 @@
     "payerPhoneHint": "No hay número en tu cuenta — indica el que recibirá el código de confirmación.",
     "payerPhoneInvalid": "Número inválido (9 dígitos, empieza por 6).",
     "confirmOpenPageTitle": "Termina tu pago",
-    "confirmOpenPageBody": "Abre la página de pago y valida los {{amount}}. Confirmamos tu pedido en cuanto llegue el pago."
+    "confirmOpenPageBody": "Abre la página de pago y valida los {{amount}}. Confirmamos tu pedido en cuanto llegue el pago.",
+    "otpTitle": "Código de validación",
+    "otpHeading": "Introduce el código recibido por SMS",
+    "otpBody": "Kulu acaba de enviar un código a tu teléfono. Introdúcelo aquí para validar el pago.",
+    "otpLabel": "Código recibido",
+    "otpPlaceholder": "123456",
+    "otpHint": "El código llega por SMS, unos segundos después de tu pedido.",
+    "otpSubmit": "Validar el código",
+    "otpSubmitting": "Comprobando…",
+    "otpSent": "Código enviado — confirmación en curso…",
+    "otpError": "No se pudo validar el código. Inténtalo de nuevo.",
+    "otpLater": "No he recibido el código",
+    "otpMissing": "Pago no encontrado. Vuelve a empezar tu pedido."
   },
   "orders": {
     "title": "Mis pedidos",

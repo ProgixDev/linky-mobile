@@ -16,7 +16,7 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import {
   initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
-  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
+  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE, intentIsLive,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { formatGNF } from '@shared/push.ts';
@@ -35,14 +35,12 @@ interface Body {
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 const PHONE_RE = /^\+224\d{9}$/;
-// 'kulu' est DELIBEREMENT ABSENT tant que l'ecran de saisie du code
-// n'existe pas (phase 3). Son rail envoie un vrai SMS a l'acheteur, et
-// /api/v2/authenticate n'est appele nulle part : l'accepter ici ouvrirait
-// un paiement que PERSONNE ne pourrait terminer. Il reste dans la
-// contrainte CHECK et dans LENGOPAY_RAILS — seul ce validateur le bloque.
+// 'kulu' rouvert le 2026-09-07 avec la phase 3 : l'ecran de saisie du code
+// (app/checkout/otp.tsx) et lengopay-confirm-otp existent desormais, donc
+// un paiement Kulu peut etre TERMINE. Il etait bloque ici entre-temps.
 const METHODS = [
   'card', 'orange-money', 'mtn-money',
-  'soutramoney', 'lengopay-card',
+  'kulu', 'soutramoney', 'lengopay-card',
 ];
 
 function valid(b: unknown): b is Body {
@@ -107,15 +105,20 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
   // peut pas annuler proprement chez Lengopay (leur API n'a pas d'annulation) et
   // que fermer notre ligne pendant qu'il peut encore payer creerait exactement
   // le trou qu'on vient de decrire, dans l'autre sens.
+  // La borne d'age n'est pas cosmetique : sans elle, une intention 'pending'
+  // que plus rien ne peut expirer (un dernier sondage en erreur — voir
+  // INTENT_TTL_MS) bloquerait cette reservation POUR TOUJOURS. On ne se montre
+  // pas plus strict que les balayages : passe 15 minutes, l'intention est morte
+  // pour tout le monde.
   const { data: livePi } = await sb
     .from('payment_intents')
-    .select('id, method, rail_intent_id, rail_action_url')
+    .select('id, method, rail_intent_id, rail_action_url, created_at')
     .eq('booking_id', bk.id)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (livePi && !String(livePi.rail_intent_id).startsWith('pending-init-')) {
+  if (livePi && intentIsLive(livePi.created_at) && !String(livePi.rail_intent_id).startsWith('pending-init-')) {
     if (livePi.method !== method) {
       throwApi('PAYMENT_IN_PROGRESS', 409,
         'Un paiement est déjà en cours pour cette réservation. Termine-le, ou attends 15 minutes avant de changer de moyen.');
@@ -123,9 +126,14 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
     return {
       body: {
         booking_id: bk.id,
+          // Kulu : rendre {kind:'poll'} priverait l'acheteur de l'ecran ou
+          // saisir son code — il attendrait 15 min pour rien. On rejoue donc
+          // l'etape reelle du rail, pas seulement sa page.
         next_step: livePi.rail_action_url
           ? { kind: 'webview', url: livePi.rail_action_url }
-          : { kind: 'poll' },
+          : livePi.method === 'kulu'
+            ? { kind: 'otp', payId: livePi.rail_intent_id }
+            : { kind: 'poll' },
       },
     };
   }

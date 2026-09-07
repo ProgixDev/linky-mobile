@@ -791,6 +791,9 @@ verify_jwt = false
 [functions.create-boost]
 verify_jwt = false
 
+[functions.lengopay-confirm-otp]
+verify_jwt = false
+
 [functions.list-boosts]
 verify_jwt = false
 

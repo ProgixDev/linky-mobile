@@ -104,7 +104,11 @@ export type LengopayNextStep =
    *  son geste normal reste de valider sur son telephone — mais on la garde
    *  sous la main comme second recours. Voir railNextStep. */
   | { kind: 'poll'; fallbackUrl?: string }
-  | { kind: 'otp' }
+  /** payId : ce que l'ecran de saisie devra renvoyer a /api/v2/authenticate. Il
+   *  voyage DANS l'etape parce que toutes les surfaces n'exposent pas
+   *  l'intention — le panier multi-boutiques, par exemple, ne rend que les
+   *  commandes creees, et n'aurait donc rien a confirmer. */
+  | { kind: 'otp'; payId: string }
   | { kind: 'webview'; url: string };
 
 export function normalizeLengopayStatus(raw: unknown): LengopayIntentStatus {

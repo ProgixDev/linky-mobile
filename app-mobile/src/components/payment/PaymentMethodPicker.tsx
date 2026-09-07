@@ -28,10 +28,11 @@
 // type_account (lp-om-gn / lp-momo-gn) doit desormais partir avec la requete,
 // donc l'operateur doit etre connu AVANT — d'ou deux lignes distinctes.
 //
-// KULU N'EST PAS ENCORE LA. Son rail exige un code de validation par SMS
-// (POST /api/v2/authenticate), donc un ecran de saisie qui n'existe pas encore ;
-// l'afficher aujourd'hui donnerait un paiement initie que personne ne pourrait
-// confirmer. Le moyen est accepte cote serveur, il ne manque que cet ecran.
+// KULU depuis le 2026-09-07 (phase 3). Son rail demande un code de validation
+// par SMS : l'ecran de saisie (app/checkout/otp.tsx) et lengopay-confirm-otp
+// existent desormais, donc un paiement Kulu peut etre TERMINE. Comme Orange et
+// MTN, il encaisse SUR un numero guineen — l'ecran appelant doit donc lui
+// demander le numero qui paie, au meme titre qu'a eux.
 //
 // « PAYCARD » n'existe nulle part dans l'API Lengopay — c'est probablement le
 // nom commercial de lp-card-gn, mais ce n'est pas verifiable depuis leur doc.
@@ -85,8 +86,8 @@ export function PaymentMethodPicker({
   // sur le mauvais rail.
   const showStripe = allowCard && !loading && profile === 'abroad';
   const showLengopayCard = allowCard && !loading && profile === 'guinea';
-  // Soutra Money est un portefeuille guineen : il n'a aucun sens a l'etranger.
-  const showSoutra = !loading && profile === 'guinea';
+  // Kulu et Soutra Money sont des portefeuilles guineens : aucun sens a l'etranger.
+  const showGuineaWallets = !loading && profile === 'guinea';
   // Le portefeuille ne s'affiche que s'il peut reellement payer. Un solde a zero
   // affiche est un bouton qui echoue.
   const showWallet = typeof walletBalanceGnf === 'number' && walletBalanceGnf > 0;
@@ -124,9 +125,21 @@ export function PaymentMethodPicker({
         logos={[MTN_LOGO]}
       />
 
+      {/* Kulu : portefeuille guineen. Encaisse sur un numero (comme Orange et
+          MTN), et se valide par un code recu par SMS. */}
+      {showGuineaWallets && (
+        <MethodRow
+          selected={value === 'kulu'}
+          onPress={() => onChange('kulu')}
+          title={t('checkout.rails.kulu')}
+          hint={t('checkout.rails.kuluHint')}
+          icon={<I.wallet size={18} color={colors.text} />}
+        />
+      )}
+
       {/* Soutra Money : portefeuille guineen, paye sur sa propre page web (pas
           de numero a saisir ici — l'acheteur s'y identifie lui-meme). */}
-      {showSoutra && (
+      {showGuineaWallets && (
         <MethodRow
           selected={value === 'soutramoney'}
           onPress={() => onChange('soutramoney')}

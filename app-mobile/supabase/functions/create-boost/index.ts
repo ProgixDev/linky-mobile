@@ -12,7 +12,7 @@ import { mapBoost, type BoostRow } from '@shared/catalog.ts';
 import { boostPrice } from '@shared/boost.ts';
 import {
   initPaymentV2, toLocalGnAccount, isGnE164,
-  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
+  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE, intentIsLive,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
@@ -31,14 +31,12 @@ interface Body {
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
-// 'kulu' est DELIBEREMENT ABSENT tant que l'ecran de saisie du code
-// n'existe pas (phase 3). Son rail envoie un vrai SMS a l'acheteur, et
-// /api/v2/authenticate n'est appele nulle part : l'accepter ici ouvrirait
-// un paiement que PERSONNE ne pourrait terminer. Il reste dans la
-// contrainte CHECK et dans LENGOPAY_RAILS — seul ce validateur le bloque.
+// 'kulu' rouvert le 2026-09-07 avec la phase 3 : l'ecran de saisie du code
+// (app/checkout/otp.tsx) et lengopay-confirm-otp existent desormais, donc
+// un paiement Kulu peut etre TERMINE. Il etait bloque ici entre-temps.
 const METHODS = [
   'wallet', 'orange-money', 'mtn-money', 'card',
-  'soutramoney', 'lengopay-card',
+  'kulu', 'soutramoney', 'lengopay-card',
 ];
 
 function valid(b: unknown): b is Body {
@@ -204,9 +202,13 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
     // Moyen different : on refuse, faute de pouvoir annuler chez Lengopay.
     const targetCol = body.property_id ? 'property_id' : 'product_id';
     const targetId = body.property_id ?? body.product_id;
+    // La borne d'age n'est pas cosmetique : sans elle, une intention 'pending'
+    // que plus rien ne peut expirer (un dernier sondage en erreur — voir
+    // INTENT_TTL_MS) rendrait cette annonce impossible a booster POUR TOUJOURS,
+    // et aucun balayage ne ramasse un boost 'pending_payment'.
     const { data: liveBoost } = await sb
       .from('boosts')
-      .select('id, days, payment_intents!inner ( id, method, rail_intent_id, rail_action_url, status )')
+      .select('id, days, payment_intents!inner ( id, method, rail_intent_id, rail_action_url, status, created_at )')
       .eq('seller_id', userId)
       .eq(targetCol, targetId)
       .eq('status', 'pending_payment')
@@ -215,8 +217,8 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       .limit(1)
       .maybeSingle();
     const livePi = (liveBoost?.payment_intents as
-      { method: string; rail_intent_id: string; rail_action_url: string | null }[] | undefined)?.[0];
-    if (liveBoost && livePi && !String(livePi.rail_intent_id).startsWith('pending-init-')) {
+      { method: string; rail_intent_id: string; rail_action_url: string | null; created_at: string }[] | undefined)?.[0];
+    if (liveBoost && livePi && intentIsLive(livePi.created_at) && !String(livePi.rail_intent_id).startsWith('pending-init-')) {
       // La DUREE compte autant que le moyen : rendre le paiement en cours alors
       // que le vendeur vient d'en choisir une autre lui facturerait l'ancien
       // tarif pour la nouvelle duree affichee a l'ecran.
@@ -227,9 +229,14 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       return {
         body: {
           boost_id: liveBoost.id,
+            // Kulu : rendre {kind:'poll'} priverait l'acheteur de l'ecran ou
+            // saisir son code — il attendrait 15 min pour rien. On rejoue donc
+            // l'etape reelle du rail, pas seulement sa page.
           next_step: livePi.rail_action_url
             ? { kind: 'webview', url: livePi.rail_action_url }
-            : { kind: 'poll' },
+            : livePi.method === 'kulu'
+              ? { kind: 'otp', payId: livePi.rail_intent_id }
+              : { kind: 'poll' },
         },
       };
     }

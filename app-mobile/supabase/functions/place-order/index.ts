@@ -49,14 +49,12 @@ interface Body {
   payer_phone?: string;
 }
 
-// 'kulu' est DELIBEREMENT ABSENT tant que l'ecran de saisie du code
-// n'existe pas (phase 3). Son rail envoie un vrai SMS a l'acheteur, et
-// /api/v2/authenticate n'est appele nulle part : l'accepter ici ouvrirait
-// un paiement que PERSONNE ne pourrait terminer. Il reste dans la
-// contrainte CHECK et dans LENGOPAY_RAILS — seul ce validateur le bloque.
+// 'kulu' rouvert le 2026-09-07 avec la phase 3 : l'ecran de saisie du code
+// (app/checkout/otp.tsx) et lengopay-confirm-otp existent desormais, donc
+// un paiement Kulu peut etre TERMINE. Il etait bloque ici entre-temps.
 const METHODS = new Set([
   'orange-money', 'mtn-money', 'card', 'wallet',
-  'soutramoney', 'lengopay-card',
+  'kulu', 'soutramoney', 'lengopay-card',
 ]);
 const DELIVERY_MODES = new Set(['pickup', 'delivery']);
 const PHONE_RE = /^\+224\d{9}$/;
@@ -202,6 +200,22 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   }
   if (!row) {
     console.error('[place-order] readback error after retries:', readErr);
+    // La commande EXISTE (la transaction a commit) meme si on n'a pas su la
+    // relire. Sans annulation elle resterait 'placed' SANS INTENTION — un etat
+    // qu'aucun balayage ne ramasse (les TTL parcourent payment_intents), donc
+    // pour toujours, en retenant le stock qu'elle a decremente.
+    //
+    // Le filtre `status = 'placed'` est ce qui rend ce geste sur : une commande
+    // reglee au PORTEFEUILLE nait deja 'paid', sequestre credite — l'annuler
+    // ici defairait un paiement abouti. Elle ne correspond donc pas au filtre.
+    const { error: cancelErr } = await sb.from('orders')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', newId).eq('status', 'placed');
+    if (cancelErr) {
+      console.error('[place-order] CRITICAL cancel-after-readback failed — commande orpheline', {
+        order_id: newId, error: cancelErr,
+      });
+    }
     throwApi('INTERNAL_ERROR', 500, 'Erreur lecture commande');
   }
 

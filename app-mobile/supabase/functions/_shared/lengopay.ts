@@ -230,7 +230,7 @@ export function railNextStep(
   const step: LengopayNextStep = webviewUrl
     ? { kind: 'webview', url: webviewUrl }
     : resp.requires_otp
-      ? { kind: 'otp' }
+      ? { kind: 'otp', payId: resp.pay_id }
       : { kind: 'poll' };
   if (expected !== 'unknown' && expected !== step.kind) {
     console.warn('[lengopay] v2 init: etape inattendue', {
@@ -277,6 +277,40 @@ export function railIsDeadEnd(method: LengopayMethod, step: LengopayNextStep): b
 export const RAIL_NO_ACTION_MESSAGE =
   'Ce moyen de paiement est momentanément indisponible. Choisis Orange Money, MTN ou ton portefeuille.';
 
+/**
+ * Duree de vie d'une intention, telle que TOUT le reste du systeme l'applique
+ * deja : expire_stale_intents, expire_stale_batch_intents,
+ * expire_stale_booking_intents et expire_stale_boost_intents cancellent toutes
+ * a `created_at < now() - interval '15 minutes'`, et pick_*_intents_to_poll
+ * cessent de sonder au meme age.
+ *
+ * POURQUOI LES GARDES « UN SEUL PAIEMENT VIVANT » DOIVENT S'Y ALIGNER.
+ * Ces balayages refusent d'expirer une intention dont le DERNIER sondage a
+ * echoue — clause `(last_polled_at is null or last_error_code is null)`, la
+ * meme dans les quatre. C'est deliberé et c'est juste : quand on n'a pas pu
+ * joindre le rail, on ne sait pas si l'acheteur a paye, et annuler une commande
+ * peut-etre payee serait pire que la laisser trainer.
+ *
+ * Consequence : une seule erreur passagere de Lengopay sur le dernier sondage
+ * de la fenetre laisse l'intention 'pending' POUR TOUJOURS — plus sondee (trop
+ * vieille), plus expirable (elle porte une erreur). Une garde sans borne d'age
+ * verrait donc eternellement un « paiement en cours » et bloquerait la
+ * reservation ou l'annonce a jamais. Avant ces gardes, cette ligne morte etait
+ * inoffensive : l'utilisateur ouvrait simplement une nouvelle intention.
+ *
+ * On ne se montre donc pas plus strict que le reste du systeme : passe ce
+ * delai, l'intention est morte pour tout le monde, y compris pour la garde.
+ */
+export const INTENT_TTL_MS = 15 * 60 * 1000;
+
+/** Vrai tant que l'intention est dans sa fenetre de vie. Voir INTENT_TTL_MS. */
+export function intentIsLive(createdAt: string | null | undefined): boolean {
+  if (!createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  if (Number.isNaN(t)) return false;
+  return Date.now() - t < INTENT_TTL_MS;
+}
+
 export async function initPaymentV2(req: LengopayV2InitRequest): Promise<LengopayV2InitResponse> {
   const res = await fetchWithTimeout(`${baseUrl()}/api/v2/payments`, {
     method: 'POST',
@@ -315,6 +349,38 @@ export async function initPaymentV2(req: LengopayV2InitRequest): Promise<Lengopa
     ...(requiresOtp ? { requires_otp: true } : {}),
     ...(webviewUrl ? { webview_url: webviewUrl } : {}),
   };
+}
+
+/** Kulu : l'acheteur recoit un code par SMS et le saisit dans l'appli.
+ *  POST /api/v2/authenticate { pay_id, code }.
+ *
+ *  NE REND PAS un « paye / pas paye ». La reponse dit seulement si Lengopay a
+ *  ACCEPTE le code ; c'est le sondage habituel (getPaymentStatusV2, via le cron)
+ *  qui tranche le sort de l'argent, exactement comme pour Orange et MTN. Traiter
+ *  un 200 d'ici comme un paiement acquis crediterait le sequestre sur la foi
+ *  d'un accuse de reception. */
+export async function confirmPaymentV2(
+  payId: string,
+  code: string,
+): Promise<{ accepted: boolean; message: string }> {
+  const res = await fetchWithTimeout(`${baseUrl()}/api/v2/authenticate`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ pay_id: payId, code, websiteid: websiteId() }),
+  });
+  const text = await res.text();
+  let raw: { success?: boolean; status?: unknown; message?: string } = {};
+  try { raw = JSON.parse(text) as typeof raw; } catch { /* corps non-JSON : traite comme un refus */ }
+  const message = typeof raw.message === 'string' ? raw.message : '';
+  // Un code faux est une reponse NORMALE du rail, pas une panne : l'acheteur
+  // doit pouvoir retaper. On ne jette donc que sur un vrai incident HTTP (5xx),
+  // qui lui merite un message different.
+  if (res.status >= 500) {
+    throw new Error(`Lengopay v2 authenticate ${res.status}: ${text.slice(0, 300)}`);
+  }
+  const accepted = res.ok && raw.success === true
+    && normalizeLengopayStatus(raw.status) !== 'failed';
+  return { accepted, message };
 }
 
 /** Status body shape assumed identical to v1 ({pay_id, websiteid}) — the v2

@@ -27,8 +27,11 @@ export type PaymentMethod =
 /** Ce qu'il reste à faire à l'acheteur après l'initialisation du paiement.
  *  'poll' = rien, il confirme sur son téléphone et le cron tranche. */
 export type PaymentNextStep =
-  | { kind: 'poll' }
-  | { kind: 'otp' }
+  | { kind: 'poll'; fallbackUrl?: string }
+  /** Kulu : `payId` est ce que l'écran de saisie renverra pour confirmer. Il
+   *  voyage dans l'étape parce que toutes les surfaces n'exposent pas
+   *  l'intention (le panier multi-boutiques ne rend que ses commandes). */
+  | { kind: 'otp'; payId: string }
   | { kind: 'webview'; url: string };
 export type DeliveryStatus =
   | 'unassigned'

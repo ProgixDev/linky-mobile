@@ -34,12 +34,14 @@ export interface CreateBoostInput {
   payerPhone?: string;
 }
 
-/** 'card' = Stripe (profils étranger). 'lengopay-card' / 'soutramoney' = rails
- *  Lengopay guinéens (2026-09-07) : mêmes moyens que le panier, comme le client
- *  l'a demandé — « Unifier les méthodes de paiement dans l'appli ». */
+/** 'card' = Stripe (profils étranger). 'lengopay-card' / 'soutramoney' / 'kulu'
+ *  = rails Lengopay guinéens (2026-09-07) : mêmes moyens que le panier, comme
+ *  le client l'a demandé — « Unifier les méthodes de paiement dans l'appli ».
+ *  Volontairement identique à Exclude<PaymentMethod,'…'> en contenu : c'est le
+ *  même sélecteur partagé qui alimente les deux. */
 export type BoostPayMethod =
   | 'wallet' | 'orange-money' | 'mtn-money' | 'card'
-  | 'soutramoney' | 'lengopay-card';
+  | 'kulu' | 'soutramoney' | 'lengopay-card';
 
 /** Portefeuille : le boost est actif immédiatement (débit atomique côté serveur).
  *  Mobile money : rien n'est actif encore — depuis Lengopay v2 (2026-09-05) la
@@ -56,7 +58,9 @@ export type CreateBoostResult =
   | { kind: 'card'; boostId: string; clientSecret: string; publishableKey: string }
   /** Soutra Money / carte Lengopay (2026-09-07) : le vendeur finit sur la page
    *  du rail. Rien n'est payé tant qu'il ne l'a pas fait. */
-  | { kind: 'webview'; boostId: string; url: string };
+  | { kind: 'webview'; boostId: string; url: string }
+  /** Kulu (2026-09-07) : le vendeur saisit un code reçu par SMS. */
+  | { kind: 'otp'; boostId: string; payId: string };
 
 export function useCreateBoost() {
   const qc = useQueryClient();
@@ -84,6 +88,9 @@ export function useCreateBoost() {
       }
       if (res.next_step?.kind === 'webview' && res.boost_id) {
         return { kind: 'webview', boostId: res.boost_id, url: res.next_step.url };
+      }
+      if (res.next_step?.kind === 'otp' && res.boost_id) {
+        return { kind: 'otp', boostId: res.boost_id, payId: res.next_step.payId };
       }
       if (!res.boost && res.boost_id) {
         return { kind: 'pending', boostId: res.boost_id };

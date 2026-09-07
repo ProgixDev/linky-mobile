@@ -85,7 +85,12 @@ export default function CheckoutRoute() {
   // « numero qui paie ». Soutra Money et la carte Lengopay identifient
   // l'acheteur sur leur propre page — leur reclamer un numero ici bloquerait
   // pour rien un acheteur qui n'en a pas.
-  const mobileMoneySelected = selected === 'orange-money' || selected === 'mtn-money';
+  //
+  // DOIT RESTER D'ACCORD AVEC LENGOPAY_RAILS[...].needsAccount cote serveur :
+  // un rail qui exige un numero la-bas mais ne le demande pas ici donnerait un
+  // bouton actif suivi d'un PAYER_PHONE_REQUIRED sans champ pour le corriger.
+  const mobileMoneySelected = selected === 'orange-money' || selected === 'mtn-money'
+    || selected === 'kulu';
   // Guinee ou etranger, deduit de l'indicatif du numero principal. Decide quel
   // rail carte proposer : Stripe a l'etranger, Carte/Wallet Lengopay en Guinee.
   const { profile: payProfile, loading: payProfileLoading } = usePaymentProfile();
@@ -106,8 +111,8 @@ export default function CheckoutRoute() {
   const showCardRail = showStripeCard || showLengopayCard;
   /** Le moyen que la ligne « Carte bancaire » selectionne, selon le profil. */
   const cardMethod: PaymentMethod = showStripeCard ? 'card' : 'lengopay-card';
-  // Soutra Money : portefeuille guineen, aucun sens a l'etranger.
-  const showSoutra = !payProfileLoading && payProfile === 'guinea';
+  // Kulu et Soutra Money : portefeuilles guineens, aucun sens a l'etranger.
+  const showGuineaWallets = !payProfileLoading && payProfile === 'guinea';
   // Client 2026-08-21 : le panier se regle en UNE fois, meme avec plusieurs
   // boutiques. On traite donc TOUJOURS le panier entier. Le parametre shopId
   // n'est plus emis nulle part ; on l'accepte encore pour qu'un lien profond
@@ -165,9 +170,10 @@ export default function CheckoutRoute() {
     const gone =
       (selected === 'card' && !showStripeCard) ||
       (selected === 'lengopay-card' && !showLengopayCard) ||
-      (selected === 'soutramoney' && !showSoutra);
+      (selected === 'soutramoney' && !showGuineaWallets) ||
+      (selected === 'kulu' && !showGuineaWallets);
     if (gone) setSelected('orange-money');
-  }, [selected, payProfileLoading, showStripeCard, showLengopayCard, showSoutra]);
+  }, [selected, payProfileLoading, showStripeCard, showLengopayCard, showGuineaWallets]);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   // Keeps the Payer button busy across the whole sheet flow (place-order →
   // init → present), not just the mutation.
@@ -539,17 +545,29 @@ export default function CheckoutRoute() {
           onPress={() => setSelected('mtn-money')}
         />
 
-        {/* « entre ton numero, puis confirme la demande » ne decrit qu'Orange et
-            MTN. La note reste donc SOUS ces deux lignes-la, avant Soutra Money —
-            la placer apres en ferait la legende d'un rail qui ne demande aucun
-            numero et n'envoie rien sur le telephone. */}
+        {/* Kulu : portefeuille guineen. Il encaisse SUR un numero, comme Orange
+            et MTN, d'ou sa place juste apres eux — au-dessus de la note « entre
+            ton numero », qui le decrit aussi. */}
+        {showGuineaWallets && (
+          <OperatorRow
+            title={t('checkout.rails.kulu')}
+            hint={t('checkout.rails.kuluHint')}
+            selected={selected === 'kulu'}
+            onPress={() => setSelected('kulu')}
+          />
+        )}
+
+        {/* « entre ton numero, puis confirme la demande » decrit Orange, MTN et
+            Kulu — les trois rails a numero. Elle reste donc SOUS eux et AVANT
+            Soutra Money : la placer apres en ferait la legende d'un rail qui ne
+            demande aucun numero et n'envoie rien sur le telephone. */}
         <Text variant="micro" tone="muted" style={{ marginBottom: 16, paddingHorizontal: 4, letterSpacing: 0, textTransform: 'none', lineHeight: 15 }}>
           {t('checkout.rails.mobileMoneyNote')}
         </Text>
 
         {/* Soutra Money : portefeuille guineen, l'acheteur finit sur leur page
             (aucun numero a saisir ici). */}
-        {showSoutra && (
+        {showGuineaWallets && (
           <OperatorRow
             title={t('checkout.rails.soutraMoney')}
             hint={t('checkout.rails.soutraMoneyHint')}
@@ -739,6 +757,13 @@ export default function CheckoutRoute() {
                         pathname: '/checkout/pay',
                         params: { url: res.next_step.url, orderId: firstOrder.id },
                       } as any);
+                    } else if (res.next_step?.kind === 'otp') {
+                      // Kulu. Le lot ne rend pas l'intention, d'ou le payId
+                      // porte par l'etape elle-meme.
+                      router.replace({
+                        pathname: '/checkout/otp',
+                        params: { payId: res.next_step.payId, orderId: firstOrder.id },
+                      } as any);
                     } else {
                       router.replace(`/checkout/confirm/${firstOrder.id}` as any);
                     }
@@ -772,6 +797,16 @@ export default function CheckoutRoute() {
                       router.replace({
                         pathname: '/checkout/pay',
                         params: { url: next_step.url, orderId: order.id },
+                      } as any);
+                      return;
+                    }
+                    if (next_step?.kind === 'otp') {
+                      // Kulu : l'acheteur recoit un code par SMS. Sans cet
+                      // ecran il n'aurait aucun endroit ou le saisir, et le
+                      // paiement expirerait en 15 min.
+                      router.replace({
+                        pathname: '/checkout/otp',
+                        params: { payId: next_step.payId, orderId: order.id },
                       } as any);
                       return;
                     }

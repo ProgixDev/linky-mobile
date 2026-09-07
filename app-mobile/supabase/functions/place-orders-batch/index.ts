@@ -52,14 +52,12 @@ const UUID_RE = /^[0-9a-f-]{36}$/i;
 // 'kulu' / 'soutramoney' / 'lengopay-card' ajoutes le 2026-09-07 : les rails
 // Lengopay guineens. Le panier multi-boutiques les accepte des le premier jour,
 // contrairement a la carte Stripe qui avait ete oubliee pendant trois jours.
-// 'kulu' est DELIBEREMENT ABSENT tant que l'ecran de saisie du code
-// n'existe pas (phase 3). Son rail envoie un vrai SMS a l'acheteur, et
-// /api/v2/authenticate n'est appele nulle part : l'accepter ici ouvrirait
-// un paiement que PERSONNE ne pourrait terminer. Il reste dans la
-// contrainte CHECK et dans LENGOPAY_RAILS — seul ce validateur le bloque.
+// 'kulu' rouvert le 2026-09-07 avec la phase 3 : l'ecran de saisie du code
+// (app/checkout/otp.tsx) et lengopay-confirm-otp existent desormais, donc
+// un paiement Kulu peut etre TERMINE. Il etait bloque ici entre-temps.
 const METHODS = [
   'wallet', 'orange-money', 'mtn-money', 'card',
-  'soutramoney', 'lengopay-card',
+  'kulu', 'soutramoney', 'lengopay-card',
 ];
 
 function valid(b: unknown): b is Body {
@@ -134,6 +132,35 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     throwApi('INTERNAL_ERROR', 500, 'Erreur création des commandes');
   }
 
+  // ── REFERMER LE LOT PLUTOT QUE DE L'ORPHELINER ───────────────────────────
+  // Les N commandes sont deja creees et LEUR STOCK DEJA DECREMENTE. Sortir en
+  // erreur sans les annuler les laisse 'placed' SANS INTENTION — un etat
+  // qu'aucun balayage ne ramasse : expire_stale_intents et
+  // expire_stale_batch_intents parcourent payment_intents, donc sans ligne
+  // d'intention rien ne les touchera jamais. Le declencheur de restitution du
+  // stock (trg_restore_stock_on_order_cancel) ne se declenche pas non plus, et
+  // les exemplaires sont perdus definitivement.
+  //
+  // Pire : wrap.ts efface la reservation d'idempotence quand le handler jette,
+  // donc un simple reessai du client cree un SECOND lot et decremente le meme
+  // stock une deuxieme fois.
+  //
+  // D'ou cette fonction hissee ICI, avant la premiere sortie possible, plutot
+  // que definie dans la branche mobile money : chaque sortie en erreur qui suit
+  // doit l'appeler.
+  const cancelBatch = async () => {
+    const { error } = await sb.from('orders')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('batch_id', batchId).eq('status', 'placed');
+    if (error) {
+      // On ne masque pas l'erreur d'origine, mais un lot non referme retient du
+      // stock : il faut pouvoir le retrouver.
+      console.error('[place-orders-batch] CRITICAL cancelBatch failed — lot orphelin', {
+        batch_id: batchId, error,
+      });
+    }
+  };
+
   // Relecture des commandes creees. Comme dans place-order : la transaction est
   // DEJA validee, donc un echec de lecture ne doit pas se transformer en 500 —
   // wrap.ts effacerait la reservation d'idempotence, et un reessai avec la meme
@@ -153,8 +180,12 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
   }
   if (!orders) {
     console.error('[place-orders-batch] readback failed for batch', batchId);
+    // Les commandes EXISTENT (la transaction a commit) meme si on n'a pas su
+    // les relire : sans annulation elles resteraient 'placed' sans intention.
+    await cancelBatch();
     throwApi('INTERNAL_ERROR', 500, 'Erreur lecture des commandes');
   }
+
 
   // Portefeuille : place_orders_batch a deja debite et alimente le sequestre.
   if (body.payment_method === 'wallet') {
@@ -170,6 +201,7 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     const { data: totalMinor, error: totalErr } = await sb.rpc('batch_total_minor', { p_batch_id: batchId });
     if (totalErr || typeof totalMinor !== 'number' || totalMinor <= 0) {
       console.error('[place-orders-batch] batch_total_minor error:', totalErr, totalMinor);
+      await cancelBatch();
       throwApi('INTERNAL_ERROR', 500, 'Erreur calcul du montant');
     }
 
@@ -268,11 +300,6 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     // qu'aucun balayage ne ramasse (les TTL travaillent sur les intentions),
     // donc pour toujours, en retenant les exemplaires reserves. Meme geste que
     // la garde de plafond plus bas.
-    const cancelBatch = async () => {
-      await sb.from('orders')
-        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-        .eq('batch_id', batchId).eq('status', 'placed');
-    };
     if (!payerPhone) {
       await cancelBatch();
       throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
@@ -288,6 +315,7 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
   const { data: totalMinor, error: totalErr } = await sb.rpc('batch_total_minor', { p_batch_id: batchId });
   if (totalErr || typeof totalMinor !== 'number' || totalMinor <= 0) {
     console.error('[place-orders-batch] batch_total_minor error:', totalErr, totalMinor);
+    await cancelBatch();
     throwApi('INTERNAL_ERROR', 500, 'Erreur calcul du montant');
   }
 

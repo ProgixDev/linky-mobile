@@ -1233,7 +1233,8 @@
       "lengopayGuineaHint": "Paycard, Kulu, Soutra, Orange Money or MTN — you choose at the next step",
       "soutraMoney": "Soutra Money",
       "soutraMoneyHint": "You finish the payment on the Soutra Money page",
-      "kulu": "Kulu"
+      "kulu": "Kulu",
+      "kuluHint": "You approve with a code received by SMS"
     },
     "confirmOpenPayment": "Open the payment page",
     "infoMobile": "You will receive an SMS code on your number to confirm the payment.",
@@ -1246,7 +1247,19 @@
     "payerPhoneHint": "No number on your account — enter the one that will receive the confirmation code.",
     "payerPhoneInvalid": "Invalid number (9 digits, starts with 6).",
     "confirmOpenPageTitle": "Finish your payment",
-    "confirmOpenPageBody": "Open the payment page and approve the {{amount}}. We confirm your order as soon as the payment lands."
+    "confirmOpenPageBody": "Open the payment page and approve the {{amount}}. We confirm your order as soon as the payment lands.",
+    "otpTitle": "Confirmation code",
+    "otpHeading": "Enter the code you received by SMS",
+    "otpBody": "Kulu has just sent a code to your phone. Enter it here to approve the payment.",
+    "otpLabel": "Code received",
+    "otpPlaceholder": "123456",
+    "otpHint": "The code arrives by SMS, a few seconds after your order.",
+    "otpSubmit": "Confirm code",
+    "otpSubmitting": "Checking…",
+    "otpSent": "Code sent — confirmation in progress…",
+    "otpError": "Could not confirm the code. Try again.",
+    "otpLater": "I didn't get the code",
+    "otpMissing": "Payment not found. Start your order again."
   },
   "orders": {
     "title": "My orders",

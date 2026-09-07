@@ -99,7 +99,10 @@ export default function BoostNewRoute() {
   // Compte inscrit par email, sans numero enregistre — meme trou que corrige
   // cote commandes le 2026-08-25 (create-boost l'exigeait deja cote serveur,
   // useCreateBoost savait deja l'envoyer, mais rien a l'ecran ne le demandait).
-  const mobileMoneySelected = method === 'orange-money' || method === 'mtn-money';
+  // Doit rester d'accord avec LENGOPAY_RAILS[...].needsAccount cote serveur :
+  // Kulu encaisse SUR un numero, comme Orange et MTN.
+  const mobileMoneySelected = method === 'orange-money' || method === 'mtn-money'
+    || method === 'kulu';
   // Le numero QUI PAIE — voir src/lib/payerPhone.ts. Toujours propose pour le
   // mobile money (la diaspora pilote un compte OM/MTN guineen a distance,
   // client 2026-09-05), pre-rempli avec celui du compte s'il est guineen.
@@ -158,6 +161,16 @@ export default function BoostNewRoute() {
           pathname: '/checkout/pay',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
           params: { url: res.url, boostId: res.boostId },
+        } as any);
+        return;
+      }
+
+      // Kulu : le vendeur saisit le code recu par SMS.
+      if (res.kind === 'otp') {
+        router.replace({
+          pathname: '/checkout/otp',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+          params: { payId: res.payId, boostId: res.boostId },
         } as any);
         return;
       }
