@@ -58,6 +58,33 @@ export default function TermsPage() {
             ),
           },
           {
+            heading: 'Séquestre et délai de confirmation',
+            body: (
+              <>
+                <p>
+                  Quand tu paies une commande, l&apos;argent n&apos;est pas
+                  versé au vendeur : il est retenu par Linky. Il ne lui est
+                  remis que lorsque tu confirmes avoir reçu ta commande, en
+                  présentant ton QR au moment de la remise.
+                </p>
+                <p>
+                  Si aucune confirmation n&apos;intervient dans les{' '}
+                  <strong>7 jours</strong> qui suivent ton paiement, la
+                  commande est annulée et tu es remboursé — prix, frais de
+                  service et frais de livraison compris. Tu reçois un rappel au
+                  3ᵉ et au 6ᵉ jour avant cette échéance.
+                </p>
+                <p>
+                  Trois situations sortent de ce délai et sont tranchées par
+                  notre équipe plutôt qu&apos;automatiquement : un litige est
+                  déjà ouvert, une livraison est en cours de route, ou le
+                  montant est élevé. Dans ces cas, nous examinons la commande
+                  avant de décider.
+                </p>
+              </>
+            ),
+          },
+          {
             heading: 'Litiges',
             body: (
               <p>
