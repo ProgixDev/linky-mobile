@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   PackageX,
   User,
+  QrCode,
 } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -85,6 +86,35 @@ export default function SellerOrderDetailRoute() {
     (delivery.status === 'assigned' || delivery.status === 'in_transit' || delivery.status === 'delivered');
   const showDeliverySection = !!delivery && (deliveryAssignable || livreurActive);
 
+  // ─── REMISE EN MAIN PROPRE : scanner le QR de l'acheteur ──────────────────
+  // Signale par le client le 2026-09-07 : « L'icône Scan n'apparaît pas dans
+  // Commande reçue côté Vendeur ». C'etait exact, et ce n'etait pas un detail
+  // d'affichage — c'etait le seul chemin manquant.
+  //
+  // Depuis le 2026-08-22 (« le client ne scanne jamais un QR, il génère
+  // seulement un QR pour sa commande »), l'acheteur AFFICHE son QR et celui qui
+  // remet la marchandise le scanne : le livreur pour une livraison, le VENDEUR
+  // pour un retrait en boutique. Tout le serveur existait — seller_confirm_pickup,
+  // sa fonction edge, le scanner, et l'ecran de confirmation qui aiguille deja
+  // vendeur/acheteur. Il manquait uniquement le bouton ICI : la liste vendeur
+  // mene a cet ecran, alors que le bouton de scan n'existait que sur
+  // app/order/[id].tsx, ou un vendeur n'arrive jamais.
+  //
+  // CONSEQUENCE DU MANQUE, et pourquoi ca urgeait : sans ce bouton, un retrait
+  // en boutique etait INCONFIRMABLE. L'argent restait au sequestre jusqu'a un
+  // litige — le vendeur livrait sans etre paye.
+  //
+  // Les deux gardes reproduisent EXACTEMENT celles de seller_confirm_pickup,
+  // pour que le bouton n'apparaisse jamais la ou le serveur refuserait :
+  //   - statut : paid | preparing | delivered
+  //   - AUCUN livreur assigne — sinon c'est lui qui confirme (LIVREUR_ASSIGNED),
+  //     sans quoi un vendeur libererait le sequestre d'une commande encore en
+  //     route, avant que l'acheteur ne l'ait recue.
+  const inHandoffWindow =
+    order.status === 'paid' || order.status === 'preparing' || order.status === 'delivered';
+  const livreurHasIt = !!delivery && delivery.status !== 'unassigned';
+  const canConfirmHandoff = inHandoffWindow && !livreurHasIt;
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
@@ -96,6 +126,71 @@ export default function SellerOrderDetailRoute() {
         <View style={{ paddingHorizontal: 24 }}>
           <OrderResolutionBanner order={order} viewerRole="seller" />
         </View>
+
+        {/* Remise en main propre — place HAUT, avant le detail produit : au
+            comptoir, l'acheteur est devant le vendeur et c'est le seul geste
+            qui compte. Le faire chercher en bas de page, c'est le meme
+            probleme que de ne pas l'avoir du tout. */}
+        {canConfirmHandoff && (
+          <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
+            <View
+              style={{
+                padding: 16,
+                borderRadius: 18,
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <QrCode size={16} color={colors.text} strokeWidth={2} />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>
+                  Remettre la commande
+                </Text>
+              </View>
+              <Text
+                style={{
+                  fontSize: 12.5,
+                  color: colors.textMuted,
+                  lineHeight: 18,
+                  marginBottom: 14,
+                }}
+              >
+                Demande à l&apos;acheteur d&apos;ouvrir sa commande dans Linky et scanne le QR
+                affiché sur son écran. Tes fonds sont libérés immédiatement.
+              </Text>
+              <Pressable
+                onPress={() => {
+                  haptic.medium();
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+                  router.push('/scan' as any);
+                }}
+                style={{
+                  height: 48,
+                  borderRadius: 14,
+                  backgroundColor: colors.text,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <QrCode size={16} color={colors.bg} strokeWidth={2.25} />
+                <Text
+                  style={{
+                    fontSize: 14.5,
+                    fontWeight: '700',
+                    color: colors.bg,
+                    lineHeight: 18,
+                    includeFontPadding: false,
+                  }}
+                >
+                  Scanner le QR de l&apos;acheteur
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
 
         {/* Product */}
         <View style={{ paddingHorizontal: 24 }}>
