@@ -195,7 +195,8 @@ export const LENGOPAY_RAILS: Record<
 // « Lien de paiement introuvable », retour, bouton « Ouvrir la page », refus a
 // nouveau, et 15 minutes d'attente pour rien. Vu du serveur, c'est la meme
 // chose qu'une absence de page, et ca se traite pareil (voir railNextStep).
-const TRUSTED_ACTION_HOST = /^https:\/\/([a-z0-9-]+\.)*(lengopay\.com|soutramoney\.com)(\/|$|\?|#)/i;
+const TRUSTED_ACTION_HOST =
+  /^https:\/\/([a-z0-9-]+\.)*(lengopay\.com|soutramoney\.com|ngenius-payments\.com)(\/|$|\?|#)/i;
 
 export function isLengopayMethod(m: string): m is LengopayMethod {
   return Object.prototype.hasOwnProperty.call(LENGOPAY_RAILS, m);
@@ -300,6 +301,91 @@ export function railIsDeadEnd(method: LengopayMethod, step: LengopayNextStep): b
 }
 
 /**
+ * Ouvre directement le formulaire de carte, en sautant le selecteur de moyen de
+ * paiement de la page hebergee Lengopay.
+ *
+ * POURQUOI. L'acheteur choisit deja « Carte bancaire » dans Linky. La page
+ * Lengopay lui reposait la meme question (Mobile Money / Wallet / Carte
+ * Bancaire), et il fallait un clic de plus pour arriver au formulaire. Demande
+ * d'Abdoulaye le 2026-09-07, capture a l'appui.
+ *
+ * COMMENT. Il n'existe AUCUN parametre d'URL pour presetectionner un moyen : leur
+ * routeur ne connait que /:transactionId et le choix vit dans l'etat React. On
+ * refait donc a leur place les deux appels que leur propre page enchaine quand
+ * on clique sur « Carte Bancaire » :
+ *   GET  /api/payment/page/{pay_id}   -> public, sans authentification
+ *   POST /api/payment/card            -> { success, msg: <url du formulaire> }
+ * Verifie en production le 2026-09-07 sur un pay_id vivant : le formulaire est
+ * servi par Orabank Guinee via N-Genius (paypage.orabankgn.ngenius-payments.com).
+ *
+ * intl_fee vaut 0 : international_fees revient vide pour la Guinee, et la page
+ * hebergee elle-meme initialise ce champ a 0 tant que l'acheteur ne change pas
+ * de pays. Nos paiements carte sont guineens.
+ *
+ * CE QUE CA COUTE. Ces deux routes ne sont PAS documentees — elles viennent de
+ * leur bundle JavaScript. Lengopay peut les changer sans prevenir. C'est
+ * pourquoi cette fonction ne leve jamais : au moindre ecart — HTTP non-200,
+ * success absent, msg vide, hote inattendu, reseau — elle rend null et
+ * l'acheteur retrouve la page hebergee d'avant. Le pire cas est donc le clic en
+ * trop, jamais un paiement casse.
+ *
+ * Effet de bord voulu : l'appel lie le paiement a la passerelle carte (gateway 5)
+ * cote Lengopay. C'est exactement ce que l'acheteur a demande, et le suivi par
+ * /api/v1/transaction/status ne change pas — meme pay_id.
+ */
+export async function resolveCardFormUrl(payId: string): Promise<string | null> {
+  try {
+    const pageRes = await fetchWithTimeout(`${baseUrl()}/api/payment/page/${payId}`, { method: 'GET' });
+    if (!pageRes.ok) {
+      console.error('[lengopay] carte directe: page HTTP', pageRes.status, '— retour a la page hebergee');
+      return null;
+    }
+    const page = await pageRes.json() as {
+      pay_info?: { id?: number | string; montant?: number | string; currency?: string };
+      intl_fee_charged_to?: string;
+    };
+    const info = page?.pay_info;
+    if (!info?.id || info.montant == null || !info.currency) {
+      console.error('[lengopay] carte directe: pay_info incomplet — retour a la page hebergee');
+      return null;
+    }
+
+    // multipart/form-data, comme leur page : leur endpoint lit un FormData,
+    // pas du JSON.
+    const fd = new FormData();
+    fd.append('amount', String(info.montant));
+    fd.append('currency', String(info.currency));
+    fd.append('id', String(info.id));
+    fd.append('intl_fee', '0');
+    fd.append('intl_fee_charged_to', String(page.intl_fee_charged_to ?? 'payer'));
+
+    const cardRes = await fetchWithTimeout(`${baseUrl()}/api/payment/card`, { method: 'POST', body: fd });
+    if (!cardRes.ok) {
+      console.error('[lengopay] carte directe: card HTTP', cardRes.status, '— retour a la page hebergee');
+      return null;
+    }
+    const card = await cardRes.json() as { success?: boolean; msg?: string };
+    if (!card?.success || typeof card.msg !== 'string' || !card.msg) {
+      console.error('[lengopay] carte directe: refus Lengopay —', String(card?.msg ?? '').slice(0, 200));
+      return null;
+    }
+    if (!TRUSTED_ACTION_HOST.test(card.msg)) {
+      // Un formulaire de carte sur un hote inconnu ne s'ouvre pas dans le
+      // chrome « Paiement » de Linky : l'acheteur y saisirait son numero de
+      // carte en croyant etre chez nous. Journalise en dur — c'est la seule
+      // facon de savoir qu'il faut ajouter un hote aux deux allowlists.
+      console.error('[lengopay] carte directe: formulaire sur un hote NON autorise —',
+        card.msg.slice(0, 200));
+      return null;
+    }
+    return card.msg;
+  } catch (e) {
+    console.error('[lengopay] carte directe: echec —', e instanceof Error ? e.message : String(e));
+    return null;
+  }
+}
+
+/**
  * LE point d'entree unique pour ouvrir un paiement Lengopay, quel que soit le
  * rail. Il choisit l'API (v1 page hebergee pour la carte, v2 en direct pour les
  * autres) et rend deja l'etape suivante, pour que les quatre appelants
@@ -330,6 +416,16 @@ export async function initForRail(
       });
       return { payId: v1.pay_id, step: { kind: 'poll' } };
     }
+
+    // L'acheteur a DEJA choisi « Carte bancaire » chez nous : lui redemander
+    // son moyen de paiement sur la page Lengopay est une question a laquelle il
+    // a repondu (demande d'Abdoulaye, 2026-09-07). On saute donc son selecteur
+    // et on ouvre directement le formulaire de carte. Best-effort, jamais
+    // bloquant : le moindre imprevu et on rend la page hebergee, c'est-a-dire
+    // le comportement d'avant.
+    const direct = await resolveCardFormUrl(v1.pay_id);
+    if (direct) return { payId: v1.pay_id, step: { kind: 'webview', url: direct } };
+
     return { payId: v1.pay_id, step: { kind: 'webview', url: v1.payment_url } };
   }
 

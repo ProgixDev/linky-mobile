@@ -27,7 +27,16 @@ import { Button } from '../../src/components/primitives/Button';
 // un hôte TIERS, pas un sous-domaine de lengopay.com. Sans cette entrée
 // l'écran refuserait la page de paiement légitime et l'acheteur ne pourrait
 // jamais payer par Soutra Money.
-const TRUSTED_PAYMENT_HOSTS = /^https:\/\/([a-z0-9-]+\.)*(lengopay\.com|soutramoney\.com)(\/|$|\?|#)/i;
+//
+// ngenius-payments.com ajouté le 2026-09-07 : depuis qu'on saute le sélecteur
+// de moyen de paiement de Lengopay (l'acheteur a déjà choisi « Carte bancaire »
+// chez nous), la WebView s'ouvre DIRECTEMENT sur le formulaire de carte, servi
+// par Orabank Guinée via N-Genius sur paypage.orabankgn.ngenius-payments.com.
+// Sans cette entrée, l'écran rejetterait le formulaire et la carte serait
+// injouable. Le repli côté serveur (resolveCardFormUrl → null) rend l'ancienne
+// page hébergée, qui reste couverte par lengopay.com.
+const TRUSTED_PAYMENT_HOSTS =
+  /^https:\/\/([a-z0-9-]+\.)*(lengopay\.com|soutramoney\.com|ngenius-payments\.com)(\/|$|\?|#)/i;
 
 function isTrustedPaymentUrl(raw?: string): boolean {
   if (!raw || typeof raw !== 'string') return false;
