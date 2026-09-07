@@ -192,7 +192,8 @@
     "see_other": "Voir {{count}} articles",
     "seeProp_one": "Voir {{count}} bien",
     "seeProp_other": "Voir {{count}} biens",
-    "propAll": "Tout"
+    "propAll": "Tout",
+    "enableLocationHint": "Active ta position pour voir la distance jusqu'à chaque logement."
   },
   "home": {
     "favorites": "Favoris",

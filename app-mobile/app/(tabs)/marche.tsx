@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   Home as HomeIcon,
   Telescope,
+  MapPin,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import * as Location from 'expo-location';
@@ -93,39 +94,54 @@ export default function MarcheRoute() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // One-shot user-location fetch for the distance-from-user badge. CHECK-ONLY:
-  // we never PROMPT here — a cold location popup while browsing listings is
-  // jarring (client 2026-07-07). The request is made at the natural moment, on
-  // the onboarding map step (CityMapPicker). If permission isn't already
-  // granted (or the sensor errors) we fall back to Conakry city center so the
-  // distance badge still renders with realistic km — better than a missing one.
+  // Position de l'utilisateur, pour le badge « à X km ». CHECK-ONLY : on ne
+  // declenche JAMAIS la popup de permission ici — un popup surgi en pleine
+  // navigation est brutal (client 2026-07-07). Elle est demandee au moment
+  // naturel, a l'etape carte de l'onboarding (CityMapPicker), et sinon par le
+  // bandeau ci-dessous, sur un geste de l'utilisateur.
+  //
+  // ON N'INVENTE PLUS DE POSITION. Ce code se rabattait sur le centre de
+  // Conakry (9.5485, -13.6770) « pour que le badge affiche quand meme des km
+  // realistes — mieux qu'un badge absent ». C'etait faux, et le client l'a
+  // signale le 2026-09-07 : debout DANS son propre logement de Kipé, il lisait
+  // « 7,5 km ». Ce n'etait pas un hasard — c'est exactement la distance entre
+  // ce point de repli et son annonce. Un chiffre invente qui a l'air mesure est
+  // pire qu'une absence : l'utilisateur le croit, et il n'a aucun moyen de
+  // savoir qu'il est faux. Sans position reelle, le badge ne s'affiche pas.
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    const CONAKRY_FALLBACK = { lat: 9.5485, lng: -13.6770 };
-    (async () => {
-      try {
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          if (!cancelled) setUserLocation(CONAKRY_FALLBACK);
+  // Vrai quand la permission n'est pas accordee mais qu'on a encore le droit de
+  // la demander (jamais repondu, ou refus non definitif) — pilote le bandeau.
+  const [canAskLocation, setCanAskLocation] = useState(false);
+
+  const readLocation = useCallback(async (prompt: boolean) => {
+    try {
+      let perm = await Location.getForegroundPermissionsAsync();
+      if (perm.status !== 'granted') {
+        if (!prompt) {
+          setCanAskLocation(perm.canAskAgain !== false);
           return;
         }
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        if (cancelled) return;
-        const { latitude, longitude } = pos.coords;
-        if (latitude === 0 && longitude === 0) {
-          setUserLocation(CONAKRY_FALLBACK);
-          return;
-        }
-        setUserLocation({ lat: latitude, lng: longitude });
-      } catch {
-        if (!cancelled) setUserLocation(CONAKRY_FALLBACK);
+        perm = await Location.requestForegroundPermissionsAsync();
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      if (perm.status !== 'granted') {
+        setCanAskLocation(perm.canAskAgain !== false);
+        return;
+      }
+      setCanAskLocation(false);
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { latitude, longitude } = pos.coords;
+      // (0,0) est le point nul de l'ocean, pas une position : c'est ce que rend
+      // un capteur qui n'a pas encore de fix.
+      if (latitude === 0 && longitude === 0) return;
+      setUserLocation({ lat: latitude, lng: longitude });
+    } catch {
+      // Capteur en erreur : pas de position, donc pas de badge. On ne devine pas.
+    }
   }, []);
+
+  useEffect(() => {
+    void readLocation(false);
+  }, [readLocation]);
 
   // Tab visibility by role.
   // Pure agent → only Immobilier. Pure seller → only Articles. Everyone else → both.
@@ -584,6 +600,32 @@ export default function MarcheRoute() {
           </View>
         ) : (
           <View style={{ paddingHorizontal: 24, marginTop: 14, gap: 14 }}>
+            {/* Sans position, aucun badge de distance ne s'affiche (on n'invente
+                plus rien). Ce bandeau est le SEUL endroit d'ou la permission
+                peut encore etre demandee une fois l'onboarding passe — et il le
+                fait sur un APPUI, jamais tout seul : la regle du client tient,
+                pas de popup surgi en pleine navigation. */}
+            {!userLocation && canAskLocation && (
+              <Pressable
+                onPress={() => { void readLocation(true); }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  paddingVertical: 12,
+                  paddingHorizontal: 14,
+                  borderRadius: 14,
+                  backgroundColor: colors.bgSunken,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <MapPin size={15} color={colors.textMuted} strokeWidth={2} />
+                <Text variant="micro" tone="muted" style={{ flex: 1, letterSpacing: 0, textTransform: 'none', lineHeight: 16 }}>
+                  {t('marche.enableLocationHint')}
+                </Text>
+              </Pressable>
+            )}
             {propLoading ? (
               Array.from({ length: 3 }).map((_, i) => <ProductCardSkeleton key={i} />)
             ) : properties && properties.length > 0 ? (

@@ -192,7 +192,8 @@
     "see_other": "Ver {{count}} artículos",
     "seeProp_one": "Ver {{count}} propiedad",
     "seeProp_other": "Ver {{count}} propiedades",
-    "propAll": "Todo"
+    "propAll": "Todo",
+    "enableLocationHint": "Activa tu ubicación para ver la distancia hasta cada alojamiento."
   },
   "home": {
     "favorites": "Favoritos",

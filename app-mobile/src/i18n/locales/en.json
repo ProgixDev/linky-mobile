@@ -192,7 +192,8 @@
     "see_other": "See {{count}} items",
     "seeProp_one": "See {{count}} property",
     "seeProp_other": "See {{count}} properties",
-    "propAll": "All"
+    "propAll": "All",
+    "enableLocationHint": "Turn on your location to see how far each listing is."
   },
   "home": {
     "favorites": "Favorites",
