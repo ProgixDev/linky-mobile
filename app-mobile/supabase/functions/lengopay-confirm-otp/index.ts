@@ -22,7 +22,8 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { confirmPaymentV2 } from '@shared/lengopay.ts';
+import { confirmPaymentV2, confirmPaycard } from '@shared/lengopay.ts';
+import type { PaycardContext } from '@shared/lengopay-types.ts';
 
 interface Body {
   /** Le rail_intent_id de l'intention (pay_id Lengopay), tel que rendu a l'init. */
@@ -58,7 +59,7 @@ Deno.serve(makePost<Body>('/v1/payments/confirm-otp', valid, async ({ sb, body, 
 
   const { data: intent, error: eIntent } = await sb
     .from('payment_intents')
-    .select('id, status, method, rail, rail_intent_id, order_id, batch_id, booking_id, boost_id')
+    .select('id, status, method, rail, rail_intent_id, rail_context, order_id, batch_id, booking_id, boost_id')
     .eq('rail', 'lengopay')
     .eq('rail_intent_id', body.pay_id)
     .maybeSingle();
@@ -112,14 +113,35 @@ Deno.serve(makePost<Body>('/v1/payments/confirm-otp', valid, async ({ sb, body, 
   //
   // Envoyer un /authenticate pour Orange/MTN/Soutra reste refuse : leur rail ne
   // comprend pas cet appel, et l'acheteur n'a de toute facon aucun code.
-  const OTP_CAPABLE = ['kulu', 'lengopay-card'];
+  //
+  // PayCard (2026-09-07) rejoint la liste : sa finalisation est le MEME geste
+  // vu de l'acheteur — un code recu, un code saisi — mais un endpoint
+  // different (/api/payment/wallet/finalize au lieu de /api/v2/authenticate),
+  // et il exige l'etat rendu par la premiere etape. D'ou l'aiguillage ci-dessous
+  // plutot qu'un appel unique.
+  const OTP_CAPABLE = ['kulu', 'lengopay-card', 'paycard'];
   if (!OTP_CAPABLE.includes(intent.method)) {
     throwApi('OTP_NOT_APPLICABLE', 400, "Ce moyen de paiement ne demande pas de code.");
   }
 
+  // PayCard ne peut pas etre confirme sans le contexte de son initialisation.
+  // Son absence n'est pas un code invalide : c'est une intention qu'on ne peut
+  // PAS finaliser, et le dire franchement vaut mieux que de laisser l'acheteur
+  // retaper un code qui n'aboutira jamais.
+  const paycardCtx = intent.method === 'paycard'
+    ? (intent.rail_context as PaycardContext | null)
+    : null;
+  if (intent.method === 'paycard' && !paycardCtx?.paycardoperationreference) {
+    console.error('[lengopay-confirm-otp] paycard sans rail_context', { intent_id: intent.id });
+    throwApi('RAIL_CONTEXT_MISSING', 409,
+      'Ce paiement PayCard ne peut pas être confirmé. Relance-le depuis ta commande.');
+  }
+
   let result;
   try {
-    result = await confirmPaymentV2(body.pay_id, body.code.trim());
+    result = paycardCtx
+      ? await confirmPaycard(paycardCtx, body.code.trim())
+      : await confirmPaymentV2(body.pay_id, body.code.trim());
   } catch (e) {
     // Panne du rail (5xx / reseau). L'intention reste 'pending' : l'acheteur
     // peut retaper, et le balayage TTL reste le filet de securite. On ne
@@ -132,7 +154,12 @@ Deno.serve(makePost<Body>('/v1/payments/confirm-otp', valid, async ({ sb, body, 
   if (!result.accepted) {
     // Code refuse : reponse NORMALE du rail, pas une panne. L'intention reste
     // ouverte pour un nouvel essai (la fenetre de 15 min borne les tentatives).
-    throwApi('OTP_REJECTED', 400, 'Code incorrect. Vérifie le SMS et réessaie.');
+    //
+    // Le message de PayCard est remonte tel quel quand il en donne un : il
+    // distingue « code incorrect » de « solde insuffisant », deux situations
+    // que l'acheteur ne traite pas du tout pareil.
+    throwApi('OTP_REJECTED', 400,
+      result.message?.trim() || 'Code incorrect. Vérifie le SMS et réessaie.');
   }
 
   // Code accepte. On note le passage sur l'intention pour le diagnostic, sans

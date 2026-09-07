@@ -32,6 +32,7 @@ import {
   type LengopayV2InitRequest,
   type LengopayV2InitResponse,
   type LengopayV2TypeAccount,
+  type PaycardContext,
 } from '@shared/lengopay-types.ts';
 
 // B (resilience): hard-cap rail HTTP calls. Status should be sub-second; if
@@ -171,19 +172,65 @@ export function toLocalGnAccount(e164: string): string {
 // L'acheteur y choisit son moyen et Lengopay gere le formulaire et le 3-D
 // Secure. Bonus : PayCard — la carte prepayee guineenne a 9 chiffres que le
 // client nommait sans qu'on sache a quoi elle correspondait — y est offerte.
+// PAYCARD — la troisieme mecanique, ni v2 ni page hebergee.
+//
+// PayCard est la carte prepayee guineenne (passerelle 3) que le client nommait
+// depuis des semaines. Sur la page hebergee elle est enterree sous l'onglet
+// « Wallet » puis un menu « Type de portefeuille ». Demande d'Abdoulaye du
+// 2026-09-07 : la sortir au meme niveau que Kulu et Soutra Money.
+//
+// Elle n'a AUCUN type_account v2 — les cinq documentes sont lp-om-gn,
+// lp-momo-gn, lp-card-gn, lp-kulu-gn, lp-soutramoney-gn. Le seul chemin est
+// celui de leur page hebergee, en deux temps :
+//   POST /api/payment/wallet           numero de carte + telephone
+//   POST /api/payment/wallet/finalize  code de verification
+// Meme forme que Kulu, donc le meme ecran de saisie de code cote Linky.
 export type LengopayMethod =
-  | 'orange-money' | 'mtn-money' | 'kulu' | 'soutramoney' | 'lengopay-card';
+  | 'orange-money' | 'mtn-money' | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard';
 
 export const LENGOPAY_RAILS: Record<
   LengopayMethod,
-  { typeAccount: LengopayV2TypeAccount; needsAccount: boolean; hostedPage: boolean; label: string }
+  {
+    typeAccount: LengopayV2TypeAccount | null;
+    needsAccount: boolean;
+    hostedPage: boolean;
+    /** Passerelle « portefeuille » de la page hebergee (PayCard = 3). Presente
+     *  = ce rail passe par /api/payment/wallet, pas par la v2 ni par la page. */
+    walletGateway?: number;
+    /** Ce rail exige un numero de carte en plus du telephone. */
+    needsCard?: boolean;
+    label: string;
+  }
 > = {
   'orange-money':  { typeAccount: 'lp-om-gn',          needsAccount: true,  hostedPage: false, label: 'Orange Money' },
   'mtn-money':     { typeAccount: 'lp-momo-gn',        needsAccount: true,  hostedPage: false, label: 'MTN MoMo' },
   'kulu':          { typeAccount: 'lp-kulu-gn',        needsAccount: true,  hostedPage: false, label: 'Kulu' },
   'soutramoney':   { typeAccount: 'lp-soutramoney-gn', needsAccount: false, hostedPage: false, label: 'Soutra Money' },
   'lengopay-card': { typeAccount: 'lp-card-gn',        needsAccount: false, hostedPage: true,  label: 'Carte bancaire' },
+  'paycard':       { typeAccount: null,                needsAccount: true,  hostedPage: true,
+                     walletGateway: 3, needsCard: true, label: 'PayCard' },
 };
+
+/** Le rail exige-t-il un numero de carte a la saisie ? */
+export function railNeedsCard(method: string): boolean {
+  const rail = (LENGOPAY_RAILS as Record<string, { needsCard?: boolean } | undefined>)[method];
+  return rail?.needsCard === true;
+}
+
+/**
+ * Refus METIER de Lengopay, a montrer a l'acheteur tel quel.
+ *
+ * Distinguer ce cas d'une panne est tout l'interet : « Le numero de compte
+ * [ 123 456 789 ] est invalide » est une phrase que l'acheteur peut corriger,
+ * alors qu'un repli silencieux vers la page hebergee lui ferait ressaisir sa
+ * carte pour rien et sans jamais lui dire ce qui cloche.
+ */
+export class LengopayRefused extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LengopayRefused';
+  }
+}
 
 // Hotes ou une page de paiement Lengopay a le droit de vivre. MIROIR EXACT de
 // l'allowlist de app/checkout/pay.tsx, qui refuse de charger toute autre page
@@ -333,17 +380,34 @@ export function railIsDeadEnd(method: LengopayMethod, step: LengopayNextStep): b
  * cote Lengopay. C'est exactement ce que l'acheteur a demande, et le suivi par
  * /api/v1/transaction/status ne change pas — meme pay_id.
  */
+/**
+ * Etat d'un paiement hebergé, lu sur la route PUBLIQUE /api/payment/page.
+ * Aucune authentification : le pay_id est le secret. Utilisee par les deux
+ * rails « page hebergee » (carte directe et PayCard), qui ont tous deux besoin
+ * de l'identifiant NUMERIQUE interne — distinct du pay_id — que seule cette
+ * route expose.
+ */
+interface HostedPayPage {
+  pay_info?: { id?: number | string; montant?: number | string; currency?: string };
+  intl_fee_charged_to?: string;
+}
+
+async function readHostedPayPage(payId: string, tag: string): Promise<HostedPayPage | null> {
+  const res = await fetchWithTimeout(`${baseUrl()}/api/payment/page/${payId}`, { method: 'GET' });
+  if (!res.ok) {
+    console.error(`[lengopay] ${tag}: page HTTP`, res.status);
+    return null;
+  }
+  return await res.json() as HostedPayPage;
+}
+
 export async function resolveCardFormUrl(payId: string): Promise<string | null> {
   try {
-    const pageRes = await fetchWithTimeout(`${baseUrl()}/api/payment/page/${payId}`, { method: 'GET' });
-    if (!pageRes.ok) {
-      console.error('[lengopay] carte directe: page HTTP', pageRes.status, '— retour a la page hebergee');
+    const page = await readHostedPayPage(payId, 'carte directe');
+    if (!page) {
+      console.error('[lengopay] carte directe: page illisible — retour a la page hebergee');
       return null;
     }
-    const page = await pageRes.json() as {
-      pay_info?: { id?: number | string; montant?: number | string; currency?: string };
-      intl_fee_charged_to?: string;
-    };
     const info = page?.pay_info;
     if (!info?.id || info.montant == null || !info.currency) {
       console.error('[lengopay] carte directe: pay_info incomplet — retour a la page hebergee');
@@ -386,6 +450,160 @@ export async function resolveCardFormUrl(payId: string): Promise<string | null> 
 }
 
 /**
+ * PayCard, premiere etape : numero de carte + telephone.
+ *
+ * Rend le contexte a garder pour la finalisation, ou null si l'appel a echoue
+ * pour une raison STRUCTURELLE (reseau, HTTP, forme inattendue) — l'appelant
+ * repliera alors sur la page hebergee. Leve LengopayRefused quand c'est
+ * Lengopay qui refuse pour une raison que l'acheteur peut corriger : carte
+ * inconnue, solde insuffisant, telephone qui ne correspond pas.
+ *
+ * Verifie en production le 2026-09-07 : l'appel part bien depuis nos serveurs
+ * et atteint le fournisseur PayCard, qui valide lui-meme le numero (« Le
+ * numero de compte [ … ] est invalide » sur un faux numero).
+ */
+export async function initPaycard(
+  payId: string,
+  card: string,
+  phone: string,
+  gateway: number,
+): Promise<PaycardContext | null> {
+  let page: HostedPayPage | null;
+  try {
+    page = await readHostedPayPage(payId, 'paycard');
+  } catch (e) {
+    console.error('[lengopay] paycard: page illisible —', e instanceof Error ? e.message : String(e));
+    return null;
+  }
+  const info = page?.pay_info;
+  if (!info?.id || info.montant == null) {
+    console.error('[lengopay] paycard: pay_info incomplet');
+    return null;
+  }
+
+  const fd = new FormData();
+  fd.append('telephone', phone);
+  fd.append('numero_card', card);
+  fd.append('select_gateway', String(gateway));
+  fd.append('amount', String(info.montant));
+  fd.append('id', String(info.id));
+
+  let raw: {
+    success?: boolean;
+    msg?: string;
+    info_payment?: {
+      phone?: string; cardnumber?: string;
+      paycardamount?: string | number; paycardoperationreference?: string;
+    };
+    transaction_infos?: {
+      idgateway?: string | number; telephone?: string;
+      forfait?: string | number; is_btob?: string | number; c?: string;
+    };
+  };
+  try {
+    const res = await fetchWithTimeout(`${baseUrl()}/api/payment/wallet`, { method: 'POST', body: fd });
+    if (!res.ok) {
+      console.error('[lengopay] paycard: wallet HTTP', res.status);
+      return null;
+    }
+    raw = await res.json();
+  } catch (e) {
+    console.error('[lengopay] paycard: appel wallet echoue —', e instanceof Error ? e.message : String(e));
+    return null;
+  }
+
+  if (!raw?.success) {
+    // Refus metier : le message vient du fournisseur PayCard et nomme
+    // precisement ce qui bloque. Le remonter tel quel vaut mieux que n'importe
+    // quelle reformulation de notre part.
+    const msg = String(raw?.msg ?? '').trim();
+    throw new LengopayRefused(msg || 'PayCard a refusé ce paiement.');
+  }
+
+  const ip = raw.info_payment;
+  const ti = raw.transaction_infos;
+  if (!ip?.paycardoperationreference || !ti) {
+    // Succes annonce mais sans de quoi finaliser : on ne garde pas un contexte
+    // a moitie, il echouerait a l'etape suivante sans qu'on sache pourquoi.
+    console.error('[lengopay] paycard: reponse success sans contexte exploitable');
+    return null;
+  }
+
+  return {
+    phone:                     String(ip.phone ?? phone),
+    cardnumber:                String(ip.cardnumber ?? ''),
+    paycardamount:             String(ip.paycardamount ?? info.montant),
+    paycardoperationreference: String(ip.paycardoperationreference),
+    // pay_info.id, PAS transaction_infos.id : leur propre page finalise avec
+    // l'identifiant de la page, pas celui qu'elle vient de stocker.
+    id:                        String(info.id),
+    idgateway:                 String(ti.idgateway ?? gateway),
+    telephone:                 String(ti.telephone ?? phone),
+    forfait:                   String(ti.forfait ?? ''),
+    is_btob:                   String(ti.is_btob ?? ''),
+    c:                         String(ti.c ?? ''),
+    intl_fee:                  '0',
+    intl_fee_charged_to:       String(page?.intl_fee_charged_to ?? 'payer'),
+  };
+}
+
+/**
+ * PayCard, seconde etape : le code de verification.
+ *
+ * Renvoie TOUS les champs de la premiere etape, exactement comme leur page le
+ * fait depuis son localStorage.
+ *
+ * La branche is_btob reproduit la leur au caractere pres : si is_btob vaut 1 on
+ * envoie le jeton `c`, sinon access_code et api_key — que leur bundle ne
+ * renseigne JAMAIS (jamais ecrits dans le localStorage, seulement lus). On
+ * envoie donc du vide comme eux : notre comportement est identique au leur dans
+ * les deux branches, ce qui est la seule garantie qu'on puisse se donner sur un
+ * endpoint non documente.
+ */
+export async function confirmPaycard(
+  ctx: PaycardContext,
+  code: string,
+): Promise<{ accepted: boolean; message: string }> {
+  const fd = new FormData();
+  fd.append('code', code);
+  fd.append('is_btob', ctx.is_btob);
+  fd.append('phone', ctx.phone);
+  fd.append('cardnumber', ctx.cardnumber);
+  fd.append('paycardamount', ctx.paycardamount);
+  fd.append('paycardoperationreference', ctx.paycardoperationreference);
+  fd.append('id', ctx.id);
+  fd.append('idgateway', ctx.idgateway);
+  fd.append('telephone', ctx.telephone);
+  fd.append('forfait', ctx.forfait);
+  fd.append('intl_fee', ctx.intl_fee);
+  fd.append('intl_fee_charged_to', ctx.intl_fee_charged_to);
+  if (ctx.is_btob === '1') {
+    fd.append('c', ctx.c);
+  } else {
+    fd.append('access_code', '');
+    fd.append('api_key', '');
+  }
+
+  try {
+    const res = await fetchWithTimeout(`${baseUrl()}/api/payment/wallet/finalize`, {
+      method: 'POST', body: fd,
+    });
+    const raw = await res.json().catch(() => null) as
+      { success?: boolean; msg?: string; message?: string } | null;
+    if (!res.ok) {
+      return { accepted: false, message: String(raw?.message ?? raw?.msg ?? 'Paiement refusé.') };
+    }
+    if (raw?.success) return { accepted: true, message: 'Paiement confirmé.' };
+    return { accepted: false, message: String(raw?.msg ?? 'Code incorrect.') };
+  } catch (e) {
+    console.error('[lengopay] paycard: finalize echoue —', e instanceof Error ? e.message : String(e));
+    // Reseau : surtout ne pas dire « refuse ». Le paiement a peut-etre abouti
+    // cote Lengopay ; c'est le sondage de statut qui tranchera.
+    return { accepted: false, message: 'Réseau indisponible. Vérifie dans un instant.' };
+  }
+}
+
+/**
  * LE point d'entree unique pour ouvrir un paiement Lengopay, quel que soit le
  * rail. Il choisit l'API (v1 page hebergee pour la carte, v2 en direct pour les
  * autres) et rend deja l'etape suivante, pour que les quatre appelants
@@ -396,11 +614,13 @@ export async function resolveCardFormUrl(payId: string): Promise<string | null> 
 export interface RailInitResult {
   payId: string;
   step: LengopayNextStep;
+  /** PayCard : etat a persister pour la finalisation (payment_intents.rail_context). */
+  context?: PaycardContext;
 }
 
 export async function initForRail(
   method: LengopayMethod,
-  req: { amount_minor: number; currency: LengopayCurrency; account?: string },
+  req: { amount_minor: number; currency: LengopayCurrency; account?: string; card?: string },
 ): Promise<RailInitResult> {
   const rail = LENGOPAY_RAILS[method];
 
@@ -415,6 +635,24 @@ export async function initForRail(
         method, pay_id: v1.pay_id, url: v1.payment_url.slice(0, 200),
       });
       return { payId: v1.pay_id, step: { kind: 'poll' } };
+    }
+
+    // PAYCARD — deux temps sur le meme paiement hebergé.
+    //
+    // On tente l'enchainement en-app. Un refus METIER (carte inconnue, solde
+    // insuffisant) remonte tel quel a l'acheteur : c'est lui qui peut le
+    // corriger. Une panne STRUCTURELLE, au contraire, replie sur la page
+    // hebergee — ou PayCard reste joignable par l'onglet « Wallet ». L'acheteur
+    // y perd deux clics, jamais son paiement.
+    if (rail.walletGateway) {
+      const ctx = await initPaycard(v1.pay_id, req.card ?? '', req.account ?? '', rail.walletGateway);
+      if (ctx) {
+        return { payId: v1.pay_id, step: { kind: 'otp', payId: v1.pay_id }, context: ctx };
+      }
+      console.error('[lengopay] paycard: init indisponible — repli sur la page hebergee', {
+        pay_id: v1.pay_id,
+      });
+      return { payId: v1.pay_id, step: { kind: 'webview', url: v1.payment_url } };
     }
 
     // L'acheteur a DEJA choisi « Carte bancaire » chez nous : lui redemander

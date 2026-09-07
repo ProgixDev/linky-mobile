@@ -90,7 +90,7 @@ export default function CheckoutRoute() {
   // un rail qui exige un numero la-bas mais ne le demande pas ici donnerait un
   // bouton actif suivi d'un PAYER_PHONE_REQUIRED sans champ pour le corriger.
   const mobileMoneySelected = selected === 'orange-money' || selected === 'mtn-money'
-    || selected === 'kulu';
+    || selected === 'kulu' || selected === 'paycard';
   // Guinee ou etranger, deduit de l'indicatif du numero principal. Decide quel
   // rail carte proposer : Stripe a l'etranger, Carte/Wallet Lengopay en Guinee.
   const { profile: payProfile, loading: payProfileLoading } = usePaymentProfile();
@@ -100,6 +100,10 @@ export default function CheckoutRoute() {
   const payerPhoneDigits = payerPhone.digits;
   const payerPhoneValid = payerPhone.valid;
   const payerPhoneE164 = payerPhone.e164;
+  // Numero de compte PayCard. Il ne quitte jamais l'appareil autrement que dans
+  // l'appel d'initialisation : ni stocke, ni journalise, ni renvoye.
+  const [payerCard, setPayerCard] = useState('');
+  const payerCardDigits = payerCard.replace(/\D/g, '');
   // « Le bouton Carte bancaire "Stripe" SE TRANSFORME » (client 2026-09-05) :
   // meme emplacement, meme etiquette, rail different selon le profil. Stripe
   // refuse les cartes guineennes (constat client 2026-07-26), donc un profil
@@ -171,7 +175,8 @@ export default function CheckoutRoute() {
       (selected === 'card' && !showStripeCard) ||
       (selected === 'lengopay-card' && !showLengopayCard) ||
       (selected === 'soutramoney' && !showGuineaWallets) ||
-      (selected === 'kulu' && !showGuineaWallets);
+      (selected === 'kulu' && !showGuineaWallets) ||
+      (selected === 'paycard' && !showGuineaWallets);
     if (gone) setSelected('orange-money');
   }, [selected, payProfileLoading, showStripeCard, showLengopayCard, showGuineaWallets]);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
@@ -576,6 +581,37 @@ export default function CheckoutRoute() {
           />
         )}
 
+        {/* PayCard : carte prepayee guineenne. Sortie ici au meme niveau que
+            Kulu et Soutra Money (demande d'Abdoulaye, 2026-09-07) — chez
+            Lengopay elle est enterree sous « Wallet » puis un menu deroulant.
+            Elle encaisse sur un numero ET un numero de compte, d'ou les deux
+            champs ci-dessous. */}
+        {showGuineaWallets && (
+          <OperatorRow
+            title={t('checkout.rails.paycard')}
+            hint={t('checkout.rails.paycardHint')}
+            selected={selected === 'paycard'}
+            onPress={() => setSelected('paycard')}
+          />
+        )}
+
+        {/* Numero de compte PayCard. Au-DESSUS du numero de telephone : c'est
+            l'information propre a ce rail, le telephone n'en est que le canal
+            du code. */}
+        {selected === 'paycard' && (
+          <View style={{ marginBottom: 16 }}>
+            <Input
+              label={t('checkout.paycardLabel')}
+              leadingIcon="card"
+              keyboardType="number-pad"
+              placeholder={t('checkout.paycardPlaceholder')}
+              value={payerCard}
+              onChangeText={setPayerCard}
+              helperText={t('checkout.paycardHint')}
+            />
+          </View>
+        )}
+
         {/* Numero qui paie — toujours affiche pour Orange/MTN, pre-rempli avec
             celui du compte s'il est guineen. Il ne suffit plus d'avoir UN
             numero au compte : la diaspora paie depuis un compte OM/MTN
@@ -736,6 +772,8 @@ export default function CheckoutRoute() {
                   paymentMethod: selected,
                   deliveryMode,
                   ...(payerPhoneE164 ? { payerPhone: payerPhoneE164 } : {}),
+                  ...(selected === 'paycard' && payerCardDigits
+                    ? { payerCard: payerCardDigits } : {}),
                 },
                 {
                   onSuccess: (res) => {
@@ -784,6 +822,8 @@ export default function CheckoutRoute() {
                 paymentMethod: selected,
                 deliveryMode,
                 ...(payerPhoneE164 ? { payerPhone: payerPhoneE164 } : {}),
+                  ...(selected === 'paycard' && payerCardDigits
+                    ? { payerCard: payerCardDigits } : {}),
               },
               {
                 onSuccess: ({ order, intent, next_step }) => {

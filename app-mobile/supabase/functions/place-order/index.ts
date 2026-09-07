@@ -21,6 +21,7 @@ import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from
 import {
   initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
   LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
+  railNeedsCard, LengopayRefused,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
@@ -47,6 +48,9 @@ interface Body {
   delivery_mode?: 'pickup' | 'delivery';
   /** Optional Q6 override. If absent, edge fn looks up primary phone from public.phones. */
   payer_phone?: string;
+  /** PayCard uniquement : le numero de compte de la carte prepayee. Jamais
+   *  persiste — il ne sert qu'a l'appel d'initialisation chez Lengopay. */
+  payer_card?: string;
 }
 
 // 'kulu' rouvert le 2026-09-07 avec la phase 3 : l'ecran de saisie du code
@@ -54,10 +58,11 @@ interface Body {
 // un paiement Kulu peut etre TERMINE. Il etait bloque ici entre-temps.
 const METHODS = new Set([
   'orange-money', 'mtn-money', 'card', 'wallet',
-  'kulu', 'soutramoney', 'lengopay-card',
+  'kulu', 'soutramoney', 'lengopay-card', 'paycard',
 ]);
 const DELIVERY_MODES = new Set(['pickup', 'delivery']);
 const PHONE_RE = /^\+224\d{9}$/;
+const CARD_RE = /^[0-9 -]{6,32}$/;
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -81,6 +86,13 @@ function valid(b: unknown): b is Body {
   }
   if (x.payer_phone !== undefined) {
     if (typeof x.payer_phone !== 'string' || !PHONE_RE.test(x.payer_phone)) return false;
+  }
+  // Le format exact d'un numero PayCard n'est pas documente : on borne
+  // seulement la longueur et le jeu de caracteres, et on laisse le fournisseur
+  // valider. Inventer un format plus strict ici rejetterait des cartes
+  // valides sans qu'on sache jamais lesquelles.
+  if (x.payer_card !== undefined) {
+    if (typeof x.payer_card !== 'string' || !CARD_RE.test(x.payer_card.trim())) return false;
   }
   return true;
 }
@@ -378,6 +390,17 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
   // et la carte identifient l'acheteur sur leur propre page. Reclamer un numero
   // guineen a un acheteur de la diaspora qui paie par carte l'aurait bloque
   // pour rien.
+  // PayCard exige un numero de carte EN PLUS du telephone. Le refuser ici, avant
+  // le moindre appel reseau, evite de creer une intention qui ne pourrait pas
+  // aboutir.
+  const payerCard = body.payer_card?.trim();
+  if (railNeedsCard(lengoMethod) && !payerCard) {
+    await sb.from('orders').update({
+      status: 'cancelled', updated_at: new Date().toISOString(),
+    }).eq('id', (row as OrderRow).id);
+    throwApi('CARD_NUMBER_REQUIRED', 400, 'Saisis ton numéro de compte PayCard.');
+  }
+
   let payerPhone: string | undefined;
   if (rail.needsAccount) {
     payerPhone = body.payer_phone;
@@ -465,6 +488,7 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
       amount_minor: Number(orderRow.total_minor),
       currency:     intentCurrency as 'GNF' | 'EUR',
       ...(payerPhone ? { account: toLocalGnAccount(payerPhone) } : {}),
+      ...(payerCard ? { card: payerCard } : {}),
     });
   } catch (e) {
     console.error('[place-order] lengopay init error:', e);
@@ -475,6 +499,10 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
       p_error_code:      'RAIL_INIT_FAILED',
       p_error_message:   (e instanceof Error ? e.message : String(e)).slice(0, 500),
     });
+    // Refus METIER (carte inconnue, solde insuffisant) : le message vient du
+    // fournisseur et nomme ce qui bloque. Un « Echec de l'initialisation »
+    // generique laisserait l'acheteur ressayer la meme carte indefiniment.
+    if (e instanceof LengopayRefused) throwApi('RAIL_REFUSED', 400, e.message);
     throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
   }
 
@@ -509,6 +537,10 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
       rail_intent_id:  initResp.payId,
       rail_status:     'pending',
       rail_action_url: railActionUrl(nextStep),
+      // PayCard : l'etat a repasser tel quel a la finalisation. Ecrit dans le
+      // MEME UPDATE que le pay_id — separes, un redemarrage entre les deux
+      // laisserait une intention impossible a confirmer.
+      ...(initResp.context ? { rail_context: initResp.context } : {}),
       updated_at:      new Date().toISOString(),
     })
     .eq('id', intentRow.id);

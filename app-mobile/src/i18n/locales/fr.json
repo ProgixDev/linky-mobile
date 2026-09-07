@@ -1235,7 +1235,9 @@
       "soutraMoney": "Soutra Money",
       "soutraMoneyHint": "Tu finis le paiement sur la page Soutra Money",
       "kulu": "Kulu",
-      "kuluHint": "Tu valides avec un code reçu par SMS"
+      "kuluHint": "Tu valides avec un code reçu par SMS",
+      "paycard": "PayCard",
+      "paycardHint": "Carte prépayée guinéenne — tu valides avec un code reçu par SMS"
     },
     "confirmOpenPayment": "Ouvrir la page de paiement",
     "infoMobile": "Tu recevras un code SMS sur ton numéro pour confirmer le paiement.",
@@ -1251,7 +1253,7 @@
     "confirmOpenPageBody": "Ouvre la page de paiement et valide les {{amount}}. On confirme ta commande dès que le paiement est reçu.",
     "otpTitle": "Code de validation",
     "otpHeading": "Saisis le code reçu par SMS",
-    "otpBody": "Kulu vient d'envoyer un code sur ton téléphone. Entre-le ici pour valider le paiement.",
+    "otpBody": "Un code vient d’être envoyé par SMS sur ton téléphone. Entre-le ici pour valider le paiement.",
     "otpLabel": "Code reçu",
     "otpPlaceholder": "123456",
     "otpHint": "Le code arrive par SMS, quelques secondes après ta commande.",
@@ -1261,9 +1263,12 @@
     "otpError": "Impossible de valider le code. Réessaie.",
     "otpLater": "Je n'ai pas reçu le code",
     "otpMissing": "Paiement introuvable. Recommence ta commande.",
-    "confirmCodeTitle": "⏳  Saisis ton code Kulu",
-    "confirmCodeBody": "Kulu t’a envoyé un code par SMS pour valider les {{amount}}. Saisis-le pour terminer le paiement.",
-    "confirmEnterCode": "Saisir le code"
+    "confirmCodeTitle": "⏳  Saisis ton code de validation",
+    "confirmCodeBody": "Un code t’a été envoyé par SMS pour valider les {{amount}}. Saisis-le pour terminer le paiement.",
+    "confirmEnterCode": "Saisir le code",
+    "paycardLabel": "Numéro de compte PayCard",
+    "paycardPlaceholder": "Le numéro inscrit sur ta carte",
+    "paycardHint": "On l’envoie à PayCard pour lancer le paiement ; Linky ne le conserve pas."
   },
   "orders": {
     "title": "Mes commandes",

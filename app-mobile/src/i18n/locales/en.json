@@ -1235,7 +1235,9 @@
       "soutraMoney": "Soutra Money",
       "soutraMoneyHint": "You finish the payment on the Soutra Money page",
       "kulu": "Kulu",
-      "kuluHint": "You approve with a code received by SMS"
+      "kuluHint": "You approve with a code received by SMS",
+      "paycard": "PayCard",
+      "paycardHint": "Guinean prepaid card — you approve with a code received by SMS"
     },
     "confirmOpenPayment": "Open the payment page",
     "infoMobile": "You will receive an SMS code on your number to confirm the payment.",
@@ -1251,7 +1253,7 @@
     "confirmOpenPageBody": "Open the payment page and approve the {{amount}}. We confirm your order as soon as the payment lands.",
     "otpTitle": "Confirmation code",
     "otpHeading": "Enter the code you received by SMS",
-    "otpBody": "Kulu has just sent a code to your phone. Enter it here to approve the payment.",
+    "otpBody": "A code has just been sent to your phone by SMS. Enter it here to approve the payment.",
     "otpLabel": "Code received",
     "otpPlaceholder": "123456",
     "otpHint": "The code arrives by SMS, a few seconds after your order.",
@@ -1261,9 +1263,12 @@
     "otpError": "Could not confirm the code. Try again.",
     "otpLater": "I didn't get the code",
     "otpMissing": "Payment not found. Start your order again.",
-    "confirmCodeTitle": "⏳  Enter your Kulu code",
-    "confirmCodeBody": "Kulu sent you an SMS code to approve the {{amount}}. Enter it to complete the payment.",
-    "confirmEnterCode": "Enter the code"
+    "confirmCodeTitle": "⏳  Enter your confirmation code",
+    "confirmCodeBody": "A code was sent to you by SMS to approve the {{amount}}. Enter it to finish the payment.",
+    "confirmEnterCode": "Enter the code",
+    "paycardLabel": "PayCard account number",
+    "paycardPlaceholder": "The number printed on your card",
+    "paycardHint": "It goes to PayCard to start the payment; Linky does not keep it."
   },
   "orders": {
     "title": "My orders",

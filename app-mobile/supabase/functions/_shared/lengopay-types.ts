@@ -117,6 +117,32 @@ export type LengopayNextStep =
   | { kind: 'otp'; payId: string }
   | { kind: 'webview'; url: string };
 
+/**
+ * Etat opaque rendu par la premiere etape PayCard, a repasser tel quel a la
+ * finalisation. Les noms sont ceux de Lengopay, volontairement : ce sont des
+ * champs qu'on TRANSPORTE sans les interpreter, et les renommer ne ferait
+ * qu'ajouter une traduction a maintenir dans les deux sens.
+ *
+ * Ni le numero de carte saisi ni le code de verification n'y figurent :
+ * cardnumber est la version MASQUEE que Lengopay nous rend, et le code ne vit
+ * que le temps d'un appel.
+ */
+export interface PaycardContext {
+  phone: string;
+  cardnumber: string;
+  paycardamount: string;
+  paycardoperationreference: string;
+  /** pay_info.id — l'identifiant NUMERIQUE interne, pas le pay_id. */
+  id: string;
+  idgateway: string;
+  telephone: string;
+  forfait: string;
+  is_btob: string;
+  c: string;
+  intl_fee: string;
+  intl_fee_charged_to: string;
+}
+
 export function normalizeLengopayStatus(raw: unknown): LengopayIntentStatus {
   if (typeof raw !== 'string') return 'pending';
   switch (raw.toUpperCase()) {

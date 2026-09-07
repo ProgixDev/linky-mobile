@@ -180,6 +180,7 @@ export default function CheckoutConfirmRoute() {
     'mtn-money':     'checkout.rails.mtnMoney',
     'soutramoney':   'checkout.rails.soutraMoney',
     'kulu':          'checkout.rails.kulu',
+    'paycard':       'checkout.rails.paycard',
     'wallet':        'checkout.walletLinky',
   };
   const methodLabel = t(METHOD_LABEL_KEYS[order.paymentMethod] ?? 'checkout.confirmRowMethod');
@@ -194,7 +195,11 @@ export default function CheckoutConfirmRoute() {
   // ranger avec Orange/MTN lui affichait « une demande vient de partir sur ton
   // telephone » — il n'en part aucune, et l'acheteur aurait attendu en vain
   // quelque chose qu'il devait, lui, aller taper.
-  const paysByCode = order.paymentMethod === 'kulu';
+  // PayCard rejoint Kulu ici : meme attente, meme geste — un code recu par SMS
+  // et saisi dans l'appli. L'oublier afficherait a l'acheteur « une demande
+  // vient de partir sur ton telephone », et il attendrait en vain quelque
+  // chose qu'il doit, lui, aller taper.
+  const paysByCode = order.paymentMethod === 'kulu' || order.paymentMethod === 'paycard';
 
   // Countdown for WAIT state.
   const elapsedMs = now - new Date(intent.createdAt).getTime();

@@ -146,6 +146,8 @@ export interface PlaceOrderInput {
   deliveryMode?: 'pickup' | 'delivery';
   /** Optional Q6 override; omit to use the user's primary phone from /phones. */
   payerPhone?: string;
+  /** PayCard : numero de compte de la carte prepayee. */
+  payerCard?: string;
 }
 
 export interface PlaceOrderResult {
@@ -167,6 +169,7 @@ export function usePlaceOrder() {
       paymentMethod,
       deliveryMode,
       payerPhone,
+      payerCard,
     }: PlaceOrderInput): Promise<PlaceOrderResult> => {
       return apiPost<PlaceOrderResult>({
         path: '/place-order',
@@ -175,6 +178,7 @@ export function usePlaceOrder() {
           payment_method: paymentMethod,
           ...(deliveryMode ? { delivery_mode: deliveryMode } : {}),
           ...(payerPhone ? { payer_phone: payerPhone } : {}),
+          ...(payerCard ? { payer_card: payerCard } : {}),
         },
       });
     },
@@ -208,6 +212,8 @@ export interface PlaceOrdersBatchInput {
   paymentMethod: PaymentMethod;
   deliveryMode?: 'pickup' | 'delivery';
   payerPhone?: string;
+  /** PayCard : numero de compte de la carte prepayee. */
+  payerCard?: string;
 }
 
 export interface PlaceOrdersBatchResult {
@@ -233,6 +239,7 @@ export function usePlaceOrdersBatch() {
       paymentMethod,
       deliveryMode,
       payerPhone,
+      payerCard,
     }: PlaceOrdersBatchInput): Promise<PlaceOrdersBatchResult> => {
       return apiPost<PlaceOrdersBatchResult>({
         path: '/place-orders-batch',
@@ -241,6 +248,7 @@ export function usePlaceOrdersBatch() {
           payment_method: paymentMethod,
           ...(deliveryMode ? { delivery_mode: deliveryMode } : {}),
           ...(payerPhone ? { payer_phone: payerPhone } : {}),
+          ...(payerCard ? { payer_card: payerCard } : {}),
         },
       });
     },

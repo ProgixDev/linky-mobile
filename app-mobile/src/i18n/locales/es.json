@@ -1235,7 +1235,9 @@
       "soutraMoney": "Soutra Money",
       "soutraMoneyHint": "Terminas el pago en la página de Soutra Money",
       "kulu": "Kulu",
-      "kuluHint": "Validas con un código recibido por SMS"
+      "kuluHint": "Validas con un código recibido por SMS",
+      "paycard": "PayCard",
+      "paycardHint": "Tarjeta prepago guineana — validas con un código recibido por SMS"
     },
     "confirmOpenPayment": "Abrir la página de pago",
     "infoMobile": "Recibirás un código SMS en tu número para confirmar el pago.",
@@ -1251,7 +1253,7 @@
     "confirmOpenPageBody": "Abre la página de pago y valida los {{amount}}. Confirmamos tu pedido en cuanto llegue el pago.",
     "otpTitle": "Código de validación",
     "otpHeading": "Introduce el código recibido por SMS",
-    "otpBody": "Kulu acaba de enviar un código a tu teléfono. Introdúcelo aquí para validar el pago.",
+    "otpBody": "Acabamos de enviarte un código por SMS. Introdúcelo aquí para validar el pago.",
     "otpLabel": "Código recibido",
     "otpPlaceholder": "123456",
     "otpHint": "El código llega por SMS, unos segundos después de tu pedido.",
@@ -1261,9 +1263,12 @@
     "otpError": "No se pudo validar el código. Inténtalo de nuevo.",
     "otpLater": "No he recibido el código",
     "otpMissing": "Pago no encontrado. Vuelve a empezar tu pedido.",
-    "confirmCodeTitle": "⏳  Introduce tu código Kulu",
-    "confirmCodeBody": "Kulu te ha enviado un código por SMS para validar los {{amount}}. Introdúcelo para completar el pago.",
-    "confirmEnterCode": "Introducir el código"
+    "confirmCodeTitle": "⏳  Introduce tu código de validación",
+    "confirmCodeBody": "Se te envió un código por SMS para validar los {{amount}}. Introdúcelo para terminar el pago.",
+    "confirmEnterCode": "Introducir el código",
+    "paycardLabel": "Número de cuenta PayCard",
+    "paycardPlaceholder": "El número impreso en tu tarjeta",
+    "paycardHint": "Se envía a PayCard para iniciar el pago; Linky no lo conserva."
   },
   "orders": {
     "title": "Mis pedidos",

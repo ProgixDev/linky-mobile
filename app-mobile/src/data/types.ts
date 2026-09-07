@@ -22,7 +22,7 @@ export type OrderStatus =
  *  décide du rail. */
 export type PaymentMethod =
   | 'orange-money' | 'mtn-money' | 'card' | 'wallet'
-  | 'kulu' | 'soutramoney' | 'lengopay-card';
+  | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard';
 
 /** Ce qu'il reste à faire à l'acheteur après l'initialisation du paiement.
  *  'poll' = rien, il confirme sur son téléphone et le cron tranche. */
