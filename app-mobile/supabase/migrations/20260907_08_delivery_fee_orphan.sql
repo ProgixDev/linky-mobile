@@ -1,5 +1,16 @@
 -- Sortir du sequestre les frais de livraison qui y sont restes coinces.
 --
+-- APPLIQUEE ET VERIFIEE le 2026-09-07 a 20:03:56 (editeur SQL). 15 000 GNF
+-- transferes du sequestre vers la plateforme pour LK-2026-10070. Comptes
+-- refermes juste apres : solde du sequestre 12 360 GNF, du aux deux commandes
+-- vivantes 12 360 GNF, ecart nul. Les deux commandes terminees ne retiennent
+-- plus rien.
+--
+-- Note de lecture pour qui compare aux chiffres ci-dessous : entre le releve et
+-- l'execution, LK-2026-10147 a ete liberee normalement (10 000 au vendeur, 300
+-- a la plateforme). Le solde final est donc 37 660 - 10 300 - 15 000 = 12 360,
+-- et non 22 660. La difference vient de cette liberation, pas de la migration.
+--
 -- CE QUE 20260907_05 A FAIT, ET CE QU'ELLE N'A PAS FAIT. Elle a corrige le
 -- CODE : trois des quatre chemins de sortie oubliaient delivery_fee_minor. Elle
 -- n'a deliberement pas touche a l'argent DEJA bloque — corriger un programme et
