@@ -53,14 +53,15 @@ export function profileFromPhone(e164: string | null | undefined): PaymentProfil
 
 export interface PaymentProfileState {
   profile: PaymentProfile;
-  /** Vrai tant qu'on ne sait pas : ne PAS decider d'un rail de paiement dessus. */
+  /** Vrai tant qu'on ne SAIT PAS — chargement en cours, ou requete en echec.
+   *  Ne PAS decider d'un rail de paiement dessus tant qu'il est vrai. */
   loading: boolean;
   /** Le numero qui a servi a trancher — utile pour l'expliquer a l'ecran. */
   e164: string | null;
 }
 
 export function usePaymentProfile(): PaymentProfileState {
-  const { data: phones, isLoading } = useMyPhones();
+  const { data: phones, isLoading, isError } = useMyPhones();
   // Diaspora escape hatch (2026-09-05) : un numero +224 garde en vivant a
   // l'etranger classait a tort en 'guinea' sans aucun moyen de corriger.
   // Reglable dans Reglages > Confidentialite ; false = comportement inchange.
@@ -72,8 +73,21 @@ export function usePaymentProfile(): PaymentProfileState {
     const e164 = primary?.e164 ?? null;
     return {
       profile: abroadOverride ? 'abroad' : profileFromPhone(e164),
-      loading: isLoading,
+      // UNE REQUETE EN ECHEC N'EST PAS UNE ABSENCE DE NUMERO.
+      //
+      // TanStack repasse isLoading a false une fois les reessais epuises, mais
+      // `data` reste undefined. Sans `isError`, on lisait donc « aucun numero »
+      // — et la regle documentee juste au-dessus traduit ca par 'abroad'. Un
+      // acheteur A CONAKRI, sur une 3G qui coupe, se voyait proposer la carte
+      // Stripe : le seul rail qui refuse justement les cartes guineennes. Il
+      // payait un echec, sans rien pour l'expliquer.
+      //
+      // `loading` est le drapeau que TOUTES les surfaces de paiement utilisent
+      // deja pour n'afficher AUCUNE des deux cartes tant que le profil est
+      // inconnu. On y range donc l'echec : ne pas savoir et ne pas savoir
+      // encore appellent exactement la meme prudence.
+      loading: isLoading || isError,
       e164,
     };
-  }, [phones, isLoading, abroadOverride]);
+  }, [phones, isLoading, isError, abroadOverride]);
 }

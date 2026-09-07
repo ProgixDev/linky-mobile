@@ -228,8 +228,13 @@ export default function BookingDetailRoute() {
                 : undefined
             }
             helperText={
+              // Neutre volontairement : ce champ sert aussi Kulu depuis le
+              // 2026-09-07. Il disait « le numéro Orange Money / MTN qui
+              // recevra la demande de confirmation » — deux opérateurs que le
+              // locataire n'avait pas choisis, et un mécanisme qui n'est pas
+              // celui de Kulu, où c'est un code qui arrive par SMS.
               payerPhone.digits.length === 0
-                ? 'Indique le numéro Orange Money / MTN qui recevra la demande de confirmation.'
+                ? 'Indique le numéro du compte qui paie.'
                 : undefined
             }
           />

@@ -56,7 +56,9 @@ function valid(b: unknown): b is Body {
  *  des deux cotes, donc leurs messages doivent l'etre aussi. */
 function throwBoostError(msg: string, where: string, error: unknown): never {
   if (msg.includes('INSUFFICIENT_FUNDS')) {
-    throwApi('INSUFFICIENT_FUNDS', 400, 'Solde insuffisant. Recharge ton portefeuille ou paie par Orange Money / MTN.');
+    // La recharge du portefeuille est desactivee (WALLET_TOPUP_ENABLED=false) :
+    // conseiller de recharger envoyait le vendeur vers un ecran inatteignable.
+    throwApi('INSUFFICIENT_FUNDS', 400, 'Solde insuffisant. Paie par Orange Money, MTN ou carte bancaire.');
   }
   if (msg.includes('PRODUCT_NOT_FOUND') || msg.includes('PROPERTY_NOT_FOUND')) {
     throwApi('NOT_FOUND', 404, 'Annonce introuvable.');
@@ -232,9 +234,13 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
             // Kulu : rendre {kind:'poll'} priverait l'acheteur de l'ecran ou
             // saisir son code — il attendrait 15 min pour rien. On rejoue donc
             // l'etape reelle du rail, pas seulement sa page.
+            // Kulu ET la carte guineenne. Pour cette derniere, la deduction tient
+            // a railIsDeadEnd : un rail sans numero qui rend 'poll' est ferme des
+            // l'init. Une intention 'lengopay-card' ENCORE VIVANTE et sans page a
+            // donc forcement rendu un code — sinon elle n'existerait plus.
           next_step: livePi.rail_action_url
             ? { kind: 'webview', url: livePi.rail_action_url }
-            : livePi.method === 'kulu'
+            : (livePi.method === 'kulu' || livePi.method === 'lengopay-card')
               ? { kind: 'otp', payId: livePi.rail_intent_id }
               : { kind: 'poll' },
         },

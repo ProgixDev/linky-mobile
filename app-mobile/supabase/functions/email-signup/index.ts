@@ -67,11 +67,29 @@ Deno.serve(makePost<Body>('/v1/auth/email/signup', valid, async ({ sb, body, req
   // store rehydrates from the server on every fresh signin/signup. A new
   // account always defaults to ['buyer'] / null city ; the DB CHECK
   // (users_roles_nonempty_check) guarantees the array is never empty.
+  //
+  // Les trois preferences suivent depuis le 2026-09-07, avec leurs valeurs par
+  // defaut. Elles sont ici parce que signIn() REMPLACE l'utilisateur stocke en
+  // entier : un champ absent de cette charge utile vaut `undefined` cote
+  // client, pas « inchange ». Un compte cree par e-mail n'a evidemment pas
+  // encore d'override de paiement, mais l'envoyer explicitement a `false` fait
+  // que le magasin d'authentification porte la MEME forme sur les quatre
+  // chemins d'entree (inscription, connexion e-mail, connexion telephone, code
+  // a usage unique) — c'est cette divergence de forme qui faisait perdre le
+  // reglage « je paie depuis l'etranger » a la reconnexion.
   return {
     body: {
       access_token,
       refresh_token: `${sess.id}.${refreshSecret}`,
-      user: { ...user, kyc_status: 'none', city: null, roles: ['buyer'] },
+      user: {
+        ...user,
+        kyc_status: 'none',
+        city: null,
+        roles: ['buyer'],
+        profile_public: true,
+        personalize_feed: true,
+        payment_abroad_override: false,
+      },
     },
   };
 }, stripTokens));

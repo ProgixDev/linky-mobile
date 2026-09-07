@@ -8,7 +8,7 @@
 //
 // CE QUE CHAQUE PROFIL VOIT — la regle vient du client :
 //   etranger : Carte bancaire (Stripe) + Orange Money / MTN (Lengopay)
-//   Guinee   : Carte bancaire (Lengopay) + Soutra Money + Orange Money / MTN
+//   Guinee   : Carte bancaire (Lengopay) + Kulu + Soutra Money + Orange Money / MTN
 //   + le Portefeuille Linky quand il est approvisionne, sur les deux profils.
 //
 // « Le bouton Carte bancaire "Stripe" SE TRANSFORME » (client 2026-09-05) : le
@@ -63,9 +63,15 @@ export interface PaymentMethodPickerProps {
   /** Solde du portefeuille. undefined/null = ne pas proposer le portefeuille
    *  (surface qui ne le supporte pas, ou solde encore inconnu). */
   walletBalanceGnf?: number | null;
-  /** false quand la surface n'a pas de rail Stripe cote serveur (le boost, par
-   *  exemple, dont create-boost rejette 'card'). Evite d'afficher un bouton qui
-   *  echouerait — l'erreur qu'on a deja faite une fois avec la carte. */
+  /** false quand la surface n'accepte AUCUN rail carte cote serveur. Evite
+   *  d'afficher un bouton qui echouerait — l'erreur qu'on a deja faite une fois
+   *  avec la carte.
+   *
+   *  Attention : ce drapeau eteint les DEUX cartes, Stripe et Lengopay. Depuis
+   *  le 2026-09-07 le meme bouton sert les deux profils, donc le passer a false
+   *  prive aussi les profils Guinee de leur seul moyen carte. Plus aucun
+   *  appelant ne le passe : create-boost, place-order, place-orders-batch et
+   *  booking-sign-pay acceptent tous la carte. */
   allowCard?: boolean;
 }
 

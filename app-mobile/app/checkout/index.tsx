@@ -648,10 +648,12 @@ export default function CheckoutRoute() {
           </>
         )}
 
-        {/* « Tu recevras un code SMS » ne vaut QUE pour Orange/MTN. Affiche
-            sous une carte bancaire ou Soutra Money, il promet un SMS qui
-            n'arrivera jamais et fait attendre l'acheteur pour rien. */}
-        {mobileMoneySelected && (
+        {/* « Tu recevras un code SMS » ne vaut QUE pour Kulu. Orange et MTN
+            n'envoient AUCUN code : leur demande arrive directement sur le
+            telephone, a valider avec le code du portefeuille de l'operateur —
+            l'acheteur attendait donc un SMS qui n'arrivait jamais. La carte et
+            Soutra Money n'envoient rien non plus. */}
+        {selected === 'kulu' && (
           <Card padding={12}>
             <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
               <I.info size={16} color={colors.primary} />

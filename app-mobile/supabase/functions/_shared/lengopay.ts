@@ -273,9 +273,13 @@ export function railIsDeadEnd(method: LengopayMethod, step: LengopayNextStep): b
   return !LENGOPAY_RAILS[method].needsAccount && step.kind === 'poll';
 }
 
-/** Message unique pour cette impasse — le meme sur les quatre surfaces. */
+/** Message unique pour cette impasse — le meme sur les quatre surfaces.
+ *  Il ne cite QUE des moyens acceptes PARTOUT ou il peut etre lance : le
+ *  portefeuille en faisait partie, mais booking-sign-pay le refuse (payer une
+ *  reservation au portefeuille crediterait le sequestre sans contrepartie), donc
+ *  un locataire qui suivait le conseil recevait un INVALID_BODY. */
 export const RAIL_NO_ACTION_MESSAGE =
-  'Ce moyen de paiement est momentanément indisponible. Choisis Orange Money, MTN ou ton portefeuille.';
+  'Ce moyen de paiement est momentanément indisponible. Choisis Orange Money ou MTN.';
 
 /**
  * Duree de vie d'une intention, telle que TOUT le reste du systeme l'applique

@@ -295,10 +295,10 @@ export default function BoostNewRoute() {
                 d'operateur se fait sur la page Lengopay, le poser ici ne
                 servait a rien.
                 La carte est ouverte depuis le 2026-09-07 (client : « Pareil
-                pour le boost aussi ») : create-boost accepte 'card' et rend un
-                client_secret Stripe, comme la reservation. Le selecteur ne la
-                montre qu'aux profils a l'etranger — un profil Guinee n'a pas
-                encore de rail carte. */}
+                pour le boost aussi »), sur LES DEUX profils : a l'etranger elle
+                part chez Stripe et rend un client_secret ; en Guinee elle part
+                chez Lengopay ('lengopay-card') et rend une page ou un code.
+                create-boost accepte les sept moyens. */}
             <PaymentMethodPicker
               value={method}
               onChange={(m) => {

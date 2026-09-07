@@ -91,7 +91,19 @@ Deno.serve(makePost<Body>('/v1/auth/email/signin', valid, async ({ sb, body, req
   // server faults get the 500.
   const { data: row, error: eRow } = await sb
     .from('emails')
-    .select('user_id, users:users(id, display_name, avatar_url, locale, kyc_status, city, roles, password_hash, status, is_admin)')
+    // profile_public / personalize_feed / payment_abroad_override font partie de
+    // la charge utile depuis le 2026-09-07. signIn() REMPLACE l'utilisateur
+    // stocke en entier : tout champ absent d'ici revient donc a `undefined`
+    // apres chaque connexion, meme s'il etait bien enregistre en base.
+    //
+    // payment_abroad_override est le cas qui coute de l'argent. C'est la SEULE
+    // echappatoire pour le Guineen expatrie qui a garde sa puce +224 — la regle
+    // du prefixe le classerait en Guinee a tort. usePaymentProfile() le lit
+    // directement dans le magasin d'authentification ; absent, il vaut `false`,
+    // et le bouton « Carte bancaire » repasse silencieusement de Stripe a
+    // Lengopay a la reconnexion suivante (reinstallation, second appareil,
+    // session revoquee). L'utilisateur avait pourtant coche la case.
+    .select('user_id, users:users(id, display_name, avatar_url, locale, kyc_status, city, roles, profile_public, personalize_feed, payment_abroad_override, password_hash, status, is_admin)')
     .eq('address', lookupAddress)
     .maybeSingle();
   if (eRow) {

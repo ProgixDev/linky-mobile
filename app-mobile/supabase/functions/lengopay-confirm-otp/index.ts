@@ -102,9 +102,18 @@ Deno.serve(makePost<Body>('/v1/payments/confirm-otp', valid, async ({ sb, body, 
       ? 'Ce paiement est déjà confirmé.'
       : "Ce paiement n'est plus en attente. Recommence la commande.");
   }
-  // Seul Kulu passe par un code. Accepter ici un pay_id Orange/MTN enverrait un
-  // /authenticate que le rail ne comprend pas.
-  if (intent.method !== 'kulu') {
+  // Les rails a code, et eux seuls. Kulu est documente comme tel ; la carte
+  // guineenne (lp-card-gn) n'a AUCUNE section dans la doc Lengopay, donc son
+  // init peut parfaitement rendre requires_otp — railNextStep le laisse passer
+  // (son etape attendue est 'unknown') et l'intention est alors enregistree
+  // avec method='lengopay-card'. Refuser ici sur le seul littéral 'kulu'
+  // rendait ce paiement-la INCONFIRMABLE : l'acheteur recevait un code, voyait
+  // l'ecran de saisie, et se faisait rejeter par notre propre garde.
+  //
+  // Envoyer un /authenticate pour Orange/MTN/Soutra reste refuse : leur rail ne
+  // comprend pas cet appel, et l'acheteur n'a de toute facon aucun code.
+  const OTP_CAPABLE = ['kulu', 'lengopay-card'];
+  if (!OTP_CAPABLE.includes(intent.method)) {
     throwApi('OTP_NOT_APPLICABLE', 400, "Ce moyen de paiement ne demande pas de code.");
   }
 

@@ -423,7 +423,7 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
       updated_at: new Date().toISOString(),
     }).eq('id', orderRow.id);
     throwApi('LENGOPAY_AMOUNT_LIMIT', 400,
-      `Ce montant (${formatGNF(orderRow.total_minor)}) dépasse le plafond autorisé pour Orange Money/MTN (${formatGNF(LENGOPAY_MAX_AMOUNT_MINOR)}). Merci de nous contacter pour un autre moyen de paiement.`);
+      `Ce montant (${formatGNF(orderRow.total_minor)}) dépasse le plafond autorisé pour ${rail.label} (${formatGNF(LENGOPAY_MAX_AMOUNT_MINOR)}). Merci de nous contacter pour un autre moyen de paiement.`);
   }
 
   // S2 Step 1: insert payment_intent FIRST with a placeholder rail_intent_id.

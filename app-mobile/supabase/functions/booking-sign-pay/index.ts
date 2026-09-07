@@ -129,9 +129,13 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
           // Kulu : rendre {kind:'poll'} priverait l'acheteur de l'ecran ou
           // saisir son code — il attendrait 15 min pour rien. On rejoue donc
           // l'etape reelle du rail, pas seulement sa page.
+          // Kulu ET la carte guineenne. Pour cette derniere, la deduction tient
+          // a railIsDeadEnd : un rail sans numero qui rend 'poll' est ferme des
+          // l'init. Une intention 'lengopay-card' ENCORE VIVANTE et sans page a
+          // donc forcement rendu un code — sinon elle n'existerait plus.
         next_step: livePi.rail_action_url
           ? { kind: 'webview', url: livePi.rail_action_url }
-          : livePi.method === 'kulu'
+          : (livePi.method === 'kulu' || livePi.method === 'lengopay-card')
             ? { kind: 'otp', payId: livePi.rail_intent_id }
             : { kind: 'poll' },
       },
@@ -253,7 +257,7 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
   // (aucune intention creee encore) — le locataire peut reessayer.
   if (Number(bk.total_minor) > LENGOPAY_MAX_AMOUNT_MINOR) {
     throwApi('LENGOPAY_AMOUNT_LIMIT', 400,
-      `Ce montant (${formatGNF(Number(bk.total_minor))}) dépasse le plafond autorisé pour Orange Money/MTN (${formatGNF(LENGOPAY_MAX_AMOUNT_MINOR)}). Merci de nous contacter pour un autre moyen de paiement.`);
+      `Ce montant (${formatGNF(Number(bk.total_minor))}) dépasse le plafond autorisé pour ${rail.label} (${formatGNF(LENGOPAY_MAX_AMOUNT_MINOR)}). Merci de nous contacter pour un autre moyen de paiement.`);
   }
 
   // S2 step 1: intent FIRST with a unique placeholder rail_intent_id.

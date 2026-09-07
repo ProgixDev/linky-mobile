@@ -328,7 +328,7 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('batch_id', batchId).eq('status', 'placed');
     throwApi('LENGOPAY_AMOUNT_LIMIT', 400,
-      `Ce montant (${formatGNF(totalMinor)}) dépasse le plafond autorisé pour Orange Money/MTN (${formatGNF(LENGOPAY_MAX_AMOUNT_MINOR)}). Merci de nous contacter pour un autre moyen de paiement.`);
+      `Ce montant (${formatGNF(totalMinor)}) dépasse le plafond autorisé pour ${rail.label} (${formatGNF(LENGOPAY_MAX_AMOUNT_MINOR)}). Merci de nous contacter pour un autre moyen de paiement.`);
   }
 
   const placeholderId = `pending-init-${crypto.randomUUID()}`;

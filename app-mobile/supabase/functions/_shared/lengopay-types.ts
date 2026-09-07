@@ -17,7 +17,13 @@
 // they pick Orange Money / MTN MoMo there), so init needs no phone/gateway.
 // pay_id is base64 WITH padding — never decode or re-encode it.
 
-export type LengopayMethod = 'orange-money' | 'mtn-money' | 'card';
+// LengopayMethod vit desormais dans _shared/lengopay.ts, aux cotes de
+// LENGOPAY_RAILS qui en est la seule source de verite. La definition qui
+// etait ici datait d'avant le 2026-09-07 : elle affirmait encore que 'card'
+// est un rail Lengopay (c'est Stripe, et uniquement Stripe, depuis le
+// dedoublement des deux cartes) et ignorait kulu / soutramoney /
+// lengopay-card. Deux types du meme nom dans le meme espace @shared, dont
+// un faux, est exactement ce qui fait router un paiement au mauvais endroit.
 export type LengopayCurrency = 'GNF' | 'EUR';
 
 /** Our normalized rail status (client normalizes Lengopay's wire casing). */

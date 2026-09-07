@@ -168,14 +168,17 @@ export default function CheckoutConfirmRoute() {
   // n'etait ni la carte ni Orange — un paiement Soutra Money aurait affiche le
   // mauvais operateur a l'acheteur.
   const METHOD_LABEL_KEYS: Record<string, string> = {
-    'card':          'checkout.card',
+    // LES DEUX rails carte portent la MEME etiquette, volontairement : le client
+    // a demande que ce soit le meme bouton qui « se transforme », donc la
+    // difference de rail doit rester invisible a l'acheteur. 'checkout.card' et
+    // 'checkout.cardName' sont identiques en francais et en espagnol mais pas en
+    // anglais (« Card » contre « Bank card ») — un acheteur anglophone payait
+    // donc sur un bouton et retrouvait un autre nom a l'ecran suivant.
+    'card':          'checkout.cardName',
     'lengopay-card': 'checkout.cardName',
     'orange-money':  'checkout.rails.orangeMoney',
     'mtn-money':     'checkout.rails.mtnMoney',
     'soutramoney':   'checkout.rails.soutraMoney',
-    // Pas encore affichable a la commande (il manque l'ecran de code), mais le
-    // moyen est deja accepte cote serveur : sans cette entree une commande Kulu
-    // rendrait « Méthode : Méthode ».
     'kulu':          'checkout.rails.kulu',
     'wallet':        'checkout.walletLinky',
   };
@@ -186,6 +189,12 @@ export default function CheckoutConfirmRoute() {
   // le telephone. Se fier a railActionUrl ferait basculer leur copie vers
   // « ouvre la page » et les detournerait du seul geste qui marche.
   const paysOnPage = order.paymentMethod === 'soutramoney' || order.paymentMethod === 'lengopay-card';
+  // Kulu est un TROISIEME cas d'attente, ni page ni demande telephonique : le
+  // paiement se conclut par un code recu par SMS et saisi dans l'appli. Le
+  // ranger avec Orange/MTN lui affichait « une demande vient de partir sur ton
+  // telephone » — il n'en part aucune, et l'acheteur aurait attendu en vain
+  // quelque chose qu'il devait, lui, aller taper.
+  const paysByCode = order.paymentMethod === 'kulu';
 
   // Countdown for WAIT state.
   const elapsedMs = now - new Date(intent.createdAt).getTime();
@@ -260,14 +269,18 @@ export default function CheckoutConfirmRoute() {
                 dire « verifie ton telephone » ferait attendre l'acheteur devant
                 un ecran ou il ne se passera jamais rien. */}
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
-              {paysOnPage
-                ? t('checkout.confirmOpenPageTitle')
-                : t('checkout.confirmCheckPhoneTitle')}
+              {paysByCode
+                ? t('checkout.confirmCodeTitle')
+                : paysOnPage
+                  ? t('checkout.confirmOpenPageTitle')
+                  : t('checkout.confirmCheckPhoneTitle')}
             </Text>
             <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
-              {paysOnPage
-                ? t('checkout.confirmOpenPageBody', { amount: formatGNF(intent.amountGnf) })
-                : t('checkout.confirmCheckPhoneBody', { amount: formatGNF(intent.amountGnf) })}
+              {paysByCode
+                ? t('checkout.confirmCodeBody', { amount: formatGNF(intent.amountGnf) })
+                : paysOnPage
+                  ? t('checkout.confirmOpenPageBody', { amount: formatGNF(intent.amountGnf) })
+                  : t('checkout.confirmCheckPhoneBody', { amount: formatGNF(intent.amountGnf) })}
             </Text>
             {/* Reprendre le paiement — UNIQUEMENT pour les rails qui ont une
                 page (Soutra Money, carte Lengopay). L'URL vient de la base
@@ -280,6 +293,24 @@ export default function CheckoutConfirmRoute() {
                 affiche a tous les acheteurs Orange/MTN qui n'ont d'ailleurs
                 aucune page a ouvrir. Regression de ma migration v2 du
                 2026-09-05, corrigee ici. */}
+            {/* Kulu : le miroir du bouton ci-dessous, pour le rail qui se
+                termine par un code plutot que par une page. /checkout/otp offre
+                explicitement une sortie « Je n'ai pas reçu le code » qui ramene
+                ici — sans ce bouton, l'acheteur qui l'emprunte ne pouvait plus
+                jamais saisir son code et attendait l'expiration a 15 min. */}
+            {paysByCode && !intent.railIntentId.startsWith('pending-init-') && (
+              <Button
+                size="md"
+                block
+                style={{ marginTop: 14 }}
+                label={t('checkout.confirmEnterCode')}
+                onPress={() => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+                  router.replace({ pathname: '/checkout/otp', params: { payId: intent.railIntentId, orderId: order.id } } as any);
+                }}
+              />
+            )}
+
             {intent.railActionUrl && (
               <Button
                 size="md"

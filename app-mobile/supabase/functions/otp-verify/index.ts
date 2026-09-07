@@ -176,7 +176,19 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
   // app then turned into a confusing "Toi" state.
   const { data: user, error: eUser } = await sb
     .from('users')
-    .select('id, display_name, avatar_url, locale, kyc_status, city, roles')
+    // profile_public / personalize_feed / payment_abroad_override font partie de
+    // la charge utile depuis le 2026-09-07. signIn() REMPLACE l'utilisateur
+    // stocke en entier : tout champ absent d'ici revient donc a `undefined`
+    // apres chaque connexion, meme s'il etait bien enregistre en base.
+    //
+    // payment_abroad_override est le cas qui coute de l'argent. C'est la SEULE
+    // echappatoire pour le Guineen expatrie qui a garde sa puce +224 — la regle
+    // du prefixe le classerait en Guinee a tort. usePaymentProfile() le lit
+    // directement dans le magasin d'authentification ; absent, il vaut `false`,
+    // et le bouton « Carte bancaire » repasse silencieusement de Stripe a
+    // Lengopay a la reconnexion suivante (reinstallation, second appareil,
+    // session revoquee). L'utilisateur avait pourtant coche la case.
+    .select('id, display_name, avatar_url, locale, kyc_status, city, roles, profile_public, personalize_feed, payment_abroad_override')
     .eq('id', userId)
     .single();
   if (eUser || !user) {

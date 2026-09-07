@@ -1226,7 +1226,7 @@
       "orangeMoneyHint": "Confirm on your phone once you've paid",
       "mtnMoney": "MTN Mobile Money",
       "mtnMoneyHint": "Confirm on your phone once you've paid",
-      "mobileMoneyNote": "You pay without leaving the app: enter your number, then confirm the request that arrives on your phone.",
+      "mobileMoneyNote": "You pay without leaving the app: enter your number, then approve the request on your phone — or enter the code you receive by SMS.",
       "mobileMoney": "Orange Money or MTN",
       "mobileMoneyHint": "You pick your operator on the next step",
       "lengopayGuinea": "Card, Wallet or Mobile Money",
@@ -1259,7 +1259,10 @@
     "otpSent": "Code sent — confirmation in progress…",
     "otpError": "Could not confirm the code. Try again.",
     "otpLater": "I didn't get the code",
-    "otpMissing": "Payment not found. Start your order again."
+    "otpMissing": "Payment not found. Start your order again.",
+    "confirmCodeTitle": "⏳  Enter your Kulu code",
+    "confirmCodeBody": "Kulu sent you an SMS code to approve the {{amount}}. Enter it to complete the payment.",
+    "confirmEnterCode": "Enter the code"
   },
   "orders": {
     "title": "My orders",
