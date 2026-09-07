@@ -8,7 +8,10 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { Loader2 } from 'lucide-react';
 import { DataTable } from '@/components/admin/DataTable';
 import { DisputesKanban } from './DisputesKanban';
-import { useAdminOrders, type AdminOrder, type AdminOrderStatus } from '@/data/queries/orders-admin';
+import {
+  useAdminOrders, canForceResolve, type AdminOrder, type AdminOrderStatus,
+} from '@/data/queries/orders-admin';
+import { ForceResolveDialog } from './ForceResolveDialog';
 
 const STATUS_META: Record<AdminOrderStatus, { label: string; cls: string }> = {
   placed: { label: 'PASSÉE', cls: 'bg-sunken text-muted' },
@@ -21,7 +24,10 @@ const STATUS_META: Record<AdminOrderStatus, { label: string; cls: string }> = {
   refunded: { label: 'REMBOURSÉE', cls: 'bg-danger/12 text-danger' },
 };
 
-const columns: ColumnDef<AdminOrder>[] = [
+// Fabrique plutot que constante : la colonne d'action doit pouvoir ouvrir le
+// dialogue, donc connaitre le setter du module.
+function buildColumns(onForceResolve: (o: AdminOrder) => void): ColumnDef<AdminOrder>[] {
+  return [
   {
     accessorKey: 'reference',
     header: 'Référence',
@@ -84,11 +90,34 @@ const columns: ColumnDef<AdminOrder>[] = [
         month: 'short',
       }),
   },
-];
+  {
+    id: 'action',
+    header: '',
+    // Le bouton n'apparait QUE sur les statuts que le serveur accepte
+    // (canForceResolve). Le montrer ailleurs donnerait un INVALID_STATUS que
+    // l'admin ne peut pas corriger — un bouton qui ne marche jamais use la
+    // confiance dans tous les autres.
+    cell: ({ row }) =>
+      canForceResolve(row.original.status) ? (
+        <button
+          type="button"
+          onClick={() => onForceResolve(row.original)}
+          className="rounded-lg bg-sunken px-2.5 py-1.5 text-xs font-bold text-muted transition-colors hover:bg-line hover:text-[#0E1311]"
+        >
+          Débloquer
+        </button>
+      ) : null,
+  },
+  ];
+}
 
 export function OrdersModule() {
   const [tab, setTab] = useState<'kanban' | 'table'>('kanban');
+  const [forceTarget, setForceTarget] = useState<AdminOrder | null>(null);
   const { data: orders, isLoading, isError } = useAdminOrders();
+  // useMemo n'apporterait rien de mesurable ici (une poignee de commandes) et
+  // ajouterait une dependance a tenir a jour.
+  const columns = buildColumns(setForceTarget);
 
   return (
     <div className="space-y-6">
@@ -118,6 +147,10 @@ export function OrdersModule() {
           searchKey="reference"
           searchPlaceholder="Rechercher par référence…"
         />
+      )}
+
+      {forceTarget && (
+        <ForceResolveDialog order={forceTarget} onClose={() => setForceTarget(null)} />
       )}
     </div>
   );
