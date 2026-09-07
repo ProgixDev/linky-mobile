@@ -1,14 +1,22 @@
 // Caller's own orders as seller — mirror of list-my-orders but scoped to
-// seller_id derived from the caller's JWT (never from the request body). The
-// seller is the legitimate audience for scan_token, so this endpoint enables
-// includeScanToken: true unconditionally — seller's QR-gate confirmation flow
-// reads it back from this list to render the QR strip on each card.
+// seller_id derived from the caller's JWT (never from the request body).
+//
+// CE POINT D'ENTREE NE REND PLUS scan_token (2026-09-07). Il le rendait sans
+// condition, pour un usage qui n'existe plus : le vendeur imprimait le QR sur
+// le colis. Depuis l'inversion du 2026-08-22, c'est l'ACHETEUR qui affiche le
+// QR et le vendeur qui le SCANNE — plus aucun ecran vendeur ne lit ce champ.
+//
+// Le laisser sortait un secret pour rien, et pas un secret anodin :
+// seller_confirm_pickup libere le sequestre sur la seule presentation du bon
+// scan_token. Un vendeur pouvait donc le lire ici et s'auto-payer sans que
+// l'acheteur ait rien recu. Le verrou n'a de sens que si le token ne
+// s'obtient QU'A LA CAMERA, en presence de l'acheteur.
 //
 // Defense-in-depth (per project_list_seller_orders_scan_token_defense memo):
 //   1. seller_id is set from requireUser(req) — same posture as place-order;
 //      a caller can never spoof another seller's orders by manipulating body.
-//   2. SELECT explicitly includes scan_token and mapOrder is invoked with
-//      includeScanToken: true, because the seller is the only audience.
+//   2. Le SELECT ne ramene plus scan_token du tout : ce qui ne quitte pas la
+//      base ne peut pas fuiter.
 //   3. V1.1 follow-up: integration test where a buyer JWT calls this endpoint
 //      must return 0 orders (seller_id = buyer's user id will match no rows
 //      unless the buyer has also sold something, which is fine). The
@@ -47,7 +55,7 @@ Deno.serve(makePost<Body>('/v1/orders/list-seller', valid, async ({ sb, body, re
   const limit = body.limit ?? 50;
   let q = sb
     .from('orders')
-    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at, scan_token')
+    .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at')
     .eq('seller_id', userId);
   if (body.status) q = q.eq('status', body.status);
   if (body.cursor) {
@@ -68,5 +76,5 @@ Deno.serve(makePost<Body>('/v1/orders/list-seller', valid, async ({ sb, body, re
     : null;
   // Seller-only endpoint: scanToken is intentionally included on every row so
   // the seller UI can render the QR strip without a second round-trip per card.
-  return { body: { orders: rows.map((r) => mapOrder(r, { includeScanToken: true })), next_cursor } };
+  return { body: { orders: rows.map((r) => mapOrder(r)), next_cursor } };
 }));

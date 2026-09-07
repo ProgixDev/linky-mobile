@@ -16,9 +16,8 @@ function valid(b: unknown): b is Body {
 }
 
 // Phase V.3a -- strip scanToken from the idempotency cache before
-// persistence. The LIVE response a seller gets in the current request
-// still carries scanToken (that's the whole point — they need it to
-// print the QR). But the cached copy a service-role DB read could pull
+// persistence. La reponse VIVANTE de l'acheteur porte encore scanToken (il en
+// a besoin pour afficher son QR). But the cached copy a service-role DB read could pull
 // up over the 24h TTL window must NOT carry the secret : a future
 // audit-log or admin replay path that reads idempotency_keys.response_body
 // would otherwise expose the QR token via the cached row.
@@ -49,13 +48,28 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
   if (r.buyer_id !== userId && r.seller_id !== userId) {
     throwApi('FORBIDDEN', 403, 'Action refusée.');
   }
-  // PII gate (Phase LIVREUR) : seller AND buyer may both receive scan_token.
-  // OLD path : seller printed the QR on the package, buyer self-scanned.
-  // NEW path : buyer renders the QR on-screen for a livreur to scan at
-  // handoff. Both paths coexist (hand-carry still uses the seller-prints
-  // route), so both audiences are legitimate. The token is still hidden
-  // from any other caller (admin uses a separate admin endpoint).
-  const isParticipant = r.buyer_id === userId || r.seller_id === userId;
+  // PII gate — L'ACHETEUR SEUL recoit scan_token, depuis le 2026-09-07.
+  //
+  // Le vendeur le recevait aussi, herite du chemin d'ORIGINE ou c'etait LUI qui
+  // imprimait le QR sur le colis et l'acheteur qui scannait. Ce chemin a ete
+  // INVERSE le 2026-08-22 (« le client ne scanne jamais un QR, il genere
+  // seulement un QR pour sa commande ») : desormais l'acheteur affiche, et
+  // celui qui remet la marchandise scanne. Le vendeur n'a donc plus aucune
+  // raison de detenir ce secret — mais l'exposition, elle, n'a jamais ete
+  // retiree.
+  //
+  // CE QUE CA OUVRAIT, ET POURQUOI C'ETAIT GRAVE. seller_confirm_pickup
+  // n'exige RIEN d'autre que le bon scan_token. Un vendeur pouvait donc lire
+  // le token via cette API, appeler seller-confirm-pickup, et se faire payer
+  // le sequestre SANS QUE L'ACHETEUR SOIT LA ni n'ait rien recu. La migration
+  // 20260822_02 justifie pourtant sa surete par : « il ne le peut qu'en
+  // scannant le QR affiche sur le TELEPHONE DE L'ACHETEUR. Le scan_token n'est
+  // jamais imprime ni transmis au vendeur par un autre canal. » C'etait faux :
+  // l'API etait cet autre canal.
+  //
+  // Le vendeur obtient le token par la CAMERA, au moment de la remise. C'est
+  // tout l'objet du verrou : il exige une presence physique.
+  const isBuyer = r.buyer_id === userId;
 
   // Delivery summary (Phase LIVREUR — seller assign). Surfaced to participants
   // so the seller order screen can render the assignment state (pick / change /
@@ -200,11 +214,10 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
 
   return {
     body: {
-      // PII opt-in (Phase LIVREUR) : both buyer and seller receive scan_token.
-      // Buyer needs it to render their own on-screen QR for livreur handoff ;
-      // seller still gets it for the legacy printed-QR path. Non-participants
-      // never reach this branch (FORBIDDEN above).
-      order:  { ...mapOrder(r, { includeScanToken: isParticipant }), delivery, hasReviewed: !!myReview, items, batchTotalGnf: batchTotalMinor },
+      // scan_token : l'ACHETEUR seul (voir la garde plus haut). Il en a besoin
+      // pour afficher son propre QR a l'ecran ; le vendeur et le livreur le
+      // lisent avec leur camera au moment de la remise, jamais par l'API.
+      order:  { ...mapOrder(r, { includeScanToken: isBuyer }), delivery, hasReviewed: !!myReview, items, batchTotalGnf: batchTotalMinor },
       intent: intentRow ? mapPaymentIntent(intentRow as PaymentIntentRow) : null,
     },
   };
