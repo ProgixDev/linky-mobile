@@ -117,6 +117,8 @@ export function useBookingSignPay() {
     mutationFn: async (input: {
       bookingId: string;
       payerPhone?: string;
+      /** PayCard : numero de compte de la carte prepayee. */
+      payerCard?: string;
       /** Tout sauf 'wallet' : confirm_booking_payment crédite le séquestre à
        *  sens unique (l'argent vient du rail), donc payer une réservation au
        *  portefeuille créerait de la monnaie. Les rails Lengopay guinéens sont
@@ -132,6 +134,7 @@ export function useBookingSignPay() {
         body: {
           booking_id: input.bookingId,
           ...(input.payerPhone ? { payer_phone: input.payerPhone } : {}),
+          ...(input.payerCard ? { payer_card: input.payerCard } : {}),
           ...(input.paymentMethod ? { payment_method: input.paymentMethod } : {}),
         },
       });

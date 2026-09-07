@@ -32,6 +32,8 @@ export interface CreateBoostInput {
   /** Défaut portefeuille — c'était le seul rail avant le 2026-08-12. */
   method?: BoostPayMethod;
   payerPhone?: string;
+  /** PayCard : numero de compte de la carte prepayee. */
+  payerCard?: string;
 }
 
 /** 'card' = Stripe (profils étranger). 'lengopay-card' / 'soutramoney' / 'kulu'
@@ -41,7 +43,7 @@ export interface CreateBoostInput {
  *  même sélecteur partagé qui alimente les deux. */
 export type BoostPayMethod =
   | 'wallet' | 'orange-money' | 'mtn-money' | 'card'
-  | 'kulu' | 'soutramoney' | 'lengopay-card';
+  | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard';
 
 /** Portefeuille : le boost est actif immédiatement (débit atomique côté serveur).
  *  Mobile money : rien n'est actif encore — depuis Lengopay v2 (2026-09-05) la
@@ -66,7 +68,7 @@ export function useCreateBoost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      productId, propertyId, days, method = 'wallet', payerPhone,
+      productId, propertyId, days, method = 'wallet', payerPhone, payerCard,
     }: CreateBoostInput): Promise<CreateBoostResult> => {
       const target = propertyId ? { property_id: propertyId } : { product_id: productId };
       const res = await apiPost<{
@@ -76,7 +78,11 @@ export function useCreateBoost() {
         next_step?: PaymentNextStep;
       }>({
         path: '/create-boost',
-        body: { ...target, days, method, ...(payerPhone ? { payer_phone: payerPhone } : {}) },
+        body: {
+          ...target, days, method,
+          ...(payerPhone ? { payer_phone: payerPhone } : {}),
+          ...(payerCard ? { payer_card: payerCard } : {}),
+        },
       });
       if (res.payment && res.boost_id) {
         return {

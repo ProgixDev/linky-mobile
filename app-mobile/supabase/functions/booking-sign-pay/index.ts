@@ -16,7 +16,8 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import {
   initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
-  LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE, intentIsLive,
+  LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
+  railNeedsCard, LengopayRefused, intentIsLive,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { formatGNF } from '@shared/push.ts';
@@ -26,6 +27,9 @@ interface Body {
   booking_id: string;
   /** Optional: the mobile-money number for reference. Falls back to primary phone. */
   payer_phone?: string;
+  /** PayCard : numero de compte de la carte prepayee. Jamais persiste — il ne
+   *  sert qu'a l'appel d'initialisation chez Lengopay. */
+  payer_card?: string;
   /** 'card' = Stripe (profils etranger) ; les autres = rails Lengopay.
    *  Absent = orange-money, pour que les installations anterieures continuent
    *  de fonctionner exactement comme avant. */
@@ -35,12 +39,13 @@ interface Body {
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 const PHONE_RE = /^\+224\d{9}$/;
+const CARD_RE = /^[0-9 -]{6,32}$/;
 // 'kulu' rouvert le 2026-09-07 avec la phase 3 : l'ecran de saisie du code
 // (app/checkout/otp.tsx) et lengopay-confirm-otp existent desormais, donc
 // un paiement Kulu peut etre TERMINE. Il etait bloque ici entre-temps.
 const METHODS = [
   'card', 'orange-money', 'mtn-money',
-  'kulu', 'soutramoney', 'lengopay-card',
+  'kulu', 'soutramoney', 'lengopay-card', 'paycard',
 ];
 
 function valid(b: unknown): b is Body {
@@ -48,6 +53,9 @@ function valid(b: unknown): b is Body {
   const x = b as Record<string, unknown>;
   if (typeof x.booking_id !== 'string' || !UUID_RE.test(x.booking_id)) return false;
   if (x.payer_phone !== undefined && (typeof x.payer_phone !== 'string' || !PHONE_RE.test(x.payer_phone))) return false;
+  if (x.payer_card !== undefined) {
+    if (typeof x.payer_card !== 'string' || !CARD_RE.test(x.payer_card.trim())) return false;
+  }
   if (x.payment_method !== undefined
       && (typeof x.payment_method !== 'string' || !METHODS.includes(x.payment_method))) return false;
   return true;
@@ -135,7 +143,10 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
           // donc forcement rendu un code — sinon elle n'existerait plus.
         next_step: livePi.rail_action_url
           ? { kind: 'webview', url: livePi.rail_action_url }
-          : (livePi.method === 'kulu' || livePi.method === 'lengopay-card')
+          // paycard rejoint la liste : elle aussi se conclut par un code, et une
+          // intention vivante sans page ne peut etre que dans cet etat.
+          : (livePi.method === 'kulu' || livePi.method === 'lengopay-card'
+             || livePi.method === 'paycard')
             ? { kind: 'otp', payId: livePi.rail_intent_id }
             : { kind: 'poll' },
       },
@@ -239,6 +250,13 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
   const lengoMethod = method as LengopayMethod;
   const rail = LENGOPAY_RAILS[lengoMethod];
 
+  // PayCard exige un numero de carte EN PLUS du telephone. Refuse ici, avant le
+  // moindre appel reseau : rien n'est encore engage.
+  const payerCard = body.payer_card?.trim();
+  if (railNeedsCard(lengoMethod) && !payerCard) {
+    throwApi('CARD_NUMBER_REQUIRED', 400, 'Saisis ton numéro de compte PayCard.');
+  }
+
   // Payer phone (reference on the intent) — body override, else primary phone.
   // Seuls les rails qui encaissent sur un numero en reclament un.
   let payerPhone: string | undefined;
@@ -289,6 +307,7 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
       amount_minor: Number(bk.total_minor),
       currency:     bk.currency as 'GNF' | 'EUR',
       ...(payerPhone ? { account: toLocalGnAccount(payerPhone) } : {}),
+      ...(payerCard ? { card: payerCard } : {}),
     });
   } catch (e) {
     console.error('[booking-sign-pay] lengopay init error:', e);
@@ -296,6 +315,9 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
       p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'init_failed',
       p_error_code: 'RAIL_INIT_FAILED', p_error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
     });
+    // Refus METIER : le message du fournisseur nomme ce qui bloque, et le
+    // locataire peut le corriger.
+    if (e instanceof LengopayRefused) throwApi('RAIL_REFUSED', 400, e.message);
     throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
   }
 
@@ -323,6 +345,9 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
       rail_intent_id:  initResp.payId,
       rail_status:     'pending',
       rail_action_url: railActionUrl(nextStep),
+      // PayCard : l'etat a repasser tel quel a la finalisation, ecrit dans le
+      // MEME UPDATE que le pay_id.
+      ...(initResp.context ? { rail_context: initResp.context } : {}),
       updated_at:      new Date().toISOString(),
     })
     .eq('id', intentRow.id);

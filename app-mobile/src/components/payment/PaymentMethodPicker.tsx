@@ -155,6 +155,20 @@ export function PaymentMethodPicker({
         />
       )}
 
+      {/* PayCard : carte prepayee guineenne. Elle exige un numero de compte EN
+          PLUS du telephone — l'ecran qui affiche ce selecteur DOIT donc rendre
+          un champ de saisie quand elle est choisie, sans quoi le bouton payer
+          echouerait sur un CARD_NUMBER_REQUIRED sans rien a corriger. */}
+      {showGuineaWallets && (
+        <MethodRow
+          selected={value === 'paycard'}
+          onPress={() => onChange('paycard')}
+          title={t('checkout.rails.paycard')}
+          hint={t('checkout.rails.paycardHint')}
+          icon={<I.card size={18} color={colors.text} />}
+        />
+      )}
+
       {showWallet && (
         <>
           <MicroLabel label={t('checkout.sectionOther')} />

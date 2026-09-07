@@ -11,7 +11,7 @@ import { requireUser } from '@shared/auth.ts';
 import { mapBoost, type BoostRow } from '@shared/catalog.ts';
 import { boostPrice } from '@shared/boost.ts';
 import {
-  initForRail, toLocalGnAccount, isGnE164,
+  initForRail, toLocalGnAccount, isGnE164, railNeedsCard, LengopayRefused,
   LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE, intentIsLive,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
@@ -28,6 +28,9 @@ interface Body {
   method?: 'wallet' | 'orange-money' | 'mtn-money' | 'card'
          | 'kulu' | 'soutramoney' | 'lengopay-card';
   payer_phone?: string;
+  /** PayCard : numero de compte de la carte prepayee. Jamais persiste — il ne
+   *  sert qu'a l'appel d'initialisation chez Lengopay. */
+  payer_card?: string;
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -36,8 +39,9 @@ const UUID_RE = /^[0-9a-f-]{36}$/i;
 // un paiement Kulu peut etre TERMINE. Il etait bloque ici entre-temps.
 const METHODS = [
   'wallet', 'orange-money', 'mtn-money', 'card',
-  'kulu', 'soutramoney', 'lengopay-card',
+  'kulu', 'soutramoney', 'lengopay-card', 'paycard',
 ];
+const CARD_RE = /^[0-9 -]{6,32}$/;
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -45,6 +49,9 @@ function valid(b: unknown): b is Body {
   if (typeof x.days !== 'number' || !Number.isInteger(x.days)) return false;
   if (x.method !== undefined && (typeof x.method !== 'string' || !METHODS.includes(x.method))) return false;
   if (x.payer_phone !== undefined && typeof x.payer_phone !== 'string') return false;
+  if (x.payer_card !== undefined) {
+    if (typeof x.payer_card !== 'string' || !CARD_RE.test(x.payer_card.trim())) return false;
+  }
   const hasProduct = typeof x.product_id === 'string' && UUID_RE.test(x.product_id);
   const hasProperty = typeof x.property_id === 'string' && UUID_RE.test(x.property_id);
   // exactly one target (XOR)
@@ -181,6 +188,12 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
     const lengoMethod = method as LengopayMethod;
     const rail = LENGOPAY_RAILS[lengoMethod];
 
+    // PayCard exige un numero de carte EN PLUS du telephone.
+    const payerCard = body.payer_card?.trim();
+    if (railNeedsCard(lengoMethod) && !payerCard) {
+      throwApi('CARD_NUMBER_REQUIRED', 400, 'Saisis ton numéro de compte PayCard.');
+    }
+
     // Seuls les rails qui encaissent sur un numero en reclament un (Soutra
     // Money et la carte identifient le vendeur sur leur propre page).
     let payerPhone: string | undefined;
@@ -240,7 +253,10 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
             // donc forcement rendu un code — sinon elle n'existerait plus.
           next_step: livePi.rail_action_url
             ? { kind: 'webview', url: livePi.rail_action_url }
-            : (livePi.method === 'kulu' || livePi.method === 'lengopay-card')
+            // paycard rejoint la liste : elle aussi se conclut par un code, et
+            // une intention vivante sans page ne peut etre que dans cet etat.
+            : (livePi.method === 'kulu' || livePi.method === 'lengopay-card'
+               || livePi.method === 'paycard')
               ? { kind: 'otp', payId: livePi.rail_intent_id }
               : { kind: 'poll' },
         },
@@ -283,6 +299,7 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
         amount_minor: amount,
         currency: 'GNF',
         ...(payerPhone ? { account: toLocalGnAccount(payerPhone) } : {}),
+        ...(payerCard ? { card: payerCard } : {}),
       });
     } catch (e) {
       console.error('[create-boost] lengopay init error:', e);
@@ -290,6 +307,9 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
         p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'init_failed',
         p_error_code: 'RAIL_INIT_FAILED', p_error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
       });
+      // Refus METIER : le message du fournisseur nomme ce qui bloque, et le
+      // vendeur peut le corriger.
+      if (e instanceof LengopayRefused) throwApi('RAIL_REFUSED', 400, e.message);
       throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
     }
 
@@ -316,6 +336,7 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
         rail_intent_id:  initResp.payId,
         rail_status:     'pending',
         rail_action_url: railActionUrl(nextStep),
+        ...(initResp.context ? { rail_context: initResp.context } : {}),
         updated_at:      new Date().toISOString(),
       })
       .eq('id', intentRow.id);

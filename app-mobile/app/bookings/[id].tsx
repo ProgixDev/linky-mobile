@@ -50,12 +50,18 @@ export default function BookingDetailRoute() {
   // propre page : leur reclamer un numero le bloquerait pour rien.
   // Doit rester d'accord avec LENGOPAY_RAILS[...].needsAccount cote serveur :
   // Kulu encaisse SUR un numero, comme Orange et MTN.
+  // PayCard aussi : elle encaisse sur un numero ET sur un numero de compte.
   const needsAccountNumber = method === 'orange-money' || method === 'mtn-money'
-    || method === 'kulu';
+    || method === 'kulu' || method === 'paycard';
   const payerPhone = usePayerPhone();
   const needsPayerPhone = needsAccountNumber && !payerPhone.loading;
   const payerPhoneValid = !needsAccountNumber || payerPhone.valid;
   const payerPhoneE164 = payerPhone.e164;
+  // Numero de compte PayCard. Il ne quitte l'appareil que dans l'appel
+  // d'initialisation : ni stocke, ni journalise.
+  const [payerCard, setPayerCard] = useState('');
+  const payerCardDigits = payerCard.replace(/\D/g, '');
+  const payerCardValid = method !== 'paycard' || payerCardDigits.length >= 6;
 
   const booking = (q.data ?? []).find((b) => b.id === id);
 
@@ -80,6 +86,7 @@ export default function BookingDetailRoute() {
       const res = await signPay.mutateAsync({
         bookingId: booking.id,
         ...(needsAccountNumber && payerPhoneE164 ? { payerPhone: payerPhoneE164 } : {}),
+        ...(method === 'paycard' && payerCardDigits ? { payerCard: payerCardDigits } : {}),
         paymentMethod: method as Exclude<PaymentMethod, 'wallet'>,
       });
 
@@ -211,6 +218,22 @@ export default function BookingDetailRoute() {
           </View>
         )}
 
+        {/* Numero de compte PayCard — au-dessus du telephone : c'est
+            l'information propre a ce rail, le telephone n'en est que le canal
+            du code. Sans ce champ, le bouton echouerait sur un
+            CARD_NUMBER_REQUIRED que rien a l'ecran ne permettrait de corriger. */}
+        {booking.status === 'accepted' && method === 'paycard' && (
+          <Input
+            label="Numéro de compte PayCard"
+            leadingIcon="card"
+            keyboardType="number-pad"
+            placeholder="Le numéro inscrit sur ta carte"
+            value={payerCard}
+            onChangeText={setPayerCard}
+            helperText="On l’envoie à PayCard pour lancer le paiement ; Linky ne le conserve pas."
+          />
+        )}
+
         {/* Numero qui paie — pre-rempli avec celui du compte s'il est guineen,
             modifiable sinon (la diaspora regle avec un compte OM/MTN guineen
             pilote a distance). Inutile pour la carte. */}
@@ -247,7 +270,7 @@ export default function BookingDetailRoute() {
             // label stops the text from crowding the 56px pill.
             label={payBusy ? 'Paiement en cours…' : 'Maintenir pour payer'}
             onConfirm={onSignPay}
-            disabled={payBusy || !payerPhoneValid}
+            disabled={payBusy || !payerPhoneValid || !payerCardValid}
           />
         )}
         {booking.status === 'paid' && (

@@ -101,8 +101,9 @@ export default function BoostNewRoute() {
   // useCreateBoost savait deja l'envoyer, mais rien a l'ecran ne le demandait).
   // Doit rester d'accord avec LENGOPAY_RAILS[...].needsAccount cote serveur :
   // Kulu encaisse SUR un numero, comme Orange et MTN.
+  // PayCard aussi : elle encaisse sur un numero ET sur un numero de compte.
   const mobileMoneySelected = method === 'orange-money' || method === 'mtn-money'
-    || method === 'kulu';
+    || method === 'kulu' || method === 'paycard';
   // Le numero QUI PAIE — voir src/lib/payerPhone.ts. Toujours propose pour le
   // mobile money (la diaspora pilote un compte OM/MTN guineen a distance,
   // client 2026-09-05), pre-rempli avec celui du compte s'il est guineen.
@@ -110,6 +111,11 @@ export default function BoostNewRoute() {
   const needsPayerPhone = mobileMoneySelected && !payerPhone.loading;
   const payerPhoneValid = !mobileMoneySelected || payerPhone.valid;
   const payerPhoneE164 = payerPhone.e164;
+  // Numero de compte PayCard. Il ne quitte l'appareil que dans l'appel
+  // d'initialisation : ni stocke, ni journalise.
+  const [payerCard, setPayerCard] = useState('');
+  const payerCardDigits = payerCard.replace(/\D/g, '');
+  const payerCardValid = method !== 'paycard' || payerCardDigits.length >= 6;
 
   const onPay = async () => {
     if (!selected || !selectedTier || create.isPending) return;
@@ -119,7 +125,10 @@ export default function BoostNewRoute() {
         selected.kind === 'property'
           ? { propertyId: selected.id }
           : { productId: selected.id };
-      const res = await create.mutateAsync({ ...target, days: selectedTier.days, method, payerPhone: payerPhoneE164 });
+      const res = await create.mutateAsync({
+        ...target, days: selectedTier.days, method, payerPhone: payerPhoneE164,
+        ...(method === 'paycard' && payerCardDigits ? { payerCard: payerCardDigits } : {}),
+      });
 
       // Carte : feuille Stripe native, exactement comme la reservation. Le
       // boost reste 'pending_payment' — c'est le webhook qui l'activera.
@@ -310,6 +319,21 @@ export default function BoostNewRoute() {
           </View>
         )}
 
+        {/* Numero de compte PayCard — sans ce champ, create-boost rejetterait
+            sec avec CARD_NUMBER_REQUIRED et rien a l'ecran ne permettrait d'y
+            repondre (meme defaut que le champ telephone corrigeait plus haut). */}
+        {hasListings && method === 'paycard' && (
+          <Input
+            label={t('checkout.paycardLabel')}
+            leadingIcon="card"
+            keyboardType="number-pad"
+            placeholder={t('checkout.paycardPlaceholder')}
+            value={payerCard}
+            onChangeText={setPayerCard}
+            helperText={t('checkout.paycardHint')}
+          />
+        )}
+
         {/* Compte sans numero (inscrit par email) : sans ce champ, create-boost
             rejetait sec avec « Numero de paiement requis » et rien a l'ecran
             ne permettait d'agir dessus. */}
@@ -347,7 +371,7 @@ export default function BoostNewRoute() {
             // insuffisant » inexplicable, soit un debit silencieux de son
             // portefeuille). Le rattrapage de :96 ne s'arme qu'une fois le solde
             // connu ; ce garde-fou couvre la fenetre d'avant.
-            disabled={!selected || !selectedTier || create.isPending || !payerPhoneValid || wallet.isLoading}
+            disabled={!selected || !selectedTier || create.isPending || !payerPhoneValid || !payerCardValid || wallet.isLoading}
             loading={create.isPending}
             onPress={() => void onPay()}
           />
