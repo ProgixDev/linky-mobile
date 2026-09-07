@@ -1205,8 +1205,8 @@
     "confirmCardConfirmingTitle": "⏳  Confirming…",
     "confirmCardConfirmingBody": "Your bank is confirming the <strong>{{amount}}</strong> payment — it takes a few seconds.",
     "confirmCardConfirmingBodyPlain": "Your bank is confirming the {{amount}} payment — it takes a few seconds.",
-    "confirmCheckPhoneTitle": "⏳  Finish your payment",
-    "confirmCheckPhoneBody": "Open the payment page, pick Orange Money or MTN MoMo and approve {{amount}}. This screen updates automatically once confirmed.",
+    "confirmCheckPhoneTitle": "⏳  Confirm on your phone",
+    "confirmCheckPhoneBody": "A {{amount}} request has just been sent to your phone. Approve it with your PIN — this screen updates on its own.",
     "confirmTimeRemaining": "⏱  Time left: {{time}}",
     "confirmCancelling": "Cancelling…",
     "confirmCancelPayment": "Cancel payment",
@@ -1230,7 +1230,10 @@
       "mobileMoney": "Orange Money or MTN",
       "mobileMoneyHint": "You pick your operator on the next step",
       "lengopayGuinea": "Card, Wallet or Mobile Money",
-      "lengopayGuineaHint": "Paycard, Kulu, Soutra, Orange Money or MTN — you choose at the next step"
+      "lengopayGuineaHint": "Paycard, Kulu, Soutra, Orange Money or MTN — you choose at the next step",
+      "soutraMoney": "Soutra Money",
+      "soutraMoneyHint": "You finish the payment on the Soutra Money page",
+      "kulu": "Kulu"
     },
     "confirmOpenPayment": "Open the payment page",
     "infoMobile": "You will receive an SMS code on your number to confirm the payment.",
@@ -1241,7 +1244,9 @@
     "payerPhoneLabel": "Number for payment",
     "payerPhonePlaceholder": "6XX XX XX XX",
     "payerPhoneHint": "No number on your account — enter the one that will receive the confirmation code.",
-    "payerPhoneInvalid": "Invalid number (9 digits, starts with 6)."
+    "payerPhoneInvalid": "Invalid number (9 digits, starts with 6).",
+    "confirmOpenPageTitle": "Finish your payment",
+    "confirmOpenPageBody": "Open the payment page and approve the {{amount}}. We confirm your order as soon as the payment lands."
   },
   "orders": {
     "title": "My orders",

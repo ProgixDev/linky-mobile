@@ -1205,8 +1205,8 @@
     "confirmCardConfirmingTitle": "⏳  Confirmation en cours…",
     "confirmCardConfirmingBody": "Votre banque confirme le paiement de <strong>{{amount}}</strong> — ça prend quelques secondes.",
     "confirmCardConfirmingBodyPlain": "Votre banque confirme le paiement de {{amount}} — ça prend quelques secondes.",
-    "confirmCheckPhoneTitle": "⏳  Finalisez votre paiement",
-    "confirmCheckPhoneBody": "Ouvrez la page de paiement, choisissez Orange Money ou MTN MoMo et validez {{amount}}. Cet écran se met à jour automatiquement dès la confirmation.",
+    "confirmCheckPhoneTitle": "⏳  Confirme sur ton téléphone",
+    "confirmCheckPhoneBody": "Une demande de {{amount}} vient de partir sur ton téléphone. Valide-la avec ton code, cet écran se met à jour tout seul.",
     "confirmTimeRemaining": "⏱  Temps restant : {{time}}",
     "confirmCancelling": "Annulation…",
     "confirmCancelPayment": "Annuler le paiement",
@@ -1230,7 +1230,10 @@
       "mobileMoney": "Orange Money ou MTN",
       "mobileMoneyHint": "Tu choisis ton opérateur à l’étape suivante",
       "lengopayGuinea": "Carte bancaire, Wallet ou Mobile Money",
-      "lengopayGuineaHint": "Paycard, Kulu, Soutra, Orange Money ou MTN — tu choisis à l’étape suivante"
+      "lengopayGuineaHint": "Paycard, Kulu, Soutra, Orange Money ou MTN — tu choisis à l’étape suivante",
+      "soutraMoney": "Soutra Money",
+      "soutraMoneyHint": "Tu finis le paiement sur la page Soutra Money",
+      "kulu": "Kulu"
     },
     "confirmOpenPayment": "Ouvrir la page de paiement",
     "infoMobile": "Tu recevras un code SMS sur ton numéro pour confirmer le paiement.",
@@ -1241,7 +1244,9 @@
     "payerPhoneLabel": "Numéro pour le paiement",
     "payerPhonePlaceholder": "6XX XX XX XX",
     "payerPhoneHint": "Aucun numéro sur ton compte — indique celui qui recevra le code de confirmation.",
-    "payerPhoneInvalid": "Numéro invalide (9 chiffres, commence par 6)."
+    "payerPhoneInvalid": "Numéro invalide (9 chiffres, commence par 6).",
+    "confirmOpenPageTitle": "Termine ton paiement",
+    "confirmOpenPageBody": "Ouvre la page de paiement et valide les {{amount}}. On confirme ta commande dès que le paiement est reçu."
   },
   "orders": {
     "title": "Mes commandes",

@@ -10,7 +10,11 @@ import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { mapBoost, type BoostRow } from '@shared/catalog.ts';
 import { boostPrice } from '@shared/boost.ts';
-import { initPaymentV2, toLocalGnAccount, isGnE164 } from '@shared/lengopay.ts';
+import {
+  initPaymentV2, toLocalGnAccount, isGnE164,
+  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
+  type LengopayMethod,
+} from '@shared/lengopay.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 
 interface Body {
@@ -18,14 +22,24 @@ interface Body {
   property_id?: string;
   days: number;
   /** Défaut 'wallet' — c'était le seul rail avant le 2026-08-12, et les anciennes
-   *  versions de l'app n'envoient pas ce champ. 'card' ajouté le 2026-09-07
-   *  (client : « Pareil pour le boost aussi »). */
-  method?: 'wallet' | 'orange-money' | 'mtn-money' | 'card';
+   *  versions de l'app n'envoient pas ce champ. 'card' (Stripe) et les rails
+   *  Lengopay guinéens ajoutés le 2026-09-07 (client : « Pareil pour le boost
+   *  aussi. Unifier les méthodes de paiement dans l'appli »). */
+  method?: 'wallet' | 'orange-money' | 'mtn-money' | 'card'
+         | 'kulu' | 'soutramoney' | 'lengopay-card';
   payer_phone?: string;
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
-const METHODS = ['wallet', 'orange-money', 'mtn-money', 'card'];
+// 'kulu' est DELIBEREMENT ABSENT tant que l'ecran de saisie du code
+// n'existe pas (phase 3). Son rail envoie un vrai SMS a l'acheteur, et
+// /api/v2/authenticate n'est appele nulle part : l'accepter ici ouvrirait
+// un paiement que PERSONNE ne pourrait terminer. Il reste dans la
+// contrainte CHECK et dans LENGOPAY_RAILS — seul ce validateur le bloque.
+const METHODS = [
+  'wallet', 'orange-money', 'mtn-money', 'card',
+  'soutramoney', 'lengopay-card',
+];
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -164,14 +178,61 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
   // intention AVANT l'appel au rail, avec un rail_intent_id provisoire, pour
   // qu'aucun paiement ne puisse exister sans ligne en base.
   if (method !== 'wallet') {
-    let payerPhone = body.payer_phone?.trim();
-    if (!payerPhone) {
-      const { data: phoneRow } = await sb
-        .from('phones').select('e164').eq('user_id', userId).eq('is_primary', true).maybeSingle();
-      payerPhone = phoneRow?.e164 ?? undefined;
+    const lengoMethod = method as LengopayMethod;
+    const rail = LENGOPAY_RAILS[lengoMethod];
+
+    // Seuls les rails qui encaissent sur un numero en reclament un (Soutra
+    // Money et la carte identifient le vendeur sur leur propre page).
+    let payerPhone: string | undefined;
+    if (rail.needsAccount) {
+      payerPhone = body.payer_phone?.trim();
+      if (!payerPhone) {
+        const { data: phoneRow } = await sb
+          .from('phones').select('e164').eq('user_id', userId).eq('is_primary', true).maybeSingle();
+        payerPhone = phoneRow?.e164 ?? undefined;
+      }
+      if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
+      if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, `Indique le numéro ${rail.label} qui paie (9 chiffres, commence par 6).`);
     }
-    if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
-    if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, 'Indique le numéro Orange Money / MTN qui paie (9 chiffres, commence par 6).');
+
+    // ── UN SEUL PAIEMENT VIVANT PAR ANNONCE ─────────────────────────────────
+    // create_pending_boost fabrique un boost NEUF a chaque appel. Sans cette
+    // garde, un vendeur qui ferme la page Soutra Money sans payer et retape
+    // « Payer » ouvre un SECOND paiement vivant pour la meme annonce ; s'il
+    // regle les deux (la premiere page est encore ouverte), il paie deux fois.
+    // On lui rend donc le paiement deja en cours au lieu d'en creer un autre.
+    // Moyen different : on refuse, faute de pouvoir annuler chez Lengopay.
+    const targetCol = body.property_id ? 'property_id' : 'product_id';
+    const targetId = body.property_id ?? body.product_id;
+    const { data: liveBoost } = await sb
+      .from('boosts')
+      .select('id, days, payment_intents!inner ( id, method, rail_intent_id, rail_action_url, status )')
+      .eq('seller_id', userId)
+      .eq(targetCol, targetId)
+      .eq('status', 'pending_payment')
+      .eq('payment_intents.status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const livePi = (liveBoost?.payment_intents as
+      { method: string; rail_intent_id: string; rail_action_url: string | null }[] | undefined)?.[0];
+    if (liveBoost && livePi && !String(livePi.rail_intent_id).startsWith('pending-init-')) {
+      // La DUREE compte autant que le moyen : rendre le paiement en cours alors
+      // que le vendeur vient d'en choisir une autre lui facturerait l'ancien
+      // tarif pour la nouvelle duree affichee a l'ecran.
+      if (livePi.method !== method || liveBoost.days !== body.days) {
+        throwApi('PAYMENT_IN_PROGRESS', 409,
+          'Un paiement est déjà en cours pour cette annonce. Termine-le, ou attends 15 minutes avant de changer de formule.');
+      }
+      return {
+        body: {
+          boost_id: liveBoost.id,
+          next_step: livePi.rail_action_url
+            ? { kind: 'webview', url: livePi.rail_action_url }
+            : { kind: 'poll' },
+        },
+      };
+    }
 
     const { data: boostId, error: pendErr } = await sb.rpc('create_pending_boost', {
       p_product_id:   body.product_id ?? null,
@@ -194,7 +255,7 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
         method,
         currency:       'GNF',
         amount_minor:   amount,
-        payer_phone:    payerPhone,
+        payer_phone:    payerPhone ?? null,
       })
       .select('id')
       .single();
@@ -208,8 +269,8 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       initResp = await initPaymentV2({
         amount_minor: amount,
         currency: 'GNF',
-        type_account: method === 'mtn-money' ? 'lp-momo-gn' : 'lp-om-gn',
-        account: toLocalGnAccount(payerPhone),
+        type_account: rail.typeAccount,
+        ...(payerPhone ? { account: toLocalGnAccount(payerPhone) } : {}),
       });
     } catch (e) {
       console.error('[create-boost] lengopay init error:', e);
@@ -220,9 +281,31 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
     }
 
+    const nextStep = railNextStep(lengoMethod, initResp);
+
+    // Impasse : rail sans numero et sans page — voir railIsDeadEnd. Le boost
+    // reserve n'a plus de chemin de reglement, on le referme tout de suite
+    // (process_boost_intent_outcome annule l'intention ET le boost).
+    if (railIsDeadEnd(lengoMethod, nextStep)) {
+      console.error('[create-boost] rail sans action exploitable', {
+        method: lengoMethod, pay_id: initResp.pay_id, boost_id: boostId,
+      });
+      await sb.rpc('process_boost_intent_outcome', {
+        p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'no_action',
+        p_error_code: 'RAIL_NO_ACTION',
+        p_error_message: `pay_id=${initResp.pay_id} method=${lengoMethod}`,
+      });
+      throwApi('RAIL_NO_ACTION', 502, RAIL_NO_ACTION_MESSAGE);
+    }
+
     const { error: updErr } = await sb
       .from('payment_intents')
-      .update({ rail_intent_id: initResp.pay_id, rail_status: 'pending', updated_at: new Date().toISOString() })
+      .update({
+        rail_intent_id:  initResp.pay_id,
+        rail_status:     'pending',
+        rail_action_url: railActionUrl(nextStep),
+        updated_at:      new Date().toISOString(),
+      })
       .eq('id', intentRow.id);
     if (updErr) {
       // Le paiement existe chez Lengopay mais on ne saurait plus le relier :
@@ -236,8 +319,9 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
     }
 
-    // Plus de payment_url (v2 est in-app) — le client attend/poll directement.
-    return { body: { boost_id: boostId } };
+    // next_step : sonder (Orange/MTN), ouvrir la page (Soutra Money) ou saisir
+    // un code (Kulu).
+    return { body: { boost_id: boostId, next_step: nextStep } };
   }
 
   // ─── Rail portefeuille (inchange) ─────────────────────────────────────────

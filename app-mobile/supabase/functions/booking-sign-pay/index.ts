@@ -14,7 +14,11 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164 } from '@shared/lengopay.ts';
+import {
+  initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
+  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
+  type LengopayMethod,
+} from '@shared/lengopay.ts';
 import { formatGNF } from '@shared/push.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 
@@ -22,15 +26,24 @@ interface Body {
   booking_id: string;
   /** Optional: the mobile-money number for reference. Falls back to primary phone. */
   payer_phone?: string;
-  /** 'card' = Stripe (profils etranger) ; sinon page hebergee Lengopay.
-   *  Absent = lengopay, pour que les installations anterieures continuent de
-   *  fonctionner exactement comme avant. */
-  payment_method?: 'card' | 'orange-money' | 'mtn-money';
+  /** 'card' = Stripe (profils etranger) ; les autres = rails Lengopay.
+   *  Absent = orange-money, pour que les installations anterieures continuent
+   *  de fonctionner exactement comme avant. */
+  payment_method?: 'card' | 'orange-money' | 'mtn-money'
+                 | 'kulu' | 'soutramoney' | 'lengopay-card';
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 const PHONE_RE = /^\+224\d{9}$/;
-const METHODS = ['card', 'orange-money', 'mtn-money'];
+// 'kulu' est DELIBEREMENT ABSENT tant que l'ecran de saisie du code
+// n'existe pas (phase 3). Son rail envoie un vrai SMS a l'acheteur, et
+// /api/v2/authenticate n'est appele nulle part : l'accepter ici ouvrirait
+// un paiement que PERSONNE ne pourrait terminer. Il reste dans la
+// contrainte CHECK et dans LENGOPAY_RAILS — seul ce validateur le bloque.
+const METHODS = [
+  'card', 'orange-money', 'mtn-money',
+  'soutramoney', 'lengopay-card',
+];
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -72,6 +85,50 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
   }
 
   const method = body.payment_method ?? 'orange-money';
+
+  // ── UN SEUL PAIEMENT VIVANT A LA FOIS ─────────────────────────────────────
+  // Sans cette garde, rappeler cet endpoint pendant qu'une intention est encore
+  // 'pending' en ouvrait une SECONDE chez Lengopay pour la meme reservation.
+  // Rien ne l'empechait : les unicites de payment_intents portent sur
+  // (rail, rail_intent_id) et (order_id, attempt_index), et order_id est NULL
+  // pour une reservation.
+  //
+  // Le scenario coute de l'argent au locataire. Il choisit Soutra Money, ferme
+  // la page sans payer, revient — la reservation est toujours 'accepted', donc
+  // le bouton « Signer & payer » est toujours la — et retape. Deux paiements
+  // vivants. S'il regle les deux (la premiere page est encore ouverte chez
+  // Soutra), le cron confirme le premier, puis confirm_booking_payment rend
+  // 'noop' sur le second parce que la reservation n'est plus 'accepted' —
+  // et process_booking_intent_outcome ne journalise que 'conflict'/'unknown'.
+  // Resultat : debite deux fois, sequestre credite une fois, aucune trace.
+  //
+  // On rend donc l'intention EN COURS au lieu d'en creer une autre. Meme moyen :
+  // le locataire retrouve sa page. Moyen different : on refuse, parce qu'on ne
+  // peut pas annuler proprement chez Lengopay (leur API n'a pas d'annulation) et
+  // que fermer notre ligne pendant qu'il peut encore payer creerait exactement
+  // le trou qu'on vient de decrire, dans l'autre sens.
+  const { data: livePi } = await sb
+    .from('payment_intents')
+    .select('id, method, rail_intent_id, rail_action_url')
+    .eq('booking_id', bk.id)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (livePi && !String(livePi.rail_intent_id).startsWith('pending-init-')) {
+    if (livePi.method !== method) {
+      throwApi('PAYMENT_IN_PROGRESS', 409,
+        'Un paiement est déjà en cours pour cette réservation. Termine-le, ou attends 15 minutes avant de changer de moyen.');
+    }
+    return {
+      body: {
+        booking_id: bk.id,
+        next_step: livePi.rail_action_url
+          ? { kind: 'webview', url: livePi.rail_action_url }
+          : { kind: 'poll' },
+      },
+    };
+  }
 
   // ── RAIL CARTE (Stripe) — profils a l'etranger ────────────────────────────
   // Client 2026-09-04 : « l'appli me demande de saisir un numero de telephone
@@ -166,16 +223,23 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
     };
   }
 
-  // ── RAIL LENGOPAY v2 (in-app Orange/MTN, plus de page hebergee) ───────────
+  // ── RAILS LENGOPAY v2 (in-app, plus de page hebergee) ─────────────────────
+  const lengoMethod = method as LengopayMethod;
+  const rail = LENGOPAY_RAILS[lengoMethod];
+
   // Payer phone (reference on the intent) — body override, else primary phone.
-  let payerPhone = body.payer_phone;
-  if (!payerPhone) {
-    const { data: phoneRow } = await sb
-      .from('phones').select('e164').eq('user_id', tenantId).eq('is_primary', true).maybeSingle();
-    payerPhone = phoneRow?.e164 ?? undefined;
+  // Seuls les rails qui encaissent sur un numero en reclament un.
+  let payerPhone: string | undefined;
+  if (rail.needsAccount) {
+    payerPhone = body.payer_phone;
+    if (!payerPhone) {
+      const { data: phoneRow } = await sb
+        .from('phones').select('e164').eq('user_id', tenantId).eq('is_primary', true).maybeSingle();
+      payerPhone = phoneRow?.e164 ?? undefined;
+    }
+    if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
+    if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, `Indique le numéro ${rail.label} qui paie (9 chiffres, commence par 6).`);
   }
-  if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
-  if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, 'Indique le numéro Orange Money / MTN qui paie (9 chiffres, commence par 6).');
 
   // Plafond Lengopay (25/08, cf. lengopay.ts). La reservation reste 'accepted'
   // (aucune intention creee encore) — le locataire peut reessayer.
@@ -192,12 +256,12 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
       booking_id:     bk.id,
       rail:           'lengopay',
       rail_intent_id: placeholderId,
-      // v2 needs to know which operator up front (no hosted page to pick on
-      // anymore) — 'method' is already narrowed to orange-money/mtn-money here.
+      // v2 needs to know which rail up front (no hosted page to pick on
+      // anymore) — 'method' est deja narrow a un rail Lengopay ici.
       method,
       currency:       bk.currency,
       amount_minor:   bk.total_minor,
-      payer_phone:    payerPhone,
+      payer_phone:    payerPhone ?? null,
     })
     .select('id')
     .single();
@@ -212,8 +276,8 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
     initResp = await initPaymentV2({
       amount_minor: Number(bk.total_minor),
       currency:     bk.currency as 'GNF' | 'EUR',
-      type_account: method === 'mtn-money' ? 'lp-momo-gn' : 'lp-om-gn',
-      account:      toLocalGnAccount(payerPhone),
+      type_account: rail.typeAccount,
+      ...(payerPhone ? { account: toLocalGnAccount(payerPhone) } : {}),
     });
   } catch (e) {
     console.error('[booking-sign-pay] lengopay init error:', e);
@@ -224,10 +288,32 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
     throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
   }
 
+  const nextStep = railNextStep(lengoMethod, initResp);
+
+  // Impasse : rail sans numero et sans page — voir railIsDeadEnd. La
+  // reservation reste 'accepted', donc le locataire peut reessayer avec un
+  // autre moyen ; aucune signature n'a ete posee (elle vient du paiement).
+  if (railIsDeadEnd(lengoMethod, nextStep)) {
+    console.error('[booking-sign-pay] rail sans action exploitable', {
+      method: lengoMethod, pay_id: initResp.pay_id, booking_id: bk.id,
+    });
+    await sb.rpc('process_booking_intent_outcome', {
+      p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'no_action',
+      p_error_code: 'RAIL_NO_ACTION',
+      p_error_message: `pay_id=${initResp.pay_id} method=${lengoMethod}`,
+    });
+    throwApi('RAIL_NO_ACTION', 502, RAIL_NO_ACTION_MESSAGE);
+  }
+
   // S2 step 3: UPDATE intent with the real pay_id from Lengopay.
   const { error: updErr } = await sb
     .from('payment_intents')
-    .update({ rail_intent_id: initResp.pay_id, rail_status: 'pending', updated_at: new Date().toISOString() })
+    .update({
+      rail_intent_id:  initResp.pay_id,
+      rail_status:     'pending',
+      rail_action_url: railActionUrl(nextStep),
+      updated_at:      new Date().toISOString(),
+    })
     .eq('id', intentRow.id);
   if (updErr) {
     console.error('[booking-sign-pay] CRITICAL intent UPDATE failed post-init', { intent_id: intentRow.id, pay_id: initResp.pay_id, error: updErr });
@@ -252,7 +338,7 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
   // `tenant_signed_at = coalesce(tenant_signed_at, now())` a la confirmation du
   // paiement (migration 20260707_02). Aucune migration necessaire : il suffisait
   // de retirer le tampon anticipe.
-  // Plus de payment_url (v2 est in-app) — le client va directement a l'ecran
-  // de confirmation/attente.
-  return { body: { booking_id: bk.id } };
+  // next_step : sonder (Orange/MTN), ouvrir la page (Soutra Money) ou saisir un
+  // code (Kulu).
+  return { body: { booking_id: bk.id, next_step: nextStep } };
 }, stripPaymentSecret));

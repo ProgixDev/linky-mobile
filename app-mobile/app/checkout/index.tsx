@@ -81,8 +81,10 @@ export default function CheckoutRoute() {
   // Default to mobile money — the real Guinea rail. Card (Stripe) is hidden
   // (client 2026-07-26: Guinean cards are refused by Stripe).
   const [selected, setSelected] = useState<PaymentMethod>(MOBILE_MONEY_METHOD);
-  // 'mtn-money' peut encore arriver d'un etat conserve par une version
-  // precedente : les deux valeurs designent la meme carte.
+  // Rails qui encaissent SUR un numero guineen : eux seuls ont besoin du champ
+  // « numero qui paie ». Soutra Money et la carte Lengopay identifient
+  // l'acheteur sur leur propre page — leur reclamer un numero ici bloquerait
+  // pour rien un acheteur qui n'en a pas.
   const mobileMoneySelected = selected === 'orange-money' || selected === 'mtn-money';
   // Guinee ou etranger, deduit de l'indicatif du numero principal. Decide quel
   // rail carte proposer : Stripe a l'etranger, Carte/Wallet Lengopay en Guinee.
@@ -93,9 +95,19 @@ export default function CheckoutRoute() {
   const payerPhoneDigits = payerPhone.digits;
   const payerPhoneValid = payerPhone.valid;
   const payerPhoneE164 = payerPhone.e164;
-  // Le rail Lengopay carte n'est pas encore integre : on ne propose donc la
-  // carte qu'aux profils etrangers, et seulement si le rail est allume.
-  const showCardRail = CARD_RAIL_ENABLED && !payProfileLoading && payProfile === 'abroad';
+  // « Le bouton Carte bancaire "Stripe" SE TRANSFORME » (client 2026-09-05) :
+  // meme emplacement, meme etiquette, rail different selon le profil. Stripe
+  // refuse les cartes guineennes (constat client 2026-07-26), donc un profil
+  // Guinee part sur lp-card-gn chez Lengopay. Tant que le profil n'est pas
+  // charge, aucune des deux : envoyer l'argent sur le mauvais rail est pire
+  // qu'attendre une seconde.
+  const showStripeCard = CARD_RAIL_ENABLED && !payProfileLoading && payProfile === 'abroad';
+  const showLengopayCard = CARD_RAIL_ENABLED && !payProfileLoading && payProfile === 'guinea';
+  const showCardRail = showStripeCard || showLengopayCard;
+  /** Le moyen que la ligne « Carte bancaire » selectionne, selon le profil. */
+  const cardMethod: PaymentMethod = showStripeCard ? 'card' : 'lengopay-card';
+  // Soutra Money : portefeuille guineen, aucun sens a l'etranger.
+  const showSoutra = !payProfileLoading && payProfile === 'guinea';
   // Client 2026-08-21 : le panier se regle en UNE fois, meme avec plusieurs
   // boutiques. On traite donc TOUJOURS le panier entier. Le parametre shopId
   // n'est plus emis nulle part ; on l'accepte encore pour qu'un lien profond
@@ -141,6 +153,21 @@ export default function CheckoutRoute() {
   useEffect(() => {
     if (selected === 'wallet' && !walletPayable) setSelected('orange-money');
   }, [selected, walletPayable]);
+  // Meme garde pour les moyens qui dependent du profil (les deux cartes, Soutra
+  // Money). Si le profil change pendant que l'ecran est ouvert, la ligne
+  // choisie disparait : plus aucun bouton ne parait selectionne, et « Payer »
+  // enverrait un moyen que l'ecran n'affiche plus. On retombe sur Orange Money,
+  // la seule ligne rendue pour tous les profils. Aucun chemin ne declenche ca
+  // aujourd'hui (ouvrir les Reglages demonte cet ecran), mais tout le choix du
+  // rail tient desormais a cette seule valeur cote client.
+  useEffect(() => {
+    if (payProfileLoading) return;
+    const gone =
+      (selected === 'card' && !showStripeCard) ||
+      (selected === 'lengopay-card' && !showLengopayCard) ||
+      (selected === 'soutramoney' && !showSoutra);
+    if (gone) setSelected('orange-money');
+  }, [selected, payProfileLoading, showStripeCard, showLengopayCard, showSoutra]);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   // Keeps the Payer button busy across the whole sheet flow (place-order →
   // init → present), not just the mutation.
@@ -442,15 +469,15 @@ export default function CheckoutRoute() {
           </Pressable>
         )}
 
-        {/* CARTE — visible seulement pour un profil etranger, et seulement si le
-            rail est allume. Un profil guineen ne la voit pas : le rail
-            Carte/Wallet Lengopay n'est pas encore integre, et proposer un bouton
-            qui echouerait repeterait l'erreur du « paiement par carte fonctionne
-            deja » qu'on vient tout juste de retirer. */}
+        {/* CARTE — une seule ligne, deux rails. Stripe pour l'etranger,
+            Lengopay (lp-card-gn) pour la Guinee. Jusqu'au 2026-09-07 la ligne
+            DISPARAISSAIT pour un profil guineen : un acheteur en Guinee n'avait
+            aucun moyen de payer par carte, alors que le client demandait que le
+            bouton « se transforme ». */}
         {showCardRail && (
           <>
             <MicroLabel label={t('checkout.sectionCard')} />
-            <Pressable onPress={() => setSelected('card')}>
+            <Pressable onPress={() => setSelected(cardMethod)}>
               <Card padding={14} style={{ marginBottom: 16 }}>
                 <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
                   <View
@@ -476,14 +503,14 @@ export default function CheckoutRoute() {
                       width: 22,
                       height: 22,
                       borderRadius: 999,
-                      backgroundColor: selected === 'card' ? colors.primary : 'transparent',
-                      borderWidth: selected === 'card' ? 0 : 1.5,
+                      backgroundColor: selected === cardMethod ? colors.primary : 'transparent',
+                      borderWidth: selected === cardMethod ? 0 : 1.5,
                       borderColor: colors.borderStrong,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    {selected === 'card' && (
+                    {selected === cardMethod && (
                       <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />
                     )}
                   </View>
@@ -512,9 +539,24 @@ export default function CheckoutRoute() {
           onPress={() => setSelected('mtn-money')}
         />
 
+        {/* « entre ton numero, puis confirme la demande » ne decrit qu'Orange et
+            MTN. La note reste donc SOUS ces deux lignes-la, avant Soutra Money —
+            la placer apres en ferait la legende d'un rail qui ne demande aucun
+            numero et n'envoie rien sur le telephone. */}
         <Text variant="micro" tone="muted" style={{ marginBottom: 16, paddingHorizontal: 4, letterSpacing: 0, textTransform: 'none', lineHeight: 15 }}>
           {t('checkout.rails.mobileMoneyNote')}
         </Text>
+
+        {/* Soutra Money : portefeuille guineen, l'acheteur finit sur leur page
+            (aucun numero a saisir ici). */}
+        {showSoutra && (
+          <OperatorRow
+            title={t('checkout.rails.soutraMoney')}
+            hint={t('checkout.rails.soutraMoneyHint')}
+            selected={selected === 'soutramoney'}
+            onPress={() => setSelected('soutramoney')}
+          />
+        )}
 
         {/* Numero qui paie — toujours affiche pour Orange/MTN, pre-rempli avec
             celui du compte s'il est guineen. Il ne suffit plus d'avoir UN
@@ -588,14 +630,19 @@ export default function CheckoutRoute() {
           </>
         )}
 
-        <Card padding={12}>
-          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-            <I.info size={16} color={colors.primary} />
-            <Text variant="micro" tone="muted" style={{ flex: 1, lineHeight: 16, letterSpacing: 0, textTransform: 'none' }}>
-              {t('checkout.infoMobile')}
-            </Text>
-          </View>
-        </Card>
+        {/* « Tu recevras un code SMS » ne vaut QUE pour Orange/MTN. Affiche
+            sous une carte bancaire ou Soutra Money, il promet un SMS qui
+            n'arrivera jamais et fait attendre l'acheteur pour rien. */}
+        {mobileMoneySelected && (
+          <Card padding={12}>
+            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+              <I.info size={16} color={colors.primary} />
+              <Text variant="micro" tone="muted" style={{ flex: 1, lineHeight: 16, letterSpacing: 0, textTransform: 'none' }}>
+                {t('checkout.infoMobile')}
+              </Text>
+            </View>
+          </Card>
+        )}
 
         {/* Récapitulatif (client 2026-07-30, étape 1 du parcours) — le client
             voit le détail exact avant de payer. */}
@@ -647,6 +694,10 @@ export default function CheckoutRoute() {
             }
             const first = lines[0];
             if (!first) return;
+            // SEUL 'card' est Stripe. 'lengopay-card' porte le meme libelle a
+            // l'ecran mais passe par le rail Lengopay ci-dessous — l'envoyer
+            // dans la feuille Stripe ferait refuser la carte guineenne, ce que
+            // ce changement existe precisement pour eviter.
             if (selected === 'card') {
               void handleCardOrder();
               return;
@@ -679,6 +730,15 @@ export default function CheckoutRoute() {
                       useCart.getState().clear();
                       show(t('checkout.orderCreated'), 'success');
                       router.replace(`/checkout/success?orderId=${firstOrder.id}`);
+                    } else if (res.next_step?.kind === 'webview') {
+                      // Soutra Money / carte Lengopay : l'acheteur finit sur la
+                      // page du rail, dans la WebView de l'appli. La fermer
+                      // renvoie a l'ecran de confirmation, qui sonde — le
+                      // resultat ne depend jamais de ce que la page affichait.
+                      router.replace({
+                        pathname: '/checkout/pay',
+                        params: { url: res.next_step.url, orderId: firstOrder.id },
+                      } as any);
                     } else {
                       router.replace(`/checkout/confirm/${firstOrder.id}` as any);
                     }
@@ -699,15 +759,26 @@ export default function CheckoutRoute() {
                 ...(payerPhoneE164 ? { payerPhone: payerPhoneE164 } : {}),
               },
               {
-                onSuccess: ({ order, intent }) => {
+                onSuccess: ({ order, intent, next_step }) => {
                   if (intent) {
+                    // Phase U.3 — NE PAS vider le panier ici ; le rail peut
+                    // encore echouer ou etre annule. Le vidage vit dans la
+                    // branche SUCCESS de confirm/[orderId].tsx.
+                    if (next_step?.kind === 'webview') {
+                      // Soutra Money / carte Lengopay : la page du rail s'ouvre
+                      // dans la WebView de l'appli. La fermer mene a l'ecran de
+                      // confirmation, qui sonde — l'issue ne depend jamais de ce
+                      // que la page affichait.
+                      router.replace({
+                        pathname: '/checkout/pay',
+                        params: { url: next_step.url, orderId: order.id },
+                      } as any);
+                      return;
+                    }
                     // Rail Orange/MTN : depuis Lengopay v2 (2026-09-05) le
                     // paiement se declenche cote operateur sans quitter l'appli
                     // — plus de WebView. On va droit a l'ecran de confirmation,
                     // qui sonde jusqu'a ce que le cron bascule l'intention.
-                    // Phase U.3 — NE PAS vider le panier ici ; le rail peut
-                    // encore echouer ou etre annule. Le vidage vit dans la
-                    // branche SUCCESS de confirm/[orderId].tsx.
                     router.replace(`/checkout/confirm/${order.id}`);
                   } else {
                     // Wallet path (no intent): order already at status='paid'.
@@ -745,7 +816,9 @@ function OperatorRow({
   selected,
   onPress,
 }: {
-  logo: number;
+  /** Absent pour un rail sans logo fourni (Soutra Money) : on retombe sur
+   *  l'icone portefeuille plutot que d'afficher un carre blanc vide. */
+  logo?: number;
   title: string;
   hint: string;
   selected: boolean;
@@ -761,13 +834,17 @@ function OperatorRow({
               width: 40,
               height: 40,
               borderRadius: 10,
-              backgroundColor: '#FFFFFF',
+              backgroundColor: logo ? '#FFFFFF' : colors.bgSunken,
               overflow: 'hidden',
               borderWidth: 1,
               borderColor: colors.border,
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <Image source={logo} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            {logo
+              ? <Image source={logo} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+              : <I.wallet size={18} color={colors.text} />}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 13, fontWeight: '600' }}>{title}</Text>

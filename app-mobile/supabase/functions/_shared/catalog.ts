@@ -276,8 +276,11 @@ export interface PaymentIntentRow {
   rail: string;
   rail_intent_id: string;
   rail_status: string | null;
+  /** Lengopay v2 webview_url — page ou l'acheteur finit de payer (Soutra Money,
+   *  carte guineenne). NULL pour les rails sans page. */
+  rail_action_url?: string | null;
   status: 'pending' | 'completed' | 'failed' | 'expired' | 'cancelled';
-  method: 'orange-money' | 'mtn-money' | 'card';
+  method: 'orange-money' | 'mtn-money' | 'card' | 'kulu' | 'soutramoney' | 'lengopay-card';
   currency: 'GNF' | 'EUR';
   amount_minor: number | string;
   payer_phone: string | null;
@@ -298,6 +301,7 @@ export function mapPaymentIntent(r: PaymentIntentRow) {
     rail: r.rail,
     railIntentId: r.rail_intent_id,
     railStatus: r.rail_status ?? undefined,
+    railActionUrl: r.rail_action_url ?? undefined,
     status: r.status,
     method: r.method,
     currency: r.currency,

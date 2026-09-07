@@ -6,7 +6,7 @@
 // order at status='disputed' pending admin resolution (Phase K).
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
-import type { Order, OrderStatus, PaymentIntent, PaymentMethod } from '../types';
+import type { Order, OrderStatus, PaymentIntent, PaymentMethod, PaymentNextStep } from '../types';
 
 interface Cursor {
   created_at: string;
@@ -153,6 +153,10 @@ export interface PlaceOrderResult {
   intent?: PaymentIntent; // present for rail methods, absent for wallet
   /** Stripe payment-sheet bundle — present only for paymentMethod 'card'. */
   payment?: { client_secret: string; publishable_key: string };
+  /** Ce qu'il reste à faire à l'acheteur sur les rails Lengopay (2026-09-07).
+   *  Absent = rien à faire de plus (portefeuille, Stripe, installations
+   *  antérieures au champ). */
+  next_step?: PaymentNextStep;
 }
 
 export function usePlaceOrder() {
@@ -201,7 +205,7 @@ export interface PlaceOrdersBatchInput {
   /** 'card' ajoute le 2026-08-24 : le bouton Carte, reactive la veille pour les
    *  profils a l'etranger, appelait encore le chemin mono-boutique — un panier
    *  a plusieurs boutiques echouait avec MULTIPLE_SELLERS. */
-  paymentMethod: 'wallet' | 'orange-money' | 'mtn-money' | 'card';
+  paymentMethod: PaymentMethod;
   deliveryMode?: 'pickup' | 'delivery';
   payerPhone?: string;
 }
@@ -217,6 +221,8 @@ export interface PlaceOrdersBatchResult {
   total_minor?: number;
   /** Rail carte : un seul PaymentIntent Stripe pour tout le lot. */
   payment?: { client_secret: string; publishable_key: string };
+  /** Rails Lengopay : ce qu'il reste à faire à l'acheteur (2026-09-07). */
+  next_step?: PaymentNextStep;
 }
 
 export function usePlaceOrdersBatch() {

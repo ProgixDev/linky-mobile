@@ -149,6 +149,19 @@ export default function BoostNewRoute() {
         return;
       }
 
+      // Soutra Money / carte Lengopay : le vendeur finit sur la page du rail,
+      // dans la WebView de l'appli. La fermer renvoie a /pro/boost?pending=1,
+      // qui rafraichit en attendant que le cron confirme — l'issue ne depend
+      // jamais de ce que la page affichait.
+      if (res.kind === 'webview') {
+        router.replace({
+          pathname: '/checkout/pay',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+          params: { url: res.url, boostId: res.boostId },
+        } as any);
+        return;
+      }
+
       // Mobile money : rien n'est paye a cet instant. Depuis Lengopay v2
       // (2026-09-05) la demande part directement chez l'operateur — le vendeur
       // confirme sur son telephone et le boost ne s'activera que quand le cron
@@ -313,7 +326,15 @@ export default function BoostNewRoute() {
             }
             block
             variant="primary"
-            disabled={!selected || !selectedTier || create.isPending || !payerPhoneValid}
+            // `wallet.isLoading` compte : c'est la valeur par defaut de `method`,
+            // et le selecteur MASQUE la ligne Portefeuille tant que le solde est
+            // inconnu. Sur une liaison lente, le vendeur voyait donc une liste
+            // sans rien de coche et pouvait quand meme appuyer — envoyant
+            // 'wallet', un moyen qu'il n'avait jamais choisi (soit un « Solde
+            // insuffisant » inexplicable, soit un debit silencieux de son
+            // portefeuille). Le rattrapage de :96 ne s'arme qu'une fois le solde
+            // connu ; ce garde-fou couvre la fenetre d'avant.
+            disabled={!selected || !selectedTier || create.isPending || !payerPhoneValid || wallet.isLoading}
             loading={create.isPending}
             onPress={() => void onPay()}
           />

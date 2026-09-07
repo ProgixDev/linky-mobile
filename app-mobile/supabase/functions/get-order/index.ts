@@ -132,7 +132,7 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
   // d'un lot changent d'etat ensemble, donc l'intention du lot est bien celle
   // de CETTE commande.
   const intentCols =
-    'id, order_id, batch_id, rail, rail_intent_id, rail_status, status, method, currency, amount_minor, payer_phone, attempt_index, attempts_count, last_polled_at, last_error_code, last_error_message, created_at, updated_at, completed_at';
+    'id, order_id, batch_id, rail, rail_intent_id, rail_status, rail_action_url, status, method, currency, amount_minor, payer_phone, attempt_index, attempts_count, last_polled_at, last_error_code, last_error_message, created_at, updated_at, completed_at';
   const intentQuery = sb.from('payment_intents').select(intentCols);
   const { data: intentRow, error: intentErr } = await (r.batch_id
     ? intentQuery.eq('batch_id', r.batch_id)

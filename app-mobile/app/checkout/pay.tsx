@@ -17,13 +17,21 @@ import { Button } from '../../src/components/primitives/Button';
 
 // Security (audit MOB-WEBVIEW-DEEPLINK): this screen is deep-linkable
 // (linky://checkout/pay?url=...), so the `url` param is attacker-controllable.
-// Only load it if it is an https:// page on a Lengopay host (the hosted
-// Orange Money / MTN payment page). Otherwise an attacker could render a
-// look-alike page inside Linky's trusted "Paiement" chrome to phish the
-// buyer's mobile-money PIN/OTP. Anything else is rejected (treated as missing).
+// Only load it if it is an https:// page on a host we actually pay through.
+// Otherwise an attacker could render a look-alike page inside Linky's trusted
+// "Paiement" chrome to phish the buyer's mobile-money PIN/OTP. Anything else is
+// rejected (treated as missing).
+//
+// soutramoney.com ajouté le 2026-09-07 : Lengopay v2 renvoie pour le rail
+// lp-soutramoney-gn un webview_url sur https://api.soutramoney.com/pay/… —
+// un hôte TIERS, pas un sous-domaine de lengopay.com. Sans cette entrée
+// l'écran refuserait la page de paiement légitime et l'acheteur ne pourrait
+// jamais payer par Soutra Money.
+const TRUSTED_PAYMENT_HOSTS = /^https:\/\/([a-z0-9-]+\.)*(lengopay\.com|soutramoney\.com)(\/|$|\?|#)/i;
+
 function isTrustedPaymentUrl(raw?: string): boolean {
   if (!raw || typeof raw !== 'string') return false;
-  return /^https:\/\/([a-z0-9-]+\.)*lengopay\.com(\/|$|\?|#)/i.test(raw);
+  return TRUSTED_PAYMENT_HOSTS.test(raw);
 }
 
 export default function CheckoutPayRoute() {

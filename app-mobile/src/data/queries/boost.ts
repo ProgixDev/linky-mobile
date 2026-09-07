@@ -3,7 +3,7 @@
 // pattern; the server owns the price, so create only sends { productId, days }.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
-import type { Boost, BoostTier } from '../types';
+import type { Boost, BoostTier, PaymentNextStep } from '../types';
 
 export function useBoosts() {
   return useQuery({
@@ -34,7 +34,12 @@ export interface CreateBoostInput {
   payerPhone?: string;
 }
 
-export type BoostPayMethod = 'wallet' | 'orange-money' | 'mtn-money' | 'card';
+/** 'card' = Stripe (profils étranger). 'lengopay-card' / 'soutramoney' = rails
+ *  Lengopay guinéens (2026-09-07) : mêmes moyens que le panier, comme le client
+ *  l'a demandé — « Unifier les méthodes de paiement dans l'appli ». */
+export type BoostPayMethod =
+  | 'wallet' | 'orange-money' | 'mtn-money' | 'card'
+  | 'soutramoney' | 'lengopay-card';
 
 /** Portefeuille : le boost est actif immédiatement (débit atomique côté serveur).
  *  Mobile money : rien n'est actif encore — depuis Lengopay v2 (2026-09-05) la
@@ -48,7 +53,10 @@ export type CreateBoostResult =
   /** Carte bancaire (2026-09-07) : rien n'est payé tant que la feuille Stripe
    *  n'a pas abouti. Le boost reste 'pending_payment' et c'est le webhook qui
    *  l'activera — même prudence que la réservation. */
-  | { kind: 'card'; boostId: string; clientSecret: string; publishableKey: string };
+  | { kind: 'card'; boostId: string; clientSecret: string; publishableKey: string }
+  /** Soutra Money / carte Lengopay (2026-09-07) : le vendeur finit sur la page
+   *  du rail. Rien n'est payé tant qu'il ne l'a pas fait. */
+  | { kind: 'webview'; boostId: string; url: string };
 
 export function useCreateBoost() {
   const qc = useQueryClient();
@@ -61,6 +69,7 @@ export function useCreateBoost() {
         boost?: Boost;
         boost_id?: string;
         payment?: { client_secret: string; publishable_key: string };
+        next_step?: PaymentNextStep;
       }>({
         path: '/create-boost',
         body: { ...target, days, method, ...(payerPhone ? { payer_phone: payerPhone } : {}) },
@@ -72,6 +81,9 @@ export function useCreateBoost() {
           clientSecret: res.payment.client_secret,
           publishableKey: res.payment.publishable_key,
         };
+      }
+      if (res.next_step?.kind === 'webview' && res.boost_id) {
+        return { kind: 'webview', boostId: res.boost_id, url: res.next_step.url };
       }
       if (!res.boost && res.boost_id) {
         return { kind: 'pending', boostId: res.boost_id };

@@ -70,25 +70,42 @@ export interface LengopayStatusResponse {
 // account is the LOCAL Guinea number, WITHOUT the +224 prefix (e.g. "620124578"),
 // unlike everywhere else in this codebase which stores E.164.
 //
-// This iteration only implements lp-om-gn / lp-momo-gn (the two Abdoulaye
-// asked for in-app). lp-card-gn / lp-kulu-gn / lp-soutramoney-gn are typed
-// for completeness but have no calling code yet — if one of their extra steps
-// ever came back on an OM/MTN call, initPaymentV2 logs loudly and still keeps
-// the pay_id (never cancels the order — the buyer may still be confirming on
-// their phone; see the comment there).
+// 2026-09-07 : les cinq type_account sont desormais appelables (demande client
+// « pour les profils en Guinee, le bouton Carte bancaire Stripe se transforme
+// en page de paiement In App Carte bancaire + Wallet »). lp-card-gn reste le
+// seul SANS section dediee dans la doc : on ne devine pas sa mecanique, on
+// reagit a la FORME de sa reponse (webview / otp / ni l'un ni l'autre), donc
+// quelle qu'elle soit l'acheteur n'est jamais bloque sans issue.
 export type LengopayV2TypeAccount = 'lp-om-gn' | 'lp-momo-gn' | 'lp-card-gn' | 'lp-kulu-gn' | 'lp-soutramoney-gn';
 
 export interface LengopayV2InitRequest {
   amount_minor: number;
   currency: LengopayCurrency;
-  type_account: 'lp-om-gn' | 'lp-momo-gn';
-  /** Local Guinea number, no +224 — see toLocalGnAccount(). */
-  account: string;
+  type_account: LengopayV2TypeAccount;
+  /** Local Guinea number, no +224 — see toLocalGnAccount(). OPTIONNEL depuis le
+   *  2026-09-07 : Soutra Money et la carte n'encaissent pas sur un numero
+   *  (l'acheteur s'identifie sur la page qu'ils renvoient). */
+  account?: string;
 }
 
 export interface LengopayV2InitResponse {
   pay_id: string;
+  /** Kulu : l'acheteur recoit un code par SMS, a confirmer via /api/v2/authenticate. */
+  requires_otp?: boolean;
+  /** Soutra Money (et peut-etre lp-card-gn) : page a ouvrir pour finir le paiement. */
+  webview_url?: string;
 }
+
+/** Ce qu'il reste a faire a l'acheteur apres l'init. 'poll' = rien, il confirme
+ *  sur son telephone et le cron tranche. */
+export type LengopayNextStep =
+  /** fallbackUrl : une page est bien revenue, mais sur un rail qui n'est PAS
+   *  cense en avoir (Orange, MTN). On ne detourne pas l'acheteur vers elle —
+   *  son geste normal reste de valider sur son telephone — mais on la garde
+   *  sous la main comme second recours. Voir railNextStep. */
+  | { kind: 'poll'; fallbackUrl?: string }
+  | { kind: 'otp' }
+  | { kind: 'webview'; url: string };
 
 export function normalizeLengopayStatus(raw: unknown): LengopayIntentStatus {
   if (typeof raw !== 'string') return 'pending';

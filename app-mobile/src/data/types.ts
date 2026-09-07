@@ -15,7 +15,21 @@ export type OrderStatus =
   | 'disputed'
   | 'cancelled'
   | 'refunded';
-export type PaymentMethod = 'orange-money' | 'mtn-money' | 'card' | 'wallet';
+/** 'card' = Stripe (profils étranger uniquement — Stripe refuse les cartes
+ *  guinéennes). 'lengopay-card' / 'kulu' / 'soutramoney' = les rails Lengopay
+ *  guinéens ouverts le 2026-09-07. Les deux cartes sont des valeurs DISTINCTES
+ *  parce que le serveur ne devine pas le pays : c'est le moyen choisi qui
+ *  décide du rail. */
+export type PaymentMethod =
+  | 'orange-money' | 'mtn-money' | 'card' | 'wallet'
+  | 'kulu' | 'soutramoney' | 'lengopay-card';
+
+/** Ce qu'il reste à faire à l'acheteur après l'initialisation du paiement.
+ *  'poll' = rien, il confirme sur son téléphone et le cron tranche. */
+export type PaymentNextStep =
+  | { kind: 'poll' }
+  | { kind: 'otp' }
+  | { kind: 'webview'; url: string };
 export type DeliveryStatus =
   | 'unassigned'
   | 'assigned'
@@ -326,8 +340,12 @@ export interface PaymentIntent {
   rail: string;
   railIntentId: string;
   railStatus?: string;
+  /** Page où l'acheteur finit de payer (Soutra Money, carte Lengopay).
+   *  Persistée côté serveur pour survivre à un écran fermé — une URL v2 ne se
+   *  reconstruit pas à partir du pay_id, contrairement à la page hébergée v1. */
+  railActionUrl?: string;
   status: PaymentIntentStatus;
-  method: 'orange-money' | 'mtn-money' | 'card';
+  method: Exclude<PaymentMethod, 'wallet'>;
   currency: 'GNF' | 'EUR';
   amountGnf: number;
   payerPhone?: string;

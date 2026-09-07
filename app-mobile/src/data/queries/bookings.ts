@@ -2,7 +2,7 @@
 // pays via Stripe sheet → check-in confirm) + landlord side. All authed.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
-import type { Booking } from '../types';
+import type { Booking, PaymentMethod, PaymentNextStep } from '../types';
 
 export interface RequestBookingInput {
   propertyId: string;
@@ -117,11 +117,16 @@ export function useBookingSignPay() {
     mutationFn: async (input: {
       bookingId: string;
       payerPhone?: string;
-      paymentMethod?: 'card' | 'orange-money' | 'mtn-money';
+      /** Tout sauf 'wallet' : confirm_booking_payment crédite le séquestre à
+       *  sens unique (l'argent vient du rail), donc payer une réservation au
+       *  portefeuille créerait de la monnaie. Les rails Lengopay guinéens sont
+       *  ouverts depuis le 2026-09-07 — « Unifier les méthodes de paiement ». */
+      paymentMethod?: Exclude<PaymentMethod, 'wallet'>;
     }) => {
       return apiPost<{
         booking_id: string;
         payment?: { client_secret: string; publishable_key: string };
+        next_step?: PaymentNextStep;
       }>({
         path: '/booking-sign-pay',
         body: {

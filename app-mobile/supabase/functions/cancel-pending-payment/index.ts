@@ -9,7 +9,7 @@ import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { stripeClient } from '@shared/stripe.ts';
-import { getPaymentStatus } from '@shared/lengopay.ts';
+import { getPaymentStatusV2 } from '@shared/lengopay.ts';
 
 interface Body { order_id: string }
 
@@ -82,15 +82,20 @@ Deno.serve(makePost<Body>('/v1/payments/cancel-pending', valid, async ({ sb, bod
     }
   }
 
-  // Lengopay has no cancel API, but a buyer can pay on the hosted page and
-  // THEN tap Annuler/Modifier before the cron poll flips the order — cancelling
-  // a paid order = money taken, escrow never credited (review 2026-07-07).
-  // Mirror the Stripe guard: check the rail status first ; if the payment
-  // already succeeded, refuse the cancel so polling can settle it to paid.
+  // Lengopay has no cancel API, but a buyer can approve the payment on their
+  // phone and THEN tap Annuler/Modifier before the cron poll flips the order —
+  // cancelling a paid order = money taken, escrow never credited (review
+  // 2026-07-07). Mirror the Stripe guard: check the rail status first ; if the
+  // payment already succeeded, refuse the cancel so polling can settle it.
+  //
+  // v2 depuis le 2026-09-07 : cette garde interrogeait encore /api/v1/ alors que
+  // TOUTES les intentions sont creees en v2 depuis le 2026-09-05 — la seule
+  // protection contre « annuler une commande deja payee » interrogeait la
+  // mauvaise API. Regression de ma propre migration v2, corrigee ici.
   if (intent.rail === 'lengopay' && !intent.rail_intent_id.startsWith('pending-init-')) {
     let railStatus: string | undefined;
     try {
-      railStatus = (await getPaymentStatus(intent.rail_intent_id)).status;
+      railStatus = (await getPaymentStatusV2(intent.rail_intent_id)).status;
     } catch (e) {
       // Don't block cancel on a rail hiccup — the 15-min TTL sweep is the
       // backstop for a genuinely paid intent. Only swallow the fetch failure.

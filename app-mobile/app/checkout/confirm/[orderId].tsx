@@ -160,7 +160,32 @@ export default function CheckoutConfirmRoute() {
   // Phase Q — card orders confirm via the Stripe webhook (1-3s typical), not
   // a buyer action on their phone : different WAIT copy, no phone row, no
   // 15-min countdown (stripe intents are excluded from the TTL sweep).
+  // 'lengopay-card' n'entre PAS ici : c'est une carte, mais un rail Lengopay
+  // sonde comme les autres, avec le compte a rebours de 15 min.
   const isCard = order.paymentMethod === 'card';
+  // Le nom du moyen tel qu'il s'affiche. Une table plutot qu'un ternaire
+  // imbrique : celui d'avant rendait « MTN Mobile Money » pour TOUT ce qui
+  // n'etait ni la carte ni Orange — un paiement Soutra Money aurait affiche le
+  // mauvais operateur a l'acheteur.
+  const METHOD_LABEL_KEYS: Record<string, string> = {
+    'card':          'checkout.card',
+    'lengopay-card': 'checkout.cardName',
+    'orange-money':  'checkout.rails.orangeMoney',
+    'mtn-money':     'checkout.rails.mtnMoney',
+    'soutramoney':   'checkout.rails.soutraMoney',
+    // Pas encore affichable a la commande (il manque l'ecran de code), mais le
+    // moyen est deja accepte cote serveur : sans cette entree une commande Kulu
+    // rendrait « Méthode : Méthode ».
+    'kulu':          'checkout.rails.kulu',
+    'wallet':        'checkout.walletLinky',
+  };
+  const methodLabel = t(METHOD_LABEL_KEYS[order.paymentMethod] ?? 'checkout.confirmRowMethod');
+  // Le texte d'attente depend du MOYEN, pas de la presence d'une URL. Orange et
+  // MTN peuvent porter une page en second recours (voir railNextStep) sans que
+  // leur geste change : ce qui conclut leur paiement reste la demande recue sur
+  // le telephone. Se fier a railActionUrl ferait basculer leur copie vers
+  // « ouvre la page » et les detournerait du seul geste qui marche.
+  const paysOnPage = order.paymentMethod === 'soutramoney' || order.paymentMethod === 'lengopay-card';
 
   // Countdown for WAIT state.
   const elapsedMs = now - new Date(intent.createdAt).getTime();
@@ -198,7 +223,7 @@ export default function CheckoutConfirmRoute() {
         <TopBar title={t('checkout.confirmTrackingTitle')} back subtitle={`#${order.reference}`} />
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
           <Card padding={16} style={{ marginTop: 12 }}>
-            <Row label={t('checkout.confirmRowMethod')} value={isCard ? t('checkout.card') : order.paymentMethod === 'orange-money' ? t('checkout.rails.orangeMoney') : t('checkout.rails.mtnMoney')} />
+            <Row label={t('checkout.confirmRowMethod')} value={methodLabel} />
             {/* Mobile-money is the Lengopay HOSTED-PAGE rail now: the buyer
                 enters + confirms their number ON Lengopay's page, so an in-app
                 « Modifier le numéro » is inert and only triggers a destructive
@@ -229,16 +254,33 @@ export default function CheckoutConfirmRoute() {
             </Card>
           ) : (
           <Card padding={16} style={{ marginTop: 16, alignItems: 'center' }}>
+            {/* Deux attentes differentes, deux textes. Orange/MTN : la demande
+                est partie sur le telephone. Soutra Money / carte Lengopay :
+                rien n'arrive sur le telephone, tout se passe sur leur page —
+                dire « verifie ton telephone » ferait attendre l'acheteur devant
+                un ecran ou il ne se passera jamais rien. */}
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, textAlign: 'center' }}>
-              {t('checkout.confirmCheckPhoneTitle')}
+              {paysOnPage
+                ? t('checkout.confirmOpenPageTitle')
+                : t('checkout.confirmCheckPhoneTitle')}
             </Text>
             <Text variant="bodyM" tone="muted" style={{ textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
-              {t('checkout.confirmCheckPhoneBody', { amount: formatGNF(intent.amountGnf) })}
+              {paysOnPage
+                ? t('checkout.confirmOpenPageBody', { amount: formatGNF(intent.amountGnf) })
+                : t('checkout.confirmCheckPhoneBody', { amount: formatGNF(intent.amountGnf) })}
             </Text>
-            {/* Lengopay hosted page — the buyer approves the payment there.
-                Reconstructed from the pay_id (railIntentId) so it survives a
-                screen reload; hidden while the placeholder id is in place. */}
-            {!intent.railIntentId.startsWith('pending-init-') && (
+            {/* Reprendre le paiement — UNIQUEMENT pour les rails qui ont une
+                page (Soutra Money, carte Lengopay). L'URL vient de la base
+                (rail_action_url), pas d'une reconstruction : depuis Lengopay v2
+                elle ne se devine plus a partir du pay_id.
+
+                Ce bouton pointait jusqu'au 2026-09-07 vers
+                payment.lengopay.com/{pay_id}, la page hebergee v1, pour un
+                pay_id cree en v2 — un bouton mort menant a une page cassee,
+                affiche a tous les acheteurs Orange/MTN qui n'ont d'ailleurs
+                aucune page a ouvrir. Regression de ma migration v2 du
+                2026-09-05, corrigee ici. */}
+            {intent.railActionUrl && (
               <Button
                 size="md"
                 block
@@ -247,7 +289,7 @@ export default function CheckoutConfirmRoute() {
                 onPress={() => {
                   // In-app WebView re-offer (client 2026-07-26) — no external browser.
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo-router typed-routes regenerate on next `expo start`; route exists on disk.
-                  router.replace({ pathname: '/checkout/pay', params: { url: `https://payment.lengopay.com/${intent.railIntentId}`, orderId: order.id } } as any);
+                  router.replace({ pathname: '/checkout/pay', params: { url: intent.railActionUrl, orderId: order.id } } as any);
                 }}
               />
             )}

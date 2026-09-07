@@ -23,7 +23,11 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164 } from '@shared/lengopay.ts';
+import {
+  initPaymentV2, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
+  LENGOPAY_RAILS, railNextStep, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
+  type LengopayMethod,
+} from '@shared/lengopay.ts';
 import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 import { formatGNF } from '@shared/push.ts';
@@ -32,7 +36,8 @@ interface ItemInput { product_id: string; quantity: number }
 
 interface Body {
   items: ItemInput[];
-  payment_method: 'wallet' | 'orange-money' | 'mtn-money' | 'card';
+  payment_method: 'wallet' | 'orange-money' | 'mtn-money' | 'card'
+                | 'kulu' | 'soutramoney' | 'lengopay-card';
   delivery_mode?: 'pickup' | 'delivery';
   payer_phone?: string;
 }
@@ -44,7 +49,18 @@ const UUID_RE = /^[0-9a-f-]{36}$/i;
 // jamais ete construite pour le panier multi-boutiques du 21 aout, faute
 // d'avoir jamais ete testee : elle etait masquee dans l'interface jusqu'a
 // avant-hier.
-const METHODS = ['wallet', 'orange-money', 'mtn-money', 'card'];
+// 'kulu' / 'soutramoney' / 'lengopay-card' ajoutes le 2026-09-07 : les rails
+// Lengopay guineens. Le panier multi-boutiques les accepte des le premier jour,
+// contrairement a la carte Stripe qui avait ete oubliee pendant trois jours.
+// 'kulu' est DELIBEREMENT ABSENT tant que l'ecran de saisie du code
+// n'existe pas (phase 3). Son rail envoie un vrai SMS a l'acheteur, et
+// /api/v2/authenticate n'est appele nulle part : l'accepter ici ouvrirait
+// un paiement que PERSONNE ne pourrait terminer. Il reste dans la
+// contrainte CHECK et dans LENGOPAY_RAILS — seul ce validateur le bloque.
+const METHODS = [
+  'wallet', 'orange-money', 'mtn-money', 'card',
+  'soutramoney', 'lengopay-card',
+];
 
 function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
@@ -233,15 +249,39 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     };
   }
 
-  // ─── Rail mobile money ────────────────────────────────────────────────────
-  let payerPhone = body.payer_phone?.trim();
-  if (!payerPhone) {
-    const { data: phoneRow } = await sb
-      .from('phones').select('e164').eq('user_id', userId).eq('is_primary', true).maybeSingle();
-    payerPhone = phoneRow?.e164 ?? undefined;
+  // ─── Rails Lengopay ───────────────────────────────────────────────────────
+  const lengoMethod = body.payment_method as LengopayMethod;
+  const rail = LENGOPAY_RAILS[lengoMethod];
+
+  // Seuls les rails qui encaissent SUR un numero en reclament un (Soutra Money
+  // et la carte identifient l'acheteur sur leur propre page).
+  let payerPhone: string | undefined;
+  if (rail.needsAccount) {
+    payerPhone = body.payer_phone?.trim();
+    if (!payerPhone) {
+      const { data: phoneRow } = await sb
+        .from('phones').select('e164').eq('user_id', userId).eq('is_primary', true).maybeSingle();
+      payerPhone = phoneRow?.e164 ?? undefined;
+    }
+    // Les N commandes du lot sont DEJA creees et leur stock decremente. Refuser
+    // sans les annuler les laisserait 'placed' sans intention — un etat
+    // qu'aucun balayage ne ramasse (les TTL travaillent sur les intentions),
+    // donc pour toujours, en retenant les exemplaires reserves. Meme geste que
+    // la garde de plafond plus bas.
+    const cancelBatch = async () => {
+      await sb.from('orders')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('batch_id', batchId).eq('status', 'placed');
+    };
+    if (!payerPhone) {
+      await cancelBatch();
+      throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
+    }
+    if (!isGnE164(payerPhone)) {
+      await cancelBatch();
+      throwApi('PAYER_PHONE_INVALID', 400, `Indique le numéro ${rail.label} qui paie (9 chiffres, commence par 6).`);
+    }
   }
-  if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
-  if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, 'Indique le numéro Orange Money / MTN qui paie (9 chiffres, commence par 6).');
 
   // Le montant vient de la BASE, jamais d'une somme calculee ici. C'est la
   // meme valeur que la garde d'egalite verifiera au reglement.
@@ -273,7 +313,7 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
       method:         body.payment_method,
       currency:       'GNF',
       amount_minor:   totalMinor,
-      payer_phone:    payerPhone,
+      payer_phone:    payerPhone ?? null,
     })
     .select('id')
     .single();
@@ -291,8 +331,8 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     initResp = await initPaymentV2({
       amount_minor: Number(totalMinor),
       currency: 'GNF',
-      type_account: body.payment_method === 'mtn-money' ? 'lp-momo-gn' : 'lp-om-gn',
-      account: toLocalGnAccount(payerPhone),
+      type_account: rail.typeAccount,
+      ...(payerPhone ? { account: toLocalGnAccount(payerPhone) } : {}),
     });
   } catch (e) {
     console.error('[place-orders-batch] lengopay init error:', e);
@@ -304,9 +344,30 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     throwApi('RAIL_INIT_FAILED', 502, "Échec de l'initialisation du paiement");
   }
 
+  const nextStep = railNextStep(lengoMethod, initResp);
+
+  // Impasse : rail sans numero et sans page — voir railIsDeadEnd. Le lot entier
+  // se referme (process_batch_intent_outcome annule les N commandes ensemble).
+  if (railIsDeadEnd(lengoMethod, nextStep)) {
+    console.error('[place-orders-batch] rail sans action exploitable', {
+      method: lengoMethod, pay_id: initResp.pay_id, batch_id: batchId,
+    });
+    await sb.rpc('process_batch_intent_outcome', {
+      p_intent_id: intentRow.id, p_terminal_status: 'failed', p_rail_status: 'no_action',
+      p_error_code: 'RAIL_NO_ACTION',
+      p_error_message: `pay_id=${initResp.pay_id} method=${lengoMethod}`,
+    });
+    throwApi('RAIL_NO_ACTION', 502, RAIL_NO_ACTION_MESSAGE);
+  }
+
   const { error: updErr } = await sb
     .from('payment_intents')
-    .update({ rail_intent_id: initResp.pay_id, rail_status: 'pending', updated_at: new Date().toISOString() })
+    .update({
+      rail_intent_id:  initResp.pay_id,
+      rail_status:     'pending',
+      rail_action_url: railActionUrl(nextStep),
+      updated_at:      new Date().toISOString(),
+    })
     .eq('id', intentRow.id);
   if (updErr) {
     // Le paiement existe chez Lengopay mais on ne saurait plus le relier : on
@@ -323,13 +384,15 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement intent');
   }
 
-  // Plus de payment_url (v2 est in-app) — le client va directement a l'ecran
-  // de confirmation/attente.
+  // next_step : sonder (Orange/MTN), ouvrir la page (Soutra Money) ou saisir un
+  // code (Kulu). Voir place-order pour pourquoi il n'est pas filtre du cache
+  // d'idempotence.
   return {
     body: {
       batch_id:     batchId,
       orders,
       total_minor:  totalMinor,
+      next_step:    nextStep,
     },
   };
 }, stripPaymentSecret));

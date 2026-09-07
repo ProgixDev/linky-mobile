@@ -26,9 +26,11 @@ import {
   normalizeLengopayStatus,
   type LengopayInitRequest,
   type LengopayInitResponse,
+  type LengopayNextStep,
   type LengopayStatusResponse,
   type LengopayV2InitRequest,
   type LengopayV2InitResponse,
+  type LengopayV2TypeAccount,
 } from '@shared/lengopay-types.ts';
 
 // B (resilience): hard-cap rail HTTP calls. Status should be sub-second; if
@@ -135,6 +137,146 @@ export function toLocalGnAccount(e164: string): string {
   return m[1];
 }
 
+// ─── Table des rails Lengopay Guinee ────────────────────────────────────────
+// UNE seule source de verite pour « quelle methode Linky -> quel type_account
+// Lengopay, et faut-il un numero ». Elle remplace les quatre ternaires binaires
+// (mtn ? lp-momo-gn : lp-om-gn) semes dans place-order, place-orders-batch,
+// booking-sign-pay et create-boost : ajouter un rail se faisait a quatre
+// endroits, et en oublier un donnait un paiement route vers le mauvais
+// operateur — de l'argent au mauvais endroit, pas une erreur d'affichage.
+//
+// needsAccount : Orange, MTN et Kulu encaissent SUR un numero guineen (envoye
+// dans `account`). Soutra Money et la carte n'en veulent pas — l'acheteur
+// s'identifie sur la page que Lengopay renvoie.
+export type LengopayMethod =
+  | 'orange-money' | 'mtn-money' | 'kulu' | 'soutramoney' | 'lengopay-card';
+
+export const LENGOPAY_RAILS: Record<
+  LengopayMethod,
+  { typeAccount: LengopayV2TypeAccount; needsAccount: boolean; label: string }
+> = {
+  'orange-money':  { typeAccount: 'lp-om-gn',          needsAccount: true,  label: 'Orange Money' },
+  'mtn-money':     { typeAccount: 'lp-momo-gn',        needsAccount: true,  label: 'MTN MoMo' },
+  'kulu':          { typeAccount: 'lp-kulu-gn',        needsAccount: true,  label: 'Kulu' },
+  'soutramoney':   { typeAccount: 'lp-soutramoney-gn', needsAccount: false, label: 'Soutra Money' },
+  'lengopay-card': { typeAccount: 'lp-card-gn',        needsAccount: false, label: 'Carte bancaire' },
+};
+
+// Hotes ou une page de paiement Lengopay a le droit de vivre. MIROIR EXACT de
+// l'allowlist de app/checkout/pay.tsx, qui refuse de charger toute autre page
+// (sans quoi un attaquant pourrait afficher un faux formulaire dans le chrome
+// « Paiement » de Linky et hameçonner un code).
+//
+// La verifier ICI, cote serveur, et pas seulement a l'ecran : une URL que le
+// telephone refusera de charger laisse l'acheteur dans une boucle fermee —
+// « Lien de paiement introuvable », retour, bouton « Ouvrir la page », refus a
+// nouveau, et 15 minutes d'attente pour rien. Vu du serveur, c'est la meme
+// chose qu'une absence de page, et ca se traite pareil (voir railNextStep).
+const TRUSTED_ACTION_HOST = /^https:\/\/([a-z0-9-]+\.)*(lengopay\.com|soutramoney\.com)(\/|$|\?|#)/i;
+
+export function isLengopayMethod(m: string): m is LengopayMethod {
+  return Object.prototype.hasOwnProperty.call(LENGOPAY_RAILS, m);
+}
+
+// Ce que la doc annonce pour chaque rail. lp-card-gn n'a AUCUNE section : son
+// entree est 'unknown', ce qui veut dire « n'importe quelle forme est
+// acceptable, ne crie pas ». Les trois autres sont documentes, donc une forme
+// differente de l'attendue est un signal a voir dans les journaux.
+const EXPECTED_STEP: Record<LengopayMethod, LengopayNextStep['kind'] | 'unknown'> = {
+  'orange-money':  'poll',
+  'mtn-money':     'poll',
+  'kulu':          'otp',
+  'soutramoney':   'webview',
+  'lengopay-card': 'unknown',
+};
+
+/** Ce que l'acheteur doit encore faire apres l'init. Une etape inattendue est
+ *  journalisee, JAMAIS transformee en echec : Lengopay a deja la demande, et
+ *  echouer ici annulerait la commande alors que l'acheteur peut encore
+ *  confirmer sur son telephone (argent preleve, commande annulee — exactement
+ *  ce que l'ordre S2 existe pour eviter). */
+export function railNextStep(
+  method: LengopayMethod,
+  resp: LengopayV2InitResponse,
+): LengopayNextStep {
+  // Une page sur un hote qu'on ne charge pas equivaut a pas de page du tout :
+  // le telephone la refuserait. On la laisse tomber ICI plutot que de la
+  // stocker et de renvoyer l'acheteur dans une boucle. Journalise en dur avec
+  // l'hote, parce que la seule reparation est de l'ajouter aux deux allowlists
+  // une fois qu'on l'a vu passer une fois.
+  let webviewUrl = resp.webview_url;
+  if (webviewUrl && !TRUSTED_ACTION_HOST.test(webviewUrl)) {
+    console.error('[lengopay] v2 init: webview_url sur un hote NON autorise — page ignoree', {
+      method, pay_id: resp.pay_id, url: webviewUrl.slice(0, 200),
+    });
+    webviewUrl = undefined;
+  }
+
+  const expected = EXPECTED_STEP[method];
+
+  // UNE PAGE SUR UN RAIL QUI N'EN ATTEND PAS NE DETOURNE PLUS L'ACHETEUR.
+  // Sur Orange et MTN, ce qui conclut le paiement est la demande qui arrive sur
+  // le telephone. Envoyer quand meme vers une page — et lui afficher « ouvre la
+  // page de paiement » au lieu de « valide sur ton telephone » — le detournerait
+  // du seul geste qui marche, pour une URL que la WebView pourrait meme refuser.
+  // On garde donc l'URL en SECOND RECOURS et on laisse le parcours normal.
+  if (webviewUrl && expected === 'poll') {
+    console.warn('[lengopay] v2 init: page inattendue sur un rail telephone — gardee en second recours', {
+      method, pay_id: resp.pay_id,
+    });
+    return { kind: 'poll', fallbackUrl: webviewUrl };
+  }
+
+  const step: LengopayNextStep = webviewUrl
+    ? { kind: 'webview', url: webviewUrl }
+    : resp.requires_otp
+      ? { kind: 'otp' }
+      : { kind: 'poll' };
+  if (expected !== 'unknown' && expected !== step.kind) {
+    console.warn('[lengopay] v2 init: etape inattendue', {
+      method, pay_id: resp.pay_id, expected, got: step.kind,
+    });
+  }
+  return step;
+}
+
+/** L'URL a enregistrer dans payment_intents.rail_action_url, quelle que soit la
+ *  forme de l'etape. NULL quand il n'y a aucune page — et jamais l'URL d'une
+ *  tentative precedente, puisqu'elle est toujours ecrite dans le meme UPDATE
+ *  que le pay_id. */
+export function railActionUrl(step: LengopayNextStep): string | null {
+  if (step.kind === 'webview') return step.url;
+  if (step.kind === 'poll') return step.fallbackUrl ?? null;
+  return null;
+}
+
+/**
+ * L'acheteur se retrouve-t-il SANS AUCUN MOYEN de payer ?
+ *
+ * Un rail qui n'encaisse pas sur un numero (Soutra Money, carte) ne declenche
+ * RIEN cote acheteur : aucune demande sur son telephone, aucun code. Sa seule
+ * porte est la page que Lengopay doit renvoyer. Si elle manque — ou si elle
+ * pointe sur un hote qu'on ne charge pas — il n'y a plus rien a faire nulle
+ * part, et l'ecran d'attente compterait 15 minutes pour rien avant d'annuler.
+ *
+ * ET ON PEUT FERMER SANS RISQUE, ce qui est l'exception a la regle « ne jamais
+ * annuler ce que l'acheteur peut encore payer » : pour que de l'argent bouge il
+ * faudrait qu'il ait saisi un code ou un numero de carte QUELQUE PART, et il
+ * n'existe justement aucun endroit ou il aurait pu le faire — on n'a envoye
+ * aucun `account`, et il n'a recu ni page ni code. Rien n'a pu etre preleve.
+ *
+ * Les rails a numero (Orange, MTN, Kulu) ne passent JAMAIS par ici : chez eux
+ * la demande part sur le telephone, donc l'absence d'etape supplementaire est
+ * le comportement normal, et fermer serait exactement la faute qu'on evite.
+ */
+export function railIsDeadEnd(method: LengopayMethod, step: LengopayNextStep): boolean {
+  return !LENGOPAY_RAILS[method].needsAccount && step.kind === 'poll';
+}
+
+/** Message unique pour cette impasse — le meme sur les quatre surfaces. */
+export const RAIL_NO_ACTION_MESSAGE =
+  'Ce moyen de paiement est momentanément indisponible. Choisis Orange Money, MTN ou ton portefeuille.';
+
 export async function initPaymentV2(req: LengopayV2InitRequest): Promise<LengopayV2InitResponse> {
   const res = await fetchWithTimeout(`${baseUrl()}/api/v2/payments`, {
     method: 'POST',
@@ -144,7 +286,10 @@ export async function initPaymentV2(req: LengopayV2InitRequest): Promise<Lengopa
       currency: req.currency,
       websiteid: websiteId(),
       type_account: req.type_account,
-      account: req.account,
+      // Omis pour Soutra Money / carte : envoyer account:undefined serait
+      // serialise en champ absent, mais on l'ecrit explicitement pour que la
+      // lecture du corps envoye ne laisse aucun doute.
+      ...(req.account ? { account: req.account } : {}),
     }),
   });
   if (!res.ok) throw new Error(`Lengopay v2 init ${res.status}: ${await res.text()}`);
@@ -157,25 +302,19 @@ export async function initPaymentV2(req: LengopayV2InitRequest): Promise<Lengopa
   if (!raw.success || !payId) {
     throw new Error(`Lengopay v2 init malformed/failed response: ${JSON.stringify(raw).slice(0, 300)}`);
   }
-  // lp-om-gn/lp-momo-gn sont documentes comme finalisables en un seul appel
-  // (seuls Kulu et Soutra Money ont une 2e etape). Si une etape supplementaire
-  // remonte quand meme, on NE JETTE PAS : Lengopay a deja la demande, et le
-  // client (message du 2026-09-05) decrit bien un « code de validation » recu
-  // par l'acheteur pour OM et MTN. Jeter ici annulerait la commande cote Linky
-  // alors que l'acheteur peut encore confirmer sur son telephone — argent
-  // preleve, commande annulee, exactement ce que l'ordre S2 existe pour eviter.
-  // On garde donc le pay_id, on laisse le sondage trancher (succes s'il
-  // confirme, expiration a 15 min sinon), et on journalise fort pour qu'on le
-  // voie tout de suite dans les logs si ce cas se produit vraiment.
-  const extraStep = raw.requires_otp ?? raw.data?.requires_otp
-    ? 'requires_otp'
-    : (raw.webview_url ?? raw.data?.webview_url) ? 'webview_url' : null;
-  if (extraStep) {
-    console.warn('[lengopay] v2 init: etape supplementaire inattendue pour orange/mtn', {
-      pay_id: payId, extraStep, raw: JSON.stringify(raw).slice(0, 300),
-    });
-  }
-  return { pay_id: payId };
+  // L'etape supplementaire est REMONTEE telle quelle (elle etait jetee avant le
+  // 2026-09-07, quand seuls Orange/MTN etaient branches). C'est railNextStep()
+  // qui juge si elle est attendue pour ce rail — et qui ne fait que journaliser
+  // sinon : on ne transforme jamais une forme inattendue en echec, sans quoi on
+  // annulerait une commande que l'acheteur peut encore payer.
+  const requiresOtp = (raw.requires_otp ?? raw.data?.requires_otp) === true;
+  const rawWebview = raw.webview_url ?? raw.data?.webview_url;
+  const webviewUrl = typeof rawWebview === 'string' && rawWebview ? rawWebview : undefined;
+  return {
+    pay_id: payId,
+    ...(requiresOtp ? { requires_otp: true } : {}),
+    ...(webviewUrl ? { webview_url: webviewUrl } : {}),
+  };
 }
 
 /** Status body shape assumed identical to v1 ({pay_id, websiteid}) — the v2

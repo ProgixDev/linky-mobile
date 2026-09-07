@@ -8,10 +8,17 @@
 //
 // CE QUE CHAQUE PROFIL VOIT — la regle vient du client :
 //   etranger : Carte bancaire (Stripe) + Orange Money / MTN (Lengopay)
-//   Guinee   : Orange Money / MTN (Lengopay) — Stripe n'accepte pas les cartes
-//              guineennes ; la Carte/Wallet Lengopay reste a construire (voir
-//              plus bas)
+//   Guinee   : Carte bancaire (Lengopay) + Soutra Money + Orange Money / MTN
 //   + le Portefeuille Linky quand il est approvisionne, sur les deux profils.
+//
+// « Le bouton Carte bancaire "Stripe" SE TRANSFORME » (client 2026-09-05) : le
+// meme emplacement, la meme etiquette, un rail different. Jusqu'au 2026-09-07 le
+// bouton DISPARAISSAIT pour un profil Guinee — un acheteur guineen n'avait
+// aucun moyen de payer par carte. Les deux cartes sont des valeurs de
+// PaymentMethod DISTINCTES ('card' vs 'lengopay-card') parce que le serveur ne
+// derive pas le pays : usePaymentProfile() est entierement cote client, donc
+// c'est le moyen envoye qui decide du rail. Si les deux partageaient 'card', un
+// acheteur guineen partirait chez Stripe et se ferait refuser sa carte.
 //
 // ORANGE ET MTN SONT DEUX BOUTONS DEPUIS LE 2026-09-05. Ils n'en faisaient
 // qu'un tant que le paiement passait par la page hebergee Lengopay v1 : c'est
@@ -21,11 +28,14 @@
 // type_account (lp-om-gn / lp-momo-gn) doit desormais partir avec la requete,
 // donc l'operateur doit etre connu AVANT — d'ou deux lignes distinctes.
 //
-// La partie Carte/Wallet Lengopay pour la Guinee (Paycard, Kulu, Soutra) n'est
-// PAS encore branchee : la doc v2 ne decrit rien de specifique pour lp-card-gn,
-// et deviner le comportement d'un rail carte avec de l'argent reel serait
-// imprudent. Tant que ce n'est pas clarifie, un profil Guinee voit Orange/MTN
-// (+ le portefeuille) — jamais un bouton carte qui echouerait.
+// KULU N'EST PAS ENCORE LA. Son rail exige un code de validation par SMS
+// (POST /api/v2/authenticate), donc un ecran de saisie qui n'existe pas encore ;
+// l'afficher aujourd'hui donnerait un paiement initie que personne ne pourrait
+// confirmer. Le moyen est accepte cote serveur, il ne manque que cet ecran.
+//
+// « PAYCARD » n'existe nulle part dans l'API Lengopay — c'est probablement le
+// nom commercial de lp-card-gn, mais ce n'est pas verifiable depuis leur doc.
+// La ligne s'appelle donc « Carte bancaire », ce qui est vrai dans les deux cas.
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
@@ -70,19 +80,27 @@ export function PaymentMethodPicker({
 
   // Stripe uniquement pour l'etranger : les cartes guineennes sont refusees par
   // Stripe (constat client 2026-07-26), la carte en Guinee passe par Lengopay.
+  // `loading` compte : tant que le profil est inconnu on n'affiche AUCUNE des
+  // deux cartes, plutot que d'en montrer une au hasard et d'envoyer l'argent
+  // sur le mauvais rail.
   const showStripe = allowCard && !loading && profile === 'abroad';
+  const showLengopayCard = allowCard && !loading && profile === 'guinea';
+  // Soutra Money est un portefeuille guineen : il n'a aucun sens a l'etranger.
+  const showSoutra = !loading && profile === 'guinea';
   // Le portefeuille ne s'affiche que s'il peut reellement payer. Un solde a zero
   // affiche est un bouton qui echoue.
   const showWallet = typeof walletBalanceGnf === 'number' && walletBalanceGnf > 0;
 
   return (
     <>
-      {showStripe && (
+      {(showStripe || showLengopayCard) && (
         <>
           <MicroLabel label={t('checkout.sectionCard')} />
           <MethodRow
-            selected={value === 'card'}
-            onPress={() => onChange('card')}
+            // Un seul des deux est vrai a la fois (profile est 'abroad' XOR
+            // 'guinea'), donc une seule ligne « Carte bancaire » s'affiche.
+            selected={value === (showStripe ? 'card' : 'lengopay-card')}
+            onPress={() => onChange(showStripe ? 'card' : 'lengopay-card')}
             title={t('checkout.cardName')}
             hint={t('checkout.cardHint')}
             icon={<I.card size={18} color={colors.text} />}
@@ -105,6 +123,18 @@ export function PaymentMethodPicker({
         hint={t('checkout.rails.mtnMoneyHint')}
         logos={[MTN_LOGO]}
       />
+
+      {/* Soutra Money : portefeuille guineen, paye sur sa propre page web (pas
+          de numero a saisir ici — l'acheteur s'y identifie lui-meme). */}
+      {showSoutra && (
+        <MethodRow
+          selected={value === 'soutramoney'}
+          onPress={() => onChange('soutramoney')}
+          title={t('checkout.rails.soutraMoney')}
+          hint={t('checkout.rails.soutraMoneyHint')}
+          icon={<I.wallet size={18} color={colors.text} />}
+        />
+      )}
 
       {showWallet && (
         <>

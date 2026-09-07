@@ -44,12 +44,15 @@ export default function BookingDetailRoute() {
   // demande son propre RPC, pas un raccourci.
   const [method, setMethod] = useState<PaymentMethod>(LENGOPAY_METHOD);
   const isCard = method === 'card';
-  // Le numero QUI PAIE — voir src/lib/payerPhone.ts. Toujours propose pour le
-  // mobile money (la diaspora paie avec un compte OM/MTN guineen qui n'est pas
-  // forcement le numero du compte, client 2026-09-05), jamais pour la carte.
+  // Le numero QUI PAIE — voir src/lib/payerPhone.ts. Reclame UNIQUEMENT par les
+  // rails qui encaissent sur un numero guineen (la diaspora paie avec un compte
+  // OM/MTN guineen qui n'est pas forcement le numero du compte, client
+  // 2026-09-05). Les cartes et Soutra Money identifient le locataire sur leur
+  // propre page : leur reclamer un numero le bloquerait pour rien.
+  const needsAccountNumber = method === 'orange-money' || method === 'mtn-money';
   const payerPhone = usePayerPhone();
-  const needsPayerPhone = !isCard && !payerPhone.loading;
-  const payerPhoneValid = isCard || payerPhone.valid;
+  const needsPayerPhone = needsAccountNumber && !payerPhone.loading;
+  const payerPhoneValid = !needsAccountNumber || payerPhone.valid;
   const payerPhoneE164 = payerPhone.e164;
 
   const booking = (q.data ?? []).find((b) => b.id === id);
@@ -66,10 +69,16 @@ export default function BookingDetailRoute() {
       // APRES le paiement, pas avant ». C'est confirm_booking_payment qui, a la
       // confirmation du rail, bascule la reservation en 'paid' ET appose la
       // signature du locataire — quel que soit le rail emprunte.
+      // Le moyen choisi part TEL QUEL. Il etait ecrase en 'orange-money' pour
+      // tout ce qui n'etait pas la carte : un locataire qui choisissait MTN
+      // recevait une demande Orange Money — de l'argent demande au mauvais
+      // operateur, pas une erreur d'affichage. Corrige le 2026-09-07 ;
+      // 'wallet' n'est pas propose ici (voir le commentaire de `method`), donc
+      // aucune valeur que booking-sign-pay refuse ne peut arriver ici.
       const res = await signPay.mutateAsync({
         bookingId: booking.id,
-        payerPhone: payerPhoneE164,
-        paymentMethod: method === 'card' ? 'card' : 'orange-money',
+        ...(needsAccountNumber && payerPhoneE164 ? { payerPhone: payerPhoneE164 } : {}),
+        paymentMethod: method as Exclude<PaymentMethod, 'wallet'>,
       });
 
       // Carte : feuille Stripe native, exactement comme le panier.
@@ -103,6 +112,22 @@ export default function BookingDetailRoute() {
         // qu'aucun paiement n'avait ete tente).
         show('Paiement envoyé — confirmation en cours…', 'info');
         void q.refetch();
+        return;
+      }
+
+      // Soutra Money / carte Lengopay : le locataire finit sur la page du rail,
+      // dans la WebView de l'appli. La fermer ramene ici, ou l'ecran sonde —
+      // l'issue ne depend jamais de ce que la page affichait.
+      if (res.next_step?.kind === 'webview') {
+        // replace, PAS push : la WebView se referme elle-meme en `replace` vers
+        // /bookings/{id}. Un push empilerait donc deux fois cet ecran, et un
+        // retour apres paiement ramenerait le locataire sur la meme page au
+        // lieu de sa liste. Meme geste que le panier et le boost.
+        router.replace({
+          pathname: '/checkout/pay',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typed-routes regenerate on next `expo start`.
+          params: { url: res.next_step.url, bookingId: booking.id },
+        } as any);
         return;
       }
 
