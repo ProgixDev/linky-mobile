@@ -26,6 +26,7 @@ import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { useMyVisitRequests, type BuyerVisitRequest } from '../../src/data/queries/properties';
 import { formatGNF } from '../../src/lib/format';
+import { priceWithFeeGnf } from '../../src/lib/fees';
 import { useTranslation } from 'react-i18next';
 
 type GroupKey = 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed';
@@ -253,7 +254,8 @@ function VisitRow({ visit }: { visit: BuyerVisitRequest }) {
                 .join(', ') || visit.property.city}
               {' · '}
               <Text style={{ fontWeight: '700', color: colors.text }}>
-                {formatGNF(visit.property.priceGnf)}
+                {/* Prix ACHETEUR, commission comprise (client 2026-09-08). */}
+                {formatGNF(priceWithFeeGnf(visit.property.priceGnf))}
                 {visit.property.perMonth
                   ? ' /mois'
                   : visit.property.type === 'location'

@@ -15,6 +15,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
+import { priceWithFeeGnf } from '../../../src/lib/fees';
 import { useProperty, useRequestVisit } from '../../../src/data/queries/properties';
 import { formatGNF } from '../../../src/lib/format';
 import { useToast } from '../../../src/components/feedback/Toast';
@@ -123,7 +124,8 @@ export default function VisitRequestRoute() {
                     fontVariant: ['tabular-nums'],
                   }}
                 >
-                  {formatGNF(property.priceGnf)}
+                  {/* Prix ACHETEUR, commission comprise (client 2026-09-08). */}
+                  {formatGNF(priceWithFeeGnf(property.priceGnf))}
                   {property.type === 'location' && (
                     <Text style={{ fontWeight: '500', color: colors.textMuted }}>
                       {property.perMonth ? t('property.visitPerMonth') : ' /jour'}

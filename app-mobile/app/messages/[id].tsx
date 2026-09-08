@@ -24,6 +24,7 @@ import { useConversation, useSendMessage, useMarkConversationRead } from '../../
 import { useToast } from '../../src/components/feedback/Toast';
 import { useAuth } from '../../src/stores/auth';
 import { formatGNF } from '../../src/lib/format';
+import { priceWithFeeGnf } from '../../src/lib/fees';
 
 const MESSAGE_MAX_LENGTH = 2000;
 
@@ -145,7 +146,9 @@ export default function ChatRoute() {
             </Text>
           </View>
           <Text style={{ fontWeight: '600', fontSize: 13, fontVariant: ['tabular-nums'] }}>
-            {formatGNF(pinned.priceGnf)}
+            {/* Prix ACHETEUR (client 2026-09-08) : l'apercu d'annonce epingle
+                dans la conversation doit montrer le MEME prix que la fiche. */}
+            {formatGNF(priceWithFeeGnf(pinned.priceGnf))}
           </Text>
         </Pressable>
       )}
