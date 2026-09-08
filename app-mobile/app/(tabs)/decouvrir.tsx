@@ -7,6 +7,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
+import { useFilters } from '../../src/stores/filters';
 import { DiscoverCard, DiscoverEnd } from '../../src/components/discover/DiscoverCard';
 import { useDiscoverInfinite, type DiscoverFilter } from '../../src/data/queries';
 import { useProperty } from '../../src/data/queries/properties';
@@ -27,17 +28,33 @@ export default function DecouvrirRoute() {
   // screen-zoom / display-size setting (was a stale module Dimensions.get()).
   const { height: SH } = useWindowDimensions();
   const roles = useAuth((s) => s.roles);
-  // Role-aware feed: pure agents see only properties, pure sellers see only products.
+  const filters = useFilters();
   const isBuyer = roles.includes('buyer');
   const isSeller = roles.includes('seller');
   const isAgent = roles.includes('agent');
   const isPureAgent = isAgent && !isSeller && !isBuyer;
   const isPureSeller = isSeller && !isAgent && !isBuyer;
-  const isPurePro = isPureAgent || isPureSeller;
-  // Manual filter (Tout / Produits / Immobilier) for everyone except pure pros,
-  // who stay locked to their single kind. Overrides the role default.
-  const [tab, setTab] = useState<DiscoverFilter>('all');
-  const feedFilter: DiscoverFilter = isPureAgent ? 'properties' : isPureSeller ? 'products' : tab;
+  // Le filtre (Tout / Produits / Immobilier) est ouvert A TOUT LE MONDE depuis
+  // le 2026-09-08. La persona choisit seulement ce qui s'ouvre EN PREMIER.
+  //
+  // Avant, un vendeur pur etait verrouille sur les produits et un agent pur sur
+  // l'immobilier : les pastilles etaient masquees et le filtre force. Un vendeur
+  // ne pouvait donc jamais decouvrir un logement — le pendant, dans le fil, du
+  // mur signale par Abdoulaye sur l'onglet Annonces. Meme raison de le lever :
+  // rien n'empeche un vendeur d'acheter ou de louer, on lui cachait seulement
+  // la porte d'entree.
+  // Le filtre est DERIVE, exactement comme l'onglet du Marche : le choix de
+  // l'utilisateur s'il en a fait un (dans le store, donc il survit aux
+  // remontages et disparait a la deconnexion), sinon le defaut de sa persona.
+  //
+  // Surtout pas un useState + useEffect : le defaut serait pose APRES la
+  // peinture, useDiscoverInfinite partirait une premiere fois sur 'all' puis une
+  // seconde sur la bonne cle — deux appels reseau au lieu d'un, payes sur la 3G,
+  // avec un fil mixte qui clignote avant de basculer.
+  const tab: DiscoverFilter =
+    filters.discoverTab ?? (isPureAgent ? 'properties' : isPureSeller ? 'products' : 'all');
+  const setTab = filters.setDiscoverTab;
+  const feedFilter: DiscoverFilter = tab;
 
   const { items, isLoading, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useDiscoverInfinite(feedFilter);
 
@@ -221,9 +238,10 @@ export default function DecouvrirRoute() {
         />
       )}
 
-      {/* Manual filter tabs — overlay at the top, hidden for pure pros. */}
-      {!isPurePro && (
-        <View
+      {/* Pastilles de filtre — affichees pour TOUT LE MONDE depuis le
+          2026-09-08 (elles etaient masquees aux pros purs, qui restaient
+          enfermes dans leur seule categorie). */}
+      <View
           pointerEvents="box-none"
           style={{ position: 'absolute', top: insets.top + 10, left: 0, right: 0, alignItems: 'center', zIndex: 10 }}
         >
@@ -262,8 +280,7 @@ export default function DecouvrirRoute() {
               },
             )}
           </View>
-        </View>
-      )}
+      </View>
     </View>
   );
 }

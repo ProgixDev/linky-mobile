@@ -10,7 +10,6 @@ import { TopBar } from '../src/components/nav/TopBar';
 import { I, type IconKey } from '../src/icons/Icon';
 import { useMarkNotificationsRead } from '../src/data/queries';
 import { useNotificationsInfinite } from '../src/data/queries/messages';
-import { useAuth } from '../src/stores/auth';
 import { Button } from '../src/components/primitives/Button';
 import type { AppNotification } from '../src/data/types';
 import { EmptyState, ErrorStateView } from '../src/components/feedback/EmptyState';
@@ -18,22 +17,29 @@ import { Skeleton } from '../src/components/primitives/Skeleton';
 
 type Tab = 'all' | 'order' | 'message' | 'visit' | 'booking' | 'promo';
 
-// Filter tabs are role-aware (client 2026-07-07): a seller's alerts aren't an
-// agent's or a buyer's. 'order' (product orders) is hidden from a PURE agent;
-// 'visit' (property visits) is hidden from a PURE seller. 'all' / 'message' /
-// 'promo' are universal. The 'all' tab still shows everything the user
-// actually receives, so nothing is ever hidden from view — only the filter
-// chips adapt.
-const TAB_DEFS: { key: Tab; labelKey: string; show: (r: { buyer: boolean; seller: boolean; agent: boolean }) => boolean }[] = [
-  { key: 'all', labelKey: 'notifications.filterAll', show: () => true },
-  { key: 'order', labelKey: 'notifications.filterOrder', show: (r) => r.buyer || r.seller },
-  { key: 'message', labelKey: 'notifications.filterMessage', show: () => true },
-  { key: 'visit', labelKey: 'notifications.filterVisit', show: (r) => r.buyer || r.agent },
-  // 'booking' (rental reservations) existed as a notification category on the
-  // server but had no chip, so those alerts were only reachable from « Toutes »
-  // (client 2026-08-05). Same audience as 'visit': the tenant and the landlord.
-  { key: 'booking', labelKey: 'notifications.filterBooking', show: (r) => r.buyer || r.agent },
-  { key: 'promo', labelKey: 'notifications.filterPromo', show: () => true },
+// TOUTES les pastilles sont montrees a tout le monde depuis le 2026-09-08.
+//
+// Elles etaient calees sur la persona (client 2026-07-07 : « les alertes d'un
+// vendeur ne sont pas celles d'un agent ») : 'order' masquee a l'agent pur,
+// 'visit' et 'booking' masquees au vendeur pur. Ce raisonnement supposait
+// qu'un vendeur ne loue pas et qu'un agent n'achete pas — ce qui n'a jamais
+// ete vrai cote serveur, et ne l'est plus du tout depuis que les deux
+// categories sont ouvertes a toutes les personas sur Annonces et Decouvrir.
+//
+// Le symptome : un vendeur qui reserve un logement RECEVAIT bien les alertes
+// 'booking', mais n'avait aucune pastille pour les retrouver — il devait les
+// pecher dans « Toutes ». Une pastille vide ne coute rien ; une alerte qu'on
+// ne sait pas retrouver, si.
+//
+// Regle a retenir : un filtre doit porter sur ce que l'utilisateur RECOIT,
+// jamais sur l'etiquette de persona qu'il porte.
+const TAB_DEFS: { key: Tab; labelKey: string }[] = [
+  { key: 'all', labelKey: 'notifications.filterAll' },
+  { key: 'order', labelKey: 'notifications.filterOrder' },
+  { key: 'message', labelKey: 'notifications.filterMessage' },
+  { key: 'visit', labelKey: 'notifications.filterVisit' },
+  { key: 'booking', labelKey: 'notifications.filterBooking' },
+  { key: 'promo', labelKey: 'notifications.filterPromo' },
 ];
 
 const ICON_FOR: Record<string, IconKey> = {
@@ -71,19 +77,10 @@ export default function NotificationsRoute() {
   const markRead = useMarkNotificationsRead();
   const [tab, setTab] = useState<Tab>('all');
 
-  // Role-aware filter chips.
-  const roles = useAuth((s) => s.roles);
-  const roleFlags = {
-    buyer: roles.includes('buyer'),
-    seller: roles.includes('seller'),
-    agent: roles.includes('agent'),
-  };
-  const visibleTabs = TAB_DEFS.filter((d) => d.show(roleFlags));
-  // If the active tab is hidden for this role, fall back to 'all'.
-  useEffect(() => {
-    if (!visibleTabs.some((d) => d.key === tab)) setTab('all');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roles]);
+  // Plus aucun filtrage par role : toutes les pastilles, pour tout le monde.
+  // Le repli « si l'onglet actif est masque pour ce role, revenir a Toutes »
+  // n'a plus d'objet — aucune pastille ne peut disparaitre.
+  const visibleTabs = TAB_DEFS;
 
   useEffect(() => {
     // Mark all read on view

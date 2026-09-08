@@ -11,8 +11,18 @@ export type PropertyTypeFilter = 'all' | 'location' | 'vente' | 'terrain';
 // and a 500k/mois lease are not the same price).
 export type RentalPeriodFilter = 'all' | 'month' | 'day';
 
+/** Le fil Decouvrir. Duplique ici plutot qu'importe de data/queries pour ne pas
+ *  faire dependre un store d'une couche de donnees. */
+export type DiscoverTab = 'all' | 'products' | 'properties';
+
 interface FiltersState {
-  marcheTab: MarcheTab;
+  /** null = l'utilisateur n'a PAS encore choisi. L'ecran derive alors le defaut
+   *  de sa persona. Sans ce null, impossible de distinguer « il veut Articles »
+   *  de « on n'a jamais rien decide », et il fallait un drapeau separe — qui
+   *  survivait au changement de compte. */
+  marcheTab: MarcheTab | null;
+  discoverTab: DiscoverTab | null;
+  setDiscoverTab: (t: DiscoverTab) => void;
   productCategory: string; // 'all' | category name
   productSort: 'recent' | 'popular';
   productPriceMaxGnf: number; // 0 = Tout
@@ -40,10 +50,12 @@ interface FiltersState {
   setFurnishedOnly: (v: boolean) => void;
   setSearchQuery: (q: string) => void;
   reset: () => void;
+  resetAll: () => void;
 }
 
 const DEFAULTS = {
-  marcheTab: 'articles' as MarcheTab,
+  marcheTab: null as MarcheTab | null,
+  discoverTab: null as DiscoverTab | null,
   productCategory: 'all',
   productSort: 'recent' as 'recent' | 'popular',
   productPriceMaxGnf: 0,
@@ -97,6 +109,7 @@ export function hasActiveFilters(s: FiltersState, isArticles: boolean): boolean 
 export const useFilters = create<FiltersState>((set) => ({
   ...DEFAULTS,
   setMarcheTab: (marcheTab) => set({ marcheTab }),
+  setDiscoverTab: (discoverTab) => set({ discoverTab }),
   setProductCategory: (productCategory) => set({ productCategory }),
   setProductSort: (productSort) => set({ productSort }),
   setProductPriceMax: (productPriceMaxGnf) => set({ productPriceMaxGnf }),
@@ -123,5 +136,11 @@ export const useFilters = create<FiltersState>((set) => ({
   // Phase U.0 should-fix — "Effacer les filtres" from the Immobilier tab
   // used to yank the user to Articles (DEFAULTS sets marcheTab='articles').
   // Preserve the current tab so the user stays where they were.
-  reset: () => set((s) => ({ ...DEFAULTS, marcheTab: s.marcheTab })),
+  reset: () => set((s) => ({ ...DEFAULTS, marcheTab: s.marcheTab, discoverTab: s.discoverTab })),
+  // Vidage COMPLET, appele a la deconnexion. « reset » preserve l'onglet
+  // courant, ce qui est juste quand l'utilisateur efface ses filtres — et faux
+  // quand un autre compte prend le telephone : il heritait sinon de l'onglet ET
+  // des filtres du precedent (meme classe de fuite que le panier et les favoris,
+  // deja corrigee dans signOut).
+  resetAll: () => set({ ...DEFAULTS }),
 }));

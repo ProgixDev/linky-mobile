@@ -35,7 +35,7 @@ import { Chip } from '../../src/components/primitives/Chip';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { HeaderActions } from '../../src/components/nav/HeaderActions';
 import { haptic } from '../../src/lib/haptics';
-import { useFilters, hasActiveFilters } from '../../src/stores/filters';
+import { useFilters, hasActiveFilters, type MarcheTab } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
 import { useProductsInfinite, useInfiniteProperties } from '../../src/data/queries';
 import { CityFilterChips } from '../../src/components/forms/CityFilterChips';
@@ -143,25 +143,30 @@ export default function MarcheRoute() {
     void readLocation(false);
   }, [readLocation]);
 
-  // Tab visibility by role.
-  // Pure agent → only Immobilier. Pure seller → only Articles. Everyone else → both.
+  // LES PERSONAS DECIDENT CE QU'ON VOIT EN PREMIER, JAMAIS CE QU'ON A LE DROIT
+  // DE FAIRE (2026-09-08).
+  //
+  // Avant, un vendeur pur ne voyait QUE l'onglet Articles et un agent pur QUE
+  // l'onglet Immobilier — l'autre etait masque et l'onglet force par un effet.
+  // Le vendeur ne pouvait donc pas parcourir un logement, donc pas en reserver
+  // un. C'est le mur qu'Abdoulaye a signale le 2026-09-08 (« en mode vendeur et
+  // Immo, on ne peut pas acheter ni reserver »).
+  //
+  // Ce n'etait pas une regle voulue mais un effet de bord : rien, nulle part,
+  // n'empeche un vendeur d'acheter. Le panier fonctionne, le paiement passe,
+  // l'argent part au sequestre — verifie sur tout le chemin, ecran ET serveur.
+  // On lui cachait seulement la porte d'entree.
+  //
+  // Une place de marche ne refuse pas un client qui paie, et le role 'buyer' ne
+  // porte AUCUN privilege : c'est une etiquette de navigation. Les deux onglets
+  // sont donc toujours disponibles ; la persona ne fait plus que choisir celui
+  // qui s'ouvre en premier.
   const isBuyer = roles.includes('buyer');
   const isSeller = roles.includes('seller');
   const isAgent = roles.includes('agent');
   const isPureAgent = isAgent && !isSeller && !isBuyer;
   const isPureSeller = isSeller && !isAgent && !isBuyer;
-  const showArticles = !isPureAgent;
-  const showImmobilier = !isPureSeller;
-  const showSwitcher = showArticles && showImmobilier;
 
-  // Force the marche tab to the only available section when role locks it.
-  useEffect(() => {
-    if (isPureAgent && filters.marcheTab !== 'immobilier') {
-      filters.setMarcheTab('immobilier');
-    } else if (isPureSeller && filters.marcheTab !== 'articles') {
-      filters.setMarcheTab('articles');
-    }
-  }, [isPureAgent, isPureSeller, filters]);
 
   const productsQuery = useProductsInfinite({
     category: filters.productCategory === 'all' ? undefined : filters.productCategory,
@@ -189,17 +194,32 @@ export default function MarcheRoute() {
   const prodLoading = productsQuery.isLoading;
   const propLoading = propertiesQuery.isLoading;
 
-  // Effective tab: respects role locks even before useEffect syncs the store.
-  const effectiveTab = isPureAgent
-    ? 'immobilier'
-    : isPureSeller
-      ? 'articles'
-      : filters.marcheTab;
+  // L'onglet est DERIVE, pas force : le choix de l'utilisateur s'il en a fait
+  // un, sinon le defaut de sa persona.
+  //
+  // Cette forme remplace un drapeau « defaut deja applique » + un useEffect, et
+  // regle d'un coup trois defauts que cette approche trainait :
+  //   - le drapeau survivait au changement de compte, donc le compte suivant
+  //     n'obtenait jamais son propre defaut (telephone partage) ;
+  //   - il etait consomme avant que les roles soient connus — useAuth retombe
+  //     sur ['buyer'], jamais sur [], donc aucune garde ne pouvait l'attendre ;
+  //   - l'effet s'executant APRES la peinture, un agent pur voyait une image
+  //     complete d'Articles avant de basculer sur Immobilier.
+  // Un calcul synchrone n'a aucun de ces trois problemes.
+  const effectiveTab: MarcheTab =
+    filters.marcheTab ?? (isPureAgent ? 'immobilier' : 'articles');
   const isArticles = effectiveTab === 'articles';
   const placeholder = isArticles
     ? t('marche.searchPlaceholderArticles')
     : t('marche.searchPlaceholderProperties');
-  const isPurePro = isPureAgent || isPureSeller;
+  // Le cadrage « Concurrence » / « Mode scout » ne vaut que sur SA propre
+  // categorie : un vendeur qui regarde les articles fait de la veille, le meme
+  // vendeur qui regarde des logements est un locataire comme un autre. Garder
+  // « Concurrence » au-dessus d'une liste d'appartements lui dirait qu'il
+  // espionne des concurrents qui n'en sont pas.
+  const isScouting =
+    (isPureSeller && effectiveTab === 'articles') ||
+    (isPureAgent && effectiveTab === 'immobilier');
 
   // Near-bottom trigger for fetchNextPage. 600px buffer = pre-fetch before the user
   // sees the end so the grid keeps growing as they scroll.
@@ -253,7 +273,7 @@ export default function MarcheRoute() {
                 lineHeight: 38,
               }}
             >
-              {isPurePro ? t('marche.titleConcurrence') : t('marche.titleMarche')}
+              {isScouting ? t('marche.titleConcurrence') : t('marche.titleMarche')}
             </Text>
             <HeaderActions />
           </View>
@@ -266,18 +286,16 @@ export default function MarcheRoute() {
               lineHeight: 20,
             }}
           >
-            {isPureSeller
-              ? t('marche.subtitleSeller')
-              : isPureAgent
-                ? t('marche.subtitleAgent')
-                : isArticles
-                  ? t('marche.subtitleArticles')
-                  : t('marche.subtitleProperties')}
+            {isScouting
+              ? (isPureSeller ? t('marche.subtitleSeller') : t('marche.subtitleAgent'))
+              : isArticles
+                ? t('marche.subtitleArticles')
+                : t('marche.subtitleProperties')}
           </Text>
         </View>
 
-        {/* Pro banner — only when user is pure pro */}
-        {isPurePro && (
+        {/* Bandeau scout — seulement quand le pro regarde SA propre categorie. */}
+        {isScouting && (
           <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
             <View
               style={{
@@ -336,7 +354,9 @@ export default function MarcheRoute() {
         )}
 
         {/* ===== Tab pills (hidden when user is pure pro of one type) ===== */}
-        {showSwitcher && (
+        {/* Selecteur toujours affiche : les deux categories sont ouvertes a
+            toutes les personas depuis le 2026-09-08. */}
+        {(
           <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
             <View
               style={{

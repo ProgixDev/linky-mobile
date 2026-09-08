@@ -4,6 +4,7 @@ import { apiPost } from '../lib/api';
 import { useCart } from './cart';
 import { useFavorites } from './favorites';
 import { useHiddenListings } from './hiddenListings';
+import { useFilters } from './filters';
 import { queryClient } from '../lib/queryClient';
 import type { AuthUser } from '../data/queries/auth';
 
@@ -198,6 +199,13 @@ export const useAuth = create<AuthState>((set) => ({
     // below, just in stores that were missed.
     useFavorites.getState().clear();
     useHiddenListings.getState().clear();
+    // Les filtres du Marche sont eux aussi PAR COMPTE alors qu'ils vivent dans
+    // un store par APPAREIL. Sans ce vidage, le compte suivant heritait de
+    // l'onglet (Articles / Immobilier), de la ville, du plafond de prix — et se
+    // voyait proposer « Effacer les filtres » pour des filtres qu'il n'avait
+    // jamais poses. Remettre marcheTab a null fait aussi que la persona du
+    // NOUVEAU compte decide de nouveau ce qui s'ouvre en premier.
+    useFilters.getState().resetAll();
     // Wipe ALL cached server data so the NEXT account never inherits the
     // previous account's listings / wallet / orders / counts (client 2026-07-30:
     // a fresh account showed "8 annonces actives" — that count was the prior

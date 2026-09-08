@@ -29,7 +29,6 @@ import { shareMessage } from '../../lib/share';
 import { useFavorites } from '../../stores/favorites';
 import { useHiddenListings } from '../../stores/hiddenListings';
 import { usePrefs } from '../../stores/prefs';
-import { useAuth } from '../../stores/auth';
 import { useToast } from '../feedback/Toast';
 import { useToggleFavorite } from '../../data/queries/products';
 import { useTogglePropertyFavorite } from '../../data/queries/properties';
@@ -66,13 +65,6 @@ export function DiscoverCard({
   const { width: winW } = useWindowDimensions();
   const SW = Math.min(winW, CARD_MAX_W);
   const dataSaver = usePrefs((s) => s.dataSaver);
-  const roles = useAuth((s) => s.roles);
-  const isBuyer = roles.includes('buyer');
-  const isSeller = roles.includes('seller');
-  const isAgent = roles.includes('agent');
-  const isPureAgent = isAgent && !isSeller && !isBuyer;
-  const isPureSeller = isSeller && !isAgent && !isBuyer;
-  const isPurePro = isPureAgent || isPureSeller;
 
   const isProduct = data.kind === 'product';
   const id = data.item.id;
@@ -381,8 +373,14 @@ export function DiscoverCard({
           </View>
         )}
 
-        {/* ===== Top filter pills (hidden for pure pros) ===== */}
-        {!isPurePro && (
+        {/* ===== Rangee haute : badge « economie de donnees » =====
+            Le commentaire d'origine parlait de « pastilles de filtre » : elles
+            ont demenage dans decouvrir.tsx, il ne reste ici que le badge.
+            Elle etait masquee aux pros purs — un vendeur ne voyait donc jamais
+            pourquoi sa video etait figee. Affichee pour tout le monde depuis le
+            2026-09-08, en meme temps que l'ouverture du fil a toutes les
+            categories. */}
+        {(
           <View
             style={{
               position: 'absolute',
@@ -425,7 +423,9 @@ export function DiscoverCard({
           <View
             style={{
               position: 'absolute',
-              top: topInset + (isPurePro ? 12 : 56),
+              // Les pastilles de filtre sont desormais toujours affichees (2026-09-08),
+              // donc la hauteur reservee ne depend plus de la persona.
+              top: topInset + 56,
               left: 16,
               flexDirection: 'row',
               gap: 6,
@@ -456,7 +456,9 @@ export function DiscoverCard({
           <View
             style={{
               position: 'absolute',
-              top: topInset + (isPurePro ? 12 : 56),
+              // Les pastilles de filtre sont desormais toujours affichees (2026-09-08),
+              // donc la hauteur reservee ne depend plus de la persona.
+              top: topInset + 56,
               left: 0,
               right: 0,
               flexDirection: 'row',

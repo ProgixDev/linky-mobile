@@ -36,6 +36,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Avatar } from '../../src/components/primitives/Avatar';
+import { HeaderActions } from '../../src/components/nav/HeaderActions';
 import { SectionHeader } from '../../src/components/lists/SectionHeader';
 import { ShopMiniCard } from '../../src/components/lists/ShopCard';
 import { ProductCard } from '../../src/components/lists/ProductCard';
@@ -84,7 +85,6 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
   const { colors } = useTheme();
   const hasBoth = isSeller && isAgent;
   const [mode, setMode] = useState<ProMode>(isSeller ? 'shop' : 'estate');
-  const { data: unreadCount = 0 } = useUnreadNotificationsCount();
   const resetDraft = useCreateListing((s) => s.reset);
   const setKind = useCreateListing((s) => s.setKind);
 
@@ -106,40 +106,15 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
         >
           <IdentityPill mode={mode} />
           <View style={{ flex: 1 }} />
-          <Pressable
-            onPress={() => {
-              haptic.light();
-              router.push('/notifications');
-            }}
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 999,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            accessibilityLabel="Notifications"
-          >
-            <Bell size={18} color={colors.text} strokeWidth={1.75} />
-            {unreadCount > 0 && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  width: 9,
-                  height: 9,
-                  borderRadius: 999,
-                  backgroundColor: colors.danger,
-                  borderWidth: 2,
-                  borderColor: colors.card,
-                }}
-              />
-            )}
-          </Pressable>
+          {/* Le trio favoris / notifications / panier, le MEME que l'accueil
+              acheteur (2026-09-08).
+              Il n'y avait ici qu'une cloche : ni panier, ni favoris, parce que
+              l'accueil pro etait cense n'appartenir qu'a quelqu'un qui ne
+              consomme pas. Depuis que les deux categories sont ouvertes a
+              toutes les personas, un vendeur peut remplir un panier — et son
+              ecran d'accueil etait le seul a n'offrir aucun chemin vers lui, ni
+              meme le compteur d'articles en attente. */}
+          <HeaderActions />
           <Pressable
             onPress={() => {
               haptic.light();

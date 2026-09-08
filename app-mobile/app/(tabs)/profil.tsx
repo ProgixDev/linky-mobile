@@ -42,15 +42,29 @@ interface QuickAction {
   href?: string;
 }
 
-// Phase T.2 — quick actions filtered per role. Multi-role users get the
-// union, ordered: buyer-side first (most common), then seller, then agent.
-// Pure buyers no longer see zero pro shortcuts (KYC stays universal since
-// it gates publishing AND high-value buyer flows).
+// Raccourcis d'achat, montres a TOUT LE MONDE depuis le 2026-09-08.
+//
+// Ils etaient filtres par role (« quick actions filtered per role »). Comme
+// rien n'empeche un vendeur ou un agent d'acheter, ce filtrage rendait leur
+// commande injoignable des qu'ils quittaient l'ecran de confirmation. Voir le
+// detail dans le corps de la fonction.
 // Phase I.3c — takes t so labels translate.
 function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAction[] {
-  const isBuyer = roles.includes('buyer');
   const out: QuickAction[] = [];
-  if (isBuyer) {
+  {
+    // « Mes commandes » et « Mes réservations » sont montrées A TOUT LE MONDE
+    // depuis le 2026-09-08, et plus seulement au role 'buyer'.
+    //
+    // POURQUOI. Rien n'empeche un vendeur ou un agent d'acheter : le panier
+    // fonctionne, le paiement passe, l'argent part au sequestre — verifie sur
+    // tout le chemin, ecran ET serveur. Mais ces deux raccourcis etaient les
+    // SEULS chemins permanents vers une commande, et ils etaient caches aux
+    // non-acheteurs. Un vendeur qui achetait payait pour de vrai, puis perdait
+    // l'acces a sa commande des qu'il quittait l'ecran de confirmation : plus
+    // moyen de scanner son QR a la reception, ni d'ouvrir un litige.
+    //
+    // De l'argent reel devenait injoignable. Un raccourci vide pour qui n'a
+    // jamais rien commande ne coute rien ; une commande introuvable, si.
     out.push({ Icon: Package, label: t('profil.qa.commandes'), href: '/orders' });
     // « Mes demandes » (buyer visit requests) removed from the buyer profile
     // (client 2026-07-26). The screen still exists and is reached via the
@@ -59,10 +73,10 @@ function buildQuickActions(roles: UserRole[], t: (k: string) => string): QuickAc
     out.push({ Icon: CalendarCheck, label: t('profil.qa.reservations'), href: '/bookings' });
     // Favoris moved to the Accueil / Marché header trio (client 2026-07-26).
   }
-  // « Ventes »/« Visites »/« Retraits » removed 2026-07-30 (already in the pro
-  // workspace). « Wallet » moved into the RÉGLAGES list (client 2026-07-30) so
-  // it isn't a lone pill on pure-pro accounts. This row now holds ONLY the
-  // buyer shortcuts → empty for pure pros, so the whole strip hides.
+  // « Ventes »/« Visites »/« Retraits » retires le 2026-07-30 (deja dans
+  // l'espace pro). « Wallet » a rejoint la liste REGLAGES. La rangee ne porte
+  // donc que les deux raccourcis d'achat — desormais visibles par tous, donc
+  // elle n'est plus jamais vide.
   // KYC lives in « Modifier mon profil » (client 2026-07-06).
   return out;
 }
