@@ -16,6 +16,7 @@ import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { Input } from '../../src/components/primitives/Input';
 import { I, type IconKey } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
+import { platformFeeGnf } from '../../src/lib/fees';
 import { useCart } from '../../src/stores/cart';
 import { apiPost } from '../../src/lib/api';
 import { usePlaceOrder, usePlaceOrdersBatch, useWallet, useCancelPendingPayment, useDeliveryQuote } from '../../src/data/queries';
@@ -335,8 +336,14 @@ export default function CheckoutRoute() {
     return sum + (p?.priceGnf ?? 0) * l.quantity;
   }, 0);
   const serviceFee = isBatch
-    ? Array.from(subtotalByShop.values()).reduce((s, sub) => s + Math.round(sub * 0.03), 0)
-    : Math.round(subtotal * 0.03);
+    ? Array.from(subtotalByShop.values()).reduce((s, sub) => s + platformFeeGnf(sub), 0)
+    : platformFeeGnf(subtotal);
+  // Ce que l'acheteur voit sur les annonces : prix vendeur + commission.
+  // Depuis le 2026-09-08 la commission est COMPRISE dans les prix affiches, donc
+  // le recapitulatif doit partir de ce meme montant — sinon la ligne « Total »
+  // serait plus haute que la somme des lignes au-dessus, et l'ecart n'aurait
+  // aucune explication a l'ecran.
+  const articlesWithFee = subtotal + serviceFee;
   // Le frais de livraison DOIT refléter la valeur serveur (delivery.ts) : le
   // serveur recalcule le forfait, ici on montre juste le même montant.
   //
@@ -710,12 +717,12 @@ export default function CheckoutRoute() {
             voit le détail exact avant de payer. */}
         <MicroLabel label="Récapitulatif" />
         <Card padding={14}>
-          <RecapRow label="Sous-total" value={formatGNF(subtotal)} />
-          {/* Commission MASQUEE (client 2026-08-22), comme dans le panier :
-              elle reste comprise dans `total`, seul son detail disparait. Les
-              deux ecrans doivent rester d'accord — l'afficher ici apres l'avoir
-              cachee dans le panier ferait apparaitre un frais surgi de nulle
-              part au moment de payer. */}
+          {/* La commission n'a JAMAIS sa propre ligne (client 2026-08-22) et,
+              depuis le 2026-09-08, elle est comprise dans le montant affiche ici
+              comme elle l'est sur les annonces et dans le panier. Les trois
+              ecrans montrent donc le meme chiffre pour les memes articles, et
+              « Sous-total + Livraison » tombe exactement sur « Total ». */}
+          <RecapRow label={`Sous-total (${t('common.feesIncluded').toLowerCase()})`} value={formatGNF(articlesWithFee)} />
           <RecapRow
             label={deliveryMode === 'delivery' ? (shopCount > 1 ? `Livraison (${shopCount} colis)` : 'Livraison') : 'Retrait sur place'}
             value={deliveryMode === 'delivery' ? formatGNF(deliveryFee) : 'Gratuit'}

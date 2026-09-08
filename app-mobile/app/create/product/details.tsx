@@ -17,6 +17,8 @@ import { useCreateListing } from '../../../src/stores/createListing';
 import { useGenerateDescription, useMyShop } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
+import { priceWithFeeGnf, PLATFORM_FEE_RATE } from '../../../src/lib/fees';
+import { formatGNF } from '../../../src/lib/format';
 import { gnfToEur } from '../../../src/lib/currency';
 
 export default function CreateProductDetailsRoute() {
@@ -124,7 +126,13 @@ export default function CreateProductDetailsRoute() {
                   onChangeText={(txt) => state.set('priceGnf', Number(txt.replace(/\D/g, '')) || 0)}
                   keyboardType="number-pad"
                   trailingIcon="check"
-                  helperText={t('create.fieldEur', { amount: gnfToEur(state.priceGnf) })}
+                  helperText={state.priceGnf > 0
+                    ? t('create.buyerSeesPrice', {
+                        amount: formatGNF(priceWithFeeGnf(state.priceGnf)),
+                        rate: PLATFORM_FEE_RATE * 100,
+                        base: formatGNF(state.priceGnf),
+                      })
+                    : t('create.fieldEur', { amount: gnfToEur(state.priceGnf) })}
                 />
               </View>
               <View style={{ width: 100 }}>

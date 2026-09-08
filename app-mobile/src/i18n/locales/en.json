@@ -33,7 +33,8 @@
       "a11yClose": "Close",
       "a11yHint": "Required field · opens the city list",
       "a11yValue": "City: {{city}}"
-    }
+    },
+    "feesIncluded": "Fees included"
   },
   "a11y": {
     "back": "Back",
@@ -668,7 +669,8 @@
     "photoSourceBody": "Take a photo now or pick from your gallery.",
     "photoSourceCamera": "Take a photo",
     "photoSourceGallery": "Choose from gallery",
-    "photosCamPermDenied": "Allow the camera to take a photo"
+    "photosCamPermDenied": "Allow the camera to take a photo",
+    "buyerSeesPrice": "Buyers will see {{amount}} — Linky's {{rate}}% fee is added to the displayed price. You receive {{base}}."
   },
   "seller": {
     "ordersTitle": "Orders received",

@@ -15,6 +15,7 @@ import { StickyBottom } from '../src/components/nav/StickyBottom';
 import { EmptyState } from '../src/components/feedback/EmptyState';
 import { I } from '../src/icons/Icon';
 import { formatGNF, formatEUR } from '../src/lib/format';
+import { platformFeeGnf, priceWithFeeGnf } from '../src/lib/fees';
 import { gnfToEur } from '../src/lib/currency';
 import { useCart } from '../src/stores/cart';
 import { useFilters } from '../src/stores/filters';
@@ -79,7 +80,7 @@ export default function CartRoute() {
     }
     return Array.from(byShop.entries()).map(([shopId, groupItems]) => {
       const sub = groupItems.reduce((s, { line, product }) => s + product.priceGnf * line.quantity, 0);
-      const f = Math.round(sub * 0.03);
+      const f = platformFeeGnf(sub);
       return { shopId, items: groupItems, subtotal: sub, fees: f, total: sub + f };
     });
   }, [items]);
@@ -189,7 +190,8 @@ export default function CartRoute() {
                 </Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                   <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
-                    {formatGNF(product.priceGnf)}
+                    {/* Prix ACHETEUR (client 2026-09-08). */}
+                    {formatGNF(priceWithFeeGnf(product.priceGnf))}
                   </Text>
                   <View
                     style={{
@@ -279,16 +281,15 @@ export default function CartRoute() {
             Ces montants sont indicatifs : le serveur recalcule tout depuis les
             prix en base, et c'est SA valeur qui est encaissee. */}
         <Card padding={14} style={{ marginTop: 4 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-            <Text variant="caption" tone="muted" style={{ letterSpacing: 0 }}>
-              {t('cart.subtotal')}
-            </Text>
-            <Text style={{ fontVariant: ['tabular-nums'] }}>{formatGNF(grandSubtotal)}</Text>
-          </View>
-          {/* Ligne de commission MASQUEE (client 2026-08-22). Le montant est
-              toujours preleve — il est dans grandTotal, et le serveur en reste
-              seul maitre. On ne le detaille simplement plus a l'acheteur. */}
-          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
+          {/* Ligne « Sous-total » RETIREE le 2026-09-08. La commission est
+              desormais comprise dans les prix affiches (client : « integrer
+              directement au prix des annonces »), donc le sous-total valait
+              exactement le total : deux lignes identiques, dont l'une semblait
+              annoncer un supplement a venir. Le panier ne porte aucune autre
+              ligne — la livraison se choisit a l'ecran suivant — donc un seul
+              montant suffit, et il est juste.
+              La commission reste prelevee et le serveur en reste seul maitre ;
+              on ne la detaille simplement plus (deja le cas depuis 2026-08-22). */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('cart.total')}</Text>
             <View style={{ alignItems: 'flex-end' }}>
@@ -297,6 +298,9 @@ export default function CartRoute() {
               </Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0 }}>
                 {formatEUR(gnfToEur(grandTotal))}
+              </Text>
+              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                {t('common.feesIncluded')}
               </Text>
             </View>
           </View>

@@ -7,6 +7,7 @@ import { Text } from '../primitives/Text';
 import { Badge } from '../primitives/Badge';
 import { I } from '../../icons/Icon';
 import { formatGNF } from '../../lib/format';
+import { priceWithFeeGnf } from '../../lib/fees';
 import { haptic } from '../../lib/haptics';
 import { useFavorites } from '../../stores/favorites';
 import { useCart } from '../../stores/cart';
@@ -59,7 +60,7 @@ export function ProductCard({
       onPress={() => router.push(`/product/${product.id}`)}
       style={{ gap: 8 }}
       accessibilityRole="button"
-      accessibilityLabel={`${product.title}, ${formatGNF(product.priceGnf)}`}
+      accessibilityLabel={`${product.title}, ${formatGNF(priceWithFeeGnf(product.priceGnf))}`}
     >
       <View style={{ position: 'relative', aspectRatio: 1, borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.bgSunken }}>
         <Image
@@ -223,9 +224,17 @@ export function ProductCard({
         >
           {product.title}
         </Text>
+        {/* Prix ACHETEUR : le prix du vendeur + la commission (client
+            2026-09-08). product.priceGnf reste ce que le vendeur touche ;
+            le +5 % est un habillage d'affichage, jamais stocke gonfle. */}
         <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'], marginTop: 2 }}>
-          {formatGNF(product.priceGnf)}
+          {formatGNF(priceWithFeeGnf(product.priceGnf))}
         </Text>
+        {!compact && (
+          <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginTop: 1 }}>
+            {t('common.feesIncluded')}
+          </Text>
+        )}
         {/* Location line. Pre-fix this rendered product.shopId — a mock-era
             leftover ('s_mamadou_shop') that shows a raw UUID with real data. */}
         {!compact && (product.district || product.city) ? (

@@ -26,6 +26,7 @@ import { Text } from '../../src/components/primitives/Text';
 import { ProductCard } from '../../src/components/lists/ProductCard';
 import { ListingComments } from '../../src/components/comments/ListingComments';
 import { haptic } from '../../src/lib/haptics';
+import { priceWithFeeGnf } from '../../src/lib/fees';
 import { shareMessage } from '../../src/lib/share';
 import { useProduct, useProducts, useToggleFavorite, useTrackView, useFindOrCreateConversation } from '../../src/data/queries';
 import { useShop } from '../../src/data/queries/shops';
@@ -170,7 +171,7 @@ export default function ProductDetailRoute() {
                     void Share.share({
                       title: product.title,
                       message: shareMessage(
-                        `${product.title} — ${formatGNF(product.priceGnf)} sur Linky`,
+                        `${product.title} — ${formatGNF(priceWithFeeGnf(product.priceGnf))} sur Linky`,
                         'product',
                         product.id,
                       ),
@@ -351,7 +352,7 @@ export default function ProductDetailRoute() {
                 includeFontPadding: false,
               }}
             >
-              {formatGNF(product.priceGnf).replace(' GNF', '')}
+              {formatGNF(priceWithFeeGnf(product.priceGnf)).replace(' GNF', '')}
             </Text>
             <Text
               style={{
@@ -369,9 +370,14 @@ export default function ProductDetailRoute() {
                 letterSpacing: 0,
               }}
             >
-              {formatEUR(gnfToEur(product.priceGnf))}
+              {formatEUR(gnfToEur(priceWithFeeGnf(product.priceGnf)))}
             </Text>
           </View>
+          {/* Mention demandee par le client le 2026-09-08, en meme temps que
+              l'integration de la commission au prix affiche. */}
+          <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}>
+            {t('common.feesIncluded')}
+          </Text>
         </View>
 
         {/* ===== Description ===== */}

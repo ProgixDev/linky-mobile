@@ -33,7 +33,8 @@
       "a11yClose": "Fermer",
       "a11yHint": "Champ requis · ouvre la liste des villes",
       "a11yValue": "Ville : {{city}}"
-    }
+    },
+    "feesIncluded": "Frais inclus"
   },
   "a11y": {
     "back": "Retour",
@@ -668,7 +669,8 @@
     "photoSourceBody": "Prends une photo maintenant ou choisis-en dans ta galerie.",
     "photoSourceCamera": "Prendre une photo",
     "photoSourceGallery": "Choisir dans la galerie",
-    "photosCamPermDenied": "Autorisez l'appareil photo pour prendre une photo"
+    "photosCamPermDenied": "Autorisez l'appareil photo pour prendre une photo",
+    "buyerSeesPrice": "Le client verra {{amount}} — les {{rate}} % de frais Linky sont ajoutés au prix affiché. Toi, tu touches {{base}}."
   },
   "seller": {
     "ordersTitle": "Commandes reçues",

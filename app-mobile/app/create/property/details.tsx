@@ -19,6 +19,8 @@ import { useCreateListing } from '../../../src/stores/createListing';
 import { useGenerateDescription } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
+import { priceWithFeeGnf, PLATFORM_FEE_RATE } from '../../../src/lib/fees';
+import { formatGNF } from '../../../src/lib/format';
 
 const PROPERTY_TYPE_DEFS = [
   { id: 'location' as const, labelKey: 'create.typeLocation' },
@@ -202,6 +204,13 @@ export default function CreatePropertyDetailsRoute() {
                   value={new Intl.NumberFormat('fr-FR').format(state.priceGnf)}
                   onChangeText={(txt) => state.set('priceGnf', Number(txt.replace(/\D/g, '')) || 0)}
                   keyboardType="number-pad"
+                  helperText={state.priceGnf > 0
+                    ? t('create.buyerSeesPrice', {
+                        amount: formatGNF(priceWithFeeGnf(state.priceGnf)),
+                        rate: PLATFORM_FEE_RATE * 100,
+                        base: formatGNF(state.priceGnf),
+                      })
+                    : undefined}
                 />
               </View>
               <View style={{ width: 110 }}>

@@ -24,6 +24,7 @@ import { DetailStateScreen } from '../../../src/components/feedback/DetailState'
 import { useTranslation } from 'react-i18next';
 import { PropertyLocationMap } from '../../../src/components/property/PropertyLocationMap';
 import { formatDistance } from '../../../src/lib/format';
+import { priceWithFeeGnf } from '../../../src/lib/fees';
 import { toToastMessage } from '../../../src/lib/api';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { haptic } from '../../../src/lib/haptics';
@@ -281,11 +282,16 @@ export default function PropertyDetailRoute() {
           <Text variant="titleL" style={{ fontSize: 18, marginBottom: 2 }}>
             {prop.title}
           </Text>
+          {/* Prix ACHETEUR, commission comprise (client 2026-09-08 : « pareil
+              pour la partie immo »). prop.priceGnf reste le prix du proprietaire. */}
           <MoneyText
-            amountGnf={prop.priceGnf}
+            amountGnf={priceWithFeeGnf(prop.priceGnf)}
             size="l"
             period={prop.type === 'location' ? (prop.perMonth ? 'month' : 'day') : undefined}
           />
+          <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
+            {t('common.feesIncluded')}
+          </Text>
           {prop.type === 'location' && (
             <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
               {/* « charges incluses » removed — no data field asserts it. */}

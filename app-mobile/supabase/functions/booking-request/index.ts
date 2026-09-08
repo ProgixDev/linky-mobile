@@ -7,6 +7,7 @@
 // for a sale — visit-complete's stated purpose since 2026-07, enforced here
 // for the first time.
 import { makePost } from '@shared/wrap.ts';
+import { platformFee } from '@shared/fees.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
@@ -144,7 +145,7 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
   const rent = Number(prop.price_minor);
   const deposit = body.period === 'month' ? rent : 0;
   const amount = body.period === 'day' ? rent * nights : body.period === 'month' ? rent + deposit : rent;
-  const fees = Math.round(amount * 0.03);
+  const fees = platformFee(amount);
   const total = amount + fees;
 
   const tenantName = await displayNameOf(sb, tenantId);

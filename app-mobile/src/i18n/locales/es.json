@@ -33,7 +33,8 @@
       "a11yClose": "Cerrar",
       "a11yHint": "Campo obligatorio · abre la lista de ciudades",
       "a11yValue": "Ciudad: {{city}}"
-    }
+    },
+    "feesIncluded": "Tarifas incluidas"
   },
   "a11y": {
     "back": "Atrás",
@@ -668,7 +669,8 @@
     "photoSourceBody": "Haz una foto ahora o elige de tu galería.",
     "photoSourceCamera": "Hacer una foto",
     "photoSourceGallery": "Elegir de la galería",
-    "photosCamPermDenied": "Permite la cámara para hacer una foto"
+    "photosCamPermDenied": "Permite la cámara para hacer una foto",
+    "buyerSeesPrice": "El cliente verá {{amount}} — la comisión Linky del {{rate}} % se añade al precio mostrado. Tú recibes {{base}}."
   },
   "seller": {
     "ordersTitle": "Pedidos recibidos",

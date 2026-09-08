@@ -20,6 +20,7 @@ import { DetailStateScreen } from '../../../src/components/feedback/DetailState'
 import { useProperty, useRequestBooking } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
+import { platformFeeGnf } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 
@@ -42,7 +43,7 @@ export default function BuyPropertyRoute() {
   }
 
   const price = prop.priceGnf;
-  const fees = Math.round(price * 0.03);
+  const fees = platformFeeGnf(price);
   const total = price + fees;
 
   const submit = () => {

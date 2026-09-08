@@ -7,6 +7,7 @@ import { Text } from '../primitives/Text';
 import { Badge } from '../primitives/Badge';
 import { I } from '../../icons/Icon';
 import { formatGNF, formatDistance } from '../../lib/format';
+import { priceWithFeeGnf } from '../../lib/fees';
 import { useDataSaverImageProps } from '../../lib/dataSaver';
 import type { Property } from '../../data/types';
 
@@ -38,7 +39,7 @@ export function PropertyCard({
         overflow: 'hidden',
       }}
       accessibilityRole="button"
-      accessibilityLabel={`${property.title}, ${formatGNF(property.priceGnf)}${property.type === 'location' ? (property.perMonth ? ' par mois' : ' par jour') : ''}`}
+      accessibilityLabel={`${property.title}, ${formatGNF(priceWithFeeGnf(property.priceGnf))}${property.type === 'location' ? (property.perMonth ? ' par mois' : ' par jour') : ''}`}
     >
       <View style={{ aspectRatio: 16 / 9, backgroundColor: colors.bgSunken }}>
         <Image
@@ -69,7 +70,8 @@ export function PropertyCard({
           }}
         >
           <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14, fontVariant: ['tabular-nums'] }}>
-            {formatGNF(property.priceGnf)}
+            {/* Prix ACHETEUR, commission comprise (client 2026-09-08). */}
+            {formatGNF(priceWithFeeGnf(property.priceGnf))}
             {property.type === 'location' && (
               <Text style={{ fontSize: 10, fontWeight: '500', opacity: 0.85 }}>
                 {property.perMonth ? ' /mois' : ' /jour'}

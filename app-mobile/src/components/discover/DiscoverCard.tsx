@@ -23,6 +23,7 @@ import {
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { formatGNF, formatEUR, formatDistance } from '../../lib/format';
+import { priceWithFeeGnf } from '../../lib/fees';
 import { gnfToEur } from '../../lib/currency';
 import { haptic } from '../../lib/haptics';
 import { shareMessage } from '../../lib/share';
@@ -69,7 +70,8 @@ export function DiscoverCard({
   const isProduct = data.kind === 'product';
   const id = data.item.id;
   const title = data.item.title;
-  const price = data.item.priceGnf;
+  // Prix ACHETEUR, commission comprise (client 2026-09-08).
+  const price = priceWithFeeGnf(data.item.priceGnf);
   // Rentals show their billing unit; sales/terrains show a bare price. The
   // old `perMonth`-only gate left daily rentals unit-less (looked like a
   // sale price on the highest-traffic buyer surface).

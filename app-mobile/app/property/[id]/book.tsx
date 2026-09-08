@@ -22,6 +22,7 @@ import { useProperty, useRequestBooking } from '../../../src/data/queries';
 import { usePropertyAvailability } from '../../../src/data/queries/bookings';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
+import { platformFeeGnf } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 
@@ -50,14 +51,14 @@ export default function BookPropertyRoute() {
       if (!startDate || !endDate) return { nights: 0, deposit: 0, amount: 0, fees: 0, total: 0, ready: false };
       const n = nightsBetween(startDate, endDate);
       const a = n * rent;
-      const f = Math.round(a * 0.03);
+      const f = platformFeeGnf(a);
       return { nights: n, deposit: 0, amount: a, fees: f, total: a + f, ready: n >= 1 && n <= 90 };
     }
     if (!startDate) return { nights: 0, deposit: 0, amount: 0, fees: 0, total: 0, ready: false };
     // Monthly: 1st month + a 1-month caution, held in escrow (client 2026-07-29).
     const dep = rent;
     const a = rent + dep;
-    const f = Math.round(a * 0.03);
+    const f = platformFeeGnf(a);
     return { nights: 0, deposit: dep, amount: a, fees: f, total: a + f, ready: true };
   }, [period, startDate, endDate, rent]);
 
