@@ -169,12 +169,19 @@ export default function CreatePropertyLocationRoute() {
         </View>
 
         <View style={{ marginTop: 14 }}>
+          {/* CENTRE DANS LA PAGE (client 2026-09-08). Sans `style` ni `block`, le
+              composant applique alignSelf: 'flex-start' — et dans une colonne
+              c'est l'axe HORIZONTAL : le bouton se collait a gauche, avec un
+              vide a sa droite sous une carte, elle, pleine largeur.
+              Le texte etait deja centre a l'interieur (justifyContent: 'center'
+              dans Button) ; c'est le bouton entier qui etait decale. */}
           <Button
             variant="secondary"
             label={busy ? t('create.locationMyPositionBusy') : t('create.locationMyPosition')}
             disabled={busy}
             onPress={handleMyPosition}
             leading={<I.pin size={14} color={colors.text} />}
+            style={{ alignSelf: 'center' }}
           />
         </View>
       </View>
