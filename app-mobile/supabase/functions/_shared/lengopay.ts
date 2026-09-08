@@ -284,6 +284,12 @@ const EXPECTED_STEP: Record<LengopayMethod, LengopayNextStep['kind'] | 'unknown'
   // elle ne traverse plus railNextStep : son etape est construite directement
   // dans initForRail et vaut toujours 'webview'. L'entree reste par coherence.
   'lengopay-card': 'webview',
+  // PayCard passe par la passerelle « portefeuille » (walletGateway 3), pas par
+  // la v2 : son etape est construite dans initForRail et ne traverse jamais
+  // railNextStep. L'entree existe uniquement pour que le Record soit complet —
+  // sans elle, `deno check` refuse le fichier au prochain deploiement, alors que
+  // tsc ne voit rien puisqu'il ne couvre pas les fichiers Deno.
+  'paycard':       'otp',
 };
 
 /** Ce que l'acheteur doit encore faire apres l'init. Une etape inattendue est

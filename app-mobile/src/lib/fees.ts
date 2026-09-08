@@ -45,3 +45,19 @@ export function platformFeeGnf(baseGnf: number): number {
 export function priceWithFeeGnf(baseGnf: number): number {
   return baseGnf + platformFeeGnf(baseGnf);
 }
+
+/**
+ * Le prix VENDEUR maximal dont le prix ACHETEUR reste sous `displayedMaxGnf`.
+ *
+ * Les filtres du Marché portent sur le plafond que l'acheteur LIT (« moins de
+ * 100 000 »), mais le serveur compare `price_minor`, le prix du vendeur. Sans
+ * cette conversion, un article à 98 000 passe le filtre et s'affiche 102 900 —
+ * au-dessus de ce que l'acheteur venait de demander, ce qui donne l'impression
+ * que le filtre ne marche pas.
+ *
+ * Vérifié : 100 000 → 95 238, et priceWithFeeGnf(95 238) = 100 000 (inclus),
+ * priceWithFeeGnf(95 239) = 100 001 (exclu).
+ */
+export function sellerPriceCeilingGnf(displayedMaxGnf: number): number {
+  return Math.floor(displayedMaxGnf / (1 + PLATFORM_FEE_RATE));
+}

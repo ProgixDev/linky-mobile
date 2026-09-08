@@ -1,5 +1,6 @@
 // Tenant booking wizard — location par jour (date range) or par mois (move-in
-// date + duration). Shows the live price recap (rent + 3% frais de service),
+// date + duration). Shows the live price recap (rent + commission Linky,
+// voir src/lib/fees.ts pour le taux),
 // then sends the request to the landlord (booking-request). The visit stays
 // OPTIONAL for rentals ; achat/vente keeps the mandatory-visit rule.
 import { useMemo, useState } from 'react';
@@ -22,7 +23,7 @@ import { useProperty, useRequestBooking } from '../../../src/data/queries';
 import { usePropertyAvailability } from '../../../src/data/queries/bookings';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
-import { platformFeeGnf } from '../../../src/lib/fees';
+import { platformFeeGnf, PLATFORM_FEE_RATE, priceWithFeeGnf } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 
@@ -110,7 +111,10 @@ export default function BookPropertyRoute() {
           <View style={{ padding: 14, borderRadius: radii.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
             <Text style={{ fontSize: 15, fontWeight: '700' }} numberOfLines={1}>{prop.title}</Text>
             <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-              {[prop.district, prop.city].filter(Boolean).join(', ')} · {formatGNF(rent)}{period === 'day' ? ' /jour' : ' /mois'}
+              {/* Prix ACHETEUR : la fiche d'ou vient l'utilisateur l'affiche deja frais
+                  compris — le montrer brut ici ferait BAISSER le prix de 5 %
+                  d'un ecran a l'autre. */}
+              {[prop.district, prop.city].filter(Boolean).join(', ')} · {formatGNF(priceWithFeeGnf(rent))}{period === 'day' ? ' /jour' : ' /mois'}
             </Text>
           </View>
 
@@ -212,7 +216,10 @@ export default function BookPropertyRoute() {
                   <RecapRow label="Caution (1 mois)" value={formatGNF(deposit)} />
                 </>
               )}
-              <RecapRow label="Frais de service (3%)" value={formatGNF(fees)} />
+              {/* Le taux est INTERPOLE, jamais ecrit en dur : c'est precisement un « 3% »
+                  fige dans le texte qui a survecu au passage a 5 % et annoncait un taux
+                  que l'app n'appliquait plus. Au prochain changement, cette ligne suit. */}
+              <RecapRow label={`Frais de service (${PLATFORM_FEE_RATE * 100}%)`} value={formatGNF(fees)} />
               <View style={{ height: 1, backgroundColor: colors.border }} />
               <RecapRow label="Total à payer à la signature" value={formatGNF(total)} bold />
             </View>

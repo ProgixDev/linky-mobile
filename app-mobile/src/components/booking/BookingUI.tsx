@@ -6,6 +6,7 @@ import { CalendarDays, Check, Clock, FileText, X as XIcon } from 'lucide-react-n
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { formatGNF } from '../../lib/format';
+import { PLATFORM_FEE_RATE } from '../../lib/fees';
 import type { Booking, BookingStatus } from '../../data/types';
 
 type Colors = ReturnType<typeof useTheme>['colors'];
@@ -136,7 +137,11 @@ export function ContractView({ booking }: { booking: Booking }) {
           ) : null}
         </>
       )}
-      <ContractRow k="Frais de service (3%)" v={formatGNF(c.fees_minor)} />
+      {/* CONTRAT SIGNE : ce document est valide par appui long par les deux
+          parties. Il annoncait « 3% » alors que le serveur en prelevait 5 —
+          sur un bien a 500 M, 10 000 000 GNF d'ecart entre le taux annonce et
+          le montant preleve. Le taux est desormais interpole. */}
+      <ContractRow k={`Frais de service (${PLATFORM_FEE_RATE * 100}%)`} v={formatGNF(c.fees_minor)} />
       <ContractRow k="Total à payer" v={formatGNF(c.total_minor)} bold />
       <View style={{ height: 1, backgroundColor: colors.border }} />
       {c.clauses.map((cl, i) => (

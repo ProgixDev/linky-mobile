@@ -595,6 +595,19 @@ export function DiscoverCard({
               >
                 {formatEUR(gnfToEur(price))}
               </Text>
+              {/* Mention « Frais inclus » sur la surface la plus vue de l'app.
+                  Sans elle, l'acheteur suppose que 5 % vont s'AJOUTER au prix
+                  qu'il lit — l'inverse exact de ce qui se passe. */}
+              <Text
+                style={{
+                  color: 'rgba(255,255,255,0.55)',
+                  fontSize: 12,
+                  fontWeight: '500',
+                  letterSpacing: 0,
+                }}
+              >
+                · {t('common.feesIncluded')}
+              </Text>
             </View>
 
             {/* Location + distance chip */}

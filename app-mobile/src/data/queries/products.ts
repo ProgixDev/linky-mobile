@@ -2,6 +2,7 @@
 // Backwards-compat: existing screens consume Product[] / Product — shape is unchanged from
 // the mock contract, since the edge functions return the same camelCase shape.
 import { useMemo } from 'react';
+import { sellerPriceCeilingGnf } from '../../lib/fees';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
 import { useAuth } from '../../stores/auth';
@@ -299,7 +300,10 @@ export function useProductsInfinite(filters: ProductFilters = {}) {
           city: filters.city || undefined,
           query: filters.query || undefined,
           shop_id: filters.shopId || undefined,
-          price_max: filters.priceMaxGnf || undefined,
+          // Le filtre porte sur le plafond que l'ACHETEUR lit ; le serveur
+          // compare le prix VENDEUR. Sans conversion, « moins de 100 000 »
+          // ramenait des articles affiches 102 900.
+          price_max: filters.priceMaxGnf ? sellerPriceCeilingGnf(filters.priceMaxGnf) : undefined,
           condition: filters.condition || undefined,
           sort: filters.sort === 'popular' ? 'popular' : undefined,
           cursor: pageParam,

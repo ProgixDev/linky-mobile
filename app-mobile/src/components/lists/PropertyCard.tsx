@@ -7,6 +7,7 @@ import { Text } from '../primitives/Text';
 import { Badge } from '../primitives/Badge';
 import { I } from '../../icons/Icon';
 import { formatGNF, formatDistance } from '../../lib/format';
+import { useTranslation } from 'react-i18next';
 import { priceWithFeeGnf } from '../../lib/fees';
 import { useDataSaverImageProps } from '../../lib/dataSaver';
 import type { Property } from '../../data/types';
@@ -25,7 +26,8 @@ export function PropertyCard({
    *  de pastille de distance. Le nombre de lignes devient identique d'une carte
    *  a l'autre, donc les hauteurs s'alignent d'elles-memes. */
   compact?: boolean;
-}) {
+}) {  const { t } = useTranslation();
+
   const { colors, radii } = useTheme();
   const imgProps = useDataSaverImageProps();
   return (
@@ -77,6 +79,13 @@ export function PropertyCard({
                 {property.perMonth ? ' /mois' : ' /jour'}
               </Text>
             )}
+          </Text>
+          {/* Mention demandee par le client (« pareil pour la partie immo »).
+              La pastille est en position absolue : l'ajouter ne change pas la
+              hauteur de la carte, meme en mode compact. Sans elle, l'acheteur
+              croit que 5 % vont S'AJOUTER — l'inverse exact de ce qui se passe. */}
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 9.5, fontWeight: '500', marginTop: 1 }}>
+            {t('common.feesIncluded')}
           </Text>
         </View>
         {property.favCount > 0 && (

@@ -20,7 +20,7 @@ import { DetailStateScreen } from '../../../src/components/feedback/DetailState'
 import { useProperty, useRequestBooking } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
-import { platformFeeGnf } from '../../../src/lib/fees';
+import { platformFeeGnf, PLATFORM_FEE_RATE, priceWithFeeGnf } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 
@@ -86,7 +86,10 @@ export default function BuyPropertyRoute() {
           <View style={{ padding: 14, borderRadius: radii.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
             <Text style={{ fontSize: 15, fontWeight: '700' }} numberOfLines={1}>{prop.title}</Text>
             <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-              {[prop.district, prop.city].filter(Boolean).join(', ')} · {formatGNF(price)}
+              {/* Prix ACHETEUR : la fiche d'ou vient l'utilisateur l'affiche deja frais
+                  compris — le montrer brut ici ferait BAISSER le prix de 5 %
+                  d'un ecran a l'autre. */}
+              {[prop.district, prop.city].filter(Boolean).join(', ')} · {formatGNF(priceWithFeeGnf(price))}
             </Text>
           </View>
 
@@ -114,7 +117,10 @@ export default function BuyPropertyRoute() {
 
           <View style={{ padding: 14, borderRadius: radii.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, gap: 8 }}>
             <RecapRow label="Prix du bien" value={formatGNF(price)} />
-            <RecapRow label="Frais de service (3%)" value={formatGNF(fees)} />
+            {/* Le taux est INTERPOLE, jamais ecrit en dur : c'est precisement un « 3% »
+                  fige dans le texte qui a survecu au passage a 5 % et annoncait un taux
+                  que l'app n'appliquait plus. Au prochain changement, cette ligne suit. */}
+            <RecapRow label={`Frais de service (${PLATFORM_FEE_RATE * 100}%)`} value={formatGNF(fees)} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
             <RecapRow label="Total à payer à la signature" value={formatGNF(total)} bold />
           </View>

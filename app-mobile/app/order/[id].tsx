@@ -13,6 +13,7 @@ import { TopBar } from '../../src/components/nav/TopBar';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { I } from '../../src/icons/Icon';
 import { formatGNF } from '../../src/lib/format';
+import { priceWithFeeGnf } from '../../src/lib/fees';
 import { useOrder } from '../../src/data/queries';
 import { useAuth } from '../../src/stores/auth';
 import { OrderResolutionBanner } from '../../src/components/orders/OrderResolutionBanner';
@@ -66,11 +67,19 @@ export default function OrderRoute() {
   // most. confirm_order_receipt + dispute_order accept 'preparing' too post-X9.
   const inHandoffWindow =
     order.status === 'paid' || order.status === 'preparing' || order.status === 'delivered';
-  // QR payload includes the scan_token secret as a query param. Phase LIVREUR
-  // widened the get-order PII gate so BOTH buyer and seller receive scanToken
-  // — the buyer renders the QR on-screen for the LIVREUR to scan at handoff
-  // (the inverted flow), the seller still gets it for the legacy printed-QR
-  // path. Non-participants never reach this screen (FORBIDDEN server-side).
+  const livreurHasIt = !!order?.delivery && order.delivery.status !== 'unassigned';
+  // Le QR porte le secret scan_token. ⚠️ CE COMMENTAIRE DISAIT L'INVERSE
+  // jusqu'au 2026-09-08 : « BOTH buyer and seller receive scanToken … the
+  // seller still gets it for the legacy printed-QR path ». C'etait vrai, et
+  // c'etait le trou : seller_confirm_pickup libere le sequestre sur le seul bon
+  // scan_token, donc un vendeur qui le lisait par l'API pouvait s'auto-payer
+  // sans que l'acheteur soit la. Ferme le 2026-09-07 (c7af5d4).
+  //
+  // Aujourd'hui : get-order ne rend scanToken qu'a l'ACHETEUR. Celui qui remet
+  // la marchandise — vendeur ou livreur — le lit avec sa CAMERA, au moment de
+  // la remise. C'est cette presence physique qui fait la serrure.
+  // order.scanToken est donc null pour un vendeur, et le bloc QR ne s'affiche
+  // que pour l'acheteur (isBuyer && … && qrPayload, plus bas).
   const qrPayload = order.scanToken
     ? `linky://order/${order.id}/confirm?token=${order.scanToken}`
     : null;
@@ -130,10 +139,47 @@ export default function OrderRoute() {
                 </Text>
               </View>
               <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
-                {formatGNF(it.unitPriceGnf)}
+                {/* Prix ACHETEUR : la LISTE des commandes affiche order.totalGnf,
+                    frais compris. Montrer ici le prix vendeur faisait deux
+                    chiffres pour la meme commande, sans rien pour expliquer
+                    l'ecart — un acheteur qui verifie en conclut qu'on lui a
+                    pris 5 % de trop. */}
+                {formatGNF(priceWithFeeGnf(it.unitPriceGnf))}
               </Text>
             </View>
           ))}
+        </Card>
+
+        {/* Ce que l'acheteur a REELLEMENT paye, repris des montants SERVEUR
+            (amountGnf + feesGnf + deliveryFeeGnf = totalGnf). Sans ce bloc,
+            l'ecran n'affichait que des prix unitaires et aucun total : le seul
+            endroit ou l'acheteur pouvait recouper son paiement lui manquait. */}
+        <Card padding={12} style={{ marginTop: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+            <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+              {`Sous-total (${t('common.feesIncluded').toLowerCase()})`}
+            </Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
+              {formatGNF(order.amountGnf + order.feesGnf)}
+            </Text>
+          </View>
+          {(order.deliveryFeeGnf ?? 0) > 0 && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                Livraison
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
+                {formatGNF(order.deliveryFeeGnf ?? 0)}
+              </Text>
+            </View>
+          )}
+          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 6 }} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 14, fontWeight: '700' }}>Total payé</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+              {formatGNF(order.totalGnf)}
+            </Text>
+          </View>
         </Card>
 
         {/* Mode de réception (client 2026-07-30). 'delivery' par défaut pour les
@@ -372,7 +418,11 @@ export default function OrderRoute() {
             livreur est assigne, le serveur refuse (LIVREUR_ASSIGNED) — c'est
             lui qui confirme. Le QR affiche par le vendeur, vestige du chemin ou
             l'acheteur scannait, a ete retire. */}
-        {isSeller && inHandoffWindow && (
+        {/* Meme garde que l'ecran vendeur (seller/orders/[id]) : des qu'un
+            livreur a pris la commande, c'est LUI qui scanne. Sans ce filtre le
+            vendeur voyait le bouton, scannait, et se prenait un refus serveur
+            (LIVREUR_ASSIGNED) sans comprendre pourquoi. */}
+        {isSeller && inHandoffWindow && !livreurHasIt && (
           <View style={{ marginTop: 18 }}>
             <MicroLabel label={t('order.deliveryCodeLabel')} />
             <Card padding={20}>

@@ -19,6 +19,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
+import { priceWithFeeGnf } from '../../../src/lib/fees';
 import { Building2 } from 'lucide-react-native';
 import { formatGNF } from '../../../src/lib/format';
 import { useCreateListing } from '../../../src/stores/createListing';
@@ -164,7 +165,8 @@ export default function PreviewRoute() {
                     letterSpacing: -0.3,
                   }}
                 >
-                  {formatGNF(state.priceGnf).replace(' GNF', '')}
+                  {/* Prix ACHETEUR — voir create/product/preview.tsx. */}
+                  {formatGNF(priceWithFeeGnf(state.priceGnf)).replace(' GNF', '')}
                 </Text>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted }}>
                   GNF{state.propertyType === 'location'

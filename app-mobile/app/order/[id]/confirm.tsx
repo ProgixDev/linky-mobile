@@ -12,6 +12,7 @@ import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { TopBar } from '../../../src/components/nav/TopBar';
 import { I } from '../../../src/icons/Icon';
 import { formatGNF } from '../../../src/lib/format';
+import { priceWithFeeGnf } from '../../../src/lib/fees';
 import { toToastMessage } from '../../../src/lib/api';
 import { useOrder, useConfirmReception, useSellerConfirmPickup } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
@@ -143,7 +144,9 @@ export default function OrderConfirmRoute() {
               </Text>
             </View>
             <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
-              {formatGNF(order.productSnapshot.priceGnf)}
+              {/* Prix ACHETEUR : cet ecran libere le sequestre, il doit montrer
+                  ce qui a ete paye, pas le prix vendeur. */}
+              {formatGNF(priceWithFeeGnf(order.productSnapshot.priceGnf))}
             </Text>
           </View>
         </Card>

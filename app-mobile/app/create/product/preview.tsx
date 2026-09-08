@@ -13,6 +13,7 @@ import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I } from '../../../src/icons/Icon';
 import { useCreateListing } from '../../../src/stores/createListing';
 import { formatGNF } from '../../../src/lib/format';
+import { priceWithFeeGnf } from '../../../src/lib/fees';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useCreateProduct } from '../../../src/data/queries/products';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
@@ -56,7 +57,10 @@ export default function CreatePreviewRoute() {
               {state.title}
             </Text>
             <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 17, marginTop: 4, fontVariant: ['tabular-nums'] }}>
-              {formatGNF(state.priceGnf)}
+              {/* L'apercu promet « voila comment votre annonce apparaitra aux
+                  acheteurs » : il doit donc montrer le prix ACHETEUR, celui que
+                  l'etape precedente vient d'annoncer au vendeur. */}
+              {formatGNF(priceWithFeeGnf(state.priceGnf))}
             </Text>
             {!!state.city && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>

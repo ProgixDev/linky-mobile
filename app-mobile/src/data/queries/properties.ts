@@ -3,6 +3,7 @@
 // each query result is unchanged from the mock contract — screens that previously
 // consumed mockProperties continue to work without translation.
 import { useMemo } from 'react';
+import { sellerPriceCeilingGnf } from '../../lib/fees';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Property, PropertyType } from '../types';
 import { apiPost } from '../../lib/api';
@@ -137,7 +138,10 @@ export function useProperties(filters: PropertyFilters = {}) {
           city: filters.city || undefined,
           bedrooms_min,
           bedrooms_max,
-          price_max: filters.priceMaxGnf || undefined,
+          // Le filtre porte sur le plafond que l'ACHETEUR lit ; le serveur
+          // compare le prix VENDEUR. Sans conversion, « moins de 100 000 »
+          // ramenait des articles affiches 102 900.
+          price_max: filters.priceMaxGnf ? sellerPriceCeilingGnf(filters.priceMaxGnf) : undefined,
           distance_max: filters.distanceToRoadMaxM || undefined,
           furnished: filters.furnishedOnly === true ? true : undefined,
           per_month: periodToPerMonth(filters.rentalPeriod),
@@ -255,7 +259,10 @@ export function useInfiniteProperties(filters: PropertyFilters = {}) {
           city: filters.city || undefined,
           bedrooms_min,
           bedrooms_max,
-          price_max: filters.priceMaxGnf || undefined,
+          // Le filtre porte sur le plafond que l'ACHETEUR lit ; le serveur
+          // compare le prix VENDEUR. Sans conversion, « moins de 100 000 »
+          // ramenait des articles affiches 102 900.
+          price_max: filters.priceMaxGnf ? sellerPriceCeilingGnf(filters.priceMaxGnf) : undefined,
           distance_max: filters.distanceToRoadMaxM || undefined,
           furnished: filters.furnishedOnly === true ? true : undefined,
           per_month: periodToPerMonth(filters.rentalPeriod),
