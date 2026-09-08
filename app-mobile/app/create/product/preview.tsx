@@ -79,11 +79,19 @@ export default function CreatePreviewRoute() {
         </View>
 
       </View>
+      {/* PROPORTIONS EXPLICITES (client 2026-09-08 : « il faut voir tout le texte
+          pour le bouton vert »). Sans poids declare, le bouton secondaire prenait
+          la largeur qu'il voulait et « Publier mon annonce » se faisait couper en
+          « Publier mon a… ». Deux tiers / un tiers garantissent au libelle long la
+          place dont il a besoin, y compris sur un ecran de 320 dp.
+          Le composant Bouton coupe volontairement a une ligne — adjustsFontSizeToFit
+          decale les glyphes sur Android (voir Button.tsx) — donc la place doit
+          venir de la MISE EN PAGE, pas d'une police qui retrecit. */}
       <StickyBottom style={{ flexDirection: 'row', gap: 8 }}>
-        <Button variant="secondary" label={t('create.previewEdit')} onPress={() => router.back()} disabled={createProduct.isPending} />
+        <Button variant="secondary" label={t('create.previewEdit')} onPress={() => router.back()} disabled={createProduct.isPending} style={{ flex: 1 }} />
         <Button
           label={createProduct.isPending ? t('create.previewPublishing') : t('create.previewPublish')}
-          style={{ flex: 1 }}
+          style={{ flex: 2 }}
           disabled={createProduct.isPending || !state.title.trim() || state.priceGnf <= 0 || state.photos.length === 0 || !state.city.trim()}
           onPress={async () => {
             try {
