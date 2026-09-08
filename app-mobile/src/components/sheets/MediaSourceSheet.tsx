@@ -1,8 +1,8 @@
-import { Modal, Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
+import { Sheet } from './Sheet';
 import { I } from '../../icons/Icon';
 import { haptic } from '../../lib/haptics';
 
@@ -29,11 +29,17 @@ export type MediaKind = 'photo' | 'video';
  *      combien de photos il reste — une information qu'on possede et qui evite
  *      une selection tronquee sans explication.
  *
- * POURQUOI PAS `Sheet` (src/components/sheets/Sheet.tsx) : elle reserve 70 px
- * pour la barre d'onglets, parce que toutes les feuilles de l'app s'ouvrent
- * depuis un ecran d'onglet. Le tunnel de creation est un ecran de pile, sans
- * barre : la marge serait un trou. Et ses hauteurs ('60%', '90%') sont faites
- * pour des listes, pas pour deux options.
+ * ELLE REPOSE SUR `Sheet`, la feuille de l'app. Une premiere version utilisait
+ * une Modal maison, parce que `Sheet` reservait 70 px pour la barre d'onglets
+ * et n'acceptait que des hauteurs en pourcentage — deux hypotheses fausses ici
+ * (ecran de pile, deux options). Plutot que de laisser l'app avec DEUX systemes
+ * de feuilles, ces deux hypotheses sont devenues des options : `reserveTabBar`
+ * et `fitContent`, toutes deux par defaut sur l'ancien comportement, donc les
+ * cinq feuilles existantes empruntent exactement le meme chemin qu'avant.
+ *
+ * Ce qu'on y gagne : le glisser-pour-fermer, le meme voile et la meme physique
+ * que partout ailleurs. Une feuille qui se ferme autrement que les autres se
+ * remarque, meme sans qu'on sache dire pourquoi.
  */
 export function MediaSourceSheet({
   open,
@@ -49,99 +55,63 @@ export function MediaSourceSheet({
   onPick: (source: MediaSource) => void;
   onClose: () => void;
 }) {
-  const { colors, radii } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const photo = kind === 'photo';
 
   const choose = (source: MediaSource) => {
     haptic.light();
     // On ferme AVANT de declencher : la camera et la galerie sont des vues
-    // systeme, et les ouvrir par-dessus une modale encore montee laisse la
-    // feuille visible derriere au retour sur certains Android.
+    // systeme, et les ouvrir par-dessus une feuille encore montee la laisse
+    // visible derriere au retour, sur certains Android.
     onClose();
     onPick(source);
   };
 
   return (
-    <Modal
-      visible={open}
-      transparent
-      animationType="slide"
-      // Le retour arriere Android doit fermer la feuille, pas l'ecran.
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        {/* Fond tapable. Une feuille qu'on ne peut fermer qu'avec un bouton
-            precis se lit comme un piege ; l'app ferme partout ailleurs au
-            toucher exterieur. */}
-        <Pressable
-          onPress={onClose}
-          style={{ ...StyleSheetAbsoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' }}
-          accessibilityLabel={t('common.cancel')}
+    <Sheet open={open} onClose={onClose} reserveTabBar={false} fitContent>
+      <View style={{ paddingHorizontal: 20, paddingTop: 4 }}>
+        <Text variant="titleM" style={{ marginBottom: 4 }}>
+          {t(photo ? 'create.photoSourceTitle' : 'create.videoSourceTitle')}
+        </Text>
+        <Text variant="caption" tone="muted" style={{ letterSpacing: 0, marginBottom: 18 }}>
+          {t(photo ? 'create.photoSourceBody' : 'create.videoSourceBody')}
+        </Text>
+
+        <SourceRow
+          Icon={photo ? I.camera : I.video}
+          title={t(photo ? 'create.photoSourceCamera' : 'create.videoSourceCamera')}
+          hint={t(photo ? 'create.photoSourceCameraHint' : 'create.videoSourceCameraHint')}
+          onPress={() => choose('camera')}
+        />
+        <View style={{ height: 10 }} />
+        <SourceRow
+          Icon={I.image}
+          title={t(photo ? 'create.photoSourceGallery' : 'create.videoSourceGallery')}
+          hint={photo
+            ? t('create.photoSourceGalleryHint', { count: remaining })
+            : t('create.videoSourceGalleryHint')}
+          onPress={() => choose('gallery')}
         />
 
-        <View
-          style={{
-            backgroundColor: colors.card,
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-            paddingHorizontal: 20,
-            paddingTop: 10,
-            paddingBottom: Math.max(insets.bottom, 16) + 8,
+        {/* « Annuler » reste discret : la feuille se ferme aussi en tirant vers
+            le bas ou en touchant le voile. C'est un dernier recours, pas une
+            option — l'alerte systeme d'avant lui donnait le meme poids qu'aux
+            deux vraies actions, et Android le placait meme en premier. */}
+        <Pressable
+          onPress={() => {
+            haptic.light();
+            onClose();
           }}
+          style={{ marginTop: 16, paddingVertical: 12, alignItems: 'center' }}
+          accessibilityRole="button"
         >
-          {/* Poignee : dit sans mot que ca se tire vers le bas. */}
-          <View
-            style={{
-              alignSelf: 'center',
-              width: 44,
-              height: 4,
-              borderRadius: 999,
-              backgroundColor: colors.borderStrong,
-              marginBottom: 16,
-            }}
-          />
-
-          <Text variant="titleM" style={{ marginBottom: 4 }}>
-            {t(photo ? 'create.photoSourceTitle' : 'create.videoSourceTitle')}
+          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted }}>
+            {t('common.cancel')}
           </Text>
-          <Text variant="caption" tone="muted" style={{ letterSpacing: 0, marginBottom: 18 }}>
-            {t(photo ? 'create.photoSourceBody' : 'create.videoSourceBody')}
-          </Text>
-
-          <SourceRow
-            Icon={photo ? I.camera : I.video}
-            title={t(photo ? 'create.photoSourceCamera' : 'create.videoSourceCamera')}
-            hint={t(photo ? 'create.photoSourceCameraHint' : 'create.videoSourceCameraHint')}
-            onPress={() => choose('camera')}
-          />
-          <View style={{ height: 10 }} />
-          <SourceRow
-            Icon={I.image}
-            title={t(photo ? 'create.photoSourceGallery' : 'create.videoSourceGallery')}
-            hint={photo
-              ? t('create.photoSourceGalleryHint', { count: remaining })
-              : t('create.videoSourceGalleryHint')}
-            onPress={() => choose('gallery')}
-          />
-
-          <Pressable
-            onPress={() => {
-              haptic.light();
-              onClose();
-            }}
-            style={{ marginTop: 16, paddingVertical: 12, alignItems: 'center' }}
-            accessibilityRole="button"
-          >
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted }}>
-              {t('common.cancel')}
-            </Text>
-          </Pressable>
-        </View>
+        </Pressable>
       </View>
-    </Modal>
+    </Sheet>
   );
 }
 
@@ -197,11 +167,3 @@ function SourceRow({
   );
 }
 
-/** Evite d'importer StyleSheet pour une seule constante. */
-const StyleSheetAbsoluteFill = {
-  position: 'absolute' as const,
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-};
