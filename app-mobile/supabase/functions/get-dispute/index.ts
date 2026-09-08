@@ -8,7 +8,9 @@
 // list-disputes endpoint is the one that filters by status='disputed'.
 //
 // Mapper: includeAdminMeta: true (admin sees admin_id in dispute_resolved
-// events). includeScanToken: false (admin isn't the seller; QR isn't theirs).
+// events). includeScanToken: false — le QR appartient a l'ACHETEUR seul
+// (sens inverse le 2026-08-22 ; cf. l'en-tete de mapOrder). Un admin n'a
+// aucune raison de le detenir : il ne remet aucune marchandise.
 //
 // admin_actions are returned newest-first so the console can render a reverse-
 // chronological timeline without flipping the array client-side.

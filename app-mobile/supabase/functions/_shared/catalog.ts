@@ -177,11 +177,27 @@ export interface OrderRow {
 
 // Two opt-in PII gates layered on top of the base mapper:
 //
-// includeScanToken — only the seller of an order may see scan_token (the QR
-//   secret printed on the package). Buyer/agent callers MUST NOT receive it;
-//   that's what makes the QR an actual lock, not a navigation hint. get-order
-//   passes { includeScanToken: r.seller_id === userId }; seller-only endpoints
-//   pass { includeScanToken: true }; buyer/public endpoints omit opts entirely.
+// includeScanToken — L'ACHETEUR SEUL peut voir scan_token. Il l'affiche à
+//   l'écran ; celui qui remet la marchandise (vendeur ou livreur) le lit avec
+//   sa caméra, au moment de la remise. C'est cette présence physique qui fait
+//   du QR une serrure et non une indication de navigation.
+//
+//   ⚠️ CE SENS A ÉTÉ INVERSÉ LE 2026-08-22, et ce commentaire disait encore
+//   l'inverse jusqu'au 2026-09-07 : « seul le VENDEUR peut voir scan_token ;
+//   les points d'entrée vendeur passent { includeScanToken: true } ». C'était
+//   le modèle d'origine, quand le vendeur imprimait le QR sur le colis.
+//
+//   Ce n'était pas une simple imprécision. seller_confirm_pickup libère le
+//   séquestre sur le seul bon scan_token : tant que list-seller-orders le
+//   servait au vendeur, celui-ci pouvait le lire par l'API et s'auto-payer
+//   sans que l'acheteur soit là ni n'ait rien reçu. Trou fermé le 2026-09-07
+//   (c7af5d4), mais le commentaire, lui, aurait fait rouvrir la porte au
+//   prochain qui l'aurait pris pour argent comptant.
+//
+//   Aujourd'hui : get-order passe { includeScanToken: r.buyer_id === userId } ;
+//   TOUT point d'entrée vendeur, livreur, agent ou admin omet opts. Si tu
+//   t'apprêtes à écrire `{ includeScanToken: true }`, demande-toi d'abord si
+//   l'appelant est bien l'acheteur — la réponse est presque toujours non.
 //
 // includeAdminMeta — only an admin caller may see admin_id inside the
 //   dispute_resolved events that Phase K resolve_dispute appends. Buyer/seller

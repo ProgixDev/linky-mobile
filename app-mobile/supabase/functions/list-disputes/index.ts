@@ -14,7 +14,8 @@
 // Cursor: (updated_at, id) for stable forward pagination.
 //
 // Mapper: includeAdminMeta: true — admins see the full event log.
-//         includeScanToken: false — admins don't ship packages.
+//         includeScanToken: false — le QR appartient a l'ACHETEUR seul,
+//         qui l'affiche a la remise (cf. l'en-tete de mapOrder).
 //
 // Stitching: orders contain buyer_id + seller_id only. We bulk-fetch the
 // distinct ids once for display_name + primary email so the Kanban can render
