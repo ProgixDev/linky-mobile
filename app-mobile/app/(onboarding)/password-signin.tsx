@@ -3,7 +3,7 @@ import { Platform, Pressable, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Lock, Mail, Phone } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff, Lock, Mail, Phone } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
@@ -36,6 +36,7 @@ export default function PasswordSigninRoute() {
   // Guinée : le numéro est accepté avec ou sans indicatif.
   const e164 = digits.startsWith('224') ? `+${digits}` : `+224${digits}`;
   const [password, setPassword] = useState('');
+  const [reveal, setReveal] = useState(false);
   const [focusField, setFocusField] = useState<'email' | 'password' | null>(null);
   const setTokens = useAuth((s) => s.setTokens);
   const signIn = useAuth((s) => s.signIn);
@@ -218,7 +219,7 @@ export default function PasswordSigninRoute() {
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={!reveal}
                   autoCapitalize="none"
                   autoCorrect={false}
                   placeholder="••••••••"
@@ -229,6 +230,24 @@ export default function PasswordSigninRoute() {
                   returnKeyType="go"
                   style={{ flex: 1, fontSize: 16, fontWeight: '500', color: colors.text, padding: 0 }}
                 />
+                {/* Oeil afficher/masquer (client 2026-09-08 : « in every place of
+                    password existing »). C'etait le SEUL ecran mot de passe a en
+                    manquer — creation et modification en avaient deja un.
+                    Il compte double A LA CONNEXION : c'est le seul endroit ou
+                    l'utilisateur tape un mot de passe qu'il ne vient pas de
+                    choisir, donc le seul ou il ne peut pas savoir s'il s'est
+                    trompe autrement qu'en se faisant refuser. */}
+                <Pressable
+                  onPress={() => setReveal((v) => !v)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                >
+                  {reveal ? (
+                    <EyeOff size={18} color={colors.textMuted} strokeWidth={1.75} />
+                  ) : (
+                    <Eye size={18} color={colors.textMuted} strokeWidth={1.75} />
+                  )}
+                </Pressable>
               </View>
             </View>
 

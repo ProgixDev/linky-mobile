@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Lock, Mail, ArrowRight } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/stores/auth';
 import { apiFetch, SERVER_ACCESS_TTL_SEC } from '@/lib/api';
@@ -220,6 +220,11 @@ function Field({
   placeholder: string;
   autoComplete?: string;
 }) {
+  // Oeil afficher/masquer sur les champs mot de passe (client 2026-09-08 :
+  // « in every place of password existing »). Le champ e-mail n'en recoit pas :
+  // il n'est jamais masque.
+  const [reveal, setReveal] = useState(false);
+  const isPassword = type === 'password';
   return (
     <div>
       <label className="text-[11px] font-bold uppercase tracking-wider text-faint">
@@ -228,13 +233,25 @@ function Field({
       <div className="mt-2 flex h-14 items-center gap-3 rounded-2xl border border-line bg-surface px-4 focus-within:border-primary">
         <Icon size={18} className="text-muted" strokeWidth={1.75} />
         <input
-          type={type}
+          type={isPassword && reveal ? 'text' : type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           autoComplete={autoComplete}
           className="flex-1 bg-transparent text-base font-medium outline-none placeholder:text-faint"
         />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setReveal((v) => !v)}
+            // type="button" est indispensable : dans un <form>, un bouton sans
+            // type vaut submit — l'oeil aurait envoye le formulaire.
+            aria-label={reveal ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            className="text-muted transition-colors hover:text-[#0E1311]"
+          >
+            {reveal ? <EyeOff size={18} strokeWidth={1.75} /> : <Eye size={18} strokeWidth={1.75} />}
+          </button>
+        )}
       </div>
     </div>
   );
