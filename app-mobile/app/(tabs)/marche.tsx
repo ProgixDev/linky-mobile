@@ -167,6 +167,23 @@ export default function MarcheRoute() {
   const isPureAgent = isAgent && !isSeller && !isBuyer;
   const isPureSeller = isSeller && !isAgent && !isBuyer;
 
+  // SEPARATION DES MODES, retablie le 2026-09-08 sur confirmation du client :
+  // « les annonces Immo apparaissent quand je suis en mode vendeur et
+  // inversement ».
+  //
+  // Je l'avais retiree le matin meme, ayant lu « en mode vendeur et Immo, on ne
+  // peut pas acheter ni reserver, il faut activer le profil acheteur » comme une
+  // PLAINTE. C'etait une REGLE : le pro reste dans sa categorie tant qu'il n'a
+  // pas active le role acheteur, qu'il coche lui-meme dans Profil > Mes roles.
+  //
+  // Ce qui a ete GARDE de ce passage, parce que ca n'a rien a voir avec la
+  // separation : l'onglet est DERIVE et non plus impose par un effet — donc
+  // plus de saut a la premiere image, plus de drapeau qui survit au changement
+  // de compte — et signOut vide desormais les filtres.
+  const showArticles = !isPureAgent;
+  const showImmobilier = !isPureSeller;
+  const showSwitcher = showArticles && showImmobilier;
+
 
   const productsQuery = useProductsInfinite({
     category: filters.productCategory === 'all' ? undefined : filters.productCategory,
@@ -206,8 +223,11 @@ export default function MarcheRoute() {
   //   - l'effet s'executant APRES la peinture, un agent pur voyait une image
   //     complete d'Articles avant de basculer sur Immobilier.
   // Un calcul synchrone n'a aucun de ces trois problemes.
-  const effectiveTab: MarcheTab =
-    filters.marcheTab ?? (isPureAgent ? 'immobilier' : 'articles');
+  const effectiveTab: MarcheTab = isPureAgent
+    ? 'immobilier'
+    : isPureSeller
+      ? 'articles'
+      : (filters.marcheTab ?? 'articles');
   const isArticles = effectiveTab === 'articles';
   const placeholder = isArticles
     ? t('marche.searchPlaceholderArticles')
@@ -354,9 +374,8 @@ export default function MarcheRoute() {
         )}
 
         {/* ===== Tab pills (hidden when user is pure pro of one type) ===== */}
-        {/* Selecteur toujours affiche : les deux categories sont ouvertes a
-            toutes les personas depuis le 2026-09-08. */}
-        {(
+        {/* Masque pour un pro pur : sa categorie est imposee. */}
+        {showSwitcher && (
           <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
             <View
               style={{

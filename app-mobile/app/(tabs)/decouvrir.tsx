@@ -51,10 +51,17 @@ export default function DecouvrirRoute() {
   // peinture, useDiscoverInfinite partirait une premiere fois sur 'all' puis une
   // seconde sur la bonne cle — deux appels reseau au lieu d'un, payes sur la 3G,
   // avec un fil mixte qui clignote avant de basculer.
-  const tab: DiscoverFilter =
-    filters.discoverTab ?? (isPureAgent ? 'properties' : isPureSeller ? 'products' : 'all');
+  // Le choix de l'utilisateur, quand il a le droit d'en faire un.
+  const tab: DiscoverFilter = filters.discoverTab ?? 'all';
   const setTab = filters.setDiscoverTab;
-  const feedFilter: DiscoverFilter = tab;
+  // SEPARATION DES MODES (client 2026-09-08, cf. marche.tsx) : un pro pur reste
+  // dans SA categorie. Le filtre du fil est donc impose, pas choisi.
+  const isPurePro = isPureAgent || isPureSeller;
+  const feedFilter: DiscoverFilter = isPureAgent
+    ? 'properties'
+    : isPureSeller
+      ? 'products'
+      : tab;
 
   const { items, isLoading, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useDiscoverInfinite(feedFilter);
 
@@ -238,10 +245,10 @@ export default function DecouvrirRoute() {
         />
       )}
 
-      {/* Pastilles de filtre — affichees pour TOUT LE MONDE depuis le
-          2026-09-08 (elles etaient masquees aux pros purs, qui restaient
-          enfermes dans leur seule categorie). */}
-      <View
+      {/* Masquees pour un pro pur : sa categorie est imposee, le filtre n'aurait
+          rien a filtrer. */}
+      {!isPurePro && (
+        <View
           pointerEvents="box-none"
           style={{ position: 'absolute', top: insets.top + 10, left: 0, right: 0, alignItems: 'center', zIndex: 10 }}
         >
@@ -280,7 +287,8 @@ export default function DecouvrirRoute() {
               },
             )}
           </View>
-      </View>
+        </View>
+      )}
     </View>
   );
 }

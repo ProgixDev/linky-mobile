@@ -21,6 +21,7 @@ import {
   EyeOff,
 } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
+import { useAuth } from '../../stores/auth';
 import { Text } from '../primitives/Text';
 import { formatGNF, formatEUR, formatDistance } from '../../lib/format';
 import { priceWithFeeGnf } from '../../lib/fees';
@@ -56,6 +57,11 @@ export function DiscoverCard({
   isActive: boolean;
   height?: number;
 }) {
+  const roles = useAuth((s) => s.roles);
+  const isBuyer = roles.includes('buyer');
+  const isSeller = roles.includes('seller');
+  const isAgent = roles.includes('agent');
+  const isPurePro = (isAgent && !isSeller && !isBuyer) || (isSeller && !isAgent && !isBuyer);
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { show } = useToast();
@@ -378,11 +384,9 @@ export function DiscoverCard({
         {/* ===== Rangee haute : badge « economie de donnees » =====
             Le commentaire d'origine parlait de « pastilles de filtre » : elles
             ont demenage dans decouvrir.tsx, il ne reste ici que le badge.
-            Elle etait masquee aux pros purs — un vendeur ne voyait donc jamais
-            pourquoi sa video etait figee. Affichee pour tout le monde depuis le
-            2026-09-08, en meme temps que l'ouverture du fil a toutes les
-            categories. */}
-        {(
+            Elle reste masquee aux pros purs, dont la mise en page haute est
+            differente (pas de pastilles au-dessus). */}
+        {!isPurePro && (
           <View
             style={{
               position: 'absolute',
@@ -425,9 +429,10 @@ export function DiscoverCard({
           <View
             style={{
               position: 'absolute',
-              // Les pastilles de filtre sont desormais toujours affichees (2026-09-08),
-              // donc la hauteur reservee ne depend plus de la persona.
-              top: topInset + 56,
+              // Hauteur reservee aux pastilles de filtre — un pro pur n'en a
+              // pas (separation des modes retablie le 2026-09-08), donc rien a
+              // reserver chez lui : sans ce conditionnel, il verrait un trou.
+              top: topInset + (isPurePro ? 12 : 56),
               left: 16,
               flexDirection: 'row',
               gap: 6,
@@ -458,9 +463,10 @@ export function DiscoverCard({
           <View
             style={{
               position: 'absolute',
-              // Les pastilles de filtre sont desormais toujours affichees (2026-09-08),
-              // donc la hauteur reservee ne depend plus de la persona.
-              top: topInset + 56,
+              // Hauteur reservee aux pastilles de filtre — un pro pur n'en a
+              // pas (separation des modes retablie le 2026-09-08), donc rien a
+              // reserver chez lui : sans ce conditionnel, il verrait un trou.
+              top: topInset + (isPurePro ? 12 : 56),
               left: 0,
               right: 0,
               flexDirection: 'row',
