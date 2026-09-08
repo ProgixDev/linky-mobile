@@ -9,6 +9,7 @@ import { Text } from '../../../src/components/primitives/Text';
 import { Button } from '../../../src/components/primitives/Button';
 import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
 import { TopBar } from '../../../src/components/nav/TopBar';
+import { VideoThumb } from '../../../src/components/media/VideoThumb';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I } from '../../../src/icons/Icon';
 import { useCreateListing } from '../../../src/stores/createListing';
@@ -41,6 +42,12 @@ export default function CreatePreviewRoute() {
         <View style={{ aspectRatio: 9 / 14, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.discoverBg }}>
           {state.photos[0] ? (
             <Image source={{ uri: state.photos[0] }} style={{ flex: 1 }} contentFit="cover" />
+          ) : state.videoUrl ? (
+            /* Pas de photo mais une video : sa premiere image vaut mieux qu'un
+               rectangle gris « aucune photo » (client 2026-09-08). L'ecran
+               promet « voila comment votre annonce apparaitra aux acheteurs » —
+               et dans le fil, c'est bien la video qu'ils verront. */
+            <VideoThumb uri={state.videoUrl} style={{ flex: 1 }} />
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <I.image size={30} color="rgba(255,255,255,0.7)" />

@@ -2,6 +2,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
+import { VideoThumb } from '../../../src/components/media/VideoThumb';
 import {
   MapPin,
   BedDouble,
@@ -95,6 +96,12 @@ export default function PreviewRoute() {
                   style={{ flex: 1 }}
                   contentFit="cover"
                 />
+              ) : state.videoUrl ? (
+                /* Pas de photo mais une video : sa premiere image plutot qu'une
+                   icone de batiment (client 2026-09-08). Meme raison que sur
+                   l'apercu produit — l'ecran promet de montrer ce que verront
+                   les acheteurs. */
+                <VideoThumb uri={state.videoUrl} style={{ flex: 1 }} />
               ) : (
                 <View
                   style={{

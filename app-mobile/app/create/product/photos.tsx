@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { pickPhotos } from '../../../src/lib/pickPhotos';
 import type { MediaSource } from '../../../src/lib/pickPhotos';
 import { MediaSourceSheet } from '../../../src/components/sheets/MediaSourceSheet';
+import { VideoThumb } from '../../../src/components/media/VideoThumb';
 import { Film, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -348,18 +349,10 @@ export default function CreatePhotosRoute() {
                 backgroundColor: colors.card,
               }}
             >
-              <View
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  backgroundColor: colors.primarySoft,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Film size={18} color={colors.primary} strokeWidth={2} />
-              </View>
+              {/* La PREMIERE IMAGE de la video, pas une icone de pellicule
+                  (client 2026-09-08). L'icone ne disait pas QUELLE video venait
+                  d'etre ajoutee, ni si le televersement avait pris la bonne. */}
+              <VideoThumb uri={videoUrl} style={{ width: 52, height: 52, borderRadius: 10 }} />
               <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>
                 {t('create.videoAdded')}
               </Text>
