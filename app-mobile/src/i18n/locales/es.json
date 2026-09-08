@@ -673,7 +673,13 @@
     "buyerSeesPrice": "El cliente verá {{amount}} — la comisión Linky del {{rate}} % se añade al precio mostrado. Tú recibes {{base}}.",
     "photoSourceCameraHint": "Se abre tu cámara, una foto a la vez",
     "photoSourceGalleryHint_one": "Hasta {{count}} foto de una vez",
-    "photoSourceGalleryHint_other": "Hasta {{count}} fotos de una vez"
+    "photoSourceGalleryHint_other": "Hasta {{count}} fotos de una vez",
+    "videoSourceTitle": "Añadir un vídeo",
+    "videoSourceBody": "Graba uno ahora o elige un vídeo de tu galería.",
+    "videoSourceCamera": "Grabar un vídeo",
+    "videoSourceCameraHint": "60 s máx., teléfono en horizontal",
+    "videoSourceGallery": "Elegir de la galería",
+    "videoSourceGalleryHint": "Un vídeo de 60 s como máximo"
   },
   "seller": {
     "ordersTitle": "Pedidos recibidos",

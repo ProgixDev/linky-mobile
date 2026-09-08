@@ -11,7 +11,9 @@
 // galerie seule l'obligeait a sortir de l'app, prendre la photo, puis revenir.
 import * as ImagePicker from 'expo-image-picker';
 
-export type PhotoSource = 'camera' | 'gallery';
+// Le type vit dans la feuille de choix : c'est elle qui produit la valeur,
+// ce module ne fait que la consommer.
+export type { MediaSource } from '../components/sheets/MediaSourceSheet';
 
 export interface PickPhotosOptions {
   /** La source DEJA choisie par l'utilisateur.
@@ -21,7 +23,7 @@ export interface PickPhotosOptions {
    *  ressemblait a rien du reste de l'app et ne pouvait rien dire d'utile.
    *  Ce module garde ce qu'il sait faire — permissions et selection — et ne
    *  s'occupe plus de demander. */
-  source: PhotoSource;
+  source: 'camera' | 'gallery';
   /** Nombre de photos encore acceptees. Borne la selection multiple. */
   remaining: number;
   /** Libelles traduits — l'appelant les resout, ce module ne connait pas i18n. */

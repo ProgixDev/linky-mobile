@@ -673,7 +673,13 @@
     "buyerSeesPrice": "Le client verra {{amount}} — les {{rate}} % de frais Linky sont ajoutés au prix affiché. Toi, tu touches {{base}}.",
     "photoSourceCameraHint": "Ta caméra s'ouvre, une photo à la fois",
     "photoSourceGalleryHint_one": "Jusqu'à {{count}} photo d'un coup",
-    "photoSourceGalleryHint_other": "Jusqu'à {{count}} photos d'un coup"
+    "photoSourceGalleryHint_other": "Jusqu'à {{count}} photos d'un coup",
+    "videoSourceTitle": "Ajouter une vidéo",
+    "videoSourceBody": "Filme maintenant, ou choisis une vidéo déjà dans ta galerie.",
+    "videoSourceCamera": "Filmer une vidéo",
+    "videoSourceCameraHint": "60 s max, téléphone à l'horizontale",
+    "videoSourceGallery": "Choisir dans la galerie",
+    "videoSourceGalleryHint": "Une vidéo de 60 s maximum"
   },
   "seller": {
     "ordersTitle": "Commandes reçues",

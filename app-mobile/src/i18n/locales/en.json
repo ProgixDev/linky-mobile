@@ -673,7 +673,13 @@
     "buyerSeesPrice": "Buyers will see {{amount}} — Linky's {{rate}}% fee is added to the displayed price. You receive {{base}}.",
     "photoSourceCameraHint": "Your camera opens, one photo at a time",
     "photoSourceGalleryHint_one": "Up to {{count}} photo at once",
-    "photoSourceGalleryHint_other": "Up to {{count}} photos at once"
+    "photoSourceGalleryHint_other": "Up to {{count}} photos at once",
+    "videoSourceTitle": "Add a video",
+    "videoSourceBody": "Film one now, or pick a video already in your gallery.",
+    "videoSourceCamera": "Film a video",
+    "videoSourceCameraHint": "60 s max, hold the phone sideways",
+    "videoSourceGallery": "Pick from gallery",
+    "videoSourceGalleryHint": "A video of 60 s at most"
   },
   "seller": {
     "ordersTitle": "Orders received",

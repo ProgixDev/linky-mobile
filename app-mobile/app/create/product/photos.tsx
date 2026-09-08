@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { pickPhotos } from '../../../src/lib/pickPhotos';
-import type { PhotoSource } from '../../../src/lib/pickPhotos';
-import { PhotoSourceSheet } from '../../../src/components/sheets/PhotoSourceSheet';
+import type { MediaSource } from '../../../src/lib/pickPhotos';
+import { MediaSourceSheet } from '../../../src/components/sheets/MediaSourceSheet';
 import { Film, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -61,6 +61,7 @@ export default function CreatePhotosRoute() {
   const { show } = useToast();
   const [uploading, setUploading] = useState(false);
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [videoSourceOpen, setVideoSourceOpen] = useState(false);
   // Optional product video (client 2026-08-03 — parity with immo). Shares the
   // createListing store's videoUrl field.
   const videoUrl = useCreateListing((s) => s.videoUrl);
@@ -106,7 +107,7 @@ export default function CreatePhotosRoute() {
     setSourceOpen(true);
   }
 
-  async function runPick(source: PhotoSource) {
+  async function runPick(source: MediaSource) {
     try {
       // Camera OU galerie (client 2026-08-23) : le vendeur photographie sa
       // marchandise sur place. La galerie seule l'obligeait a quitter l'app.
@@ -161,15 +162,36 @@ export default function CreatePhotosRoute() {
   const videoExt = (mime: string): string =>
     mime === 'video/quicktime' ? 'mov' : mime === 'video/webm' ? 'webm' : 'mp4';
 
-  async function pickVideo() {
+  /** Ouvre la feuille de choix video. Le travail reel se fait dans runVideo. */
+  function pickVideo() {
     if (videoUploading) return;
+    setVideoSourceOpen(true);
+  }
+
+  async function runVideo(source: MediaSource) {
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // La camera etait absente : le vendeur devait sortir de l'app, filmer,
+      // revenir. Demande du client le 2026-09-08 (« toujours acces a la
+      // camera »), exactement comme pour les photos.
+      const perm = source === 'camera'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        show(t('create.photosPermDenied'), 'danger');
+        // Le message doit nommer la permission REFUSEE : « autorisez l'acces aux
+        // photos » alors qu'on vient de demander la camera envoie l'utilisateur
+        // regler le mauvais interrupteur dans les parametres du telephone.
+        show(t(source === 'camera' ? 'create.photosCamPermDenied' : 'create.photosPermDenied'), 'danger');
         return;
       }
-      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'videos', quality: 0.7 });
+      // videoMaxDuration coupe A LA PRISE plutot que de refuser apres coup :
+      // filmer 3 minutes puis se faire jeter est la pire facon de l'apprendre.
+      const picked = source === 'camera'
+        ? await ImagePicker.launchCameraAsync({
+            mediaTypes: 'videos',
+            quality: 0.7,
+            videoMaxDuration: MAX_VIDEO_SEC,
+          })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'videos', quality: 0.7 });
       if (picked.canceled || picked.assets.length === 0) return;
       const asset = picked.assets[0];
       if (typeof asset.duration === 'number' && asset.duration > (MAX_VIDEO_SEC + 5) * 1000) {
@@ -386,11 +408,18 @@ export default function CreatePhotosRoute() {
           onPress={() => router.push('/create/product/preview')}
         />
       </StickyBottom>
-      <PhotoSourceSheet
+      <MediaSourceSheet
+        kind="photo"
         open={sourceOpen}
         remaining={remaining}
         onPick={runPick}
         onClose={() => setSourceOpen(false)}
+      />
+      <MediaSourceSheet
+        kind="video"
+        open={videoSourceOpen}
+        onPick={runVideo}
+        onClose={() => setVideoSourceOpen(false)}
       />
     </SafeAreaView>
   );

@@ -6,10 +6,14 @@ import { Text } from '../primitives/Text';
 import { I } from '../../icons/Icon';
 import { haptic } from '../../lib/haptics';
 
-export type PhotoSource = 'camera' | 'gallery';
+export type MediaSource = 'camera' | 'gallery';
+
+/** Photos d'annonce, ou video de presentation. */
+export type MediaKind = 'photo' | 'video';
 
 /**
- * Choix de la source des photos : appareil photo ou galerie.
+ * Choix de la source d'un media d'annonce : appareil photo / camera, ou galerie.
+ * Sert aux PHOTOS et a la VIDEO — c'est le meme geste, avec d'autres mots.
  *
  * REMPLACE UN Alert.alert NATIF (2026-09-08). L'alerte systeme posait trois
  * problemes que sa simplicite d'ecriture cachait :
@@ -31,23 +35,26 @@ export type PhotoSource = 'camera' | 'gallery';
  * barre : la marge serait un trou. Et ses hauteurs ('60%', '90%') sont faites
  * pour des listes, pas pour deux options.
  */
-export function PhotoSourceSheet({
+export function MediaSourceSheet({
   open,
-  remaining,
+  kind,
+  remaining = 0,
   onPick,
   onClose,
 }: {
   open: boolean;
-  /** Photos encore acceptees — affiche sur la ligne galerie. */
-  remaining: number;
-  onPick: (source: PhotoSource) => void;
+  kind: MediaKind;
+  /** Photos encore acceptees — affiche sur la ligne galerie. Ignore en video. */
+  remaining?: number;
+  onPick: (source: MediaSource) => void;
   onClose: () => void;
 }) {
   const { colors, radii } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const photo = kind === 'photo';
 
-  const choose = (source: PhotoSource) => {
+  const choose = (source: MediaSource) => {
     haptic.light();
     // On ferme AVANT de declencher : la camera et la galerie sont des vues
     // systeme, et les ouvrir par-dessus une modale encore montee laisse la
@@ -98,23 +105,25 @@ export function PhotoSourceSheet({
           />
 
           <Text variant="titleM" style={{ marginBottom: 4 }}>
-            {t('create.photoSourceTitle')}
+            {t(photo ? 'create.photoSourceTitle' : 'create.videoSourceTitle')}
           </Text>
           <Text variant="caption" tone="muted" style={{ letterSpacing: 0, marginBottom: 18 }}>
-            {t('create.photoSourceBody')}
+            {t(photo ? 'create.photoSourceBody' : 'create.videoSourceBody')}
           </Text>
 
           <SourceRow
-            Icon={I.camera}
-            title={t('create.photoSourceCamera')}
-            hint={t('create.photoSourceCameraHint')}
+            Icon={photo ? I.camera : I.video}
+            title={t(photo ? 'create.photoSourceCamera' : 'create.videoSourceCamera')}
+            hint={t(photo ? 'create.photoSourceCameraHint' : 'create.videoSourceCameraHint')}
             onPress={() => choose('camera')}
           />
           <View style={{ height: 10 }} />
           <SourceRow
             Icon={I.image}
-            title={t('create.photoSourceGallery')}
-            hint={t('create.photoSourceGalleryHint', { count: remaining })}
+            title={t(photo ? 'create.photoSourceGallery' : 'create.videoSourceGallery')}
+            hint={photo
+              ? t('create.photoSourceGalleryHint', { count: remaining })
+              : t('create.videoSourceGalleryHint')}
             onPress={() => choose('gallery')}
           />
 
