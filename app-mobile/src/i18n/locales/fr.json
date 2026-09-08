@@ -670,7 +670,10 @@
     "photoSourceCamera": "Prendre une photo",
     "photoSourceGallery": "Choisir dans la galerie",
     "photosCamPermDenied": "Autorisez l'appareil photo pour prendre une photo",
-    "buyerSeesPrice": "Le client verra {{amount}} — les {{rate}} % de frais Linky sont ajoutés au prix affiché. Toi, tu touches {{base}}."
+    "buyerSeesPrice": "Le client verra {{amount}} — les {{rate}} % de frais Linky sont ajoutés au prix affiché. Toi, tu touches {{base}}.",
+    "photoSourceCameraHint": "Ta caméra s'ouvre, une photo à la fois",
+    "photoSourceGalleryHint_one": "Jusqu'à {{count}} photo d'un coup",
+    "photoSourceGalleryHint_other": "Jusqu'à {{count}} photos d'un coup"
   },
   "seller": {
     "ordersTitle": "Commandes reçues",

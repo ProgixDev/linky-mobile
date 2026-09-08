@@ -5,6 +5,8 @@ import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { pickPhotos } from '../../../src/lib/pickPhotos';
+import type { PhotoSource } from '../../../src/lib/pickPhotos';
+import { PhotoSourceSheet } from '../../../src/components/sheets/PhotoSourceSheet';
 import { Camera, Film, Plus, Trash2, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -51,6 +53,7 @@ export default function PropertyPhotosRoute() {
   const requestUploadUrl = useRequestPhotoUploadUrl();
   const toast = useToast();
   const [uploading, setUploading] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const videoUrl = useCreateListing((s) => s.videoUrl);
   const [videoUploading, setVideoUploading] = useState(false);
 
@@ -95,8 +98,13 @@ export default function PropertyPhotosRoute() {
     return { url: public_url, storage_path: path, position };
   }
 
-  async function addPhotos() {
+  /** Ouvre la feuille de choix. Le travail reel se fait dans runPick. */
+  function addPhotos() {
     if (uploading || propertyPhotos.length >= MAX_PHOTOS) return;
+    setSourceOpen(true);
+  }
+
+  async function runPick(source: PhotoSource) {
     try {
       // Camera OU galerie (client 2026-08-23) : l'agent photographie le bien
       // pendant la visite. Meme porte que l'ecran produit — les deux ecrans
@@ -104,13 +112,9 @@ export default function PropertyPhotosRoute() {
       // serait passe inapercu.
       const remaining = MAX_PHOTOS - propertyPhotos.length;
       const toUpload = await pickPhotos({
+        source,
         remaining,
         labels: {
-          title: t('create.photoSourceTitle'),
-          body: t('create.photoSourceBody'),
-          camera: t('create.photoSourceCamera'),
-          gallery: t('create.photoSourceGallery'),
-          cancel: t('common.cancel'),
           galleryDenied: t('create.photosPermDenied'),
           cameraDenied: t('create.photosCamPermDenied'),
         },
@@ -493,6 +497,12 @@ export default function PropertyPhotosRoute() {
           </Text>
         </Pressable>
       </SafeAreaView>
+      <PhotoSourceSheet
+        open={sourceOpen}
+        remaining={MAX_PHOTOS - propertyPhotos.length}
+        onPick={runPick}
+        onClose={() => setSourceOpen(false)}
+      />
     </SafeAreaView>
   );
 }

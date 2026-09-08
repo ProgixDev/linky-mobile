@@ -670,7 +670,10 @@
     "photoSourceCamera": "Hacer una foto",
     "photoSourceGallery": "Elegir de la galería",
     "photosCamPermDenied": "Permite la cámara para hacer una foto",
-    "buyerSeesPrice": "El cliente verá {{amount}} — la comisión Linky del {{rate}} % se añade al precio mostrado. Tú recibes {{base}}."
+    "buyerSeesPrice": "El cliente verá {{amount}} — la comisión Linky del {{rate}} % se añade al precio mostrado. Tú recibes {{base}}.",
+    "photoSourceCameraHint": "Se abre tu cámara, una foto a la vez",
+    "photoSourceGalleryHint_one": "Hasta {{count}} foto de una vez",
+    "photoSourceGalleryHint_other": "Hasta {{count}} fotos de una vez"
   },
   "seller": {
     "ordersTitle": "Pedidos recibidos",

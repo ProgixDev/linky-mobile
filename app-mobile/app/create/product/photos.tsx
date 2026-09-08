@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { pickPhotos } from '../../../src/lib/pickPhotos';
+import type { PhotoSource } from '../../../src/lib/pickPhotos';
+import { PhotoSourceSheet } from '../../../src/components/sheets/PhotoSourceSheet';
 import { Film, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -58,6 +60,7 @@ export default function CreatePhotosRoute() {
   const requestUploadUrl = useRequestPhotoUploadUrl();
   const { show } = useToast();
   const [uploading, setUploading] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
   // Optional product video (client 2026-08-03 — parity with immo). Shares the
   // createListing store's videoUrl field.
   const videoUrl = useCreateListing((s) => s.videoUrl);
@@ -97,20 +100,21 @@ export default function CreatePhotosRoute() {
     return public_url;
   }
 
-  async function handleAdd() {
+  /** Ouvre la feuille de choix. Le travail reel se fait dans runPick. */
+  function handleAdd() {
     if (!canAdd) return;
+    setSourceOpen(true);
+  }
+
+  async function runPick(source: PhotoSource) {
     try {
       // Camera OU galerie (client 2026-08-23) : le vendeur photographie sa
       // marchandise sur place. La galerie seule l'obligeait a quitter l'app.
       // pickPhotos gere le choix, les permissions et le plafond restant.
       const toUpload = await pickPhotos({
+        source,
         remaining,
         labels: {
-          title: t('create.photoSourceTitle'),
-          body: t('create.photoSourceBody'),
-          camera: t('create.photoSourceCamera'),
-          gallery: t('create.photoSourceGallery'),
-          cancel: t('common.cancel'),
           galleryDenied: t('create.photosPermDenied'),
           cameraDenied: t('create.photosCamPermDenied'),
         },
@@ -382,6 +386,12 @@ export default function CreatePhotosRoute() {
           onPress={() => router.push('/create/product/preview')}
         />
       </StickyBottom>
+      <PhotoSourceSheet
+        open={sourceOpen}
+        remaining={remaining}
+        onPick={runPick}
+        onClose={() => setSourceOpen(false)}
+      />
     </SafeAreaView>
   );
 }

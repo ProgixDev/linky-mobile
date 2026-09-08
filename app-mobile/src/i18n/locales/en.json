@@ -670,7 +670,10 @@
     "photoSourceCamera": "Take a photo",
     "photoSourceGallery": "Choose from gallery",
     "photosCamPermDenied": "Allow the camera to take a photo",
-    "buyerSeesPrice": "Buyers will see {{amount}} — Linky's {{rate}}% fee is added to the displayed price. You receive {{base}}."
+    "buyerSeesPrice": "Buyers will see {{amount}} — Linky's {{rate}}% fee is added to the displayed price. You receive {{base}}.",
+    "photoSourceCameraHint": "Your camera opens, one photo at a time",
+    "photoSourceGalleryHint_one": "Up to {{count}} photo at once",
+    "photoSourceGalleryHint_other": "Up to {{count}} photos at once"
   },
   "seller": {
     "ordersTitle": "Orders received",

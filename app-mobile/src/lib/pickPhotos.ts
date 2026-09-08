@@ -9,19 +9,23 @@
 //
 // Sur le terrain guineen, le vendeur photographie sa marchandise sur place : la
 // galerie seule l'obligeait a sortir de l'app, prendre la photo, puis revenir.
-import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
+export type PhotoSource = 'camera' | 'gallery';
+
 export interface PickPhotosOptions {
+  /** La source DEJA choisie par l'utilisateur.
+   *
+   *  Le choix se faisait ici, dans un Alert.alert natif. Il est remonte a
+   *  l'ecran le 2026-09-08 (PhotoSourceSheet) : une alerte systeme ne
+   *  ressemblait a rien du reste de l'app et ne pouvait rien dire d'utile.
+   *  Ce module garde ce qu'il sait faire — permissions et selection — et ne
+   *  s'occupe plus de demander. */
+  source: PhotoSource;
   /** Nombre de photos encore acceptees. Borne la selection multiple. */
   remaining: number;
   /** Libelles traduits — l'appelant les resout, ce module ne connait pas i18n. */
   labels: {
-    title: string;
-    body: string;
-    camera: string;
-    gallery: string;
-    cancel: string;
     galleryDenied: string;
     cameraDenied: string;
   };
@@ -35,13 +39,10 @@ export interface PickPhotosOptions {
  * echec technique remonte a l'appelant.
  */
 export async function pickPhotos(opts: PickPhotosOptions): Promise<ImagePicker.ImagePickerAsset[]> {
-  const { remaining, labels, onDenied } = opts;
+  const { source, remaining, labels, onDenied } = opts;
   if (remaining <= 0) return [];
 
-  const choice = await askSource(labels);
-  if (choice === 'cancel') return [];
-
-  if (choice === 'camera') {
+  if (source === 'camera') {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
       onDenied(labels.cameraDenied);
@@ -71,22 +72,4 @@ export async function pickPhotos(opts: PickPhotosOptions): Promise<ImagePicker.I
   });
   if (picked.canceled || picked.assets.length === 0) return [];
   return picked.assets.slice(0, remaining);
-}
-
-/** Alert natif plutot qu'une feuille maison : deux options, aucun etat a gerer. */
-function askSource(labels: PickPhotosOptions['labels']): Promise<'camera' | 'gallery' | 'cancel'> {
-  return new Promise((resolve) => {
-    Alert.alert(
-      labels.title,
-      labels.body,
-      [
-        { text: labels.camera, onPress: () => resolve('camera') },
-        { text: labels.gallery, onPress: () => resolve('gallery') },
-        // onDismiss ne se declenche pas partout (retour arriere Android) ; le
-        // bouton d'annulation garantit qu'on resout toujours la promesse.
-        { text: labels.cancel, style: 'cancel', onPress: () => resolve('cancel') },
-      ],
-      { cancelable: true, onDismiss: () => resolve('cancel') },
-    );
-  });
 }
