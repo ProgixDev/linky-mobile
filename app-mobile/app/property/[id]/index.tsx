@@ -289,15 +289,11 @@ export default function PropertyDetailRoute() {
             size="l"
             period={prop.type === 'location' ? (prop.perMonth ? 'month' : 'day') : undefined}
           />
-          <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
-            {t('common.feesIncluded')}
-          </Text>
-          {prop.type === 'location' && (
-            <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
-              {/* « charges incluses » removed — no data field asserts it. */}
-              {prop.perMonth ? 'par mois' : 'par jour'}
-            </Text>
-          )}
+          {/* La periode n'est PAS repetee ici : MoneyText l'imprime deja, collee
+              au montant (« 2 415 000 GNF /mois »). Cette ligne affichait « par
+              mois » juste en dessous — la meme information deux fois. La
+              redondance datait de juillet ; elle est devenue voyante quand la
+              mention « Frais inclus » qui les separait a ete retiree. */}
 
           {/* Négocier le prix — rentals only, and never on your own listing
               (find-or-create-conversation 403s self-targets). */}

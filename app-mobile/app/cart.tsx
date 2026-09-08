@@ -299,9 +299,6 @@ export default function CartRoute() {
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0 }}>
                 {formatEUR(gnfToEur(grandTotal))}
               </Text>
-              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                {t('common.feesIncluded')}
-              </Text>
             </View>
           </View>
           {groups.length > 1 && (

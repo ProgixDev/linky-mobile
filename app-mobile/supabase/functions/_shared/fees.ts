@@ -2,7 +2,12 @@
 //
 // Passe de 3 % a 5 % le 2026-09-08 a la demande du client, en meme temps que
 // l'affichage : la commission est desormais INCLUSE dans le prix montre sur
-// l'annonce (« Frais inclus ») au lieu de n'apparaitre qu'au paiement.
+// l'annonce, au lieu de s'ajouter au paiement.
+//
+// La MENTION « Frais inclus », elle, n'apparait plus qu'a la finalisation du
+// paiement (client, 2026-09-08 23:05 : « il doit apparaitre uniquement a la
+// finalisation du paiement »). Les prix restent commission comprise PARTOUT —
+// seule l'etiquette a disparu des surfaces de navigation.
 //
 // LE MODELE N'A PAS CHANGE POUR AUTANT :
 //   amount_minor  ce que le VENDEUR touche, entier          10 000

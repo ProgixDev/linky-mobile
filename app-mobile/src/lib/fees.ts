@@ -5,6 +5,19 @@
 // rajoute les +5% et affiche 10 500 GNF. Le client lui voit 10 500 GNF.
 // Pareil pour la partie immo. Avec le message "Frais inclus". »
 //
+// PRÉCISION DU MÊME SOIR (23:05) : « Concernant le message "Frais inclus" il
+// doit apparaître uniquement à la finalisation du paiement. » L'étiquette a
+// donc été retirée des cartes, des fiches, du fil Découvrir et du panier ; elle
+// ne subsiste que sur le récapitulatif de paiement et sur le reçu de commande.
+//
+// ⚠️ CE QUE ÇA IMPLIQUE POUR LA SUITE. L'étiquette servait aussi de garde-fou
+// visible : tant qu'elle accompagnait un prix, une surface qui aurait oublié
+// `priceWithFeeGnf` se voyait. Ce n'est plus le cas — un prix affiché sans la
+// commission passerait désormais inaperçu jusqu'à l'écran de paiement, où
+// l'acheteur découvrirait un montant plus élevé que celui de l'annonce. Toute
+// NOUVELLE surface qui montre un prix à un acheteur doit passer par
+// `priceWithFeeGnf`, sans exception.
+//
 // CE QUI EST STOCKÉ RESTE LE PRIX DU VENDEUR. `products.price_minor` et
 // `properties.price_minor` valent toujours 10 000 : c'est ce que le vendeur a
 // saisi et ce qu'il touchera, entier. Le +5 % est un habillage d'AFFICHAGE,

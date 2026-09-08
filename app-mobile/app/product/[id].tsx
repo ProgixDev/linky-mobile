@@ -373,11 +373,6 @@ export default function ProductDetailRoute() {
               {formatEUR(gnfToEur(priceWithFeeGnf(product.priceGnf)))}
             </Text>
           </View>
-          {/* Mention demandee par le client le 2026-09-08, en meme temps que
-              l'integration de la commission au prix affiche. */}
-          <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}>
-            {t('common.feesIncluded')}
-          </Text>
         </View>
 
         {/* ===== Description ===== */}

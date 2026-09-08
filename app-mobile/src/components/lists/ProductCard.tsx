@@ -230,11 +230,6 @@ export function ProductCard({
         <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'], marginTop: 2 }}>
           {formatGNF(priceWithFeeGnf(product.priceGnf))}
         </Text>
-        {!compact && (
-          <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginTop: 1 }}>
-            {t('common.feesIncluded')}
-          </Text>
-        )}
         {/* Location line. Pre-fix this rendered product.shopId — a mock-era
             leftover ('s_mamadou_shop') that shows a raw UUID with real data. */}
         {!compact && (product.district || product.city) ? (
