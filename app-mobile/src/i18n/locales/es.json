@@ -1690,7 +1690,9 @@
     "writeLabel": "Escríbanos",
     "writeSub": "hello@linkygroup.com",
     "madeWith": "Hecho con",
-    "atConakry": "en Conakry."
+    "atConakry": "en Conakry.",
+    "phoneLabel": "Llámanos",
+    "whatsappLabel": "WhatsApp"
   },
   "helpScreen": {
     "topbar": "Ayuda y soporte",
@@ -1715,7 +1717,9 @@
     "faq3Q": "¿Cómo convertirme en vendedor verificado?",
     "faq3A": "Vaya a Perfil → Verificación de identidad y siga los 3 pasos.",
     "faq4Q": "¿Están disponibles los pagos en euros?",
-    "faq4A": "Sí, con tarjeta bancaria para la diáspora. El GNF sigue siendo la moneda principal."
+    "faq4A": "Sí, con tarjeta bancaria para la diáspora. El GNF sigue siendo la moneda principal.",
+    "phoneLabel": "Llámanos",
+    "whatsappLabel": "WhatsApp"
   },
   "legal": {
     "termsTitle": "Términos y condiciones",

@@ -54,6 +54,37 @@ export default function ContactPage() {
             Ouvre l&apos;app Linky → Profil → Aide & support.
           </p>
         </div>
+
+        {/* Téléphone + WhatsApp (client 2026-09-08). La grille prévoyait deux
+            colonnes depuis toujours — le commentaire au-dessus dit « Phone +
+            chat hero » — mais la seconde était vide, faute de numéro réel. */}
+        <div className="rounded-3xl bg-white p-7 ring-1 ring-[#E5DED1]">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#8a9490]">
+            Par téléphone
+          </div>
+          <div className="font-display mt-2 text-3xl font-bold tracking-tight">
+            Appelle-nous
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-[#5e6864]">
+            Appel direct ou WhatsApp, du lundi au samedi.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <a
+              href="tel:+224610574736"
+              className="rounded-full bg-[#0E1311] px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
+            >
+              +224 610 57 47 36
+            </a>
+            <a
+              href="https://wa.me/224610574736"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full bg-[#EFE8DA] px-4 py-2 text-sm font-bold text-[#0E1311] transition-colors hover:bg-[#E5DED1]"
+            >
+              WhatsApp
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* Channels */}

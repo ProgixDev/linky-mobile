@@ -1690,7 +1690,9 @@
     "writeLabel": "Nous écrire",
     "writeSub": "hello@linkygroup.com",
     "madeWith": "Fait avec",
-    "atConakry": "à Conakry."
+    "atConakry": "à Conakry.",
+    "phoneLabel": "Nous appeler",
+    "whatsappLabel": "WhatsApp"
   },
   "helpScreen": {
     "topbar": "Aide & support",
@@ -1715,7 +1717,9 @@
     "faq3Q": "Comment devenir vendeur vérifié ?",
     "faq3A": "Allez dans Profil → Vérification d'identité et suivez les 3 étapes.",
     "faq4Q": "Les paiements en euros sont-ils disponibles ?",
-    "faq4A": "Oui, avec une carte bancaire pour la diaspora. GNF reste la devise principale."
+    "faq4A": "Oui, avec une carte bancaire pour la diaspora. GNF reste la devise principale.",
+    "phoneLabel": "Nous appeler",
+    "whatsappLabel": "WhatsApp"
   },
   "legal": {
     "termsTitle": "Conditions générales",

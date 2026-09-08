@@ -1690,7 +1690,9 @@
     "writeLabel": "Write to us",
     "writeSub": "hello@linkygroup.com",
     "madeWith": "Made with",
-    "atConakry": "in Conakry."
+    "atConakry": "in Conakry.",
+    "phoneLabel": "Call us",
+    "whatsappLabel": "WhatsApp"
   },
   "helpScreen": {
     "topbar": "Help & support",
@@ -1715,7 +1717,9 @@
     "faq3Q": "How do I become a verified seller?",
     "faq3A": "Go to Profile → Identity verification and follow the 3 steps.",
     "faq4Q": "Are euro payments available?",
-    "faq4A": "Yes, with a bank card for the diaspora. GNF remains the main currency."
+    "faq4A": "Yes, with a bank card for the diaspora. GNF remains the main currency.",
+    "phoneLabel": "Call us",
+    "whatsappLabel": "WhatsApp"
   },
   "legal": {
     "termsTitle": "Terms & conditions",

@@ -6,6 +6,8 @@ import {
   AtSign,
   Globe,
   Mail,
+  Phone,
+  MessageCircle,
   ExternalLink,
   Heart,
 } from 'lucide-react-native';
@@ -15,6 +17,9 @@ import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 import { haptic } from '../../src/lib/haptics';
+import {
+  CONTACT_PHONE_DISPLAY, CONTACT_PHONE_TEL_URL, CONTACT_WHATSAPP_URL,
+} from '../../src/lib/contact';
 
 const APP_VERSION = '0.1.0';
 const APP_BUILD = '1';
@@ -138,6 +143,23 @@ export default function AboutRoute() {
             label={t('aboutScreen.writeLabel')}
             sub={t('aboutScreen.writeSub')}
             onPress={() => Linking.openURL('mailto:hello@linkygroup.com').catch(() => {})}
+            trailing={<ExternalLink size={14} color={colors.textFaint} strokeWidth={2} />}
+          />
+          {/* Téléphone + WhatsApp (client 2026-09-08). Le numéro vient d'une
+              constante partagée : il sert ici à l'affichage ET au lien, et sur
+              l'écran d'aide aussi — écrit à la main, il finirait par différer. */}
+          <ActionRow
+            Icon={Phone}
+            label={t('aboutScreen.phoneLabel')}
+            sub={CONTACT_PHONE_DISPLAY}
+            onPress={() => Linking.openURL(CONTACT_PHONE_TEL_URL).catch(() => {})}
+            trailing={<ExternalLink size={14} color={colors.textFaint} strokeWidth={2} />}
+          />
+          <ActionRow
+            Icon={MessageCircle}
+            label={t('aboutScreen.whatsappLabel')}
+            sub={CONTACT_PHONE_DISPLAY}
+            onPress={() => Linking.openURL(CONTACT_WHATSAPP_URL).catch(() => {})}
             trailing={<ExternalLink size={14} color={colors.textFaint} strokeWidth={2} />}
             last
           />

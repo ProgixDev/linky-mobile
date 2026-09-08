@@ -2,6 +2,8 @@ import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Mail,
+  Phone,
+  MessageCircle,
   ChevronRight,
   HelpCircle,
   ShieldCheck,
@@ -12,6 +14,9 @@ import type { LucideIcon } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
+import {
+  CONTACT_PHONE_DISPLAY, CONTACT_PHONE_TEL_URL, CONTACT_WHATSAPP_URL,
+} from '../../src/lib/contact';
 import { Text } from '../../src/components/primitives/Text';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
 
@@ -47,8 +52,12 @@ export default function HelpRoute() {
             removed (no live-chat backend exists in V1 — the badge actively
             lied). Email + Appeler stay because both already openURL into
             the OS app. */}
-        {/* "Appeler" row removed — it dialed a placeholder number
-            (+224 622 00 00 00) that reaches nothing. Email is the real channel. */}
+        {/* La ligne « Appeler » avait été RETIRÉE parce qu'elle composait un
+            bouche-trou (+224 622 00 00 00) qui ne menait nulle part : un bouton
+            qui ne répond jamais use la confiance plus qu'il ne la crée.
+            Rétablie le 2026-09-08 avec le VRAI numéro fourni par le client —
+            c'était la seule condition qui manquait. S'il cessait de répondre,
+            il faudrait retirer les deux lignes, pas les laisser sonner. */}
         <SectionLabel label={t('helpScreen.sectionContact')} />
         <Card>
           <ContactRow
@@ -56,6 +65,18 @@ export default function HelpRoute() {
             label={t('helpScreen.emailLabel')}
             sub={t('helpScreen.emailSub')}
             onPress={() => Linking.openURL('mailto:support@linkygroup.com').catch(() => {})}
+          />
+          <ContactRow
+            Icon={Phone}
+            label={t('helpScreen.phoneLabel')}
+            sub={CONTACT_PHONE_DISPLAY}
+            onPress={() => Linking.openURL(CONTACT_PHONE_TEL_URL).catch(() => {})}
+          />
+          <ContactRow
+            Icon={MessageCircle}
+            label={t('helpScreen.whatsappLabel')}
+            sub={CONTACT_PHONE_DISPLAY}
+            onPress={() => Linking.openURL(CONTACT_WHATSAPP_URL).catch(() => {})}
             last
           />
         </Card>
