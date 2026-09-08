@@ -1284,9 +1284,9 @@
     "filterActive": "En cours",
     "filterCompleted": "Terminées",
     "status": {
-      "placed": "PASSÉE",
+      "placed": "EN COURS",
       "paid": "PAYÉE",
-      "preparing": "EN COURS",
+      "preparing": "EN PRÉPARATION",
       "delivered": "LIVRÉE",
       "released": "TERMINÉE",
       "disputed": "LITIGE",

@@ -136,7 +136,7 @@ function StatusBadge({ status }: { status: string }) {
     refunded: { label: 'REMBOURSÉ', cls: 'bg-accent-soft text-accent-text' },
     released: { label: 'LIBÉRÉ', cls: 'bg-success/12 text-success' },
     paid: { label: 'PAYÉ', cls: 'bg-accent-soft text-accent-text' },
-    placed: { label: 'PASSÉE', cls: 'bg-sunken text-muted' },
+    placed: { label: 'EN COURS', cls: 'bg-sunken text-muted' },
   };
   const m = map[status] ?? { label: status.toUpperCase(), cls: 'bg-sunken text-muted' };
   return (

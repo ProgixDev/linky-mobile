@@ -14,9 +14,9 @@ import {
 import { ForceResolveDialog } from './ForceResolveDialog';
 
 const STATUS_META: Record<AdminOrderStatus, { label: string; cls: string }> = {
-  placed: { label: 'PASSÉE', cls: 'bg-sunken text-muted' },
+  placed: { label: 'EN COURS', cls: 'bg-sunken text-muted' },
   paid: { label: 'PAYÉE', cls: 'bg-accent-soft text-accent-text' },
-  preparing: { label: 'EN COURS', cls: 'bg-accent-soft text-accent-text' },
+  preparing: { label: 'EN PRÉPARATION', cls: 'bg-accent-soft text-accent-text' },
   delivered: { label: 'LIVRÉE', cls: 'bg-primary-soft text-primary-deep' },
   released: { label: 'TERMINÉE', cls: 'bg-success/12 text-success' },
   disputed: { label: 'LITIGE', cls: 'bg-danger/12 text-danger' },

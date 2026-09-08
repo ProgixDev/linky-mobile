@@ -1284,7 +1284,7 @@
     "filterActive": "Active",
     "filterCompleted": "Done",
     "status": {
-      "placed": "PLACED",
+      "placed": "IN PROGRESS",
       "paid": "PAID",
       "preparing": "PREPARING",
       "delivered": "DELIVERED",
