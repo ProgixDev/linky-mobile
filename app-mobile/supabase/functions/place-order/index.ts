@@ -21,7 +21,7 @@ import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from
 import {
   initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
   LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
-  railNeedsCard, LengopayRefused,
+  railNeedsCard, LengopayRefused, railPhoneMessage,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
@@ -41,7 +41,7 @@ interface Body {
    *  'soutramoney' = les rails guineens ouverts le 2026-09-07 — le serveur ne
    *  derive PAS le pays, c'est le moyen choisi qui decide du rail. */
   payment_method: 'orange-money' | 'mtn-money' | 'card' | 'wallet'
-                | 'kulu' | 'soutramoney' | 'lengopay-card';
+                | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard';
   /** Mode de réception (client 2026-07-30). 'delivery' = Linky livre (frais
    *  forfaitaire) ; 'pickup' = retrait boutique (gratuit). Absent → 'delivery'
    *  (rétro-compat : toutes les commandes historiques étaient en livraison). */
@@ -430,7 +430,7 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     // pas un « echec de l'initialisation » venu du rail.
     if (!isGnE164(payerPhone)) {
       await cancelOrder();
-      throwApi('PAYER_PHONE_INVALID', 400, `Indique le numéro ${rail.label} qui paie (9 chiffres, commence par 6).`);
+      throwApi('PAYER_PHONE_INVALID', 400, railPhoneMessage(lengoMethod));
     }
   }
 

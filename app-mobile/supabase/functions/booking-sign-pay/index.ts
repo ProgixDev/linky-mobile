@@ -17,7 +17,7 @@ import { requireUser } from '@shared/auth.ts';
 import {
   initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
   LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
-  railNeedsCard, LengopayRefused, intentIsLive,
+  railNeedsCard, LengopayRefused, railPhoneMessage, intentIsLive,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { formatGNF } from '@shared/push.ts';
@@ -34,7 +34,7 @@ interface Body {
    *  Absent = orange-money, pour que les installations anterieures continuent
    *  de fonctionner exactement comme avant. */
   payment_method?: 'card' | 'orange-money' | 'mtn-money'
-                 | 'kulu' | 'soutramoney' | 'lengopay-card';
+                 | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard';
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -268,7 +268,7 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
       payerPhone = phoneRow?.e164 ?? undefined;
     }
     if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
-    if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, `Indique le numéro ${rail.label} qui paie (9 chiffres, commence par 6).`);
+    if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, railPhoneMessage(lengoMethod));
   }
 
   // Plafond Lengopay (25/08, cf. lengopay.ts). La reservation reste 'accepted'

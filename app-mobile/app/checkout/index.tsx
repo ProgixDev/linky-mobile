@@ -620,7 +620,11 @@ export default function CheckoutRoute() {
         {mobileMoneySelected && (
           <View style={{ marginBottom: 16 }}>
             <Input
-              label={t('checkout.payerPhoneLabel')}
+              // PayCard pose DEUX champs de chiffres l'un sous l'autre. Sans
+              // libellé distinct, l'acheteur retape son numéro de carte ici.
+              label={selected === 'paycard'
+                ? t('checkout.payerPhoneLabelPaycard')
+                : t('checkout.payerPhoneLabel')}
               leadingIcon="phone"
               keyboardType="phone-pad"
               placeholder={t('checkout.payerPhonePlaceholder')}
@@ -631,7 +635,9 @@ export default function CheckoutRoute() {
                   ? t('checkout.payerPhoneInvalid')
                   : undefined
               }
-              helperText={payerPhoneDigits.length === 0 ? t('checkout.payerPhoneHint') : undefined}
+              helperText={selected === 'paycard'
+                ? t('checkout.payerPhoneHintPaycard')
+                : (payerPhoneDigits.length === 0 ? t('checkout.payerPhoneHint') : undefined)}
             />
           </View>
         )}

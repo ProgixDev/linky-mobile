@@ -1268,7 +1268,9 @@
     "confirmEnterCode": "Introducir el código",
     "paycardLabel": "Número de cuenta PayCard",
     "paycardPlaceholder": "El número impreso en tu tarjeta",
-    "paycardHint": "Se envía a PayCard para iniciar el pago; Linky no lo conserva."
+    "paycardHint": "Se envía a PayCard para iniciar el pago; Linky no lo conserva.",
+    "payerPhoneLabelPaycard": "Número de teléfono (para recibir el código)",
+    "payerPhoneHintPaycard": "El código de validación de PayCard llega a este número."
   },
   "orders": {
     "title": "Mis pedidos",

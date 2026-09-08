@@ -339,7 +339,11 @@ export default function BoostNewRoute() {
             ne permettait d'agir dessus. */}
         {hasListings && needsPayerPhone && (
           <Input
-            label={t('checkout.payerPhoneLabel')}
+            // PayCard pose DEUX champs de chiffres : sans libellé distinct,
+            // le vendeur retape son numéro de carte ici.
+            label={method === 'paycard'
+              ? t('checkout.payerPhoneLabelPaycard')
+              : t('checkout.payerPhoneLabel')}
             leadingIcon="phone"
             keyboardType="phone-pad"
             placeholder={t('checkout.payerPhonePlaceholder')}

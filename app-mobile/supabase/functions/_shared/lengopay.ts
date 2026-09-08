@@ -211,6 +211,28 @@ export const LENGOPAY_RAILS: Record<
                      walletGateway: 3, needsCard: true, label: 'PayCard' },
 };
 
+/**
+ * Le message a montrer quand le numero de telephone est absent ou invalide.
+ *
+ * POURQUOI CE N'EST PAS UNE SEULE PHRASE. Pour Orange, MTN et Kulu, le
+ * telephone EST le compte qui paie — « Indique le numéro Orange Money qui
+ * paie » est exact. Pour PayCard il ne l'est pas : le compte est le numero de
+ * la carte, deja saisi dans un AUTRE champ juste au-dessus. Reprendre le
+ * libelle du rail donnerait « Indique le numéro PayCard qui paie », et
+ * l'acheteur y retaperait son numero de carte — deux champs de chiffres cote a
+ * cote, c'est exactement comme ca qu'on se trompe.
+ *
+ * Ecrit ICI et pas dans les quatre points d'entree, pour la meme raison que la
+ * table des rails existe : une phrase dupliquee quatre fois finit par diverger
+ * sur un seul des quatre.
+ */
+export function railPhoneMessage(method: LengopayMethod): string {
+  const rail = LENGOPAY_RAILS[method];
+  return rail.needsCard
+    ? `Indique le numéro de téléphone lié à ta carte ${rail.label} (9 chiffres, commence par 6).`
+    : `Indique le numéro ${rail.label} qui paie (9 chiffres, commence par 6).`;
+}
+
 /** Le rail exige-t-il un numero de carte a la saisie ? */
 export function railNeedsCard(method: string): boolean {
   const rail = (LENGOPAY_RAILS as Record<string, { needsCard?: boolean } | undefined>)[method];

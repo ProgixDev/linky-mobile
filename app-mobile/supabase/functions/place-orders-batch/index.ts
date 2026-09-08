@@ -26,7 +26,7 @@ import { requireUser } from '@shared/auth.ts';
 import {
   initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
   LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
-  railNeedsCard, LengopayRefused,
+  railNeedsCard, LengopayRefused, railPhoneMessage,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
 import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.ts';
@@ -38,7 +38,7 @@ interface ItemInput { product_id: string; quantity: number }
 interface Body {
   items: ItemInput[];
   payment_method: 'wallet' | 'orange-money' | 'mtn-money' | 'card'
-                | 'kulu' | 'soutramoney' | 'lengopay-card';
+                | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard';
   delivery_mode?: 'pickup' | 'delivery';
   payer_phone?: string;
   /** PayCard uniquement : numero de compte de la carte prepayee. Jamais persiste. */
@@ -320,7 +320,7 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     }
     if (!isGnE164(payerPhone)) {
       await cancelBatch();
-      throwApi('PAYER_PHONE_INVALID', 400, `Indique le numéro ${rail.label} qui paie (9 chiffres, commence par 6).`);
+      throwApi('PAYER_PHONE_INVALID', 400, railPhoneMessage(lengoMethod));
     }
   }
 

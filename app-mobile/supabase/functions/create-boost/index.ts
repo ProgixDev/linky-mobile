@@ -11,7 +11,7 @@ import { requireUser } from '@shared/auth.ts';
 import { mapBoost, type BoostRow } from '@shared/catalog.ts';
 import { boostPrice } from '@shared/boost.ts';
 import {
-  initForRail, toLocalGnAccount, isGnE164, railNeedsCard, LengopayRefused,
+  initForRail, toLocalGnAccount, isGnE164, railNeedsCard, LengopayRefused, railPhoneMessage,
   LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE, intentIsLive,
   type LengopayMethod,
 } from '@shared/lengopay.ts';
@@ -26,7 +26,7 @@ interface Body {
    *  Lengopay guinéens ajoutés le 2026-09-07 (client : « Pareil pour le boost
    *  aussi. Unifier les méthodes de paiement dans l'appli »). */
   method?: 'wallet' | 'orange-money' | 'mtn-money' | 'card'
-         | 'kulu' | 'soutramoney' | 'lengopay-card';
+         | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard';
   payer_phone?: string;
   /** PayCard : numero de compte de la carte prepayee. Jamais persiste — il ne
    *  sert qu'a l'appel d'initialisation chez Lengopay. */
@@ -205,7 +205,7 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
         payerPhone = phoneRow?.e164 ?? undefined;
       }
       if (!payerPhone) throwApi('PAYER_PHONE_REQUIRED', 400, 'Numéro de paiement requis');
-      if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, `Indique le numéro ${rail.label} qui paie (9 chiffres, commence par 6).`);
+      if (!isGnE164(payerPhone)) throwApi('PAYER_PHONE_INVALID', 400, railPhoneMessage(lengoMethod));
     }
 
     // ── UN SEUL PAIEMENT VIVANT PAR ANNONCE ─────────────────────────────────

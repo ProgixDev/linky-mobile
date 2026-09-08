@@ -239,7 +239,11 @@ export default function BookingDetailRoute() {
             pilote a distance). Inutile pour la carte. */}
         {booking.status === 'accepted' && needsPayerPhone && (
           <Input
-            label="Numéro pour le paiement"
+            // PayCard pose DEUX champs de chiffres : sans libellé distinct,
+            // le locataire retape son numéro de carte ici.
+            label={method === 'paycard'
+              ? "Numéro de téléphone (pour recevoir le code)"
+              : "Numéro pour le paiement"}
             leadingIcon="phone"
             keyboardType="phone-pad"
             placeholder="6XX XX XX XX"
