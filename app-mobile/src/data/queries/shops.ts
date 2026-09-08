@@ -23,9 +23,15 @@ export interface UpsertShopInput {
   } | null;
 }
 
-export function useShops(limit?: number) {
+// `enabled` : l'accueil ne demande PAS une categorie qu'il ne montrera pas
+// (separation des modes, src/lib/persona.ts). Trois requetes evitees a chaque
+// ouverture pour un compte restreint — sur un forfait guineen, ce sont des
+// donnees payees pour rien. La cle de cache ne change pas : si le compte
+// retrouve la categorie, le cache existant ressert.
+export function useShops(limit?: number, enabled = true) {
   return useQuery({
     queryKey: ['shops', limit],
+    enabled,
     queryFn: async (): Promise<Shop[]> => {
       const { shops } = await apiPost<{ shops: Shop[]; next_cursor: { created_at: string; id: string } | null }>({
         path: '/list-shops',

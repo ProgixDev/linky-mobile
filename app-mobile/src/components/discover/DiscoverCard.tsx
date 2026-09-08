@@ -21,6 +21,7 @@ import {
   EyeOff,
 } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
+import { listingScope } from '../../lib/persona';
 import { useAuth } from '../../stores/auth';
 import { Text } from '../primitives/Text';
 import { formatGNF, formatEUR, formatDistance } from '../../lib/format';
@@ -58,10 +59,12 @@ export function DiscoverCard({
   height?: number;
 }) {
   const roles = useAuth((s) => s.roles);
-  const isBuyer = roles.includes('buyer');
-  const isSeller = roles.includes('seller');
-  const isAgent = roles.includes('agent');
-  const isPurePro = (isAgent && !isSeller && !isBuyer) || (isSeller && !isAgent && !isBuyer);
+  // MIROIR DE LA MISE EN PAGE DE decouvrir.tsx, et rien d'autre : `isScoped`
+  // ne dit pas ici « c'est un pro », il dit « il n'y a PAS de pastilles de
+  // filtre au-dessus de moi », d'ou les 56px d'en-tete qui tombent a 12.
+  // La regle doit donc etre EXACTEMENT celle de l'ecran (src/lib/persona.ts) :
+  // quand les deux copies divergeaient d'un seul terme, l'en-tete se decalait.
+  const isScoped = listingScope(roles) !== 'both';
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { show } = useToast();
@@ -384,9 +387,10 @@ export function DiscoverCard({
         {/* ===== Rangee haute : badge « economie de donnees » =====
             Le commentaire d'origine parlait de « pastilles de filtre » : elles
             ont demenage dans decouvrir.tsx, il ne reste ici que le badge.
-            Elle reste masquee aux pros purs, dont la mise en page haute est
+            Elle reste masquee aux comptes restreints a une categorie, dont la
+            mise en page haute est
             differente (pas de pastilles au-dessus). */}
-        {!isPurePro && (
+        {!isScoped && (
           <View
             style={{
               position: 'absolute',
@@ -429,10 +433,11 @@ export function DiscoverCard({
           <View
             style={{
               position: 'absolute',
-              // Hauteur reservee aux pastilles de filtre — un pro pur n'en a
+              // Hauteur reservee aux pastilles de filtre — un compte
+              // restreint a une categorie n'en a
               // pas (separation des modes retablie le 2026-09-08), donc rien a
               // reserver chez lui : sans ce conditionnel, il verrait un trou.
-              top: topInset + (isPurePro ? 12 : 56),
+              top: topInset + (isScoped ? 12 : 56),
               left: 16,
               flexDirection: 'row',
               gap: 6,
@@ -463,10 +468,11 @@ export function DiscoverCard({
           <View
             style={{
               position: 'absolute',
-              // Hauteur reservee aux pastilles de filtre — un pro pur n'en a
+              // Hauteur reservee aux pastilles de filtre — un compte
+              // restreint a une categorie n'en a
               // pas (separation des modes retablie le 2026-09-08), donc rien a
               // reserver chez lui : sans ce conditionnel, il verrait un trou.
-              top: topInset + (isPurePro ? 12 : 56),
+              top: topInset + (isScoped ? 12 : 56),
               left: 0,
               right: 0,
               flexDirection: 'row',

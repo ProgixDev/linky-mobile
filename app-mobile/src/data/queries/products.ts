@@ -158,10 +158,16 @@ export function useProduct(id: string | undefined) {
   });
 }
 
-export function usePopularProducts(limit = 4) {
+// `enabled` : l'accueil ne demande PAS une categorie qu'il ne montrera pas
+// (separation des modes, src/lib/persona.ts). Trois requetes evitees a chaque
+// ouverture pour un compte restreint — sur un forfait guineen, ce sont des
+// donnees payees pour rien. La cle de cache ne change pas : si le compte
+// retrouve la categorie, le cache existant ressert.
+export function usePopularProducts(limit = 4, enabled = true) {
   const myShopIds = useMyShopIds();
   const query = useQuery({
     queryKey: ['products-popular', limit],
+    enabled,
     queryFn: async (): Promise<Product[]> => {
       const { products } = await apiPost<{ products: Product[] }>({
         path: '/list-products',

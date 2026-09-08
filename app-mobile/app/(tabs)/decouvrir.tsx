@@ -7,6 +7,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
+import { listingScope } from '../../src/lib/persona';
 import { useFilters } from '../../src/stores/filters';
 import { DiscoverCard, DiscoverEnd } from '../../src/components/discover/DiscoverCard';
 import { useDiscoverInfinite, type DiscoverFilter } from '../../src/data/queries';
@@ -29,39 +30,28 @@ export default function DecouvrirRoute() {
   const { height: SH } = useWindowDimensions();
   const roles = useAuth((s) => s.roles);
   const filters = useFilters();
-  const isBuyer = roles.includes('buyer');
-  const isSeller = roles.includes('seller');
-  const isAgent = roles.includes('agent');
-  const isPureAgent = isAgent && !isSeller && !isBuyer;
-  const isPureSeller = isSeller && !isAgent && !isBuyer;
-  // Le filtre (Tout / Produits / Immobilier) est ouvert A TOUT LE MONDE depuis
-  // le 2026-09-08. La persona choisit seulement ce qui s'ouvre EN PREMIER.
+  const scope = listingScope(roles);
+  // Le filtre (Tout / Produits / Immobilier) suit la SEPARATION DES MODES,
+  // exactement comme les onglets du Marche : la regle unique est dans
+  // src/lib/persona.ts. Un compte restreint a une categorie ne choisit rien —
+  // les pastilles disparaissent et le fil est impose. Lui laisser un selecteur
+  // dont deux positions sur trois sont interdites vaudrait pire que pas de
+  // selecteur du tout.
   //
-  // Avant, un vendeur pur etait verrouille sur les produits et un agent pur sur
-  // l'immobilier : les pastilles etaient masquees et le filtre force. Un vendeur
-  // ne pouvait donc jamais decouvrir un logement — le pendant, dans le fil, du
-  // mur signale par Abdoulaye sur l'onglet Annonces. Meme raison de le lever :
-  // rien n'empeche un vendeur d'acheter ou de louer, on lui cachait seulement
-  // la porte d'entree.
-  // Le filtre est DERIVE, exactement comme l'onglet du Marche : le choix de
-  // l'utilisateur s'il en a fait un (dans le store, donc il survit aux
-  // remontages et disparait a la deconnexion), sinon le defaut de sa persona.
+  // Le filtre est DERIVE, jamais pose par un effet : le choix de
+  // l'utilisateur quand il a le droit d'en faire un (dans le store, donc il
+  // survit aux remontages et disparait a la deconnexion), sinon sa categorie.
   //
   // Surtout pas un useState + useEffect : le defaut serait pose APRES la
   // peinture, useDiscoverInfinite partirait une premiere fois sur 'all' puis une
   // seconde sur la bonne cle — deux appels reseau au lieu d'un, payes sur la 3G,
   // avec un fil mixte qui clignote avant de basculer.
-  // Le choix de l'utilisateur, quand il a le droit d'en faire un.
   const tab: DiscoverFilter = filters.discoverTab ?? 'all';
   const setTab = filters.setDiscoverTab;
-  // SEPARATION DES MODES (client 2026-09-08, cf. marche.tsx) : un pro pur reste
-  // dans SA categorie. Le filtre du fil est donc impose, pas choisi.
-  const isPurePro = isPureAgent || isPureSeller;
-  const feedFilter: DiscoverFilter = isPureAgent
-    ? 'properties'
-    : isPureSeller
-      ? 'products'
-      : tab;
+  // 'products' / 'properties' sont litteralement les valeurs de DiscoverFilter :
+  // la portee EST le filtre quand elle est restreinte.
+  const isScoped = scope !== 'both';
+  const feedFilter: DiscoverFilter = scope === 'both' ? tab : scope;
 
   const { items, isLoading, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useDiscoverInfinite(feedFilter);
 
@@ -245,9 +235,9 @@ export default function DecouvrirRoute() {
         />
       )}
 
-      {/* Masquees pour un pro pur : sa categorie est imposee, le filtre n'aurait
+      {/* Masquees pour un compte restreint : sa categorie est imposee, le filtre n'aurait
           rien a filtrer. */}
-      {!isPurePro && (
+      {!isScoped && (
         <View
           pointerEvents="box-none"
           style={{ position: 'absolute', top: insets.top + 10, left: 0, right: 0, alignItems: 'center', zIndex: 10 }}

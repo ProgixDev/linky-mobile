@@ -35,6 +35,7 @@ import { Chip } from '../../src/components/primitives/Chip';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { HeaderActions } from '../../src/components/nav/HeaderActions';
 import { haptic } from '../../src/lib/haptics';
+import { listingScope } from '../../src/lib/persona';
 import { useFilters, hasActiveFilters, type MarcheTab } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
 import { useProductsInfinite, useInfiniteProperties } from '../../src/data/queries';
@@ -143,45 +144,22 @@ export default function MarcheRoute() {
     void readLocation(false);
   }, [readLocation]);
 
-  // LES PERSONAS DECIDENT CE QU'ON VOIT EN PREMIER, JAMAIS CE QU'ON A LE DROIT
-  // DE FAIRE (2026-09-08).
+  // SEPARATION DES MODES — la regle vit dans src/lib/persona.ts, lue a
+  // l'identique par Decouvrir et par la carte du fil.
   //
-  // Avant, un vendeur pur ne voyait QUE l'onglet Articles et un agent pur QUE
-  // l'onglet Immobilier — l'autre etait masque et l'onglet force par un effet.
-  // Le vendeur ne pouvait donc pas parcourir un logement, donc pas en reserver
-  // un. C'est le mur qu'Abdoulaye a signale le 2026-09-08 (« en mode vendeur et
-  // Immo, on ne peut pas acheter ni reserver »).
-  //
-  // Ce n'etait pas une regle voulue mais un effet de bord : rien, nulle part,
-  // n'empeche un vendeur d'acheter. Le panier fonctionne, le paiement passe,
-  // l'argent part au sequestre — verifie sur tout le chemin, ecran ET serveur.
-  // On lui cachait seulement la porte d'entree.
-  //
-  // Une place de marche ne refuse pas un client qui paie, et le role 'buyer' ne
-  // porte AUCUN privilege : c'est une etiquette de navigation. Les deux onglets
-  // sont donc toujours disponibles ; la persona ne fait plus que choisir celui
-  // qui s'ouvre en premier.
+  // Client, 2026-09-08 22:50 : « les vendeurs ne voient que les annonces
+  // d'articles et les proprietaires / Agent immobilier ne voient que les
+  // annonces Immo ». La regle porte sur le role de PUBLICATION seul : le role
+  // acheteur donne le droit d'acheter, pas celui de voir l'autre catalogue.
+  // C'est le terme qui manquait — un vendeur ayant aussi coche « Acheteur »
+  // echappait a la separation et voyait les deux onglets.
   const isBuyer = roles.includes('buyer');
-  const isSeller = roles.includes('seller');
-  const isAgent = roles.includes('agent');
-  const isPureAgent = isAgent && !isSeller && !isBuyer;
-  const isPureSeller = isSeller && !isAgent && !isBuyer;
+  const scope = listingScope(roles);
+  const onlyProducts = scope === 'products';
+  const onlyProperties = scope === 'properties';
 
-  // SEPARATION DES MODES, retablie le 2026-09-08 sur confirmation du client :
-  // « les annonces Immo apparaissent quand je suis en mode vendeur et
-  // inversement ».
-  //
-  // Je l'avais retiree le matin meme, ayant lu « en mode vendeur et Immo, on ne
-  // peut pas acheter ni reserver, il faut activer le profil acheteur » comme une
-  // PLAINTE. C'etait une REGLE : le pro reste dans sa categorie tant qu'il n'a
-  // pas active le role acheteur, qu'il coche lui-meme dans Profil > Mes roles.
-  //
-  // Ce qui a ete GARDE de ce passage, parce que ca n'a rien a voir avec la
-  // separation : l'onglet est DERIVE et non plus impose par un effet — donc
-  // plus de saut a la premiere image, plus de drapeau qui survit au changement
-  // de compte — et signOut vide desormais les filtres.
-  const showArticles = !isPureAgent;
-  const showImmobilier = !isPureSeller;
+  const showArticles = !onlyProperties;
+  const showImmobilier = !onlyProducts;
   const showSwitcher = showArticles && showImmobilier;
 
 
@@ -223,23 +201,23 @@ export default function MarcheRoute() {
   //   - l'effet s'executant APRES la peinture, un agent pur voyait une image
   //     complete d'Articles avant de basculer sur Immobilier.
   // Un calcul synchrone n'a aucun de ces trois problemes.
-  const effectiveTab: MarcheTab = isPureAgent
+  const effectiveTab: MarcheTab = onlyProperties
     ? 'immobilier'
-    : isPureSeller
+    : onlyProducts
       ? 'articles'
       : (filters.marcheTab ?? 'articles');
   const isArticles = effectiveTab === 'articles';
   const placeholder = isArticles
     ? t('marche.searchPlaceholderArticles')
     : t('marche.searchPlaceholderProperties');
-  // Le cadrage « Concurrence » / « Mode scout » ne vaut que sur SA propre
-  // categorie : un vendeur qui regarde les articles fait de la veille, le meme
-  // vendeur qui regarde des logements est un locataire comme un autre. Garder
-  // « Concurrence » au-dessus d'une liste d'appartements lui dirait qu'il
-  // espionne des concurrents qui n'en sont pas.
-  const isScouting =
-    (isPureSeller && effectiveTab === 'articles') ||
-    (isPureAgent && effectiveTab === 'immobilier');
+  // Le bandeau « Mode scout / Concurrence » repond a une AUTRE question que la
+  // separation : non pas « qu'a-t-il le droit de voir » mais « pourquoi
+  // regarde-t-il ». Il reste donc reserve au pro qui n'achete PAS. Un vendeur
+  // ayant coche « Acheteur » voit la meme liste d'articles, mais pour y
+  // acheter — lui annoncer qu'il espionne la concurrence serait faux.
+  const isScoutSeller = onlyProducts && !isBuyer;
+  const isScoutAgent = onlyProperties && !isBuyer;
+  const isScouting = isScoutSeller || isScoutAgent;
 
   // Near-bottom trigger for fetchNextPage. 600px buffer = pre-fetch before the user
   // sees the end so the grid keeps growing as they scroll.
@@ -307,7 +285,7 @@ export default function MarcheRoute() {
             }}
           >
             {isScouting
-              ? (isPureSeller ? t('marche.subtitleSeller') : t('marche.subtitleAgent'))
+              ? (isScoutSeller ? t('marche.subtitleSeller') : t('marche.subtitleAgent'))
               : isArticles
                 ? t('marche.subtitleArticles')
                 : t('marche.subtitleProperties')}
@@ -364,7 +342,7 @@ export default function MarcheRoute() {
                     opacity: 0.75,
                   }}
                 >
-                  {isPureSeller
+                  {isScoutSeller
                     ? t('marche.scoutSubSeller')
                     : t('marche.scoutSubAgent')}
                 </Text>

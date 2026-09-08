@@ -285,10 +285,16 @@ export function useInfiniteProperties(filters: PropertyFilters = {}) {
   return { ...query, properties };
 }
 
-export function useNearbyProperties(limit = 4) {
+// `enabled` : l'accueil ne demande PAS une categorie qu'il ne montrera pas
+// (separation des modes, src/lib/persona.ts). Trois requetes evitees a chaque
+// ouverture pour un compte restreint — sur un forfait guineen, ce sont des
+// donnees payees pour rien. La cle de cache ne change pas : si le compte
+// retrouve la categorie, le cache existant ressert.
+export function useNearbyProperties(limit = 4, enabled = true) {
   const meId = useMeId();
   const query = useQuery({
     queryKey: ['properties-nearby', limit],
+    enabled,
     queryFn: async (): Promise<Property[]> => {
       const { properties } = await apiPost<{ properties: Property[]; next_cursor: Cursor | null }>({
         path: '/list-properties',

@@ -45,6 +45,7 @@ import { formatGNF, formatEUR } from '../../src/lib/format';
 import { gnfToEur } from '../../src/lib/currency';
 import { haptic } from '../../src/lib/haptics';
 import { photos } from '../../src/data/photos';
+import { listingScope } from '../../src/lib/persona';
 import { useAuth } from '../../src/stores/auth';
 import { useCart } from '../../src/stores/cart';
 import { useCreateListing } from '../../src/stores/createListing';
@@ -206,18 +207,34 @@ function BuyerHome() {
   const user = useAuth((s) => s.user);
   const cartCount = useCart((s) => s.lines.length);
   const roles = useAuth((s) => s.roles);
-  const { data: shops, isLoading: shopsLoading } = useShops(3);
-  const { data: products, isLoading: prodLoading } = usePopularProducts(4);
-  const { data: properties, isLoading: propLoading } = useNearbyProperties(3);
+  // SEPARATION DES MODES sur l'ACCUEIL (client 2026-09-08 22:50). L'accueil
+  // affiche des annonces des DEUX categories — boutiques, produits populaires,
+  // logements a proximite, jusqu'aux pastilles Location / Vente / Terrains.
+  // Corriger le Marche et Decouvrir sans corriger l'accueil aurait laisse la
+  // premiere page de l'application contredire la regle.
+  const scope = listingScope(roles);
+  const onlyProducts = scope === 'products';
+  const onlyProperties = scope === 'properties';
+  const { data: shops, isLoading: shopsLoading } = useShops(3, !onlyProperties);
+  const { data: products, isLoading: prodLoading } = usePopularProducts(4, !onlyProperties);
+  const { data: properties, isLoading: propLoading } = useNearbyProperties(3, !onlyProducts);
   const walletQuery = useWallet();
   const wallet = walletQuery.data;
   const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!wallet;
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
 
   const firstName = (user?.display_name ?? t('home.fallbackName')).split(' ')[0];
+  // Les trois dernieres pastilles (Location / Vente / Terrains) menent a
+  // l'onglet Immobilier et les cinq premieres aux articles : une grille non
+  // filtree offrirait une porte d'entree vers ce qu'on vient de masquer
+  // ailleurs.
   const CATEGORIES = useMemo(
-    () => CATEGORY_DEFS.map((c) => ({ ...c, label: t(c.labelKey) })),
-    [t],
+    () =>
+      CATEGORY_DEFS.filter((c) => {
+        const isImmo = c.code === 'Location' || c.code === 'Vente' || c.code === 'Terrains';
+        return isImmo ? !onlyProducts : !onlyProperties;
+      }).map((c) => ({ ...c, label: t(c.labelKey) })),
+    [t, onlyProducts, onlyProperties],
   );
 
   return (
@@ -376,64 +393,69 @@ function BuyerHome() {
         </View>
 
         {/* Featured shops — same swipe row as popular products : two cards
-            visible, a peek of the third, snap per card. */}
-        <View style={{ marginTop: 28 }}>
-          <SectionHeader
-            title={t('home.shopsSection')}
-            action={t('home.seeAll')}
-            onAction={() => {
-              useFilters.getState().setMarcheTab('articles');
-              router.push('/(tabs)/marche');
-            }}
-          />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={POPULAR_CARD_WIDTH + 12}
-            decelerationRate="fast"
-            contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
-          >
-            {shopsLoading
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <View key={i} style={{ width: POPULAR_CARD_WIDTH, height: 110, borderRadius: 16, backgroundColor: colors.bgSunken }} />
-                ))
-              : shops?.map((s) => <ShopMiniCard key={s.id} shop={s} width={POPULAR_CARD_WIDTH} />) ?? null}
-          </ScrollView>
-        </View>
-
-        {/* Popular products — one horizontal swipe row : two cards visible,
-            a peek of the third invites the swipe (was a vertical 2-col grid). */}
-        <View style={{ marginTop: 28 }}>
-          <View style={{ paddingHorizontal: 20 }}>
+            visible, a peek of the third, snap per card.
+            Masquees pour une agence immobiliere : separation des modes. */}
+        {!onlyProperties && (
+          <View style={{ marginTop: 28 }}>
             <SectionHeader
-              title={t('home.popularSection')}
+              title={t('home.shopsSection')}
               action={t('home.seeAll')}
               onAction={() => {
                 useFilters.getState().setMarcheTab('articles');
                 router.push('/(tabs)/marche');
               }}
             />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={POPULAR_CARD_WIDTH + 12}
+              decelerationRate="fast"
+              contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
+            >
+              {shopsLoading
+                ? Array.from({ length: 3 }).map((_, i) => (
+                    <View key={i} style={{ width: POPULAR_CARD_WIDTH, height: 110, borderRadius: 16, backgroundColor: colors.bgSunken }} />
+                  ))
+                : shops?.map((s) => <ShopMiniCard key={s.id} shop={s} width={POPULAR_CARD_WIDTH} />) ?? null}
+            </ScrollView>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={POPULAR_CARD_WIDTH + 12}
-            decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
-          >
-            {prodLoading
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <View key={i} style={{ width: POPULAR_CARD_WIDTH }}>
-                    <ProductCardSkeleton />
-                  </View>
-                ))
-              : products?.map((p) => (
-                  <View key={p.id} style={{ width: POPULAR_CARD_WIDTH }}>
-                    <ProductCard product={p} />
-                  </View>
-                ))}
-          </ScrollView>
-        </View>
+        )}
+
+        {/* Popular products — one horizontal swipe row : two cards visible,
+            a peek of the third invites the swipe (was a vertical 2-col grid). */}
+        {!onlyProperties && (
+          <View style={{ marginTop: 28 }}>
+            <View style={{ paddingHorizontal: 20 }}>
+              <SectionHeader
+                title={t('home.popularSection')}
+                action={t('home.seeAll')}
+                onAction={() => {
+                  useFilters.getState().setMarcheTab('articles');
+                  router.push('/(tabs)/marche');
+                }}
+              />
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={POPULAR_CARD_WIDTH + 12}
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+            >
+              {prodLoading
+                ? Array.from({ length: 3 }).map((_, i) => (
+                    <View key={i} style={{ width: POPULAR_CARD_WIDTH }}>
+                      <ProductCardSkeleton />
+                    </View>
+                  ))
+                : products?.map((p) => (
+                    <View key={p.id} style={{ width: POPULAR_CARD_WIDTH }}>
+                      <ProductCard product={p} />
+                    </View>
+                  ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Découvrir teaser */}
         <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
@@ -500,7 +522,7 @@ function BuyerHome() {
                 position: 'relative',
               }}
             >
-              {products?.[0]?.photos?.[0] && (
+              {!onlyProperties && products?.[0]?.photos?.[0] && (
                 <Image
                   source={{ uri: products[0].photos[0] }}
                   style={{
@@ -515,7 +537,7 @@ function BuyerHome() {
                   contentFit="cover"
                 />
               )}
-              {properties?.[0]?.photos?.[0] && (
+              {!onlyProducts && properties?.[0]?.photos?.[0] && (
                 <Image
                   source={{ uri: properties[0].photos[0] }}
                   style={{
@@ -548,35 +570,38 @@ function BuyerHome() {
           </Pressable>
         </View>
 
-        {/* Real estate near */}
-        <View style={{ marginTop: 28 }}>
-          <SectionHeader
-            title={t('home.nearbyPropertiesSection')}
-            action={t('home.seeAll')}
-            onAction={() => {
-              // Marché reads its tab from the filters store and remembers the
-              // last one used, so a « voir tout » that doesn't set it lands on
-              // whatever the user browsed before (client 2026-08-05).
-              useFilters.getState().setMarcheTab('immobilier');
-              router.push('/(tabs)/marche');
-            }}
-          />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
-          >
-            {propLoading
-              ? Array.from({ length: 2 }).map((_, i) => (
-                  <View key={i} style={{ width: 260, height: 200, borderRadius: 16, backgroundColor: colors.bgSunken }} />
-                ))
-              : properties?.map((p) => (
-                  <View key={p.id} style={{ width: 260 }}>
-                    <PropertyCard property={p} compact />
-                  </View>
-                )) ?? null}
-          </ScrollView>
-        </View>
+        {/* Real estate near — masque pour un vendeur d'articles :
+            separation des modes. */}
+        {!onlyProducts && (
+          <View style={{ marginTop: 28 }}>
+            <SectionHeader
+              title={t('home.nearbyPropertiesSection')}
+              action={t('home.seeAll')}
+              onAction={() => {
+                // Marché reads its tab from the filters store and remembers the
+                // last one used, so a « voir tout » that doesn't set it lands on
+                // whatever the user browsed before (client 2026-08-05).
+                useFilters.getState().setMarcheTab('immobilier');
+                router.push('/(tabs)/marche');
+              }}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
+            >
+              {propLoading
+                ? Array.from({ length: 2 }).map((_, i) => (
+                    <View key={i} style={{ width: 260, height: 200, borderRadius: 16, backgroundColor: colors.bgSunken }} />
+                  ))
+                : properties?.map((p) => (
+                    <View key={p.id} style={{ width: 260 }}>
+                      <PropertyCard property={p} compact />
+                    </View>
+                  )) ?? null}
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
