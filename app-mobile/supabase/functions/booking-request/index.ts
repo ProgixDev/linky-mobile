@@ -142,7 +142,8 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
       body.period === 'sale' ? 'Ce bien n\'est plus disponible.' : 'Ces dates ne sont plus disponibles.');
   }
 
-  // Money snapshot — buyer pays the 3% fee on top. Daily: rent × nights.
+  // Money snapshot — buyer pays the platform fee on top (taux dans
+  // _shared/fees.ts ; 3 % jusqu'au 2026-09-08, 5 % depuis). Daily: rent × nights.
   // Monthly: 1st month + a 1-month CAUTION (deposit) held in escrow (client
   // 2026-07-29). The landlord receives 1st month + caution at move-in; the
   // end-of-lease return of the caution is settled off-app between the parties

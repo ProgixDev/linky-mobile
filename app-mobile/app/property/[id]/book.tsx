@@ -24,7 +24,7 @@ import { useProperty, useRequestBooking } from '../../../src/data/queries';
 import { usePropertyAvailability } from '../../../src/data/queries/bookings';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
-import { platformFeeGnf, PLATFORM_FEE_RATE, priceWithFeeGnf } from '../../../src/lib/fees';
+import { platformFeeGnf, priceWithFeeGnf } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 
@@ -49,7 +49,7 @@ export default function BookPropertyRoute() {
   const period: 'day' | 'month' = prop?.perMonth ? 'month' : 'day';
   const rent = prop?.priceGnf ?? 0;
 
-  const { nights, deposit, amount, fees, total, ready } = useMemo(() => {
+  const { nights, total, ready } = useMemo(() => {
     if (period === 'day') {
       if (!startDate || !endDate) return { nights: 0, deposit: 0, amount: 0, fees: 0, total: 0, ready: false };
       const n = nightsBetween(startDate, endDate);
@@ -64,6 +64,10 @@ export default function BookPropertyRoute() {
     const f = platformFeeGnf(a);
     return { nights: 0, deposit: dep, amount: a, fees: f, total: a + f, ready: true };
   }, [period, startDate, endDate, rent]);
+
+  // Le premier mois TEL QUE L'ANNONCE L'AFFICHE. La caution prend le reste du
+  // total, ce qui garantit que les deux lignes s'additionnent exactement.
+  const firstMonthWithFee = rent + platformFeeGnf(rent);
 
   if (isLoading || isError || !prop) {
     return <DetailStateScreen loading={isLoading} title="Réserver" onRetry={() => void refetch()} />;
@@ -214,18 +218,36 @@ export default function BookPropertyRoute() {
           {/* Price recap */}
           {ready && (
             <View style={{ padding: 14, borderRadius: radii.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, gap: 8 }}>
+              {/* COMMISSION COMPRISE, PLUS DE LIGNE SEPAREE — client 2026-09-09 :
+                  « Le prix dans Annonces affiche 1050 (prix + 5%). Mais a la
+                  finalisation du paiement les deux sont dissocies. Faire comme
+                  pour les Articles. » Meme forme que le recapitulatif du
+                  paiement marketplace.
+
+                  LE PRIX A LA NUIT A DISPARU DE CETTE LIGNE, ET C'EST VOULU.
+                  Le serveur arrondit la commission sur le montant TOTAL du
+                  sejour, jamais nuit par nuit : pour un loyer de 333 GNF sur
+                  3 nuits, 350 × 3 afficherait 1 050 alors que le total vaut
+                  1 049. Un ecran de paiement qui ne tombe pas juste ne se
+                  rattrape pas. Le tarif a la nuit, commission comprise, est
+                  deja en tete de cet ecran — rien n'est perdu.
+
+                  EN MENSUEL, la ligne « premier mois » vaut exactement le prix
+                  affiche sur l'annonce, et la caution recoit le RESTE. La somme
+                  des deux lignes tombe donc toujours sur le total, quel que
+                  soit l'arrondi — et le chiffre que le client compare a
+                  l'annonce est celui qu'il attend. */}
               {period === 'day' ? (
-                <RecapRow label={`${formatGNF(rent)} × ${nights} nuit${nights > 1 ? 's' : ''}`} value={formatGNF(amount)} />
+                <RecapRow
+                  label={`Séjour · ${nights} nuit${nights > 1 ? 's' : ''} (frais inclus)`}
+                  value={formatGNF(total)}
+                />
               ) : (
                 <>
-                  <RecapRow label="Premier mois de loyer" value={formatGNF(rent)} />
-                  <RecapRow label="Caution (1 mois)" value={formatGNF(deposit)} />
+                  <RecapRow label="Premier mois de loyer (frais inclus)" value={formatGNF(firstMonthWithFee)} />
+                  <RecapRow label="Caution (1 mois, frais inclus)" value={formatGNF(total - firstMonthWithFee)} />
                 </>
               )}
-              {/* Le taux est INTERPOLE, jamais ecrit en dur : c'est precisement un « 3% »
-                  fige dans le texte qui a survecu au passage a 5 % et annoncait un taux
-                  que l'app n'appliquait plus. Au prochain changement, cette ligne suit. */}
-              <RecapRow label={`Frais de service (${PLATFORM_FEE_RATE * 100}%)`} value={formatGNF(fees)} />
               <View style={{ height: 1, backgroundColor: colors.border }} />
               <RecapRow label="Total à payer à la signature" value={formatGNF(total)} bold />
             </View>

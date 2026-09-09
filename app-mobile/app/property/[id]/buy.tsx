@@ -21,7 +21,7 @@ import { DetailStateScreen } from '../../../src/components/feedback/DetailState'
 import { useProperty, useRequestBooking } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
-import { platformFeeGnf, PLATFORM_FEE_RATE, priceWithFeeGnf } from '../../../src/lib/fees';
+import { platformFeeGnf, priceWithFeeGnf } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 
@@ -45,8 +45,7 @@ export default function BuyPropertyRoute() {
   }
 
   const price = prop.priceGnf;
-  const fees = platformFeeGnf(price);
-  const total = price + fees;
+  const total = price + platformFeeGnf(price);
 
   const submit = () => {
     if (request.isPending) return;
@@ -120,11 +119,11 @@ export default function BuyPropertyRoute() {
           </View>
 
           <View style={{ padding: 14, borderRadius: radii.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, gap: 8 }}>
-            <RecapRow label="Prix du bien" value={formatGNF(price)} />
-            {/* Le taux est INTERPOLE, jamais ecrit en dur : c'est precisement un « 3% »
-                  fige dans le texte qui a survecu au passage a 5 % et annoncait un taux
-                  que l'app n'appliquait plus. Au prochain changement, cette ligne suit. */}
-            <RecapRow label={`Frais de service (${PLATFORM_FEE_RATE * 100}%)`} value={formatGNF(fees)} />
+            {/* COMMISSION COMPRISE, PLUS DE LIGNE SEPAREE (client 2026-09-09) :
+                le prix affiche ici est celui de l'annonce, pas le prix vendeur
+                suivi d'un supplement. Exact par construction — `total` vient du
+                meme calcul que le serveur. */}
+            <RecapRow label="Prix du bien (frais inclus)" value={formatGNF(total)} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
             <RecapRow label="Total à payer à la signature" value={formatGNF(total)} bold />
           </View>
