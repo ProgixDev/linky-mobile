@@ -10,6 +10,8 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { nativeChooserAvailable, type PickedAsset } from '../../../src/lib/pickPhotos';
+import { chooseImagesNative, chooseVideoNative } from '../../../src/lib/nativeMediaChooser';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Film, Plus, Rocket, Star, Trash2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -48,7 +50,7 @@ function sanitizeFilename(raw: string | null | undefined, fallbackExt: string): 
   const trimmed = base.length > 80 ? base.slice(base.length - 80) : base;
   return trimmed || `photo.${fallbackExt}`;
 }
-function resolveMime(asset: ImagePicker.ImagePickerAsset): AllowedMime {
+function resolveMime(asset: PickedAsset): AllowedMime {
   const m = asset.mimeType?.toLowerCase();
   if (m === 'image/jpeg' || m === 'image/png' || m === 'image/webp') return m;
   const ext = (asset.fileName || asset.uri).toLowerCase().split('.').pop() ?? '';
@@ -150,7 +152,7 @@ export default function PropertyEditRoute() {
       videoDirty);
   const canSave = dirty && !!title.trim() && price > 0 && !!city.trim() && photos.length >= 1;
 
-  async function uploadAsset(asset: ImagePicker.ImagePickerAsset): Promise<EditPhoto | null> {
+  async function uploadAsset(asset: PickedAsset): Promise<EditPhoto | null> {
     const originalMime = resolveMime(asset);
     const optimized = await optimizePhoto(asset.uri, originalMime);
     const contentType = optimized.mimeType;
@@ -177,21 +179,35 @@ export default function PropertyEditRoute() {
   async function addPhotos() {
     if (uploading || photos.length >= MAX_PHOTOS) return;
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        toast.show(t('propertyEdit.photoPermission'), 'danger');
-        return;
-      }
+      // SELECTEUR NATIF (client 2026-09-09), le meme qu'a la creation : un seul
+      // ecran systeme pour l'appareil photo ET la galerie. L'ecran de
+      // modification n'offrait QUE la galerie — un agent qui voulait ajouter
+      // une photo prise sur le moment devait sortir de l'application. Le
+      // chemin galerie reste en repli quand le binaire ne porte pas le module.
       const remaining = MAX_PHOTOS - photos.length;
-      const picked = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images',
-        quality: 0.8,
-        allowsMultipleSelection: true,
-        selectionLimit: remaining,
-      });
-      if (picked.canceled || picked.assets.length === 0) return;
+      let toUpload: PickedAsset[];
+      if (nativeChooserAvailable) {
+        const cam = await ImagePicker.requestCameraPermissionsAsync();
+        toUpload = (
+          await chooseImagesNative(remaining, cam.granted, t('create.photoSourceTitle'))
+        ).slice(0, remaining);
+      } else {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          toast.show(t('propertyEdit.photoPermission'), 'danger');
+          return;
+        }
+        const picked = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: 'images',
+          quality: 0.8,
+          allowsMultipleSelection: true,
+          selectionLimit: remaining,
+        });
+        if (picked.canceled || picked.assets.length === 0) return;
+        toUpload = picked.assets.slice(0, remaining);
+      }
+      if (toUpload.length === 0) return;
       setUploading(true);
-      const toUpload = picked.assets.slice(0, remaining);
       const uploaded: EditPhoto[] = [];
       for (const asset of toUpload) {
         try {
@@ -215,7 +231,7 @@ export default function PropertyEditRoute() {
     setPhotos((prev) => (i === 0 ? prev : [prev[i], ...prev.filter((_, idx) => idx !== i)]));
 
   // ── Optional property video (client 2026-07-26) ─────────────────────────
-  const resolveVideoMime = (asset: ImagePicker.ImagePickerAsset): string => {
+  const resolveVideoMime = (asset: PickedAsset): string => {
     const m = asset.mimeType?.toLowerCase();
     if (m === 'video/mp4' || m === 'video/quicktime' || m === 'video/webm') return m;
     const ext = (asset.fileName || asset.uri).toLowerCase().split('.').pop() ?? '';
@@ -226,11 +242,23 @@ export default function PropertyEditRoute() {
   async function pickVideo() {
     if (videoUploading) return;
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) { toast.show(t('propertyEdit.photoPermission'), 'danger'); return; }
-      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'videos', quality: 0.7 });
-      if (picked.canceled || picked.assets.length === 0) return;
-      const asset = picked.assets[0];
+      // Meme selecteur natif que pour les photos : filmer sur le moment, ou
+      // reprendre une video de la galerie, dans l'ecran du telephone.
+      // 60 s est le plafond applique ci-dessous (65_000 ms de tolerance) ; on le
+      // passe au natif pour qu'il coupe A LA PRISE plutot qu'apres coup.
+      let asset: PickedAsset | undefined;
+      if (nativeChooserAvailable) {
+        const cam = await ImagePicker.requestCameraPermissionsAsync();
+        const chosen = await chooseVideoNative(cam.granted, t('create.videoSourceTitle'), 60);
+        asset = chosen[0];
+      } else {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) { toast.show(t('propertyEdit.photoPermission'), 'danger'); return; }
+        const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'videos', quality: 0.7 });
+        if (picked.canceled || picked.assets.length === 0) return;
+        asset = picked.assets[0];
+      }
+      if (!asset) return;
       if (typeof asset.duration === 'number' && asset.duration > 65_000) {
         toast.show(t('create.videoTooLong'), 'danger');
         return;

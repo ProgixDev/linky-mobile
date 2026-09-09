@@ -4,8 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { pickPhotos } from '../../../src/lib/pickPhotos';
-import type { MediaSource } from '../../../src/lib/pickPhotos';
+import {
+  pickPhotos,
+  nativeChooserAvailable,
+  type MediaSource,
+  type PickedAsset,
+  type PickSource,
+} from '../../../src/lib/pickPhotos';
+import { chooseVideoNative } from '../../../src/lib/nativeMediaChooser';
 import { MediaSourceSheet } from '../../../src/components/sheets/MediaSourceSheet';
 import { VideoThumb } from '../../../src/components/media/VideoThumb';
 import { Camera, Film, Plus, Trash2, Star } from 'lucide-react-native';
@@ -30,7 +36,7 @@ function sanitizeFilename(raw: string | null | undefined, fallbackExt: string): 
   return trimmed || `photo.${fallbackExt}`;
 }
 
-function resolveMime(asset: ImagePicker.ImagePickerAsset): AllowedMime {
+function resolveMime(asset: PickedAsset): AllowedMime {
   const m = asset.mimeType?.toLowerCase();
   if (m === 'image/jpeg' || m === 'image/png' || m === 'image/webp') return m;
   const ext = (asset.fileName || asset.uri).toLowerCase().split('.').pop() ?? '';
@@ -69,7 +75,7 @@ export default function PropertyPhotosRoute() {
 
   // Optimize + upload a single asset → returns the stored photo meta, or null on failure.
   async function uploadAsset(
-    asset: ImagePicker.ImagePickerAsset,
+    asset: PickedAsset,
     position: number,
   ): Promise<PropertyPhoto | null> {
     // Optimize before upload: resize > 1600px down + re-encode as jpeg. Cuts
@@ -103,10 +109,17 @@ export default function PropertyPhotosRoute() {
   /** Ouvre la feuille de choix. Le travail reel se fait dans runPick. */
   function addPhotos() {
     if (uploading || propertyPhotos.length >= MAX_PHOTOS) return;
+    // SELECTEUR NATIF quand le binaire le porte (client 2026-09-09) : un seul
+    // ecran systeme propose l'appareil photo et la galerie. Sinon — iOS, ou un
+    // telephone encore sur l'ancien build — la feuille de choix reste.
+    if (nativeChooserAvailable) {
+      void runPick('system');
+      return;
+    }
     setSourceOpen(true);
   }
 
-  async function runPick(source: MediaSource) {
+  async function runPick(source: PickSource) {
     try {
       // Camera OU galerie (client 2026-08-23) : l'agent photographie le bien
       // pendant la visite. Meme porte que l'ecran produit — les deux ecrans
@@ -119,6 +132,7 @@ export default function PropertyPhotosRoute() {
         labels: {
           galleryDenied: t('create.photosPermDenied'),
           cameraDenied: t('create.photosCamPermDenied'),
+          systemTitle: t('create.photoSourceTitle'),
         },
         onDenied: (m) => toast.show(m, 'danger'),
       });
@@ -148,7 +162,7 @@ export default function PropertyPhotosRoute() {
 
   // ── Optional property video (client 2026-07-26) ─────────────────────────
   const MAX_VIDEO_SEC = 60;
-  const resolveVideoMime = (asset: ImagePicker.ImagePickerAsset): string => {
+  const resolveVideoMime = (asset: PickedAsset): string => {
     const m = asset.mimeType?.toLowerCase();
     if (m === 'video/mp4' || m === 'video/quicktime' || m === 'video/webm') return m;
     const ext = (asset.fileName || asset.uri).toLowerCase().split('.').pop() ?? '';
@@ -162,35 +176,56 @@ export default function PropertyPhotosRoute() {
   /** Ouvre la feuille de choix video. Le travail reel se fait dans runVideo. */
   function pickVideo() {
     if (videoUploading) return;
+    if (nativeChooserAvailable) {
+      void runVideo('system');
+      return;
+    }
     setVideoSourceOpen(true);
   }
 
-  async function runVideo(source: MediaSource) {
+  async function runVideo(source: PickSource) {
     try {
       // La camera etait absente : le vendeur devait sortir de l'app, filmer,
       // revenir. Demande du client le 2026-09-08 (« toujours acces a la
       // camera »), exactement comme pour les photos.
-      const perm = source === 'camera'
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        // Le message doit nommer la permission REFUSEE : « autorisez l'acces aux
-        // photos » alors qu'on vient de demander la camera envoie l'utilisateur
-        // regler le mauvais interrupteur dans les parametres du telephone.
-        toast.show(t(source === 'camera' ? 'create.photosCamPermDenied' : 'create.photosPermDenied'), 'danger');
-        return;
+      let asset: PickedAsset | undefined;
+      if (source === 'system') {
+        // SELECTEUR NATIF (client 2026-09-09) : l'appareil photo et la galerie
+        // video dans le meme ecran systeme. La permission camera se demande
+        // AVANT, puisqu'on ignore ce que l'utilisateur va choisir ; un refus
+        // n'empeche rien, le selecteur s'ouvre alors sans l'entree camera.
+        // Le plafond de duree est passe au natif, qui coupe A LA PRISE.
+        const cam = await ImagePicker.requestCameraPermissionsAsync();
+        const chosen = await chooseVideoNative(
+          cam.granted,
+          t('create.videoSourceTitle'),
+          MAX_VIDEO_SEC,
+        );
+        asset = chosen[0];
+      } else {
+        const perm = source === 'camera'
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          // Le message doit nommer la permission REFUSEE : « autorisez l'acces aux
+          // photos » alors qu'on vient de demander la camera envoie l'utilisateur
+          // regler le mauvais interrupteur dans les parametres du telephone.
+          toast.show(t(source === 'camera' ? 'create.photosCamPermDenied' : 'create.photosPermDenied'), 'danger');
+          return;
+        }
+        // videoMaxDuration coupe A LA PRISE plutot que de refuser apres coup :
+        // filmer 3 minutes puis se faire jeter est la pire facon de l'apprendre.
+        const picked = source === 'camera'
+          ? await ImagePicker.launchCameraAsync({
+              mediaTypes: 'videos',
+              quality: 0.7,
+              videoMaxDuration: MAX_VIDEO_SEC,
+            })
+          : await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'videos', quality: 0.7 });
+        if (picked.canceled || picked.assets.length === 0) return;
+        asset = picked.assets[0];
       }
-      // videoMaxDuration coupe A LA PRISE plutot que de refuser apres coup :
-      // filmer 3 minutes puis se faire jeter est la pire facon de l'apprendre.
-      const picked = source === 'camera'
-        ? await ImagePicker.launchCameraAsync({
-            mediaTypes: 'videos',
-            quality: 0.7,
-            videoMaxDuration: MAX_VIDEO_SEC,
-          })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'videos', quality: 0.7 });
-      if (picked.canceled || picked.assets.length === 0) return;
-      const asset = picked.assets[0];
+      if (!asset) return;
       // ImagePicker reports video duration in milliseconds. Guard the ~60s cap
       // (a few seconds of tolerance) — long videos are painful to upload on 3G.
       if (typeof asset.duration === 'number' && asset.duration > (MAX_VIDEO_SEC + 5) * 1000) {
