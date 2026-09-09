@@ -8,6 +8,18 @@ version = '0.1.0'
 
 android {
   namespace "com.linky.mediachooser"
+  // OBLIGATOIRES, ET C'EST CE QUI A FAIT ECHOUER LE PREMIER BUILD :
+  //   A problem occurred configuring project ':media-chooser'
+  //     > 'android.defaultConfig.versionName' is not defined
+  // expo-module-gradle-plugin publie chaque module dans un depot maven local et
+  // lit ces deux valeurs pour le faire ; sans elles il ne trouve meme pas de
+  // composant « release » a publier, d'ou la seconde erreur en cascade sur
+  // :expo. Tous les modules livres les declarent (expo-image-picker : 22 /
+  // "55.0.20") — le squelette que j'avais ecrit les avait oubliees.
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
 }
 
 dependencies {
