@@ -1,3 +1,20 @@
+// ════════════════════════════════════════════════════════════════════════════
+// FONCTIONNALITE RETIREE — 2026-09-09
+// ════════════════════════════════════════════════════════════════════════════
+// Client : « On peut retirer completement tout ce qui est visite. Ils vont
+// utiliser le chat in app pour se fixer un rdv pour la visite physique. »
+//
+// L'endpoint reste DEPLOYE mais refuse tout appel (VISITS_DISABLED, 403), sur
+// le modele de wallet-send : plus aucun ecran n'appelle ces routes, mais un
+// binaire deja installe chez un utilisateur, lui, les appelle encore. Un client
+// qui n'a pas recu la mise a jour doit se heurter au meme mur qu'un appel curl
+// — retirer l'ecran sans fermer la porte laisserait la fonctionnalite vivante
+// pour tous les APK en circulation.
+//
+// La table visit_requests et ses 3 lignes ne sont PAS supprimees : rien
+// n'oblige a detruire des donnees pour retirer une fonctionnalite, et une
+// suppression ne se rejoue pas si le client change d'avis.
+// ════════════════════════════════════════════════════════════════════════════
 // Buyer requests a visit on a property. JWT-authed; buyer_id = caller. Idempotent on
 // (property_id, buyer_id, requested_at) — re-submitting the same slot returns the
 // existing row rather than creating a duplicate or 409'ing. Future statuses
@@ -60,7 +77,14 @@ function mapVisitRequest(r: VisitRow) {
 
 const SIXTY_DAYS_MS = 60 * 24 * 3600 * 1000;
 
+// Retiree le 2026-09-09 (voir le bandeau en tete). Passer a true
+// suffirait a tout reactiver : rien d'autre n'a ete demonte cote serveur.
+const VISITS_ENABLED = false;
+
 Deno.serve(makePost<Body>('/v1/visits/request', valid, async ({ sb, body, req }) => {
+  if (!VISITS_ENABLED) {
+    throwApi('VISITS_DISABLED', 403, 'Les visites se conviennent desormais par la messagerie.');
+  }
   const userId = await requireUser(req);
   // VERROU « MODE ACHETEUR », cote serveur (client 2026-09-08 23:01). Place
   // juste apres l'authentification et AVANT toute ecriture : un refus tardif

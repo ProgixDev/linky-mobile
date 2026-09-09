@@ -1,3 +1,20 @@
+// ════════════════════════════════════════════════════════════════════════════
+// FONCTIONNALITE RETIREE — 2026-09-09
+// ════════════════════════════════════════════════════════════════════════════
+// Client : « On peut retirer completement tout ce qui est visite. Ils vont
+// utiliser le chat in app pour se fixer un rdv pour la visite physique. »
+//
+// L'endpoint reste DEPLOYE mais refuse tout appel (VISITS_DISABLED, 403), sur
+// le modele de wallet-send : plus aucun ecran n'appelle ces routes, mais un
+// binaire deja installe chez un utilisateur, lui, les appelle encore. Un client
+// qui n'a pas recu la mise a jour doit se heurter au meme mur qu'un appel curl
+// — retirer l'ecran sans fermer la porte laisserait la fonctionnalite vivante
+// pour tous les APK en circulation.
+//
+// La table visit_requests et ses 3 lignes ne sont PAS supprimees : rien
+// n'oblige a detruire des donnees pour retirer une fonctionnalite, et une
+// suppression ne se rejoue pas si le client change d'avis.
+// ════════════════════════════════════════════════════════════════════════════
 // Property owner (agent) decides on a pending visit request — accept or reject.
 // JWT-authed. Two guards: (1) the caller must own the property the visit_request
 // targets — verified server-side via join, never trusted from the client; (2) the
@@ -65,7 +82,14 @@ function formatSlot(iso: string): string {
   return `${date} à ${time}`;
 }
 
+// Retiree le 2026-09-09 (voir le bandeau en tete). Passer a true
+// suffirait a tout reactiver : rien d'autre n'a ete demonte cote serveur.
+const VISITS_ENABLED = false;
+
 Deno.serve(makePost<Body>('/v1/visits/respond', valid, async ({ sb, body, req }) => {
+  if (!VISITS_ENABLED) {
+    throwApi('VISITS_DISABLED', 403, 'Les visites se conviennent desormais par la messagerie.');
+  }
   const userId = await requireUser(req);
 
   // 1. Load the visit + owning property for authorization + status guard.

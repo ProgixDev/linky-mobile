@@ -167,17 +167,3 @@ export function useConfirmCheckin() {
   });
 }
 
-// Owner marks an accepted visit as completed (the "visite obligatoire avant
-// transaction" precondition for achat/vente).
-export function useCompleteVisit() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (visitRequestId: string) => {
-      return apiPost<{ ok: true }>({ path: '/visit-complete', body: { visit_request_id: visitRequestId } });
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['agent-visits'] });
-      qc.invalidateQueries({ queryKey: ['my-visit-requests'] });
-    },
-  });
-}

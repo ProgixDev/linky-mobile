@@ -1,8 +1,8 @@
 // Tenant booking wizard — location par jour (date range) or par mois (move-in
 // date + duration). Shows the live price recap (rent + commission Linky,
 // voir src/lib/fees.ts pour le taux),
-// then sends the request to the landlord (booking-request). The visit stays
-// OPTIONAL for rentals ; achat/vente keeps the mandatory-visit rule.
+// then sends the request to the landlord (booking-request). La visite en
+// ligne a ete retiree le 2026-09-09 : le rendez-vous se prend par le chat.
 import { useBuyerGate } from '../../../src/components/feedback/BuyerGate';
 import { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
@@ -73,7 +73,7 @@ export default function BookPropertyRoute() {
     return <DetailStateScreen loading={isLoading} title="Réserver" onRetry={() => void refetch()} />;
   }
   if (prop.type !== 'location') {
-    // Achat/vente : pas de réservation en ligne — la visite est obligatoire.
+    // Achat/vente : pas de réservation par date — c'est un paiement unique.
     return <DetailStateScreen loading={false} title="Réserver" onRetry={() => router.back()} />;
   }
 
@@ -256,7 +256,7 @@ export default function BookPropertyRoute() {
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
               <Text style={{ fontWeight: '700' }}>Paiement sécurisé. </Text>
-              Ton argent reste en séquestre jusqu'à la confirmation de ton emménagement. La visite du bien reste possible avant de réserver.
+              Ton argent reste en séquestre jusqu'à la confirmation de ton emménagement. Contacte le propriétaire pour visiter le bien avant de réserver.
             </Text>
           </TrustStrip>
         </ScrollView>

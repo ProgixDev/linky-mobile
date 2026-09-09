@@ -39,7 +39,7 @@ const FILTER_DEFS: { id: Filter; labelKey: string; statuses?: OrderStatus[] }[] 
 ];
 
 // Status tones map to theme tokens (resolved per-render) so the pills stay
-// legible on dark `colors.card` — mirrors the pattern in pro/visites/index.tsx.
+// legible on dark `colors.card`.
 type PillTone = 'accent' | 'primary' | 'danger' | 'muted';
 
 const STATUS_META: Record<OrderStatus, { labelKey: string; Icon: LucideIcon; tone: PillTone }> = {

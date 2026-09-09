@@ -82,35 +82,13 @@ export interface UpdatePropertyInput {
   status?: 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
 }
 
-export interface RequestVisitInput {
-  property_id: string;
-  requested_at: string;
-  note?: string;
-}
-
-export type VisitStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed';
-
-export interface VisitRequest {
-  id: string;
-  propertyId: string;
-  buyerId: string;
-  requestedAt: string;
-  note: string;
-  status: VisitStatus | string;
-  createdAt: string;
-  decidedAt?: string;
-  decidedById?: string;
-  // Optional joined snapshots — populated by list-agent-visits, absent from
-  // request-visit / visit-respond responses (those return the base row only).
-  property?: { id: string; title: string; district: string | null; city: string };
-  buyer?: { id: string; displayName?: string; avatarUrl?: string };
-}
-
-export interface RespondVisitInput {
-  visit_request_id: string;
-  decision: 'accept' | 'reject';
-  note?: string;
-}
+// Les types et hooks de VISITE ont ete retires le 2026-09-09 (client :
+// « On peut retirer completement tout ce qui est visite. Ils vont utiliser le
+// chat in app pour se fixer un rdv pour la visite physique »). Les 5 fonctions
+// edge (request-visit, visit-respond, visit-complete, list-agent-visits,
+// list-my-visit-requests) et la table visit_requests restent en place mais
+// dormantes — meme traitement que wallet-send : plus aucun appelant, aucune
+// donnee detruite.
 
 interface Cursor { created_at: string; id: string }
 
@@ -380,88 +358,3 @@ export function useSetPropertyStatus() {
   });
 }
 
-export function useRequestVisit() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: RequestVisitInput) => {
-      const r = await apiPost<{ visit_request: VisitRequest }>({ path: '/request-visit', body: input });
-      return r.visit_request;
-    },
-    // Phase X.9 — buyer is replaced onto /buyer/requests right after submit ;
-    // without this invalidation the destination list is the previous fetch
-    // (no new visit visible), contradicting the success toast. Invalidate also
-    // ['property', propertyId] so the property detail's "demande envoyée" badge
-    // re-renders without a navigation round-trip.
-    onSuccess: (visit) => {
-      qc.invalidateQueries({ queryKey: ['my-visit-requests'] });
-      qc.invalidateQueries({ queryKey: ['property', visit.propertyId] });
-    },
-  });
-}
-
-export function useAgentVisits(status?: VisitStatus | string) {
-  return useQuery({
-    queryKey: ['agent-visits', status ?? null],
-    queryFn: async (): Promise<VisitRequest[]> => {
-      const r = await apiPost<{ visits: VisitRequest[] }>({
-        path: '/list-agent-visits',
-        body: status ? { status } : {},
-      });
-      return r.visits;
-    },
-  });
-}
-
-// Phase X.1 — buyer-side visit list. Mirrors useAgentVisits but joins the
-// property snapshot (cover photo, title, district, city, price) for the
-// list card. Sorted server-side requested_at desc.
-export interface BuyerVisitRequest extends VisitRequest {
-  property?: {
-    id: string;
-    title: string;
-    district: string | null;
-    city: string;
-    // GNF is integer-only — minor units = major units. Naming the field
-    // priceGnf (instead of priceMinor) matches the project-wide convention
-    // used by `Product.priceGnf` and prevents a future /100 division bug if a
-    // currency with fractional units ever gets bolted on. Values identical.
-    priceGnf: number;
-    perMonth: boolean;
-    // Distinguishes daily rentals (perMonth=false, show « /jour ») from
-    // vente/terrain (bare price). Optional: older fn payloads omit it.
-    type?: 'location' | 'vente' | 'terrain';
-    coverUrl?: string;
-  };
-}
-export function useMyVisitRequests(status?: VisitStatus | string) {
-  return useQuery({
-    queryKey: ['my-visit-requests', status ?? null],
-    queryFn: async (): Promise<BuyerVisitRequest[]> => {
-      const r = await apiPost<{ visits: BuyerVisitRequest[] }>({
-        path: '/list-my-visit-requests',
-        body: status ? { status } : {},
-      });
-      return r.visits;
-    },
-    // Phase X.9 — guarantee the post-request screen shows the fresh row.
-    // refetchOnMount: 'always' is fine here because the list is small (≤ 100
-    // server-side limit) and buyer-side traffic to /buyer/requests is low.
-    refetchOnMount: 'always',
-  });
-}
-
-export function useRespondVisitRequest() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: RespondVisitInput) => {
-      const r = await apiPost<{ visit_request: VisitRequest }>({
-        path: '/visit-respond',
-        body: input,
-      });
-      return r.visit_request;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['agent-visits'] });
-    },
-  });
-}

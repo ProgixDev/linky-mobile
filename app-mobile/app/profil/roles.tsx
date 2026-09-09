@@ -34,7 +34,7 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
     can: [
       'Acheter des produits et réserver des logements (jour / mois)',
       "Payer en toute sécurité : l'argent reste bloqué (escrow) jusqu'à la réception",
-      'Demander des visites, discuter avec les vendeurs et laisser des avis',
+      'Discuter avec les vendeurs, convenir des visites et laisser des avis',
     ],
     must: [
       'Confirme la réception uniquement quand tu as le produit en main',
@@ -73,14 +73,13 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
     title: 'Devenir agent immobilier',
     can: [
       'Publier des biens : location (jour / mois), vente et terrains',
-      'Gérer les demandes de visite et les réservations',
+      'Gérer vos réservations et convenir des visites par la messagerie',
       "Faire signer les contrats de location dans l'app et encaisser en escrow",
     ],
     must: [
       "Vérifier votre identité avant de publier votre première annonce",
       'Annoncer des biens réels et disponibles, avec des prix exacts',
-      'Pour la vente : la visite est obligatoire avant toute transaction',
-      'Honorer les visites planifiées et les réservations acceptées',
+      'Honorer les visites convenues et les réservations acceptées',
     ],
   },
 };

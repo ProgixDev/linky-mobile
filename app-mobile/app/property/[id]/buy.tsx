@@ -1,9 +1,9 @@
 // Buyer purchase request — vente/terrain, one-time payment (client 2026-08-31:
 // « active payment for vente ET terrain aussi »). No dates, no period : the
 // full price once. Mirrors book.tsx's price-recap pattern but far simpler —
-// there's nothing to schedule. The visit-required precondition is enforced
-// server-side (booking-request); this screen surfaces that error clearly
-// rather than duplicating the check client-side.
+// there's nothing to schedule. La visite prealable, obligatoire jusqu'au
+// 2026-09-09, a ete retiree cote client ET serveur : l'acheteur convient d'un
+// rendez-vous physique par le chat, hors machine a etats.
 import { useBuyerGate } from '../../../src/components/feedback/BuyerGate';
 import { useState } from 'react';
 import { Platform, ScrollView, TextInput, View } from 'react-native';
@@ -20,7 +20,7 @@ import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
 import { useProperty, useRequestBooking } from '../../../src/data/queries';
 import { useToast } from '../../../src/components/feedback/Toast';
-import { ApiError, toToastMessage } from '../../../src/lib/api';
+import { toToastMessage } from '../../../src/lib/api';
 import { platformFeeGnf, priceWithFeeGnf } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
@@ -67,10 +67,6 @@ export default function BuyPropertyRoute() {
           router.replace('/bookings' as never);
         },
         onError: (e) => {
-          if (e instanceof ApiError && e.code === 'VISIT_REQUIRED') {
-            show(e.message, 'danger');
-            return;
-          }
           show(toToastMessage(e, "Impossible d'envoyer la demande."), 'danger');
         },
       },
@@ -131,7 +127,7 @@ export default function BuyPropertyRoute() {
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
               <Text style={{ fontWeight: '700' }}>Paiement sécurisé. </Text>
-              Ton argent reste en séquestre jusqu'à la confirmation de la remise du bien. Une visite confirmée par le propriétaire est requise avant l'achat.
+              Ton argent reste en séquestre jusqu'à la confirmation de la remise du bien. Contacte le propriétaire pour visiter le bien avant de t'engager.
             </Text>
           </TrustStrip>
         </ScrollView>

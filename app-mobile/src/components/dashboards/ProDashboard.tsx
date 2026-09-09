@@ -12,7 +12,6 @@ import {
   Package,
   Clock,
   Building2,
-  CalendarDays,
   KeyRound,
   MapPin,
   BedDouble,
@@ -870,23 +869,19 @@ export function EstateDashboard() {
               dead onPress); the Baux and Booster screens themselves serve
               a Bientot disponible state and Mes biens duplicates the list
               just below. */}
-          <QuickAction
-            Icon={CalendarDays}
-            label={t('proDashboard.qaVisits')}
-            onPress={() => router.push('/pro/visites')}
-          />
+          {/* « Visites » retiree le 2026-09-09 (client : « On peut retirer
+              completement tout ce qui est visite. Ils vont utiliser le chat in
+              app pour se fixer un rdv »). L'agent prend ses rendez-vous par la
+              messagerie ; il ne reste donc aucun ecran a ouvrir ici. */}
           {/* Booking flow — the "Suivi des baux" screens are real now. */}
           <QuickAction
             Icon={KeyRound}
             label="Baux"
             onPress={() => router.push('/agent/leases' as never)}
           />
-          {/* Was « Demandes », which opened a second view of the SAME visit
-              requests as « Visites » — the client spotted the duplication
-              (2026-08-07). Visites is the one kept: it counts pending/accepted,
-              groups by day, and carries the Accepter / Refuser actions inline.
-              Boost takes the freed slot, which also retires the banner that
-              used to sit under this row. */}
+          {/* Boost occupe la place liberee par « Demandes » (doublon des
+              visites, retire le 2026-08-07), ce qui a aussi retire la banniere
+              qui se trouvait sous cette rangee. */}
           <QuickAction
             Icon={Zap}
             label={t('proDashboard.qaBoost')}

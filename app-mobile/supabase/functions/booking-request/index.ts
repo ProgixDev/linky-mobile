@@ -3,9 +3,9 @@
 // Creates the booking at status 'requested' with a money + contract snapshot;
 // the landlord/seller then accepts & signs (booking-respond), the tenant/buyer
 // signs & pays (booking-sign-pay → cron-poll-intents → confirm_booking_payment).
-// The visit is OPTIONAL for rentals (client decision 2026-07) but MANDATORY
-// for a sale — visit-complete's stated purpose since 2026-07, enforced here
-// for the first time.
+// La visite en ligne a ete retiree le 2026-09-09 : aucune precondition de
+// visite ne s'applique plus, ni pour une location ni pour un achat. Le
+// rendez-vous physique se convient par le chat de l'application.
 import { makePost } from '@shared/wrap.ts';
 import { platformFee } from '@shared/fees.ts';
 import { throwApi } from '@shared/errors.ts';
@@ -66,7 +66,7 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
   if (start.getTime() < today.getTime()) {
     throwApi('INVALID_DATES', 400, 'La date de début est déjà passée.');
   }
-  // Bound how far ahead a booking can start (sanity, mirrors visits' 60d rule).
+  // Bound how far ahead a booking can start (garde-fou : 60 jours).
   if (start.getTime() > today.getTime() + 180 * 86_400_000) {
     throwApi('INVALID_DATES', 400, 'La date de début est trop éloignée (6 mois max).');
   }
@@ -98,23 +98,18 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
   if (prop.status !== 'active') throwApi('PROPERTY_INACTIVE', 409, 'Cette annonce n\'est plus disponible.');
   if (prop.owner_id === tenantId) throwApi('SELF_BOOKING_FORBIDDEN', 400, 'Tu ne peux pas réserver ton propre bien.');
 
-  if (body.period === 'sale') {
-    // Visite obligatoire avant achat (raison d'etre de visit-complete depuis
-    // 2026-07, jamais appliquee jusqu'ici). Le proprietaire doit avoir marque
-    // une visite de CET acheteur comme effectuee.
-    const { data: visit, error: eVisit } = await sb
-      .from('visit_requests')
-      .select('id')
-      .eq('property_id', prop.id)
-      .eq('buyer_id', tenantId)
-      .eq('status', 'completed')
-      .limit(1)
-      .maybeSingle();
-    if (eVisit) { console.error('[booking-request] visit lookup:', eVisit); throwApi('INTERNAL_ERROR', 500, 'Erreur base de données'); }
-    if (!visit) {
-      throwApi('VISIT_REQUIRED', 409, 'Une visite doit être effectuée et confirmée par le propriétaire avant l\'achat.');
-    }
-  } else {
+  // LA VISITE EN LIGNE A ETE RETIREE le 2026-09-09 (client : « On peut retirer
+  // completement tout ce qui est visite. Ils vont utiliser le chat in app pour
+  // se fixer un rdv pour la visite physique »).
+  //
+  // CONSEQUENCE DIRECTE : la precondition VISIT_REQUIRED qui bloquait l'achat
+  // d'un bien tombe avec elle. Elle exigeait une ligne visit_requests en
+  // 'completed' ; plus aucun ecran ne permet d'en creer une, donc la garder
+  // aurait rendu « Acheter via l'application » definitivement impossible — un
+  // bouton qui echoue a chaque fois, avec un message renvoyant a une
+  // fonctionnalite disparue. Le rendez-vous physique se cale desormais par le
+  // chat, hors machine a etats.
+  if (body.period !== 'sale') {
     const expectedPeriod = prop.per_month ? 'month' : 'day';
     if (body.period !== expectedPeriod) {
       throwApi('PERIOD_MISMATCH', 400, prop.per_month ? 'Ce bien se loue au mois.' : 'Ce bien se loue à la journée.');

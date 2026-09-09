@@ -64,9 +64,9 @@ export default function PropertyDetailRoute() {
     else player.pause();
   }, [photoIdx, player, videoSrc]);
   // Self-action guard : the property's ownerId is the agent's user_id. When
-  // the viewer owns this listing, the counterparty actions (Contacter +
-  // Visiter) are replaced with a manage CTA — both backends 403 self-targets
-  // (find-or-create-conversation, request-visit) so offering them is misleading.
+  // the viewer owns this listing, « Contacter » is replaced with a manage CTA
+  // — find-or-create-conversation 403s a self-target, so offering it is
+  // misleading.
   const authUserId = useAuth((s) => s.authUserId);
   const isOwnProperty = !!authUserId && !!prop?.ownerId && authUserId === prop.ownerId;
   // Agency (= the shop the property belongs to) — shown as a card linking to the
@@ -401,14 +401,14 @@ export default function PropertyDetailRoute() {
               <TrustStrip tone="primary">
                 <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
                   <Text style={{ fontWeight: '700' }}>Réservation sécurisée. </Text>
-                  Ton paiement reste en séquestre jusqu'à ton emménagement. La visite est possible avant de réserver, mais optionnelle.
+                  Ton paiement reste en séquestre jusqu'à ton emménagement. Contacte le propriétaire pour convenir d'une visite avant de réserver.
                 </Text>
               </TrustStrip>
             ) : (
               <TrustStrip tone="primary">
                 <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-                  <Text style={{ fontWeight: '700' }}>Visite obligatoire. </Text>
-                  Pour acheter via l'application, la visite du bien doit être effectuée et confirmée par le propriétaire au préalable. Ton paiement reste ensuite en séquestre jusqu'à la remise du bien.
+                  <Text style={{ fontWeight: '700' }}>Achat sécurisé. </Text>
+                  Contacte le propriétaire pour visiter le bien avant de t'engager. Ton paiement reste ensuite en séquestre jusqu'à la remise du bien.
                 </Text>
               </TrustStrip>
             )}
@@ -460,10 +460,10 @@ export default function PropertyDetailRoute() {
       {/* Phase U.0-B2 — offers have no V1 backend ; the «Faire une offre» /
           «Offre» CTAs were sending nothing and the target screen was 100 %
           mock. Removed until the offers backend lands. Buyers contact the
-          agent via Message (Contacter) and book a visit instead.
-          Self-action guard : when the viewer owns the property, replace
-          counterparty actions with a manage CTA — both find-or-create and
-          request-visit 403 self-targets, so offering them is misleading. */}
+          agent via Message (Contacter) instead.
+          Self-action guard : when the viewer owns the property, replace the
+          counterparty action with a manage CTA — find-or-create 403s a
+          self-target, so offering it is misleading. */}
       <StickyBottom
         style={{ flexDirection: 'row', gap: 8 }}
         onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
@@ -477,13 +477,16 @@ export default function PropertyDetailRoute() {
             onPress={() => router.push(`/property/edit/${prop.id}`)}
           />
         ) : prop.type === 'location' ? (
-          // VERROU « MODE ACHETEUR » sur reserver / acheter / visiter (client
-          // 2026-09-08 23:01). « Contacter » reste ouvert : ecrire au
-          // proprietaire n'engage rien, et la regle porte sur commander et
-          // louer. Chaque ecran d'arrivee reverrouille de son cote — un lien
-          // profond n'a pas a repasser par ici.
-          // Booking flow (client 2026-07) : renting is the primary action ;
-          // the visit stays available but OPTIONAL for rentals.
+          // VERROU « MODE ACHETEUR » sur reserver / acheter (client 2026-09-08
+          // 23:01). « Contacter » reste ouvert : ecrire au proprietaire
+          // n'engage rien, et la regle porte sur commander et louer. Chaque
+          // ecran d'arrivee reverrouille de son cote — un lien profond n'a pas
+          // a repasser par ici.
+          //
+          // LA VISITE A ETE RETIREE le 2026-09-09 (client) : le rendez-vous
+          // physique se convient par le chat. « Contacter » n'est donc plus un
+          // bouton secondaire parmi deux, c'est LE chemin vers la visite — il
+          // prend toute la largeur.
           <View style={{ flex: 1, gap: 8 }}>
             <Button
               size="lg"
@@ -494,32 +497,20 @@ export default function PropertyDetailRoute() {
                 router.push(`/property/${prop.id}/book` as never);
               }}
             />
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Button
-                variant="outline"
-                style={{ flex: 1 }}
-                label="Contacter"
-                leading={<I.msg size={16} color={colors.text} />}
-                onPress={onChatPress}
-                disabled={findOrCreate.isPending || !prop.ownerId}
-              />
-              <Button
-                variant="outline"
-                style={{ flex: 1 }}
-                label="Visiter (optionnel)"
-                onPress={() => {
-                  if (!requireBuyer()) return;
-                  router.push(`/property/${prop.id}/visit`);
-                }}
-              />
-            </View>
+            <Button
+              variant="outline"
+              block
+              label="Contacter"
+              leading={<I.msg size={16} color={colors.text} />}
+              onPress={onChatPress}
+              disabled={findOrCreate.isPending || !prop.ownerId}
+            />
           </View>
         ) : (
           // Achat/vente ET terrain (client 2026-08-31 : payer via l'appli OU
           // voir avec le propriétaire directement — les deux restent
-          // disponibles). La visite reste OBLIGATOIRE avant tout achat
-          // en ligne ; le serveur refuse sinon (VISIT_REQUIRED), avec un
-          // message clair plutôt qu'un blocage silencieux côté UI.
+          // disponibles). La visite prealable n'est plus une condition : elle
+          // se cale par le chat, et le serveur ne la reclame plus.
           <View style={{ flex: 1, gap: 8 }}>
             <Button
               size="lg"
@@ -530,25 +521,14 @@ export default function PropertyDetailRoute() {
                 router.push(`/property/${prop.id}/buy` as never);
               }}
             />
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Button
-                variant="outline"
-                style={{ flex: 1 }}
-                label="Contacter"
-                leading={<I.msg size={16} color={colors.text} />}
-                onPress={onChatPress}
-                disabled={findOrCreate.isPending || !prop.ownerId}
-              />
-              <Button
-                variant="outline"
-                style={{ flex: 1 }}
-                label="Visiter"
-                onPress={() => {
-                  if (!requireBuyer()) return;
-                  router.push(`/property/${prop.id}/visit`);
-                }}
-              />
-            </View>
+            <Button
+              variant="outline"
+              block
+              label="Contacter"
+              leading={<I.msg size={16} color={colors.text} />}
+              onPress={onChatPress}
+              disabled={findOrCreate.isPending || !prop.ownerId}
+            />
           </View>
         )}
       </StickyBottom>

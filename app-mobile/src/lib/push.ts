@@ -18,6 +18,7 @@ import Constants from 'expo-constants';
 import { router, useRootNavigationState } from 'expo-router';
 import { apiPost } from './api';
 import { storage, STORAGE_KEYS } from './storage';
+import { isOpenableDeeplink } from './deeplink';
 import { useAuth } from '../stores/auth';
 import { usePrefs } from '../stores/prefs';
 
@@ -169,7 +170,7 @@ export function useNotificationTapRouting(): void {
       // deeplink rather than push it into a 401 loop.
       if (!isOnboarded || !authUserId) return;
       const deeplink = response.notification.request.content.data?.deeplink;
-      if (typeof deeplink === 'string' && deeplink.startsWith('/')) {
+      if (isOpenableDeeplink(deeplink)) {
         router.push(deeplink as never);
       }
     };

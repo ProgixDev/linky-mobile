@@ -1,3 +1,20 @@
+// ════════════════════════════════════════════════════════════════════════════
+// FONCTIONNALITE RETIREE — 2026-09-09
+// ════════════════════════════════════════════════════════════════════════════
+// Client : « On peut retirer completement tout ce qui est visite. Ils vont
+// utiliser le chat in app pour se fixer un rdv pour la visite physique. »
+//
+// L'endpoint reste DEPLOYE mais refuse tout appel (VISITS_DISABLED, 403), sur
+// le modele de wallet-send : plus aucun ecran n'appelle ces routes, mais un
+// binaire deja installe chez un utilisateur, lui, les appelle encore. Un client
+// qui n'a pas recu la mise a jour doit se heurter au meme mur qu'un appel curl
+// — retirer l'ecran sans fermer la porte laisserait la fonctionnalite vivante
+// pour tous les APK en circulation.
+//
+// La table visit_requests et ses 3 lignes ne sont PAS supprimees : rien
+// n'oblige a detruire des donnees pour retirer une fonctionnalite, et une
+// suppression ne se rejoue pas si le client change d'avis.
+// ════════════════════════════════════════════════════════════════════════════
 // Owner marks an ACCEPTED visit as COMPLETED (the visit actually happened).
 // This is the missing writer of visit_requests.status='completed' — required
 // by the client rule "visite obligatoire avant toute transaction (achat/vente)":
@@ -17,7 +34,14 @@ function valid(b: unknown): b is Body {
   return typeof x.visit_request_id === 'string' && UUID_RE.test(x.visit_request_id);
 }
 
+// Retiree le 2026-09-09 (voir le bandeau en tete). Passer a true
+// suffirait a tout reactiver : rien d'autre n'a ete demonte cote serveur.
+const VISITS_ENABLED = false;
+
 Deno.serve(makePost<Body>('/v1/visits/complete', valid, async ({ sb, body, req }) => {
+  if (!VISITS_ENABLED) {
+    throwApi('VISITS_DISABLED', 403, 'Les visites se conviennent desormais par la messagerie.');
+  }
   const userId = await requireUser(req);
 
   const { data: visit, error: eV } = await sb

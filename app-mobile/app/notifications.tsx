@@ -12,10 +12,11 @@ import { useMarkNotificationsRead } from '../src/data/queries';
 import { useNotificationsInfinite } from '../src/data/queries/messages';
 import { Button } from '../src/components/primitives/Button';
 import type { AppNotification } from '../src/data/types';
+import { isOpenableDeeplink } from '../src/lib/deeplink';
 import { EmptyState, ErrorStateView } from '../src/components/feedback/EmptyState';
 import { Skeleton } from '../src/components/primitives/Skeleton';
 
-type Tab = 'all' | 'order' | 'message' | 'visit' | 'booking' | 'promo';
+type Tab = 'all' | 'order' | 'message' | 'booking' | 'promo';
 
 // TOUTES les pastilles sont montrees a tout le monde depuis le 2026-09-08.
 //
@@ -37,7 +38,9 @@ const TAB_DEFS: { key: Tab; labelKey: string }[] = [
   { key: 'all', labelKey: 'notifications.filterAll' },
   { key: 'order', labelKey: 'notifications.filterOrder' },
   { key: 'message', labelKey: 'notifications.filterMessage' },
-  { key: 'visit', labelKey: 'notifications.filterVisit' },
+  // « Visites » retiree le 2026-09-09 avec la fonctionnalite. Les alertes deja
+  // recues gardent leur categorie et restent lisibles dans « Toutes » — on
+  // retire le filtre, pas l'historique.
   { key: 'booking', labelKey: 'notifications.filterBooking' },
   { key: 'promo', labelKey: 'notifications.filterPromo' },
 ];
@@ -254,8 +257,9 @@ function NotificationRow({ item }: { item: AppNotification }) {
           : item.category === 'promo'
             ? { bg: colors.accentSoft, fg: colors.accentText }
             : { bg: colors.bgSunken, fg: colors.text };
-  // Same guard as the push-tap handler (push.ts): only in-app routes.
-  const canOpen = typeof item.deeplink === 'string' && item.deeplink.startsWith('/');
+  // Meme garde que le gestionnaire de tap (push.ts) : routes internes ET
+  // toujours existantes.
+  const canOpen = isOpenableDeeplink(item.deeplink);
   // Une seule constante pour la colonne d'icone : le retrait du separateur en
   // dessous doit tomber EXACTEMENT sous le texte. Deux valeurs ecrites a la
   // main finiraient par diverger d'un pixel ou deux, et c'est precisement ce
