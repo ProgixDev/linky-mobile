@@ -1,3 +1,4 @@
+import { useBuyerGate } from '../../../src/components/feedback/BuyerGate';
 import { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -48,6 +49,7 @@ export default function VisitRequestRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: property, isLoading, isError, refetch } = useProperty(id);
   const requestVisit = useRequestVisit();
+  const { requireBuyer } = useBuyerGate();
   const toast = useToast();
 
   const [dayId, setDayId] = useState('tomorrow');
@@ -318,6 +320,8 @@ export default function VisitRequestRoute() {
             disabled={!valid || requestVisit.isPending}
             onPress={async () => {
               if (!valid || !property || !slot) return;
+              // Filet pour l'arrivee directe sur cet ecran (lien profond).
+              if (!requireBuyer()) return;
               try {
                 haptic.medium();
                 const day = DAYS.find((d) => d.id === dayId)!;

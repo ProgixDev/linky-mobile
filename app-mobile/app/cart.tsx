@@ -18,6 +18,7 @@ import { formatGNF, formatEUR } from '../src/lib/format';
 import { platformFeeGnf, priceWithFeeGnf } from '../src/lib/fees';
 import { gnfToEur } from '../src/lib/currency';
 import { useCart } from '../src/stores/cart';
+import { useBuyerGate } from '../src/components/feedback/BuyerGate';
 import { useFilters } from '../src/stores/filters';
 import { apiPost } from '../src/lib/api';
 import type { Product } from '../src/data/types';
@@ -28,6 +29,7 @@ export default function CartRoute() {
   const { t } = useTranslation();
   const toast = useToast();
   const { lines, setQuantity, remove } = useCart();
+  const { requireBuyer } = useBuyerGate();
 
   // One real-backend fetch per cart line; shared cache with useProduct on the
   // detail page (same queryKey shape: ['product', id]).
@@ -317,6 +319,10 @@ export default function CartRoute() {
           block
           label={`${t('cart.pay')} · ${formatGNF(grandTotal)}`}
           onPress={() => {
+            // Le panier peut avoir ete rempli AVANT que le compte ne perde son
+            // role acheteur : ses articles restent, mais le paiement s'arrete
+            // ici plutot qu'a l'ecran suivant.
+            if (!requireBuyer()) return;
             haptic.light();
             router.push('/checkout');
           }}

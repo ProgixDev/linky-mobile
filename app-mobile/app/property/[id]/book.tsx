@@ -3,6 +3,7 @@
 // voir src/lib/fees.ts pour le taux),
 // then sends the request to the landlord (booking-request). The visit stays
 // OPTIONAL for rentals ; achat/vente keeps the mandatory-visit rule.
+import { useBuyerGate } from '../../../src/components/feedback/BuyerGate';
 import { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -38,6 +39,7 @@ export default function BookPropertyRoute() {
   const request = useRequestBooking();
   const availability = usePropertyAvailability(id);
   const { show } = useToast();
+  const { requireBuyer } = useBuyerGate();
 
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
@@ -73,6 +75,10 @@ export default function BookPropertyRoute() {
 
   const submit = () => {
     if (!ready || request.isPending || !startDate) return;
+    // Filet pour l'arrivee DIRECTE sur cet ecran : la fiche du bien verrouille
+    // deja le bouton « Reserver », mais un lien profond ou un retour arriere
+    // amenent ici sans repasser par elle.
+    if (!requireBuyer()) return;
     haptic.medium();
     request.mutate(
       {

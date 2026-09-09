@@ -9,6 +9,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { requireBuyerRole } from '@shared/roles.ts';
 import { notifyDetached, displayNameOf } from '@shared/push.ts';
 
 interface Body {
@@ -61,6 +62,12 @@ const SIXTY_DAYS_MS = 60 * 24 * 3600 * 1000;
 
 Deno.serve(makePost<Body>('/v1/visits/request', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
+  // VERROU « MODE ACHETEUR », cote serveur (client 2026-09-08 23:01). Place
+  // juste apres l'authentification et AVANT toute ecriture : un refus tardif
+  // laisserait derriere lui une commande, un lot ou une reservation a moitie
+  // constitues. Voir _shared/roles.ts pour ce qu'il ne faut SURTOUT pas
+  // verrouiller avec ce garde.
+  await requireBuyerRole(sb, userId);
 
   // Slot timing: strictly future, within 60 days.
   const reqMs = Date.parse(body.requested_at);

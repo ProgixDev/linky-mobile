@@ -1799,6 +1799,12 @@
     "becomeAgent": "Convertirme en {{role}}",
     "backHome": "Volver al inicio"
   },
+  "buyerGate": {
+    "title": "Activa el modo Comprador",
+    "body": "Para pedir un artículo o alquilar una vivienda, activa el rol Comprador en tu perfil. Conservas tu modo Vendedor o Agente inmobiliario.",
+    "cta": "Activar ahora",
+    "later": "Más tarde"
+  },
   "favoritesScreen": {
     "title": "Favoritos",
     "subtitle": "Sus favoritos, guardados para más tarde.",

@@ -9,8 +9,6 @@ import { NoiseOverlay } from '../../src/components/visuals/NoiseOverlay';
 import { WALLET_TOPUP_ENABLED } from '../../src/lib/flags';
 import {
   Bell,
-  Heart,
-  ShoppingBag,
   Plus,
   Store,
   Wallet,
@@ -47,7 +45,7 @@ import { haptic } from '../../src/lib/haptics';
 import { photos } from '../../src/data/photos';
 import { listingScope } from '../../src/lib/persona';
 import { useAuth } from '../../src/stores/auth';
-import { useCart } from '../../src/stores/cart';
+import { HeaderActions } from '../../src/components/nav/HeaderActions';
 import { useCreateListing } from '../../src/stores/createListing';
 import { useFilters } from '../../src/stores/filters';
 import {
@@ -205,7 +203,6 @@ function BuyerHome() {
   const { colors, theme } = useTheme();
   const { t } = useTranslation();
   const user = useAuth((s) => s.user);
-  const cartCount = useCart((s) => s.lines.length);
   const roles = useAuth((s) => s.roles);
   // SEPARATION DES MODES sur l'ACCUEIL (client 2026-09-08 22:50). L'accueil
   // affiche des annonces des DEUX categories — boutiques, produits populaires,
@@ -221,7 +218,6 @@ function BuyerHome() {
   const walletQuery = useWallet();
   const wallet = walletQuery.data;
   const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!wallet;
-  const { data: unreadCount = 0 } = useUnreadNotificationsCount();
 
   const firstName = (user?.display_name ?? t('home.fallbackName')).split(' ')[0];
   // Les trois dernieres pastilles (Location / Vente / Terrains) menent a
@@ -293,33 +289,17 @@ function BuyerHome() {
               </View>
             </View>
           </View>
-          {/* Favoris / notifications / panier — the trio, kept consistent with
-              the Marché header (client 2026-07-26). Favoris was moved here off
-              the Profil screen. */}
-          <CircleAction
-            onPress={() => router.push('/favorites')}
-            accessibilityLabel={t('home.favorites')}
-          >
-            <Heart size={18} color={colors.text} strokeWidth={1.75} />
-          </CircleAction>
-          <CircleAction
-            onPress={() => router.push('/notifications')}
-            accessibilityLabel={t('home.notifications')}
-            badge={unreadCount > 0 ? 'dot' : undefined}
-          >
-            <Bell size={18} color={colors.text} strokeWidth={1.75} />
-          </CircleAction>
-          {/* Phase X.10 (revised) — Messagerie is back as a dedicated tab and
-              Boutique was fused into the Profil hero card. The X.10-first
-              Messages icon + Home Boutique shortcut were both removed so the
-              header carries only universal commerce actions. */}
-          <CircleAction
-            onPress={() => router.push('/cart')}
-            accessibilityLabel={t('home.cart', { count: cartCount })}
-            badge={cartCount > 0 ? String(cartCount) : undefined}
-          >
-            <ShoppingBag size={18} color={colors.text} strokeWidth={1.75} />
-          </CircleAction>
+          {/* Favoris / notifications / panier — LE COMPOSANT PARTAGE, plus une
+              copie locale. Le commentaire d'origine disait deja que le trio
+              devait rester « consistent with the Marché header » (client
+              2026-07-26) ; il l'etait par recopie, et une recopie finit
+              toujours par diverger. Elle avait deja commence : quand le client
+              a demande de ne laisser que la cloche sans le role acheteur
+              (2026-09-08 23:00), seul l'exemplaire de Marche l'a appris.
+              L'accueil aurait garde panier et favoris pour un compte livreur —
+              qui n'est pas « pro pur » au sens de isPurePro, donc atterrit ici.
+              Un seul exemplaire : la regle s'applique aux deux ecrans. */}
+          <HeaderActions />
         </View>
 
         {/* Pro summary card removed from the Home (client 2026-07-30): it
@@ -609,84 +589,6 @@ function BuyerHome() {
 
 // ---------- Subcomponents ----------
 
-function CircleAction({
-  onPress,
-  children,
-  badge,
-  accessibilityLabel,
-}: {
-  onPress: () => void;
-  children: React.ReactNode;
-  badge?: 'dot' | string;
-  accessibilityLabel?: string;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      onPress={() => {
-        haptic.light();
-        onPress();
-      }}
-      accessibilityLabel={accessibilityLabel}
-      style={{
-        width: 42,
-        height: 42,
-        borderRadius: 999,
-        backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {children}
-      {badge === 'dot' ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            width: 9,
-            height: 9,
-            borderRadius: 999,
-            backgroundColor: colors.danger,
-            borderWidth: 2,
-            borderColor: colors.card,
-          }}
-        />
-      ) : typeof badge === 'string' ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: -3,
-            right: -3,
-            minWidth: 18,
-            height: 18,
-            paddingHorizontal: 5,
-            borderRadius: 999,
-            backgroundColor: colors.primary,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 2,
-            borderColor: colors.bg,
-          }}
-        >
-          <Text
-            style={{
-              color: '#FFFFFF',
-              fontSize: 10,
-              fontWeight: '700',
-              lineHeight: 12,
-              includeFontPadding: false,
-            }}
-          >
-            {badge}
-          </Text>
-        </View>
-      ) : null}
-    </Pressable>
-  );
-}
 
 function HomeWalletCard({
   balanceGnf,

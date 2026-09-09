@@ -17,6 +17,7 @@ import { useFonts } from 'expo-font';
 import i18n from '../src/i18n';
 import { ThemeProvider } from '../src/theme/ThemeProvider';
 import { ToastProvider } from '../src/components/feedback/Toast';
+import { BuyerGateProvider } from '../src/components/feedback/BuyerGate';
 import { UpdateBanner } from '../src/components/feedback/UpdateBanner';
 import { usePushRegistration, useNotificationTapRouting } from '../src/lib/push';
 
@@ -75,6 +76,12 @@ export default function RootLayout() {
                 <ThemeProvider>
                   <BottomSheetModalProvider>
                     <ToastProvider>
+                      {/* Le verrou « mode Acheteur » (client 2026-09-08 23:01)
+                          est monte ICI, une seule fois : sa feuille doit
+                          pouvoir s'ouvrir depuis n'importe quel bouton qui
+                          engage de l'argent, sans que l'ecran appelant ait a
+                          penser a la rendre. */}
+                      <BuyerGateProvider>
                       <PushBootstrap />
                       <StatusBar style="auto" />
                       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
@@ -179,6 +186,7 @@ export default function RootLayout() {
                           applied in ONE restart instead of two (client
                           2026-08-05 — testers kept running stale bundles). */}
                       <UpdateBanner />
+                      </BuyerGateProvider>
                     </ToastProvider>
                   </BottomSheetModalProvider>
                 </ThemeProvider>

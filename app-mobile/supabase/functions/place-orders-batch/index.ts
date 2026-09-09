@@ -23,6 +23,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { requireBuyerRole } from '@shared/roles.ts';
 import {
   initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
   LENGOPAY_RAILS, railIsDeadEnd, railActionUrl, RAIL_NO_ACTION_MESSAGE,
@@ -97,6 +98,12 @@ function stripPaymentSecret(body: unknown): unknown {
 
 Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
+  // VERROU « MODE ACHETEUR », cote serveur (client 2026-09-08 23:01). Place
+  // juste apres l'authentification et AVANT toute ecriture : un refus tardif
+  // laisserait derriere lui une commande, un lot ou une reservation a moitie
+  // constitues. Voir _shared/roles.ts pour ce qu'il ne faut SURTOUT pas
+  // verrouiller avec ce garde.
+  await requireBuyerRole(sb, userId);
 
   // Meme garde qu'en mono-boutique (place-order) : refuser AVANT de creer la
   // moindre commande, pas apres — un lot a moitie constitue qu'aucun rail ne

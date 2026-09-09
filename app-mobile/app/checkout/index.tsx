@@ -12,6 +12,7 @@ import { Card } from '../../src/components/primitives/Card';
 import { Button } from '../../src/components/primitives/Button';
 import { TopBar } from '../../src/components/nav/TopBar';
 import { StickyBottom } from '../../src/components/nav/StickyBottom';
+import { useBuyerGate } from '../../src/components/feedback/BuyerGate';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { Input } from '../../src/components/primitives/Input';
 import { I, type IconKey } from '../../src/icons/Icon';
@@ -126,6 +127,7 @@ export default function CheckoutRoute() {
   const allLines = useCart((s) => s.lines);
   const lines = shopId ? allLines.filter((l) => l.shopId === shopId) : allLines;
   const placeOrder = usePlaceOrder();
+  const { requireBuyer } = useBuyerGate();
   const cancelPending = useCancelPendingPayment();
   const placeBatch = usePlaceOrdersBatch();
   const { show } = useToast();
@@ -751,6 +753,11 @@ export default function CheckoutRoute() {
                   : t('checkout.payCta', { amount: formatGNF(total) })
           }
           onPress={() => {
+            // DERNIER FILET avant que l'argent ne parte. Les ecrans amont
+            // verrouillent deja, mais celui-ci est atteignable par un lien
+            // profond, par un retour arriere, ou apres un changement de role
+            // survenu pendant que l'ecran etait ouvert.
+            if (!requireBuyer()) return;
             // Livraison sans adresse : on ne prend pas le paiement — on envoie
             // d'abord ajouter une adresse de destination.
             if (loadFailed) {

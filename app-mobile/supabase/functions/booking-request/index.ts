@@ -10,6 +10,7 @@ import { makePost } from '@shared/wrap.ts';
 import { platformFee } from '@shared/fees.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { requireBuyerRole } from '@shared/roles.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 
 interface Body {
@@ -52,6 +53,12 @@ function valid(b: unknown): b is Body {
 
 Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req }) => {
   const tenantId = await requireUser(req);
+  // VERROU « MODE ACHETEUR », cote serveur (client 2026-09-08 23:01). Place
+  // juste apres l'authentification et AVANT toute ecriture : un refus tardif
+  // laisserait derriere lui une commande, un lot ou une reservation a moitie
+  // constitues. Voir _shared/roles.ts pour ce qu'il ne faut SURTOUT pas
+  // verrouiller avec ce garde.
+  await requireBuyerRole(sb, tenantId);
 
   const start = parseDate(body.start_date);
   if (!start) throwApi('INVALID_DATES', 400, 'Date de début invalide.');

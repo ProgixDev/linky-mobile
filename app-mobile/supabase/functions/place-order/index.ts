@@ -17,6 +17,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { requireBuyerRole } from '@shared/roles.ts';
 import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from '@shared/catalog.ts';
 import {
   initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
@@ -110,6 +111,12 @@ function stripPaymentSecret(body: unknown): unknown {
 
 Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
+  // VERROU « MODE ACHETEUR », cote serveur (client 2026-09-08 23:01). Place
+  // juste apres l'authentification et AVANT toute ecriture : un refus tardif
+  // laisserait derriere lui une commande, un lot ou une reservation a moitie
+  // constitues. Voir _shared/roles.ts pour ce qu'il ne faut SURTOUT pas
+  // verrouiller avec ce garde.
+  await requireBuyerRole(sb, userId);
 
   // Card needs Stripe configured — check BEFORE the RPC so a missing secret
   // doesn't create an order we'd immediately have to cancel. Same graceful

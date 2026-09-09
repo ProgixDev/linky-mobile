@@ -1799,6 +1799,12 @@
     "becomeAgent": "Become a {{role}}",
     "backHome": "Back to home"
   },
+  "buyerGate": {
+    "title": "Turn on Buyer mode",
+    "body": "To order an item or rent a place, turn on the Buyer role in your profile. You keep your Seller or Estate agent mode.",
+    "cta": "Turn it on",
+    "later": "Later"
+  },
   "favoritesScreen": {
     "title": "Favorites",
     "subtitle": "Your saved picks for later.",

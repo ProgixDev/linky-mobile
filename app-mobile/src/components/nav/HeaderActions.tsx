@@ -2,6 +2,16 @@
 // Accueil (home) AND Marché (annonces) screens so the three buttons are
 // identical everywhere (client 2026-07-26: favoris moved off Profil, and the
 // trio must be consistent across Accueil and Annonces).
+//
+// SAUF SANS LE RÔLE ACHETEUR — client, 2026-09-08 23:00 : « Laisser juste
+// l'icône notifications quand on est en mode Vendeur ou Immo ». Le message
+// suivant en donne la raison : sans ce rôle on ne peut ni commander ni louer.
+// Un panier et des favoris qui ne mènent nulle part ne sont pas neutres : ils
+// promettent une action que l'écran suivant refusera.
+//
+// L'accueil n'a rien a corriger de ce côté : un compte sans rôle acheteur y
+// reçoit ProHome, dont l'en-tête ne porte déjà que la cloche. C'est l'onglet
+// Annonces qui gardait le trio — l'écran de sa capture.
 import { View, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Heart, Bell, ShoppingBag } from 'lucide-react-native';
@@ -10,6 +20,8 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { haptic } from '../../lib/haptics';
 import { useCart } from '../../stores/cart';
+import { useAuth } from '../../stores/auth';
+import { canBuy } from '../../lib/persona';
 import { useUnreadNotificationsCount } from '../../data/queries';
 
 function ActionButton({
@@ -87,12 +99,18 @@ export function HeaderActions() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const cartCount = useCart((s) => s.lines.length);
+  const roles = useAuth((s) => s.roles);
+  // Les hooks restent inconditionnels : c'est le RENDU qui varie, pas l'ordre
+  // des hooks — un compte peut activer son rôle acheteur sans remonter l'écran.
+  const buyer = canBuy(roles);
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
   return (
     <View style={{ flexDirection: 'row', gap: 8 }}>
-      <ActionButton onPress={() => router.push('/favorites')} accessibilityLabel={t('home.favorites')}>
-        <Heart size={18} color={colors.text} strokeWidth={1.75} />
-      </ActionButton>
+      {buyer && (
+        <ActionButton onPress={() => router.push('/favorites')} accessibilityLabel={t('home.favorites')}>
+          <Heart size={18} color={colors.text} strokeWidth={1.75} />
+        </ActionButton>
+      )}
       <ActionButton
         onPress={() => router.push('/notifications')}
         accessibilityLabel={t('home.notifications')}
@@ -100,13 +118,15 @@ export function HeaderActions() {
       >
         <Bell size={18} color={colors.text} strokeWidth={1.75} />
       </ActionButton>
-      <ActionButton
-        onPress={() => router.push('/cart')}
-        accessibilityLabel={t('home.cart', { count: cartCount })}
-        badge={cartCount > 0 ? String(cartCount) : undefined}
-      >
-        <ShoppingBag size={18} color={colors.text} strokeWidth={1.75} />
-      </ActionButton>
+      {buyer && (
+        <ActionButton
+          onPress={() => router.push('/cart')}
+          accessibilityLabel={t('home.cart', { count: cartCount })}
+          badge={cartCount > 0 ? String(cartCount) : undefined}
+        >
+          <ShoppingBag size={18} color={colors.text} strokeWidth={1.75} />
+        </ActionButton>
+      )}
     </View>
   );
 }

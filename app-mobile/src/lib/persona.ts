@@ -41,3 +41,25 @@ export function listingScope(roles: string[]): ListingScope {
   if (isSeller === isAgent) return 'both';
   return isSeller ? 'products' : 'properties';
 }
+
+// Le droit d'ACHETER, de LOUER et de RÉSERVER.
+//
+// DEMANDE DU CLIENT, 2026-09-08 23:01 : « On ne peut pas faire de commande ni
+// louer si le mode Acheteur n'est pas activé. » Il l'avait déjà écrit le matin
+// (« il faut activer le profil acheteur pour pouvoir faire ça ») ; je l'avais
+// lu comme une plainte au lieu d'une règle. Cette fois c'est explicite.
+//
+// POURQUOI UNE FONCTION POUR UN `includes`. Parce que la portée d'affichage
+// ci-dessus s'est mise à dériver dès qu'elle a été recopiée à trois endroits,
+// et que celle-ci sera lue depuis bien plus de fichiers — chaque bouton qui
+// engage de l'argent. Un nom unique se cherche, se relit, et se change en un
+// seul endroit le jour où le client change d'avis.
+//
+// CE QUE CE VERROU N'EST PAS. Il protège l'ENGAGEMENT, pas ce qui a déjà été
+// engagé. Quelqu'un qui a commandé puis désactivé son rôle acheteur doit
+// toujours pouvoir suivre sa commande, scanner son QR, ouvrir un litige et
+// être remboursé — sinon de l'argent réel devient injoignable. Ne jamais
+// étendre `canBuy` aux écrans de suivi, de reçu ou de litige.
+export function canBuy(roles: string[]): boolean {
+  return roles.includes('buyer');
+}

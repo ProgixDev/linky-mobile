@@ -4,6 +4,7 @@
 // there's nothing to schedule. The visit-required precondition is enforced
 // server-side (booking-request); this screen surfaces that error clearly
 // rather than duplicating the check client-side.
+import { useBuyerGate } from '../../../src/components/feedback/BuyerGate';
 import { useState } from 'react';
 import { Platform, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -30,6 +31,7 @@ export default function BuyPropertyRoute() {
   const { data: prop, isLoading, isError, refetch } = useProperty(id);
   const request = useRequestBooking();
   const { show } = useToast();
+  const { requireBuyer } = useBuyerGate();
 
   const [note, setNote] = useState('');
 
@@ -48,6 +50,8 @@ export default function BuyPropertyRoute() {
 
   const submit = () => {
     if (request.isPending) return;
+    // Filet pour l'arrivee directe sur cet ecran (lien profond, retour arriere).
+    if (!requireBuyer()) return;
     haptic.medium();
     request.mutate(
       {

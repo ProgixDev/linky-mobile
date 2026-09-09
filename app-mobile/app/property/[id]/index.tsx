@@ -1,3 +1,4 @@
+import { useBuyerGate } from '../../../src/components/feedback/BuyerGate';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
@@ -31,6 +32,7 @@ import { haptic } from '../../../src/lib/haptics';
 import { shareMessage } from '../../../src/lib/share';
 
 export default function PropertyDetailRoute() {
+  const { requireBuyer } = useBuyerGate();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
   // LIVE carousel width (capped to the 500 content column). A static module
@@ -475,6 +477,11 @@ export default function PropertyDetailRoute() {
             onPress={() => router.push(`/property/edit/${prop.id}`)}
           />
         ) : prop.type === 'location' ? (
+          // VERROU « MODE ACHETEUR » sur reserver / acheter / visiter (client
+          // 2026-09-08 23:01). « Contacter » reste ouvert : ecrire au
+          // proprietaire n'engage rien, et la regle porte sur commander et
+          // louer. Chaque ecran d'arrivee reverrouille de son cote — un lien
+          // profond n'a pas a repasser par ici.
           // Booking flow (client 2026-07) : renting is the primary action ;
           // the visit stays available but OPTIONAL for rentals.
           <View style={{ flex: 1, gap: 8 }}>
@@ -482,7 +489,10 @@ export default function PropertyDetailRoute() {
               size="lg"
               block
               label="Réserver ce logement"
-              onPress={() => router.push(`/property/${prop.id}/book` as never)}
+              onPress={() => {
+                if (!requireBuyer()) return;
+                router.push(`/property/${prop.id}/book` as never);
+              }}
             />
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <Button
@@ -497,7 +507,10 @@ export default function PropertyDetailRoute() {
                 variant="outline"
                 style={{ flex: 1 }}
                 label="Visiter (optionnel)"
-                onPress={() => router.push(`/property/${prop.id}/visit`)}
+                onPress={() => {
+                  if (!requireBuyer()) return;
+                  router.push(`/property/${prop.id}/visit`);
+                }}
               />
             </View>
           </View>
@@ -512,7 +525,10 @@ export default function PropertyDetailRoute() {
               size="lg"
               block
               label="Acheter via l'application"
-              onPress={() => router.push(`/property/${prop.id}/buy` as never)}
+              onPress={() => {
+                if (!requireBuyer()) return;
+                router.push(`/property/${prop.id}/buy` as never);
+              }}
             />
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <Button
@@ -527,7 +543,10 @@ export default function PropertyDetailRoute() {
                 variant="outline"
                 style={{ flex: 1 }}
                 label="Visiter"
-                onPress={() => router.push(`/property/${prop.id}/visit`)}
+                onPress={() => {
+                  if (!requireBuyer()) return;
+                  router.push(`/property/${prop.id}/visit`);
+                }}
               />
             </View>
           </View>

@@ -11,6 +11,7 @@ import { priceWithFeeGnf } from '../../lib/fees';
 import { haptic } from '../../lib/haptics';
 import { useFavorites } from '../../stores/favorites';
 import { useCart } from '../../stores/cart';
+import { useBuyerGate } from '../feedback/BuyerGate';
 import { useStockGate } from '../../lib/stockGate';
 import { useToast } from '../feedback/Toast';
 import { useDataSaverImageProps } from '../../lib/dataSaver';
@@ -30,6 +31,7 @@ export function ProductCard({
   const sold = product.status === 'sold';
   const imgProps = useDataSaverImageProps();
   const addToCart = useCart((s) => s.add);
+  const { requireBuyer } = useBuyerGate();
   const toast = useToast();
   // Le stock ET ce qui est deja au panier : sans le second, chaque appui
   // ajoutait un exemplaire de plus, sans limite.
@@ -41,6 +43,12 @@ export function ProductCard({
    *  paiement boutique par boutique se font a l'ecran du panier. */
   const onQuickAdd = () => {
     haptic.light();
+    // VERROU « MODE ACHETEUR » (client 2026-09-08 23:01) — avant la garde de
+    // stock, volontairement : le stock est une propriete de l'article et il
+    // change, le role dit si ce geste est ouvert a cette personne tout court.
+    // Annoncer « rupture » a quelqu'un qui n'aurait de toute facon pas pu
+    // commander, c'est lui donner la mauvaise raison.
+    if (!requireBuyer()) return;
     if (gate.outOfStock) {
       toast.show(t('product.outOfStockToast'), 'info');
       return;

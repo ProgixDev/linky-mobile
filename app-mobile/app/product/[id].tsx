@@ -32,6 +32,7 @@ import { useProduct, useProducts, useToggleFavorite, useTrackView, useFindOrCrea
 import { useShop } from '../../src/data/queries/shops';
 import { useFavorites } from '../../src/stores/favorites';
 import { useCart } from '../../src/stores/cart';
+import { useBuyerGate } from '../../src/components/feedback/BuyerGate';
 import { useStockGate } from '../../src/lib/stockGate';
 import { useAuth } from '../../src/stores/auth';
 import { useToast } from '../../src/components/feedback/Toast';
@@ -68,6 +69,7 @@ export default function ProductDetailRoute() {
   }, [id]);
   const addToCart = useCart((s) => s.add);
   const replaceCart = useCart((s) => s.replaceWith);
+  const { requireBuyer } = useBuyerGate();
   // Declare AVANT le retour anticipe de la ligne 97 : un hook ne peut pas etre
   // appele conditionnellement. Tant que le produit charge, la garde porte sur
   // un identifiant vide et laisse passer — sans effet, l'ecran n'est pas rendu.
@@ -724,6 +726,9 @@ export default function ProductDetailRoute() {
                   // En revanche cet ecran n'avait AUCUNE garde de stock — ni
                   // rupture, ni plafond — alors que la carte de liste en avait
                   // une. Les deux chemins avaient diverge (client 2026-08-24).
+                  // VERROU « MODE ACHETEUR » (client 2026-09-08 23:01), place
+                  // avant la garde de stock pour la meme raison qu'en liste.
+                  if (!requireBuyer()) return;
                   if (gate.outOfStock) {
                     show(t('product.outOfStockToast'), 'info');
                     return;
@@ -765,6 +770,11 @@ export default function ProductDetailRoute() {
               <Pressable
                 onPress={() => {
                   haptic.medium();
+                  // Le verrou vient AVANT replaceCart : ce bouton VIDE le panier
+                  // pour n'y laisser que cet article. Le placer apres aurait
+                  // efface le panier de quelqu'un a qui on refuse ensuite l'acces
+                  // au paiement — une perte silencieuse, pour rien.
+                  if (!requireBuyer()) return;
                   // « Acheter » = buy THIS article now, so the cart is reset to it.
                   replaceCart(product.id, product.shopId);
                   router.push('/checkout');
