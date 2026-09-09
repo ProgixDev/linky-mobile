@@ -387,10 +387,14 @@ export function DiscoverCard({
         {/* ===== Rangee haute : badge « economie de donnees » =====
             Le commentaire d'origine parlait de « pastilles de filtre » : elles
             ont demenage dans decouvrir.tsx, il ne reste ici que le badge.
-            Elle reste masquee aux comptes restreints a une categorie, dont la
-            mise en page haute est
-            differente (pas de pastilles au-dessus). */}
-        {!isScoped && (
+            IL N'EST PLUS CONDITIONNE A LA PORTEE. Il l'etait par heritage : la
+            rangee contenait autrefois les pastilles, absentes chez un pro pur.
+            Mais le badge est en position absolue, cale a topInset + 8 et aligne
+            a DROITE — il ne rencontre jamais les pastilles. Le garder derriere
+            `isScoped` privait un vendeur ou un agent pur du seul signe que le
+            mode economie de donnees est actif, alors que ce reglage n'a rien a
+            voir avec la categorie qu'il publie. `dataSaver` suffit. */}
+        {(
           <View
             style={{
               position: 'absolute',

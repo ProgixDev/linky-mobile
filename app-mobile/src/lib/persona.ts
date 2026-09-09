@@ -32,12 +32,44 @@
 // jamais devenir injoignable.
 export type ListingScope = 'products' | 'properties' | 'both';
 
+// ⚠️ LA TABLE DE VÉRITÉ, PARCE QUE CETTE RÈGLE A ÉTÉ ÉCRITE TROIS FOIS.
+//
+//   acheteur  vendeur  agent   portée        d'où ça vient
+//   ────────────────────────────────────────────────────────────────────────
+//      ✓         ✗       ✗     both          acheteur simple
+//      ✓         ✓       ✗     both          client 2026-09-09 (voir plus bas)
+//      ✓         ✗       ✓     both          client 2026-09-09 (son compte)
+//      ✓         ✓       ✓     both
+//      ✗         ✓       ✗     products      client 2026-09-08 22:50
+//      ✗         ✗       ✓     properties    client 2026-09-08 22:50
+//      ✗         ✓       ✓     both          les deux catégories publiées
+//      ✗         ✗       ✗     both          rôles pas encore remontés
+//
+// TROISIÈME ÉNONCÉ DU CLIENT, 2026-09-09 : « En masquant les annonces immo en
+// mode Vendeur uniquement et les annonces Articles en mode Immo uniquement, tu
+// as masqué pour le mode Acheteur + Vendeur et aussi Acheteur + Immo. »
+//
+// Autrement dit : la restriction ne vise QUE le professionnel pur. Dès que le
+// rôle acheteur est actif, la personne achète — et qui achète voit tout le
+// catalogue. C'est cohérent avec `canBuy` juste en dessous : le rôle acheteur
+// est ce qui donne le droit d'acheter, il serait absurde qu'il ouvre la caisse
+// en fermant la moitié du magasin.
+//
+// CE TERME AVAIT DÉJÀ EXISTÉ, ET JE L'AVAIS RETIRÉ LA VEILLE. Le client avait
+// signalé que la séparation ne s'appliquait pas sur son compte ; j'en ai conclu
+// que le terme acheteur était le coupable et je l'ai supprimé, ce qui a étendu
+// la restriction aux comptes mixtes. La cause était ailleurs : `loadRoles()`
+// (src/stores/auth.ts) retombe sur ['buyer'] tant que la charge serveur n'est
+// pas arrivée, si bien qu'un démarrage à froid montre tout pendant un instant.
+// Ce repli est VOULU — dans le doute, un catalogue complet vaut mieux qu'un
+// catalogue vide — mais il ressemble à une règle cassée. Ne pas le « corriger »
+// en durcissant la portée : c'est ce qui a produit ce troisième aller-retour.
 export function listingScope(roles: string[]): ListingScope {
+  // Le rôle acheteur l'emporte sur tout le reste.
+  if (roles.includes('buyer')) return 'both';
   const isSeller = roles.includes('seller');
   const isAgent = roles.includes('agent');
-  // Les deux rôles, ou aucun : rien à restreindre. « Aucun » couvre l'acheteur
-  // simple et le compte tout juste créé dont les rôles ne sont pas encore
-  // remontés — dans le doute on montre tout, jamais un catalogue vide.
+  // Les deux rôles de publication, ou aucun : rien à restreindre.
   if (isSeller === isAgent) return 'both';
   return isSeller ? 'products' : 'properties';
 }

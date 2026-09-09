@@ -828,8 +828,18 @@ function CategoryGridTile({
         onPress();
       }}
       style={{
+        // PAS de flexGrow. Avec 8 pastilles — deux rangees pleines de 4 — il ne
+        // se voyait pas. Des que la grille est filtree par categorie (5 pour un
+        // vendeur, 3 pour un agent), la derniere rangee n'est plus pleine et
+        // l'element s'etire pour occuper toute la largeur : `flexBasis` cesse
+        // alors d'etre une largeur DEFINIE, la boite interieure en `width: 100%`
+        // n'a plus rien contre quoi se resoudre, et `aspectRatio: 1` en tire une
+        // hauteur enorme. C'est la pastille geante « Beaute & Sante » de la
+        // capture client du 2026-09-09.
+        // Sans grow, la largeur reste 22 % dans tous les cas : la rangee
+        // incomplete est simplement alignee a gauche, avec des pastilles de
+        // taille normale.
         flexBasis: '22%',
-        flexGrow: 1,
         alignItems: 'center',
         gap: 8,
       }}

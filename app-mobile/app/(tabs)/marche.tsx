@@ -153,7 +153,6 @@ export default function MarcheRoute() {
   // acheteur donne le droit d'acheter, pas celui de voir l'autre catalogue.
   // C'est le terme qui manquait — un vendeur ayant aussi coche « Acheteur »
   // echappait a la separation et voyait les deux onglets.
-  const isBuyer = roles.includes('buyer');
   const scope = listingScope(roles);
   const onlyProducts = scope === 'products';
   const onlyProperties = scope === 'properties';
@@ -215,8 +214,13 @@ export default function MarcheRoute() {
   // regarde-t-il ». Il reste donc reserve au pro qui n'achete PAS. Un vendeur
   // ayant coche « Acheteur » voit la meme liste d'articles, mais pour y
   // acheter — lui annoncer qu'il espionne la concurrence serait faux.
-  const isScoutSeller = onlyProducts && !isBuyer;
-  const isScoutAgent = onlyProperties && !isBuyer;
+  // Le garde « et pas acheteur » a ete retire ici : depuis que listingScope rend
+  // 'both' des que le role acheteur est present (client 2026-09-09),
+  // `onlyProducts` implique deja l'absence de ce role. Garder le terme laisserait
+  // croire que les deux conditions different — c'est ce genre de doublon qui a
+  // fait deriver la regle.
+  const isScoutSeller = onlyProducts;
+  const isScoutAgent = onlyProperties;
   const isScouting = isScoutSeller || isScoutAgent;
 
   // Near-bottom trigger for fetchNextPage. 600px buffer = pre-fetch before the user
