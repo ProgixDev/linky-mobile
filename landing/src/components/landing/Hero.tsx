@@ -5,9 +5,10 @@ import { motion } from 'motion/react';
 import { ShieldCheck, Wallet, Sparkles } from 'lucide-react';
 import { AndroidDownloadButton } from './AndroidDownloadButton';
 import { AppStoreBadges } from './AppStoreBadges';
-import { ANDROID_APK_PATH, DRIVER_APK_PATH } from '@/lib/download';
+import { ANDROID_APK_PATH, DRIVER_APK_PATH, type AndroidRelease } from '@/lib/download';
+import { AppVersionNote } from './AppVersionNote';
 
-export function Hero() {
+export function Hero({ release = null }: { release?: AndroidRelease | null }) {
   return (
     <section className="relative min-h-screen overflow-hidden">
       {/* Full-bleed background */}
@@ -105,6 +106,7 @@ export function Hero() {
                 variant="secondary"
               />
             </div>
+            <AppVersionNote release={release} />
             <div className="flex flex-col gap-2.5">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-[#1E2825]/45">
                 Bientôt aussi sur

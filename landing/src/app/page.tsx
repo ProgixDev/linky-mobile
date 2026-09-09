@@ -8,12 +8,17 @@ import { Trust } from '@/components/landing/Trust';
 import { FAQ } from '@/components/landing/FAQ';
 import { CTABand } from '@/components/landing/CTABand';
 import { Footer } from '@/components/landing/Footer';
+import { getLatestAndroidRelease } from '@/lib/download';
 
-export default function Page() {
+export default async function Page() {
+  // Lu ICI, cote serveur, puis passe aux deux boutons : une seule requete par
+  // rendu au lieu d'une par emplacement, et aucun risque que l'accroche et la
+  // bande d'appel affichent deux versions differentes.
+  const release = await getLatestAndroidRelease();
   return (
     <main>
       <Nav />
-      <Hero />
+      <Hero release={release} />
       <Features />
       <HowItWorks />
       <Discover />
@@ -26,7 +31,7 @@ export default function Page() {
           un seul paiement. Elle reviendra quand de vrais clients auront de
           vrais avis a donner. */}
       <FAQ />
-      <CTABand />
+      <CTABand release={release} />
       <Footer />
     </main>
   );

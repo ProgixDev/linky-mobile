@@ -1,8 +1,9 @@
 import { AppStoreBadges } from './AppStoreBadges';
 import { AndroidDownloadButton } from './AndroidDownloadButton';
-import { ANDROID_APK_PATH, DRIVER_APK_PATH } from '@/lib/download';
+import { ANDROID_APK_PATH, DRIVER_APK_PATH, type AndroidRelease } from '@/lib/download';
+import { AppVersionNote } from './AppVersionNote';
 
-export function CTABand() {
+export function CTABand({ release = null }: { release?: AndroidRelease | null }) {
   return (
     <section
       id="download"
@@ -41,6 +42,7 @@ export function CTABand() {
                   variant="onDarkGhost"
                 />
               </div>
+              <AppVersionNote release={release} tone="light" />
               <div className="flex flex-col items-center gap-2.5">
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-white/50">
                   Bientôt sur les stores
