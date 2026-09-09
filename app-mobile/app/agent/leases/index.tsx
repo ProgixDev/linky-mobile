@@ -1,4 +1,7 @@
-// Landlord "Suivi des baux" — real bookings list (was a ComingSoon placeholder).
+// Landlord "Réservations" — real bookings list (was a ComingSoon placeholder).
+// Intitule aligne sur la pastille du tableau de bord le 2026-09-09 : arriver
+// sur « Suivi des baux » apres avoir touche « Réservations » donnait
+// l'impression de s'etre trompe d'ecran.
 // Requests to approve, signed/paid leases, active leases.
 import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
@@ -35,7 +38,7 @@ export default function LeasesRoute() {
   if (q.isError && bookings.length === 0) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Suivi des baux" subtitle="Tes locations : demandes, contrats et loyers." />
+        <ScreenHeader title="Réservations" subtitle="Tes locations et ventes : demandes, contrats et loyers." />
         <ErrorStateView onRetry={() => void q.refetch()} />
       </SafeAreaView>
     );
@@ -48,7 +51,7 @@ export default function LeasesRoute() {
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <ScreenHeader title="Suivi des baux" subtitle="Tes locations : demandes, contrats et loyers." />
+        <ScreenHeader title="Réservations" subtitle="Tes locations et ventes : demandes, contrats et loyers." />
         {q.isLoading ? (
           <View style={{ paddingHorizontal: 20, paddingTop: 8, gap: 14 }}>
             <Skeleton height={92} radius={18} />

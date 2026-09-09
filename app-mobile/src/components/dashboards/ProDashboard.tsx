@@ -873,10 +873,18 @@ export function EstateDashboard() {
               completement tout ce qui est visite. Ils vont utiliser le chat in
               app pour se fixer un rdv »). L'agent prend ses rendez-vous par la
               messagerie ; il ne reste donc aucun ecran a ouvrir ici. */}
-          {/* Booking flow — the "Suivi des baux" screens are real now. */}
+          {/* « Baux » renommee « Réservations » le 2026-09-09 (client : « Je
+              mettrai Demandes ou Reservation ou Gestion locative »).
+              « Demandes » ne couvrait que le premier des quatre groupes de
+              l'ecran ; « Gestion locative » exclut les ventes, qui atterrissent
+              ici aussi. « Réservations » nomme exactement ce que la liste
+              contient — et c'est deja le mot que l'ecran employait tout seul
+              (« Aucune réservation reçue »), et celui que voit le locataire en
+              face (« Mes réservations »). Un meme objet, un meme mot des deux
+              cotes de la transaction. */}
           <QuickAction
             Icon={KeyRound}
-            label="Baux"
+            label="Réservations"
             onPress={() => router.push('/agent/leases' as never)}
           />
           {/* Boost occupe la place liberee par « Demandes » (doublon des
@@ -1162,7 +1170,19 @@ function QuickAction({
           </View>
         )}
       </View>
-      <Text style={{ fontSize: 11.5, fontWeight: '600', color: colors.text, letterSpacing: 0 }}>
+      {/* « Réservations » (12 caracteres) est le libelle le plus long de la
+          rangee : sur un ecran de 360 dp la case ne fait que ~72 dp et le mot
+          debordait ou se coupait en plein milieu. Une seule ligne, et on laisse
+          la police se reduire de 15 % au besoin — les libelles courts
+          (Booster, Stats, Retraits) tiennent deja et ne bougent pas d'un
+          pixel. Tronquer aurait donne « Réservatio… », ce qui est pire qu'un
+          demi-point de corps en moins. */}
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
+        style={{ fontSize: 11.5, fontWeight: '600', color: colors.text, letterSpacing: 0 }}
+      >
         {label}
       </Text>
     </Pressable>
