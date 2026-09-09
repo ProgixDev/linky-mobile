@@ -45,12 +45,14 @@ import { Text } from '../primitives/Text';
 import { Card } from '../primitives/Card';
 import { MicroLabel } from '../lists/SectionHeader';
 import { I } from '../../icons/Icon';
+import { PAY_LOGOS } from '../../lib/paymentLogos';
 import { formatGNF } from '../../lib/format';
 import { usePaymentProfile } from '../../lib/paymentProfile';
 import type { PaymentMethod } from '../../data/types';
 
-const ORANGE_LOGO: number = require('../../../assets/images/pay-orange-money.png');
-const MTN_LOGO: number = require('../../../assets/images/pay-mtn-momo.png');
+// Meme source que l'ecran de paiement marketplace — voir src/lib/paymentLogos.ts.
+const ORANGE_LOGO = PAY_LOGOS.orangeMoney;
+const MTN_LOGO = PAY_LOGOS.mtnMomo;
 
 /** Valeur par defaut du rail mobile money quand un ecran doit en pre-selectionner
  *  une (l'acheteur choisit ensuite Orange ou MTN explicitement — Lengopay v2 a

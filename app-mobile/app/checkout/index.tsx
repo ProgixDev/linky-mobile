@@ -12,6 +12,7 @@ import { Card } from '../../src/components/primitives/Card';
 import { Button } from '../../src/components/primitives/Button';
 import { TopBar } from '../../src/components/nav/TopBar';
 import { StickyBottom } from '../../src/components/nav/StickyBottom';
+import { PAY_LOGOS } from '../../src/lib/paymentLogos';
 import { useBuyerGate } from '../../src/components/feedback/BuyerGate';
 import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { Input } from '../../src/components/primitives/Input';
@@ -44,10 +45,9 @@ const STRIPE_TEST_MODE = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '').
 // MEME page hebergee Lengopay, ou l'operateur se choisit vraiment. Le choix
 // etait donc pose deux fois, et le premier ne servait a rien : au mieux du
 // bruit, au pire un acheteur convaincu d'avoir deja designe son operateur.
-const MOBILE_MONEY_LOGOS: number[] = [
-  require('../../assets/images/pay-orange-money.png'),
-  require('../../assets/images/pay-mtn-momo.png'),
-];
+// Les logos vivent dans src/lib/paymentLogos.ts : cet ecran et
+// PaymentMethodPicker en chargeaient chacun sa copie.
+const MOBILE_MONEY_LOGOS: number[] = [PAY_LOGOS.orangeMoney, PAY_LOGOS.mtnMomo];
 
 // Valeur transmise au serveur. La page hebergee laissant le payeur choisir son
 // operateur, cette etiquette n'est qu'une reference portee par l'intention de
