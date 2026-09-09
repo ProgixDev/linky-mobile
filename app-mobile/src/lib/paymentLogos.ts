@@ -24,9 +24,14 @@ export const PAY_LOGOS = {
   // (cercles Mastercard aux couleurs officielles + le mot VISA). 1,6 Ko — un
   // logo telecharge aurait pese vingt fois plus pour une tuile de 40 px.
   card: require('../../assets/images/pay-card.png') as number,
-  // Le mark Linky lui-meme, recadre depuis l'icone de l'application et reduit
-  // en palette 16 couleurs. Le portefeuille est un moyen de paiement comme les
-  // autres : il merite sa marque, pas une icone generique.
+  // LA CARTE LINKY, dessinee. Le client a d'abord vu une version qui reprenait
+  // seulement le mark ∞ et a repondu, a juste titre : « ca ne ressemble pas a
+  // une carte ». D'ou une silhouette de carte, avec le ∞ en OR dessus.
+  //
+  // POURQUOI IL N'Y A PAS DE PUCE. Trois elements ne tiennent pas dans 40 px :
+  // teste a la taille reelle, la puce devenait un point dore sans forme et le
+  // ∞ s'ecrasait. La silhouette suffit a dire « carte » ; la puce ne disait
+  // plus rien. Deux elements, tous deux lisibles.
   walletLinky: require('../../assets/images/pay-wallet-linky.png') as number,
   // Portefeuille guineen. Fichier fourni par le client le 2026-09-09.
   kulu: require('../../assets/images/pay-kulu.png') as number,
