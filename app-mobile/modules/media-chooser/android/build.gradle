@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.linky.mediachooser'
+version = '0.1.0'
+
+android {
+  namespace "com.linky.mediachooser"
+}
+
+dependencies {
+  // FileProvider vient d'androidx.core. Il arriverait sans doute de facon
+  // transitive par expo-modules-core, mais dependre d'un transitif pour une
+  // classe qu'on importe explicitement, c'est laisser le build casser le jour
+  // ou la chaine change. Meme version que celle d'expo-image-picker, pour ne
+  // pas introduire un second androidx.core dans le graphe.
+  implementation "androidx.core:core-ktx:1.17.0"
+}

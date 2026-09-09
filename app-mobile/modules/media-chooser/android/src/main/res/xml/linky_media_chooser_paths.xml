@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+  <!-- Tout ce que le module ecrit vit dans cache/linky-media : ni la galerie de
+       l'utilisateur, ni un stockage permanent. Android purge ce dossier tout
+       seul, et le fichier n'a besoin de survivre que jusqu'a la fin du
+       televersement. -->
+  <cache-path name="linky-media" path="linky-media/" />
+</paths>

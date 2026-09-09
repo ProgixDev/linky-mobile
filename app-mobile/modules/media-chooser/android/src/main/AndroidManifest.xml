@@ -1,0 +1,32 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!-- L'appareil photo ecrit dans un fichier de NOTRE cache : il lui faut donc
+         une URI qu'il ait le droit d'ouvrir. Autorite propre au module pour ne
+         pas entrer en collision avec celle d'expo-image-picker, qui reste en
+         place et sert toujours de repli. -->
+    <provider
+      android:name="androidx.core.content.FileProvider"
+      android:authorities="${applicationId}.LinkyMediaChooserProvider"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/linky_media_chooser_paths" />
+    </provider>
+  </application>
+
+  <!-- Visibilite des paquets (Android 11+). Sans ces declarations,
+       resolveActivity() rend null depuis notre processus et l'entree
+       « Appareil photo » disparait du selecteur.
+       expo-image-picker declare bien IMAGE_CAPTURE, mais son action video est
+       mal orthographiee (« android.media.action.ACTION_VIDEO_CAPTURE » au lieu
+       de « android.media.action.VIDEO_CAPTURE ») : on declare la bonne ici. -->
+  <queries>
+    <intent>
+      <action android:name="android.media.action.IMAGE_CAPTURE" />
+    </intent>
+    <intent>
+      <action android:name="android.media.action.VIDEO_CAPTURE" />
+    </intent>
+  </queries>
+</manifest>

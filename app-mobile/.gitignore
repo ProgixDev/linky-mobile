@@ -4,6 +4,13 @@ dist/
 .expo-shared/
 ios/
 android/
+# ...sauf les sources du module natif local. La regle « android/ » ci-dessus
+# attrape N'IMPORTE QUEL dossier de ce nom, a n'importe quelle profondeur : le
+# Kotlin de modules/media-chooser/android/ etait donc ignore en silence. Les
+# fichiers deja suivis ne sont pas concernes par un .gitignore, mais un NOUVEAU
+# fichier natif l'aurait ete — et ne serait jamais parti au build.
+!modules/**/android/
+!modules/**/android/**
 *.log
 .DS_Store
 .env*
