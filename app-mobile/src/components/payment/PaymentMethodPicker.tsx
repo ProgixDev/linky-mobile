@@ -112,7 +112,7 @@ export function PaymentMethodPicker({
             onPress={() => onChange(showStripe ? 'card' : 'lengopay-card')}
             title={t('checkout.cardName')}
             hint={t('checkout.cardHint')}
-            icon={<I.card size={18} color={colors.text} />}
+            logos={[PAY_LOGOS.card]}
           />
         </>
       )}
@@ -179,7 +179,7 @@ export function PaymentMethodPicker({
             onPress={() => onChange('wallet')}
             title={t('checkout.walletLinky')}
             hint={t('checkout.walletBalance', { amount: formatGNF(walletBalanceGnf as number) })}
-            icon={<I.wallet size={18} color={colors.text} />}
+            logos={[PAY_LOGOS.walletLinky]}
           />
         </>
       )}

@@ -521,12 +521,17 @@ export default function CheckoutRoute() {
                       width: 40,
                       height: 40,
                       borderRadius: 10,
-                      backgroundColor: colors.bgSunken,
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      backgroundColor: '#FFFFFF',
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: colors.border,
                     }}
                   >
-                    <I.card size={18} color={colors.text} />
+                    <Image
+                      source={PAY_LOGOS.card}
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit="cover"
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.cardName')}</Text>
@@ -678,17 +683,24 @@ export default function CheckoutRoute() {
                 onPress={() => setSelected('wallet')}
                 style={{ padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}
               >
+                {/* Fond BLANC et non primarySoft : le mark Linky porte deja
+                    ses couleurs, une pastille verte derriere les ecraserait. */}
                 <View
                   style={{
                     width: 40,
                     height: 40,
                     borderRadius: 10,
-                    backgroundColor: colors.primarySoft,
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    backgroundColor: '#FFFFFF',
+                    overflow: 'hidden',
+                    borderWidth: 1,
+                    borderColor: colors.border,
                   }}
                 >
-                  <I.wallet size={18} color={colors.primary} />
+                  <Image
+                    source={PAY_LOGOS.walletLinky}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="cover"
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.walletLinky')}</Text>

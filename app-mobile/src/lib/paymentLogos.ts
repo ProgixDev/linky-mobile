@@ -20,4 +20,12 @@
 export const PAY_LOGOS = {
   orangeMoney: require('../../assets/images/pay-orange-money.png') as number,
   mtnMomo: require('../../assets/images/pay-mtn-momo.png') as number,
+  // « Carte bancaire » : les deux marques d'acceptation, dessinees a la main
+  // (cercles Mastercard aux couleurs officielles + le mot VISA). 1,6 Ko — un
+  // logo telecharge aurait pese vingt fois plus pour une tuile de 40 px.
+  card: require('../../assets/images/pay-card.png') as number,
+  // Le mark Linky lui-meme, recadre depuis l'icone de l'application et reduit
+  // en palette 16 couleurs. Le portefeuille est un moyen de paiement comme les
+  // autres : il merite sa marque, pas une icone generique.
+  walletLinky: require('../../assets/images/pay-wallet-linky.png') as number,
 } as const;
