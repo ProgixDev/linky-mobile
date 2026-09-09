@@ -2,8 +2,9 @@
 // pick a duration tier, pay from the wallet. Price is server-authoritative
 // (create-boost re-derives it from days); this screen only sends
 // { productId | propertyId, days }. Insufficient balance surfaces a message.
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
@@ -208,7 +209,20 @@ export default function BoostNewRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('pro.boostNewTitle')} back />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 22, paddingBottom: 40 }}>
+      {/* CLAVIER : le champ « numero pour le paiement » se retrouvait CACHE
+          DERRIERE le clavier (client 2026-09-09, capture a l'appui). Un
+          ScrollView ordinaire ne fait rien de particulier quand un champ prend
+          le focus : sous adjustResize la fenetre retrecit, mais rien ne
+          remonte le champ dans la partie encore visible. On tape a l'aveugle.
+
+          KeyboardAwareScrollView vient de react-native-keyboard-controller,
+          deja installe et deja monte a la racine (KeyboardProvider) : c'est le
+          meme moteur que les KeyboardAvoidingView de l'onboarding, mais qui
+          fait defiler jusqu'au champ focalise au lieu de pousser tout l'ecran.
+
+          `bottomOffset` = la marge gardee SOUS le champ une fois remonte. Le bouton est dans le
+          defilement, comme sur l'ecran de reservation. */}
+      <KeyboardAwareScrollView bottomOffset={24} contentContainerStyle={{ padding: 16, gap: 22, paddingBottom: 40 }}>
         <Text tone="muted" variant="micro" style={{ letterSpacing: 0, textTransform: 'none' }}>
           {t('pro.boostWalletBalance', { balance: formatGNF(wallet.data?.balanceGnf ?? 0) })}
         </Text>
@@ -380,7 +394,7 @@ export default function BoostNewRoute() {
             onPress={() => void onPay()}
           />
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

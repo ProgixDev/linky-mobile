@@ -2,8 +2,9 @@
 //   requested → Annuler
 //   accepted  → Signer & payer (hold-to-confirm signature → Stripe sheet)
 //   paid      → Confirmer l'emménagement (hold-to-confirm → escrow release)
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
@@ -170,7 +171,20 @@ export default function BookingDetailRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={isSale ? 'Achat' : 'Réservation'} back />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 16 }}>
+      {/* CLAVIER : le champ « numero pour le paiement » se retrouvait CACHE
+          DERRIERE le clavier (client 2026-09-09, capture a l'appui). Un
+          ScrollView ordinaire ne fait rien de particulier quand un champ prend
+          le focus : sous adjustResize la fenetre retrecit, mais rien ne
+          remonte le champ dans la partie encore visible. On tape a l'aveugle.
+
+          KeyboardAwareScrollView vient de react-native-keyboard-controller,
+          deja installe et deja monte a la racine (KeyboardProvider) : c'est le
+          meme moteur que les KeyboardAvoidingView de l'onboarding, mais qui
+          fait defiler jusqu'au champ focalise au lieu de pousser tout l'ecran.
+
+          `bottomOffset` = la marge gardee SOUS le champ une fois remonte. Le bouton de
+          paiement vit dans le defilement : 24 px suffisent a le degager. */}
+      <KeyboardAwareScrollView bottomOffset={24} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 16 }}>
         <View style={{ gap: 8 }}>
           <Text style={{ fontSize: 18, fontWeight: '700' }}>{booking.property?.title}</Text>
           <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
@@ -310,7 +324,7 @@ export default function BookingDetailRoute() {
             }
           />
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

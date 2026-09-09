@@ -1,5 +1,6 @@
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
@@ -382,7 +383,22 @@ export default function CheckoutRoute() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('checkout.title')} back />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
+      {/* CLAVIER : le champ « numero pour le paiement » se retrouvait CACHE
+          DERRIERE le clavier (client 2026-09-09, capture a l'appui). Un
+          ScrollView ordinaire ne fait rien de particulier quand un champ prend
+          le focus : sous adjustResize la fenetre retrecit, mais rien ne
+          remonte le champ dans la partie encore visible. On tape a l'aveugle.
+
+          KeyboardAwareScrollView vient de react-native-keyboard-controller,
+          deja installe et deja monte a la racine (KeyboardProvider) : c'est le
+          meme moteur que les KeyboardAvoidingView de l'onboarding, mais qui
+          fait defiler jusqu'au champ focalise au lieu de pousser tout l'ecran.
+
+          `bottomOffset` = la marge gardee SOUS le champ une fois remonte. Ici le bouton « Payer » est
+          dans un StickyBottom, colle au bas de la fenetre AU-DESSUS du clavier :
+          sans marge, le champ remonterait juste derriere lui. 110 px couvrent sa
+          hauteur (contenu + paddings + encoche du bas). */}
+      <KeyboardAwareScrollView bottomOffset={110} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
         {/* Mode de réception (client 2026-07-30) : livraison Linky ou retrait. */}
         <MicroLabel label="Mode de réception" />
         <Card padding={0} style={{ overflow: 'hidden', marginBottom: needsAddress || deliveryMode === 'delivery' ? 8 : 16 }}>
@@ -735,7 +751,7 @@ export default function CheckoutRoute() {
             <Text style={{ fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{formatGNF(total)}</Text>
           </View>
         </Card>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <StickyBottom>
         <Button
