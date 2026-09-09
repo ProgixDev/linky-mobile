@@ -3,7 +3,7 @@
 //   accepted  → Signer & payer (hold-to-confirm signature → Stripe sheet)
 //   paid      → Confirmer l'emménagement (hold-to-confirm → escrow release)
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -64,7 +64,38 @@ export default function BookingDetailRoute() {
   const payerCardDigits = payerCard.replace(/\D/g, '');
   const payerCardValid = method !== 'paycard' || payerCardDigits.length >= 6;
 
+  // ATTENTE DE CONFIRMATION — client 2026-09-09 : « l'utilisateur did his
+  // payment and the page still in this ». Sur Orange/MTN la demande part chez
+  // l'operateur et l'ecran restait le formulaire de paiement, avec un simple
+  // toast qui disparait en trois secondes. Le locataire ne savait ni si sa
+  // demande etait partie, ni quoi attendre.
+  //
+  // Cote articles ce moment a son ecran (checkout/confirm) ; il n'avait pas
+  // d'equivalent ici. Plutot que de generaliser cet ecran-la — 407 lignes
+  // nouees aux commandes, a leur intention de paiement et au panier — l'attente
+  // est rendue ICI, sur l'ecran ou le locataire se trouve deja.
+  const [awaitingPayment, setAwaitingPayment] = useState(false);
+
   const booking = (q.data ?? []).find((b) => b.id === id);
+  const bookingStatus = booking?.status;
+
+  // LE COMMENTAIRE D'ORIGINE DISAIT QUE CET ECRAN SONDAIT. Il ne sondait pas :
+  // useMyBookings n'a aucun refetchInterval, et le seul refetch partait juste
+  // apres l'envoi, quand la reservation est forcement encore 'accepted'.
+  // L'ecran ne bougeait donc jamais tout seul. 5 s, la meme cadence que les
+  // commandes sur un rail Lengopay ; l'intervalle s'arrete des que le statut
+  // change, et n'existe pas hors de l'attente.
+  const refetchRef = useRef(q.refetch);
+  refetchRef.current = q.refetch;
+  useEffect(() => {
+    if (!awaitingPayment) return;
+    if (bookingStatus && bookingStatus !== 'accepted') {
+      setAwaitingPayment(false);
+      return;
+    }
+    const timer = setInterval(() => { void refetchRef.current(); }, 5000);
+    return () => clearInterval(timer);
+  }, [awaitingPayment, bookingStatus]);
 
   if (q.isLoading || !booking) {
     return <DetailStateScreen loading={q.isLoading} title="Réservation" onRetry={() => void q.refetch()} />;
@@ -157,7 +188,9 @@ export default function BookingDetailRoute() {
       // On reste sur l'ecran, qui sonde jusqu'a ce que le cron passe la
       // reservation en 'paid'. Meme prudence que le rail carte juste au-dessus :
       // ne rien annoncer comme paye tant que le serveur ne l'a pas acte.
-      show('Demande envoyée — confirme sur ton téléphone.', 'info');
+      // On ne se contente plus d'un toast : l'ecran passe en attente et se met
+      // a jour tout seul jusqu'a ce que le cron bascule la reservation en 'paid'.
+      setAwaitingPayment(true);
       void q.refetch();
     } catch (e) {
       show(toToastMessage(e, 'Le paiement a échoué.'), 'danger');
@@ -225,7 +258,60 @@ export default function BookingDetailRoute() {
             boost (client 2026-09-04 : « unifier les methodes de paiement »).
             Il n'y en avait AUCUN ici : l'ecran sautait droit au champ
             telephone, ce qui bloquait net un payeur de la diaspora. */}
-        {booking.status === 'accepted' && (
+        {/* L'ATTENTE DE CONFIRMATION. Meme structure que l'ecran des articles :
+            ce qui a ete demande, a qui, pour combien — puis ce qu'il reste a
+            faire. Le formulaire de paiement s'efface pendant ce temps : le
+            laisser inviterait a repayer une demande deja partie.
+
+            PAS DE COMPTE A REBOURS, contrairement a l'ecran des commandes. Il y
+            affiche l'echeance REELLE de l'intention de paiement ; la charge
+            d'une reservation ne porte aucune information d'intention, donc tout
+            chiffre affiche ici serait invente. Mieux vaut ne rien annoncer que
+            d'annoncer faux sur un ecran d'argent.
+
+            PAS DE « ANNULER LE PAIEMENT » NON PLUS : cancel-pending-payment
+            n'accepte qu'un order_id. « Annuler la demande » juste en dessous
+            reste disponible et annule la reservation, ce qui est une autre
+            action — elle porte donc son propre nom. */}
+        {booking.status === 'accepted' && awaitingPayment && (
+          <View style={{ gap: 12 }}>
+            <MicroLabel label="Paiement en cours" />
+            <View
+              style={{
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                padding: 14,
+                gap: 10,
+              }}
+            >
+              <AwaitRow label="Méthode" value={method === 'mtn-money' ? 'MTN Mobile Money' : 'Orange Money'} />
+              <AwaitRow label="Numéro" value={formatGnPhone(payerPhone.digits)} />
+              <AwaitRow label="Montant" value={formatGNF(booking.totalGnf)} />
+            </View>
+
+            <View
+              style={{
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: 'rgba(232,165,61,0.35)',
+                backgroundColor: colors.accentSoft,
+                padding: 14,
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700' }}>
+                ⏳  Confirme sur ton téléphone
+              </Text>
+              <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', lineHeight: 17 }}>
+                {`Une demande de ${formatGNF(booking.totalGnf)} vient de partir sur ton téléphone. Valide-la avec ton code — cet écran se met à jour tout seul.`}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {booking.status === 'accepted' && !awaitingPayment && (
           <View>
             <MicroLabel label="Moyen de paiement" />
             <PaymentMethodPicker value={method} onChange={setMethod} />
@@ -236,7 +322,7 @@ export default function BookingDetailRoute() {
             l'information propre a ce rail, le telephone n'en est que le canal
             du code. Sans ce champ, le bouton echouerait sur un
             CARD_NUMBER_REQUIRED que rien a l'ecran ne permettrait de corriger. */}
-        {booking.status === 'accepted' && method === 'paycard' && (
+        {booking.status === 'accepted' && !awaitingPayment && method === 'paycard' && (
           <Input
             label="Numéro de compte PayCard"
             leadingIcon="card"
@@ -251,7 +337,7 @@ export default function BookingDetailRoute() {
         {/* Numero qui paie — pre-rempli avec celui du compte s'il est guineen,
             modifiable sinon (la diaspora regle avec un compte OM/MTN guineen
             pilote a distance). Inutile pour la carte. */}
-        {booking.status === 'accepted' && needsPayerPhone && (
+        {booking.status === 'accepted' && !awaitingPayment && needsPayerPhone && (
           <Input
             // PayCard pose DEUX champs de chiffres : sans libellé distinct,
             // le locataire retape son numéro de carte ici.
@@ -282,7 +368,7 @@ export default function BookingDetailRoute() {
         )}
 
         {/* Stage actions */}
-        {booking.status === 'accepted' && (
+        {booking.status === 'accepted' && !awaitingPayment && (
           <HoldToConfirmButton
             // Amount lives in the trust strip above — keeping it out of the
             // label stops the text from crowding the 56px pill.
@@ -326,5 +412,17 @@ export default function BookingDetailRoute() {
         )}
       </KeyboardAwareScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Une ligne « libelle / valeur » du recapitulatif d'attente. */
+function AwaitRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+        {label}
+      </Text>
+      <Text style={{ fontSize: 13.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{value}</Text>
+    </View>
   );
 }
