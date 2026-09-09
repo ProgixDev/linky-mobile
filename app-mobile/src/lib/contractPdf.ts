@@ -1,3 +1,4 @@
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import { formatGNF } from './format';
 import { formatBookingDate } from '../components/booking/BookingUI';
 import type { Booking } from '../data/types';
@@ -58,10 +59,46 @@ type SharingLike = {
   shareAsync: (uri: string, opts?: Record<string, unknown>) => Promise<void>;
 };
 
+// LA SONDE EST FAITE UNE SEULE FOIS, AU CHARGEMENT, ET LE RENDU NE LIT QU'UN
+// BOOLEEN. C'est le motif exact de src/lib/nativeMediaChooser.ts:36-38, qui est
+// compile dans le binaire du client depuis des semaines et n'a jamais rien fait
+// tomber : interroger le registre au niveau du module est sur, y compris quand
+// le module natif est absent.
+//
+// Le rendu, lui, ne doit RIEN faire de natif. contractPdfAvailable() est
+// appelee pendant le rendu de l'ecran d'une reservation dont le contrat porte
+// les deux signatures ; en la reduisant a la lecture d'une constante, on retire
+// definitivement cette classe de plantage du chemin de rendu.
+const NATIVE_PRESENT =
+  !!requireOptionalNativeModule('ExpoPrint') && !!requireOptionalNativeModule('ExpoSharing');
+
 let nativeCache: { print: PrintLike; sharing: SharingLike } | null | undefined;
 
 function loadNative(): { print: PrintLike; sharing: SharingLike } | null {
   if (nativeCache !== undefined) return nativeCache;
+
+  // LE REGISTRE D'ABORD, LE PAQUET ENSUITE. requireOptionalNativeModule
+  // interroge la table des modules natifs et REND null quand il en manque un —
+  // elle porte son propre try/catch et ne leve jamais. Tant qu'elle n'a pas
+  // repondu, on ne touche pas a `expo-print` : sur un ancien binaire, le paquet
+  // n'est donc jamais evalue, et la question de savoir si son erreur est
+  // rattrapable ne se pose meme plus.
+  //
+  // POURQUOI CE DETOUR PLUTOT QUE LE SEUL try/catch. Le premier correctif
+  // (a7fcc20) enfermait require('expo-print') dans un try/catch, en pariant sur
+  // le fait que Metro relaie l'erreur du module — ce qu'il fait bien
+  // (metro-runtime/src/polyfills/require.js:315). Mais l'ecran gris est revenu
+  // sur les reservations dont le contrat porte les DEUX signatures, c'est-a-dire
+  // exactement celles ou contractPdfAvailable() est appelee. Je ne parie pas la
+  // production sur une subtilite de moteur quand ce depot contient deja un
+  // motif eprouve : src/lib/nativeMediaChooser.ts:36-38 interroge le registre
+  // de cette maniere, il est compile dans le binaire du client, et il n'a
+  // jamais rien fait planter.
+  if (!NATIVE_PRESENT) {
+    nativeCache = null;
+    return null;
+  }
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const print = require('expo-print') as PrintLike;
@@ -72,8 +109,8 @@ function loadNative(): { print: PrintLike; sharing: SharingLike } | null {
         ? { print, sharing }
         : null;
   } catch {
-    // Ancien binaire : le natif n'y est pas. Ce n'est pas une erreur, c'est un
-    // telephone qui n'a pas encore la mise a jour.
+    // Ceinture ET bretelles : le registre a repondu, mais si l'evaluation du
+    // paquet echoue quand meme, l'ecran ne doit pas tomber pour autant.
     nativeCache = null;
   }
   return nativeCache;
@@ -85,7 +122,7 @@ function loadNative(): { print: PrintLike; sharing: SharingLike } | null {
  * echouerait.
  */
 export function contractPdfAvailable(): boolean {
-  return loadNative() !== null;
+  return NATIVE_PRESENT;
 }
 
 /** Le contrat est-il un document complet, signe par les deux parties ? */
