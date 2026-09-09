@@ -28,4 +28,6 @@ export const PAY_LOGOS = {
   // en palette 16 couleurs. Le portefeuille est un moyen de paiement comme les
   // autres : il merite sa marque, pas une icone generique.
   walletLinky: require('../../assets/images/pay-wallet-linky.png') as number,
+  // Portefeuille guineen. Fichier fourni par le client le 2026-09-09.
+  kulu: require('../../assets/images/pay-kulu.png') as number,
 } as const;

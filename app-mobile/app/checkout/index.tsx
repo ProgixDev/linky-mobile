@@ -585,6 +585,7 @@ export default function CheckoutRoute() {
             ton numero », qui le decrit aussi. */}
         {showGuineaWallets && (
           <OperatorRow
+            logo={PAY_LOGOS.kulu}
             title={t('checkout.rails.kulu')}
             hint={t('checkout.rails.kuluHint')}
             selected={selected === 'kulu'}

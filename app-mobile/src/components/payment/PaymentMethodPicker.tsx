@@ -141,7 +141,7 @@ export function PaymentMethodPicker({
           onPress={() => onChange('kulu')}
           title={t('checkout.rails.kulu')}
           hint={t('checkout.rails.kuluHint')}
-          icon={<I.wallet size={18} color={colors.text} />}
+          logos={[PAY_LOGOS.kulu]}
         />
       )}
 
