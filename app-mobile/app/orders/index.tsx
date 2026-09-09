@@ -17,8 +17,8 @@ import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
+import { FilterChips, type FilterChip } from '../../src/components/nav/FilterChips';
 import { ScreenHeader } from '../../src/components/nav/ScreenHeader';
-import { haptic } from '../../src/lib/haptics';
 import { useMyOrders } from '../../src/data/queries';
 import { formatGNF } from '../../src/lib/format';
 import type { Order, OrderStatus } from '../../src/data/types';
@@ -50,7 +50,7 @@ export default function OrdersIndex() {
   const [filter, setFilter] = useState<Filter>('all');
   const { data: orders = [] } = useMyOrders();
 
-  const FILTERS: { id: Filter; label: string }[] = useMemo(
+  const FILTERS: FilterChip<Filter>[] = useMemo(
     () => [
       { id: 'all', label: t('orders.filterAll') },
       { id: 'active', label: t('orders.filterActive') },
@@ -79,51 +79,10 @@ export default function OrdersIndex() {
              vendeur pour un retrait — qui le scanne. */
         />
 
-        {/* Filter chips */}
-        <View
-          style={{
-            paddingHorizontal: 24,
-            marginBottom: 14,
-            flexDirection: 'row',
-            gap: 8,
-          }}
-        >
-          {FILTERS.map((f) => {
-            const active = filter === f.id;
-            return (
-              <Pressable
-                key={f.id}
-                onPress={() => {
-                  haptic.selection();
-                  setFilter(f.id);
-                }}
-                style={{
-                  paddingHorizontal: 14,
-                  height: 36,
-                  borderRadius: 999,
-                  backgroundColor: active ? colors.text : colors.card,
-                  borderWidth: 1,
-                  borderColor: active ? colors.text : colors.border,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: active ? colors.bg : colors.text,
-                    letterSpacing: 0,
-                    lineHeight: 15,
-                    includeFontPadding: false,
-                  }}
-                >
-                  {f.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {/* La rangee vit desormais dans FilterChips : le client a demande le
+            meme filtre sur ses reservations, et deux copies identiques auraient
+            fini par diverger. */}
+        <FilterChips chips={FILTERS} value={filter} onChange={setFilter} />
 
         <View style={{ paddingHorizontal: 24, gap: 10 }}>
           {filtered.map((o) => (

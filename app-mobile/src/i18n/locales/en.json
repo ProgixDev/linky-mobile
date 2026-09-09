@@ -1305,6 +1305,13 @@
       "refunded": "REFUNDED"
     }
   },
+  "bookings": {
+    "filterAll": "All",
+    "filterPending": "Pending",
+    "filterActive": "Active",
+    "filterCompleted": "Completed",
+    "filterCancelled": "Cancelled"
+  },
   "order": {
     "trackingTitle": "Order tracking",
     "fallbackTitle": "Order",

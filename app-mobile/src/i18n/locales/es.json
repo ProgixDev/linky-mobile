@@ -1305,6 +1305,13 @@
       "refunded": "REEMBOLSADO"
     }
   },
+  "bookings": {
+    "filterAll": "Todas",
+    "filterPending": "Pendientes",
+    "filterActive": "Activas",
+    "filterCompleted": "Completadas",
+    "filterCancelled": "Canceladas"
+  },
   "order": {
     "trackingTitle": "Seguimiento del pedido",
     "fallbackTitle": "Pedido",
