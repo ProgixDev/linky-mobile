@@ -605,6 +605,7 @@ export default function CheckoutRoute() {
             (aucun numero a saisir ici). */}
         {showGuineaWallets && (
           <OperatorRow
+            logo={PAY_LOGOS.soutraMoney}
             title={t('checkout.rails.soutraMoney')}
             hint={t('checkout.rails.soutraMoneyHint')}
             selected={selected === 'soutramoney'}
@@ -619,6 +620,7 @@ export default function CheckoutRoute() {
             champs ci-dessous. */}
         {showGuineaWallets && (
           <OperatorRow
+            logo={PAY_LOGOS.paycard}
             title={t('checkout.rails.paycard')}
             hint={t('checkout.rails.paycardHint')}
             selected={selected === 'paycard'}

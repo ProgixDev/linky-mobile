@@ -153,7 +153,7 @@ export function PaymentMethodPicker({
           onPress={() => onChange('soutramoney')}
           title={t('checkout.rails.soutraMoney')}
           hint={t('checkout.rails.soutraMoneyHint')}
-          icon={<I.wallet size={18} color={colors.text} />}
+          logos={[PAY_LOGOS.soutraMoney]}
         />
       )}
 
@@ -167,7 +167,7 @@ export function PaymentMethodPicker({
           onPress={() => onChange('paycard')}
           title={t('checkout.rails.paycard')}
           hint={t('checkout.rails.paycardHint')}
-          icon={<I.card size={18} color={colors.text} />}
+          logos={[PAY_LOGOS.paycard]}
         />
       )}
 

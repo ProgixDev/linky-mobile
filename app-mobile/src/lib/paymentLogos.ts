@@ -35,4 +35,13 @@ export const PAY_LOGOS = {
   walletLinky: require('../../assets/images/pay-wallet-linky.png') as number,
   // Portefeuille guineen. Fichier fourni par le client le 2026-09-09.
   kulu: require('../../assets/images/pay-kulu.png') as number,
+  // Soutra Money : recadre sur l'ELEPHANT seul. Le logo complet porte le
+  // nom, le mot « money » et un slogan ; a 40 px le slogan devenait de la
+  // bouillie et tirait tout le reste vers le bas. Le slogan chevauchant la
+  // trompe horizontalement, aucun rectangle ne pouvait les separer : il a
+  // fallu blanchir tout ce qui n'etait pas bleu. Meme parti que Kulu, dont le
+  // client a lui-meme envoye la baleine seule — et la ligne porte de toute
+  // facon le nom ecrit a cote.
+  soutraMoney: require('../../assets/images/pay-soutra-money.png') as number,
+  paycard: require('../../assets/images/pay-paycard.png') as number,
 } as const;
