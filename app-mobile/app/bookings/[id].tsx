@@ -24,7 +24,7 @@ import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { formatGNF } from '../../src/lib/format';
 import { contractIsSigned, contractPdfAvailable, shareContractPdf } from '../../src/lib/contractPdf';
-import { formatGnPhone } from '../../src/lib/gnPhone';
+import { formatGnPhone, gnOperatorMismatch } from '../../src/lib/gnPhone';
 import { usePayerPhone } from '../../src/lib/payerPhone';
 import type { PaymentMethod } from '../../src/data/types';
 
@@ -58,7 +58,17 @@ export default function BookingDetailRoute() {
     || method === 'kulu' || method === 'paycard';
   const payerPhone = usePayerPhone();
   const needsPayerPhone = needsAccountNumber && !payerPhone.loading;
-  const payerPhoneValid = !needsAccountNumber || payerPhone.valid;
+  // LE NUMERO DOIT CORRESPONDRE AU RAIL CHOISI. Le 2026-09-09 a 22:14, un
+  // numero MTN (66x) est parti sur le rail Orange Money : Lengopay a repondu
+  // « Incorrect phone number », en anglais, et le paiement a echoue sans que
+  // l'utilisateur puisse comprendre. On tranche donc AVANT de partir, avec un
+  // message qui dit quoi faire. gnOperatorMismatch rend null des qu'elle n'est
+  // pas certaine du prefixe : un numero inconnu passe et c'est le rail qui
+  // tranche, plutot que de bloquer un client sur un prefixe recent.
+  const operatorWarning = needsAccountNumber && payerPhone.valid
+    ? gnOperatorMismatch(payerPhone.digits, method)
+    : null;
+  const payerPhoneValid = (!needsAccountNumber || payerPhone.valid) && !operatorWarning;
   const payerPhoneE164 = payerPhone.e164;
   // Numero de compte PayCard. Il ne quitte l'appareil que dans l'appel
   // d'initialisation : ni stocke, ni journalise.
@@ -386,7 +396,7 @@ export default function BookingDetailRoute() {
             errorText={
               payerPhone.digits.length > 0 && !payerPhone.valid
                 ? 'Numéro invalide (9 chiffres, commence par 6).'
-                : undefined
+                : (operatorWarning ?? undefined)
             }
             helperText={
               // Neutre volontairement : ce champ sert aussi Kulu depuis le

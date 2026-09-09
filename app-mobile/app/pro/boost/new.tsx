@@ -22,6 +22,7 @@ import { useToast } from '../../../src/components/feedback/Toast';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
 import { formatGnPhone } from '../../../src/lib/gnPhone';
 import { usePayerPhone } from '../../../src/lib/payerPhone';
+import { gnOperatorMismatch } from '../../../src/lib/gnPhone';
 import { PaymentMethodPicker } from '../../../src/components/payment/PaymentMethodPicker';
 import {
   useBoosts,
@@ -110,7 +111,13 @@ export default function BoostNewRoute() {
   // client 2026-09-05), pre-rempli avec celui du compte s'il est guineen.
   const payerPhone = usePayerPhone();
   const needsPayerPhone = mobileMoneySelected && !payerPhone.loading;
-  const payerPhoneValid = !mobileMoneySelected || payerPhone.valid;
+  // Meme garde que sur l'ecran de reservation : un numero MTN parti sur le rail
+  // Orange est refuse par le prestataire avec un message anglais brut
+  // (incident du 2026-09-09 22:14). On tranche avant l'appel, en francais.
+  const operatorWarning = mobileMoneySelected && payerPhone.valid
+    ? gnOperatorMismatch(payerPhone.digits, method)
+    : null;
+  const payerPhoneValid = (!mobileMoneySelected || payerPhone.valid) && !operatorWarning;
   const payerPhoneE164 = payerPhone.e164;
   // Numero de compte PayCard. Il ne quitte l'appareil que dans l'appel
   // d'initialisation : ni stocke, ni journalise.
@@ -366,7 +373,7 @@ export default function BoostNewRoute() {
             errorText={
               payerPhone.digits.length > 0 && !payerPhone.valid
                 ? t('checkout.payerPhoneInvalid')
-                : undefined
+                : (operatorWarning ?? undefined)
             }
             helperText={payerPhone.digits.length === 0 ? t('checkout.payerPhoneHint') : undefined}
           />

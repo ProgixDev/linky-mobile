@@ -28,6 +28,7 @@ import { DELIVERY_FEE_GNF, type DeliveryMode } from '../../src/lib/delivery';
 import { usePaymentProfile } from '../../src/lib/paymentProfile';
 import { formatGnPhone } from '../../src/lib/gnPhone';
 import { usePayerPhone } from '../../src/lib/payerPhone';
+import { gnOperatorMismatch } from '../../src/lib/gnPhone';
 import type { PaymentMethod, Product } from '../../src/data/types';
 import { useToast } from '../../src/components/feedback/Toast';
 
@@ -101,7 +102,11 @@ export default function CheckoutRoute() {
   // pilotant un compte OM/MTN guineen depuis l'etranger, client 2026-09-05).
   const payerPhone = usePayerPhone();
   const payerPhoneDigits = payerPhone.digits;
-  const payerPhoneValid = payerPhone.valid;
+  // Meme garde que sur l'ecran de reservation : un numero MTN parti sur le rail
+  // Orange est refuse par le prestataire avec un message anglais brut
+  // (incident du 2026-09-09 22:14). On tranche avant l'appel, en francais.
+  const operatorWarning = payerPhone.valid ? gnOperatorMismatch(payerPhone.digits, selected) : null;
+  const payerPhoneValid = payerPhone.valid && !operatorWarning;
   const payerPhoneE164 = payerPhone.e164;
   // Numero de compte PayCard. Il ne quitte jamais l'appareil autrement que dans
   // l'appel d'initialisation : ni stocke, ni journalise, ni renvoye.
@@ -664,9 +669,9 @@ export default function CheckoutRoute() {
               value={formatGnPhone(payerPhoneDigits)}
               onChangeText={payerPhone.onChange}
               errorText={
-                payerPhoneDigits.length > 0 && !payerPhoneValid
+                payerPhoneDigits.length > 0 && !payerPhone.valid
                   ? t('checkout.payerPhoneInvalid')
-                  : undefined
+                  : (operatorWarning ?? undefined)
               }
               helperText={selected === 'paycard'
                 ? t('checkout.payerPhoneHintPaycard')
