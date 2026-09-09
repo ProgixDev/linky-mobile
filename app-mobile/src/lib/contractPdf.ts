@@ -1,5 +1,3 @@
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { formatGNF } from './format';
 import { formatBookingDate } from '../components/booking/BookingUI';
 import type { Booking } from '../data/types';
@@ -25,6 +23,70 @@ import type { Booking } from '../data/types';
  * Une feuille distante qui ne charge pas donnerait un document nu, et sur un
  * forfait guineen elle ne chargerait pas toujours.
  */
+
+/**
+ * AUCUN IMPORT STATIQUE DE MODULE NATIF DANS CE FICHIER. C'EST LA LECON DU SOIR.
+ *
+ * INCIDENT DU 2026-09-09, 21:14. Le client ne pouvait plus reserver : la
+ * reservation etait bien creee en base, puis l'application basculait sur
+ * /bookings/[id] et n'affichait qu'un ECRAN GRIS VIDE. Aucune erreur serveur,
+ * aucune intention de paiement — le plantage etait entierement cote telephone.
+ *
+ * LA CAUSE. expo-print appelle requireNativeModule('ExpoPrint') AU CHARGEMENT
+ * DU MODULE (node_modules/expo-print/build/ExponentPrint.js:2), pas au premier
+ * appel. Il leve donc des l'import. Or app/bookings/[id].tsx importe ce fichier
+ * en tete, et expo-print + expo-sharing ont ete ajoutes a 18:03, APRES la
+ * construction de vc12 — l'APK que le client a sur son telephone. La mise a
+ * jour OTA lui a livre du code JS qui reclamait du code natif absent de son
+ * binaire : tout l'ecran mourait avant de s'afficher.
+ *
+ * UNE MISE A JOUR OTA NE PEUT PAS APPORTER DE CODE NATIF. Toute dependance
+ * native introduite entre deux builds doit donc etre chargee PARESSEUSEMENT et
+ * echouer en douceur, sinon elle transforme un ajout de fonctionnalite en
+ * panne totale pour tous ceux qui n'ont pas encore reinstalle. C'est exactement
+ * la protection deja en place sur le module media-chooser
+ * (requireOptionalNativeModule) ; elle manquait ici.
+ *
+ * Le require est evalue au premier besoin et enferme dans un try/catch : sur un
+ * ancien binaire, le bouton disparait simplement, et le reste de l'ecran — le
+ * paiement, le contrat a l'ecran, la confirmation d'emmenagement — continue de
+ * fonctionner normalement.
+ */
+type PrintLike = { printToFileAsync: (o: { html: string }) => Promise<{ uri: string }> };
+type SharingLike = {
+  isAvailableAsync: () => Promise<boolean>;
+  shareAsync: (uri: string, opts?: Record<string, unknown>) => Promise<void>;
+};
+
+let nativeCache: { print: PrintLike; sharing: SharingLike } | null | undefined;
+
+function loadNative(): { print: PrintLike; sharing: SharingLike } | null {
+  if (nativeCache !== undefined) return nativeCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const print = require('expo-print') as PrintLike;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const sharing = require('expo-sharing') as SharingLike;
+    nativeCache =
+      typeof print?.printToFileAsync === 'function' && typeof sharing?.shareAsync === 'function'
+        ? { print, sharing }
+        : null;
+  } catch {
+    // Ancien binaire : le natif n'y est pas. Ce n'est pas une erreur, c'est un
+    // telephone qui n'a pas encore la mise a jour.
+    nativeCache = null;
+  }
+  return nativeCache;
+}
+
+/**
+ * Ce telephone sait-il produire le PDF ? Faux sur un binaire anterieur au
+ * 2026-09-09 : on masque le bouton plutot que de proposer une action qui
+ * echouerait.
+ */
+export function contractPdfAvailable(): boolean {
+  return loadNative() !== null;
+}
 
 /** Le contrat est-il un document complet, signe par les deux parties ? */
 export function contractIsSigned(b: Booking): boolean {
@@ -146,13 +208,17 @@ export function contractHtml(b: Booking): string {
  */
 export async function shareContractPdf(b: Booking): Promise<string | null> {
   if (!b.contract) return "Ce contrat n'est pas encore disponible.";
+  const native = loadNative();
+  if (!native) {
+    return 'Mets a jour l’application pour telecharger le contrat.';
+  }
   try {
-    const { uri } = await Print.printToFileAsync({ html: contractHtml(b) });
+    const { uri } = await native.print.printToFileAsync({ html: contractHtml(b) });
     // Certaines configurations n'ont aucune cible de partage (emulateur nu).
-    if (!(await Sharing.isAvailableAsync())) {
+    if (!(await native.sharing.isAvailableAsync())) {
       return 'Le partage n’est pas disponible sur cet appareil.';
     }
-    await Sharing.shareAsync(uri, {
+    await native.sharing.shareAsync(uri, {
       mimeType: 'application/pdf',
       dialogTitle: 'Contrat Linky',
       UTI: 'com.adobe.pdf',

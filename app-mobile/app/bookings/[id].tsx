@@ -23,7 +23,7 @@ import { PaymentMethodPicker, LENGOPAY_METHOD } from '../../src/components/payme
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { formatGNF } from '../../src/lib/format';
-import { contractIsSigned, shareContractPdf } from '../../src/lib/contractPdf';
+import { contractIsSigned, contractPdfAvailable, shareContractPdf } from '../../src/lib/contractPdf';
 import { formatGnPhone } from '../../src/lib/gnPhone';
 import { usePayerPhone } from '../../src/lib/payerPhone';
 import type { PaymentMethod } from '../../src/data/types';
@@ -259,7 +259,12 @@ export default function BookingDetailRoute() {
 
             Tout vient de l'appareil : `booking.contract` est l'instantane fige
             a la demande. Le PDF se genere donc sans reseau. */}
-        {contractIsSigned(booking) && (
+        {/* contractPdfAvailable() : sur un binaire anterieur au 2026-09-09 le
+            code natif d'impression n'existe pas. On masque le bouton au lieu de
+            proposer une action qui echouerait — et surtout, plus rien ici ne
+            peut faire tomber l'ecran entier (voir l'incident decrit dans
+            src/lib/contractPdf.ts). */}
+        {contractIsSigned(booking) && contractPdfAvailable() && (
           <Button
             variant="outline"
             size="lg"
