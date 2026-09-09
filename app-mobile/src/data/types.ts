@@ -370,10 +370,24 @@ export interface WalletMovement {
   status: 'received' | 'escrow' | 'completed' | 'pending';
 }
 
+/** D'ou vient l'argent d'un portefeuille — voir la migration
+ *  20260909_01_wallet_origin_breakdown. La somme des origines EGALE le solde. */
+export type WalletOrigin =
+  | 'products'    // ventes d'articles encaissees
+  | 'properties'  // locations et ventes immobilieres encaissees
+  | 'topup'       // recharges
+  | 'refund'      // remboursements recus
+  | 'purchase'    // achats payes depuis le portefeuille
+  | 'boost'       // mises en avant payees
+  | 'withdrawal'  // retraits
+  | 'other';
+
 export interface Wallet {
   balanceGnf: number;
   pendingGnf: number;
   movements: WalletMovement[];
+  /** Net par origine. Une origine qui se solde a zero est absente. */
+  originsGnf: Partial<Record<WalletOrigin, number>>;
 }
 
 export interface Message {

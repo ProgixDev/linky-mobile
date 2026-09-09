@@ -40,6 +40,7 @@ import {
   useDeleteProduct,
   useDeleteProperty,
 } from '../../data/queries';
+import { WalletOrigins } from '../wallet/WalletOrigins';
 import { useWallet } from '../../data/queries/wallet';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sheet } from '../sheets/Sheet';
@@ -1089,6 +1090,11 @@ function WalletHero({
               </Pressable>
             )}
           </View>
+          {/* D'ou vient cet argent. La MEME carte sert au tableau de bord
+              boutique et a celui de l'agence : c'est precisement ce qui avait
+              trouble le client, qui voyait un solde sur son ecran immobilier
+              sans avoir eu la moindre reservation. La ligne le dit. */}
+          <WalletOrigins origins={wallet.data?.originsGnf} />
         </View>
       </View>
     </Pressable>

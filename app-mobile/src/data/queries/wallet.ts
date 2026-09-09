@@ -3,9 +3,10 @@
 // shape the existing screens consume. Only GNF is surfaced in the UI for V1.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
-import type { Wallet, WalletMovement } from '../types';
+import type { Wallet, WalletMovement, WalletOrigin } from '../types';
 
 interface BalanceRow { wallet_id: string; currency: string; balance_minor: number }
+interface OriginRow { currency: string; origin: string; net_minor: number }
 interface HistoryEntry {
   id: string;
   wallet_id: string;
@@ -18,16 +19,26 @@ interface HistoryEntry {
   created_at: string;
 }
 
-// Keys = actual ledger ref_type values (see migrations: confirm_topup,
-// place_order, confirm_order_receipt, resolve_dispute, process_withdrawal).
+// Les cles sont les ref_type REELS du grand livre, releves sur les appels a
+// post_transfer dans les migrations (11 valeurs distinctes).
+//
+// DEUX CLES ETAIENT FAUSSES et deux familles manquaient : 'topup' et
+// 'withdrawal_payout' n'existent pas — le grand livre ecrit 'credit' et
+// 'debit' — et rien ne couvrait l'immobilier ni les mises en avant. Ces
+// mouvements s'affichaient donc dans l'historique avec leur nom technique brut
+// (« booking_release »), ce que personne ne peut lire.
 const REF_LABEL: Record<string, string> = {
-  topup: 'Recharge',
-  withdrawal_payout: 'Retrait',
+  credit: 'Recharge',
+  debit: 'Retrait',
   order_escrow: 'Paiement commande',
   order_release: 'Vente encaissée',
   order_platform_fee: 'Frais de service',
   order_refund: 'Remboursement',
   order_fee_refund: 'Remboursement des frais',
+  booking_release: 'Loyer encaissé',
+  booking_refund: 'Remboursement réservation',
+  booking_platform_fee: 'Frais de service',
+  boost_purchase: 'Mise en avant',
 };
 
 function toMovement(e: HistoryEntry): WalletMovement {
@@ -47,13 +58,21 @@ export function useWallet() {
     queryKey: ['wallet'],
     queryFn: async (): Promise<Wallet> => {
       const [balance, history] = await Promise.all([
-        apiPost<{ balances: BalanceRow[] }>({ path: '/wallet-balance', body: {} }),
+        apiPost<{ balances: BalanceRow[]; origins?: OriginRow[] }>({ path: '/wallet-balance', body: {} }),
         apiPost<{ entries: HistoryEntry[]; next_cursor: unknown }>({ path: '/wallet-history', body: { limit: 50 } }),
       ]);
       const gnf = balance.balances.find((b) => b.currency === 'GNF');
       const balanceGnf = Number(gnf?.balance_minor ?? 0);
       const movements = (history.entries ?? []).filter((e) => e.currency === 'GNF').map(toMovement);
-      return { balanceGnf, pendingGnf: 0, movements };
+      // `origins` est optionnel : un binaire qui tourne encore sur l'ancienne
+      // fonction serveur ne le recevra pas, et l'ecran doit rester correct —
+      // il affiche alors le solde sans sa ventilation.
+      const originsGnf: Wallet['originsGnf'] = {};
+      for (const row of balance.origins ?? []) {
+        if (row.currency !== 'GNF') continue;
+        originsGnf[row.origin as WalletOrigin] = Number(row.net_minor);
+      }
+      return { balanceGnf, pendingGnf: 0, movements, originsGnf };
     },
   });
 }
