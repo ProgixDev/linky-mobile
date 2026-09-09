@@ -24,14 +24,21 @@ export const PAY_LOGOS = {
   // (cercles Mastercard aux couleurs officielles + le mot VISA). 1,6 Ko — un
   // logo telecharge aurait pese vingt fois plus pour une tuile de 40 px.
   card: require('../../assets/images/pay-card.png') as number,
-  // LA CARTE LINKY, dessinee. Le client a d'abord vu une version qui reprenait
-  // seulement le mark ∞ et a repondu, a juste titre : « ca ne ressemble pas a
-  // une carte ». D'ou une silhouette de carte, avec le ∞ en OR dessus.
+  // LA CARTE LINKY, fournie par le client (2026-09-09) : carte verte, puce
+  // doree, symbole infini pose dessus.
   //
-  // POURQUOI IL N'Y A PAS DE PUCE. Trois elements ne tiennent pas dans 40 px :
-  // teste a la taille reelle, la puce devenait un point dore sans forme et le
-  // ∞ s'ecrasait. La silhouette suffit a dire « carte » ; la puce ne disait
-  // plus rien. Deux elements, tous deux lisibles.
+  // J'AVAIS PREDIT QU'ELLE NE TIENDRAIT PAS A 40 px, et j'avais tort. Mon
+  // objection portait sur un ∞ « vert sur vert » — mais je n'avais compare que
+  // les TEINTES. A la taille reelle, le vert du symbole est nettement plus
+  // CLAIR que celui du corps de carte, et cet ecart de valeur suffit : le ∞
+  // reste lisible, la puce aussi. Verifie en rendant le fichier a 40 px avant
+  // de le retenir, comme les six autres.
+  //
+  // Elle dit aussi mieux « carte bancaire » que la version que j'avais
+  // dessinee, ce qui etait precisement la demande du client.
+  //
+  // Recadree sur la carte (la source faisait 1254 px avec une large marge
+  // blanche) et reduite a 256 px en palette : 767 Ko -> 20 Ko.
   walletLinky: require('../../assets/images/pay-wallet-linky.png') as number,
   // Portefeuille guineen. Fichier fourni par le client le 2026-09-09.
   kulu: require('../../assets/images/pay-kulu.png') as number,
