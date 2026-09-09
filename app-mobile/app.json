@@ -4,7 +4,10 @@
     "slug": "linky",
     "version": "1.0.0",
     "orientation": "portrait",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "icon": "./assets/images/icon.png",
     "scheme": "linky",
     "userInterfaceStyle": "automatic",
@@ -89,11 +92,11 @@
         }
       ],
       [
-      "expo-secure-store",
-      {
-        "faceIDPermission": false
-      }
-    ],
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       "expo-video",
       [
         "expo-camera",
@@ -140,7 +143,8 @@
         {
           "enableGooglePay": true
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

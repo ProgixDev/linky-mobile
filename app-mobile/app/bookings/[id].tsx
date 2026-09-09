@@ -23,6 +23,7 @@ import { PaymentMethodPicker, LENGOPAY_METHOD } from '../../src/components/payme
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { formatGNF } from '../../src/lib/format';
+import { contractIsSigned, shareContractPdf } from '../../src/lib/contractPdf';
 import { formatGnPhone } from '../../src/lib/gnPhone';
 import { usePayerPhone } from '../../src/lib/payerPhone';
 import type { PaymentMethod } from '../../src/data/types';
@@ -36,6 +37,7 @@ export default function BookingDetailRoute() {
   const cancel = useCancelBooking();
   const checkin = useConfirmCheckin();
   const [payBusy, setPayBusy] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   // Client 2026-09-04 : la reservation n'offrait AUCUN choix de paiement, elle
   // sautait droit au champ telephone. Meme selecteur que le panier desormais.
@@ -248,6 +250,33 @@ export default function BookingDetailRoute() {
         )}
 
         <ContractView booking={booking} />
+
+        {/* TELECHARGER LE CONTRAT — client 2026-09-09. Il n'apparait qu'une fois
+            le document COMPLET : les deux signatures posees. Avant le paiement
+            la reservation n'est qu'un accord en cours, et laisser telecharger
+            un contrat non signe donnerait au locataire une piece qui ne prouve
+            rien — pire, qu'il pourrait croire opposable.
+
+            Tout vient de l'appareil : `booking.contract` est l'instantane fige
+            a la demande. Le PDF se genere donc sans reseau. */}
+        {contractIsSigned(booking) && (
+          <Button
+            variant="outline"
+            size="lg"
+            block
+            label={pdfBusy ? 'Préparation…' : 'Télécharger le contrat'}
+            disabled={pdfBusy}
+            onPress={async () => {
+              setPdfBusy(true);
+              try {
+                const err = await shareContractPdf(booking);
+                if (err) show(err, 'danger');
+              } finally {
+                setPdfBusy(false);
+              }
+            }}
+          />
+        )}
 
         <View>
           <MicroLabel label="Historique" />
