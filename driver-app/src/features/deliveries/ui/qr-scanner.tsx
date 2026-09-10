@@ -58,8 +58,8 @@ export function QrScanner({ onScanned, onCancel }: QrScannerProps) {
         <View className="flex-1 items-center justify-center gap-3 px-6">
           <AppText variant="title">Accès caméra requis</AppText>
           <AppText variant="caption" className="text-center">
-            Linky Driver utilise la caméra pour scanner le QR de la commande du client et confirmer
-            la livraison.
+            Dépose utilise la caméra pour scanner le QR de la commande du client et confirmer la
+            livraison.
           </AppText>
           {permission.canAskAgain ? (
             <Button

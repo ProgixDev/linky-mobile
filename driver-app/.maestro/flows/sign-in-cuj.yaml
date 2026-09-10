@@ -1,26 +1,26 @@
-# CUJ-004: livreur signs in with an email OTP (docs/quality/critical-user-journeys.md).
+# CUJ-004: livreur signs in with a PHONE OTP (docs/quality/critical-user-journeys.md).
 # Deterministic gate for the parts Maestro can drive; Argent (/verify-ui) covers
-# real-email delivery + the authenticated round-trip against a seeded livreur.
+# real SMS/WhatsApp delivery + the authenticated round-trip against a seeded livreur.
 #
 # PREREQUISITES (why this is deferred where they're absent):
 #   - a booted iOS simulator with the dev build installed (macOS only), and
 #   - the deployed otp-request in STUB mode (echoes a dev_code) so the code step is
-#     deterministic — the screen auto-fills the dev code. With real-email delivery the
+#     deterministic — the screen auto-fills the dev code. With real delivery the
 #     code is dynamic; drive the verify step via Argent instead.
 appId: com.linky.driver.dev
 env:
-  DRIVER_EMAIL: driver@example.com
+  DRIVER_PHONE: '622551288'
 ---
 - launchApp:
     clearState: true
-# Cold start is unauthenticated → the sign-in (email) step.
+# Cold start is unauthenticated → the sign-in (phone) step.
 - assertVisible:
     id: 'auth-sign-in-screen'
 - assertVisible:
-    id: 'auth-email'
+    id: 'auth-phone'
 - tapOn:
-    id: 'auth-email'
-- inputText: ${DRIVER_EMAIL}
+    id: 'auth-phone'
+- inputText: ${DRIVER_PHONE}
 - tapOn:
     id: 'auth-request-code'
 # Code step reached (deterministic up to here): the code field + a gated resend appear.

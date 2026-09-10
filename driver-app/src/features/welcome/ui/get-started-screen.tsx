@@ -86,7 +86,7 @@ export function GetStartedScreen() {
       <Animated.View style={wordmarkStyle} className="flex-row items-center gap-2 px-6 pt-2">
         <LinkyMark size={34} />
         <AppText variant="label" className="text-ink-inverse">
-          Linky Driver
+          Dépose
         </AppText>
       </Animated.View>
 

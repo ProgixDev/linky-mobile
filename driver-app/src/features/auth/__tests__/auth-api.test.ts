@@ -26,15 +26,15 @@ const apiErr = (status: number, code: string, message_fr = '') =>
 beforeEach(() => mockApiPost.mockReset());
 
 describe('requestOtp', () => {
-  it('posts an email OTP request with NO bearer token and returns otpId + devCode', async () => {
+  it('posts a PHONE OTP request with NO bearer token and returns otpId + devCode', async () => {
     mockApiPost.mockResolvedValue({ otp_id: 'otp-1', dev_code: '123456' });
 
-    const result = await requestOtp({ email: 'driver@example.com' });
+    const result = await requestOtp({ phone: '+224622551288' });
 
     expect(mockApiPost).toHaveBeenCalledWith({
       path: '/otp-request',
       authed: false,
-      body: { channel: 'email', target: 'driver@example.com', purpose: 'signin', app: 'driver' },
+      body: { channel: 'phone', target: '+224622551288', purpose: 'signin', app: 'driver' },
     });
     expect(result).toEqual({ ok: true, otpId: 'otp-1', devCode: '123456' });
   });
@@ -42,7 +42,7 @@ describe('requestOtp', () => {
   it('omits devCode in real-delivery mode (no dev_code field)', async () => {
     mockApiPost.mockResolvedValue({ otp_id: 'otp-2' });
 
-    const result = await requestOtp({ email: 'driver@example.com' });
+    const result = await requestOtp({ phone: '+224622551288' });
 
     expect(result).toEqual({ ok: true, otpId: 'otp-2', devCode: undefined });
   });
@@ -50,7 +50,7 @@ describe('requestOtp', () => {
   it('maps a rate-limit to the typed kind with the server message', async () => {
     mockApiPost.mockRejectedValue(apiErr(429, 'OTP_RATE_LIMITED', 'Trop de demandes.'));
 
-    const result = await requestOtp({ email: 'driver@example.com' });
+    const result = await requestOtp({ phone: '+224622551288' });
 
     expect(result).toEqual({ ok: false, kind: 'rate_limited', message: 'Trop de demandes.' });
   });
@@ -58,37 +58,39 @@ describe('requestOtp', () => {
   it('maps a delivery failure', async () => {
     mockApiPost.mockRejectedValue(apiErr(502, 'OTP_DELIVERY_FAILED', 'Envoi impossible.'));
 
-    expect(await requestOtp({ email: 'x@e.com' })).toEqual({
+    expect(await requestOtp({ phone: '+224622551288' })).toEqual({
       ok: false,
       kind: 'delivery_failed',
       message: 'Envoi impossible.',
     });
   });
 
-  it('maps a marketplace email to email_in_marketplace (driver ≠ customer)', async () => {
-    mockApiPost.mockRejectedValue(
-      apiErr(409, 'EMAIL_IN_MARKETPLACE', 'Cet email est déjà utilisé sur l’app Linky.'),
-    );
-
-    expect(await requestOtp({ email: 'buyer@example.com' })).toEqual({
-      ok: false,
-      kind: 'email_in_marketplace',
-      message: 'Cet email est déjà utilisé sur l’app Linky.',
-    });
+  // LE CAS « deja client Linky » A DISPARU, ET C'EST LE POINT DE LA DEMANDE.
+  // Le garde serveur qui levait EMAIL_IN_MARKETPLACE ne porte que sur le canal
+  // e-mail (otp-request/index.ts:29) ; en telephone il ne se declenche jamais.
+  // Ce test verrouille la regle voulue par le client le 2026-09-10 : un numero
+  // deja connu du marketplace DOIT pouvoir ouvrir une session livreur.
+  it('lets a phone already known to the marketplace sign in (no marketplace block)', async () => {
+    mockApiPost.mockResolvedValueOnce({ otp_id: 'otp-1' });
+    const result = await requestOtp({ phone: '+224622551288' });
+    expect(result).toEqual({ ok: true, otpId: 'otp-1', devCode: undefined });
   });
 
   it('maps a transport failure to offline', async () => {
     mockApiPost.mockRejectedValue(apiErr(0, 'NETWORK_ERROR', 'Connexion impossible'));
 
-    expect((await requestOtp({ email: 'x@e.com' })).ok).toBe(false);
-    const r = await requestOtp({ email: 'x@e.com' });
+    expect((await requestOtp({ phone: '+224622551288' })).ok).toBe(false);
+    const r = await requestOtp({ phone: '+224622551288' });
     expect(r).toMatchObject({ ok: false, kind: 'offline' });
   });
 
   it('treats an unexpected payload as a generic error (no false otpId)', async () => {
     mockApiPost.mockResolvedValue({ nope: true });
 
-    expect(await requestOtp({ email: 'x@e.com' })).toMatchObject({ ok: false, kind: 'error' });
+    expect(await requestOtp({ phone: '+224622551288' })).toMatchObject({
+      ok: false,
+      kind: 'error',
+    });
   });
 });
 

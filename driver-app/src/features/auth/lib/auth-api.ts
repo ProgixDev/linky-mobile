@@ -40,8 +40,6 @@ const FALLBACK: Record<OtpErrorKind, string> = {
   not_found: 'Code introuvable ou expiré.',
   delivery_failed: 'Envoi du code impossible. Réessaie plus tard.',
   offline: 'Connexion impossible. Vérifie ta connexion.',
-  email_in_marketplace:
-    'Cet email est déjà utilisé sur l’app Linky (client / vendeur). Tu ne peux pas être à la fois client et livreur — utilise une autre adresse email pour ton compte livreur.',
   error: 'Une erreur est survenue. Réessaie.',
 };
 
@@ -63,8 +61,6 @@ function kindForCode(status: number, code: string): OtpErrorKind {
       return 'not_found';
     case 'OTP_DELIVERY_FAILED':
       return 'delivery_failed';
-    case 'EMAIL_IN_MARKETPLACE':
-      return 'email_in_marketplace';
     default:
       return 'error';
   }
@@ -78,13 +74,22 @@ function mapError(e: unknown): { kind: OtpErrorKind; message: string } {
   return { kind: 'error', message: FALLBACK.error };
 }
 
-/** Request an email OTP. Returns the otp_id (and a dev_code in stub mode). */
-export async function requestOtp({ email }: { email: string }): Promise<OtpRequestResult> {
+/**
+ * Demande un code par TELEPHONE. Rend l'otp_id (et un dev_code en mode stub).
+ *
+ * `phone` doit deja etre en E.164 — GnPhoneSchema s'en charge dans le store.
+ *
+ * On garde `app: 'driver'` : le serveur s'en sert pour marquer origin_app sur
+ * un compte NEUF. Le garde « deja client Linky » qu'il porte est, lui, limite
+ * au canal e-mail, donc un numero deja connu du marketplace passe et ouvre la
+ * session sur CE compte-la — exactement ce que le client a demande.
+ */
+export async function requestOtp({ phone }: { phone: string }): Promise<OtpRequestResult> {
   try {
     const data = await apiPost<unknown>({
       path: '/otp-request',
       authed: false,
-      body: { channel: 'email', target: email, purpose: 'signin', app: 'driver' },
+      body: { channel: 'phone', target: phone, purpose: 'signin', app: 'driver' },
     });
     const parsed = OtpRequestResponseSchema.safeParse(data);
     if (!parsed.success) return { ok: false, kind: 'error', message: FALLBACK.error };

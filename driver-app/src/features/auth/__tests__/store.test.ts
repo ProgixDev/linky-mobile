@@ -39,42 +39,42 @@ beforeEach(() => {
     user: null,
     error: null,
     otpId: null,
-    pendingEmail: null,
+    pendingPhone: null,
     devCode: null,
   });
 });
 
 describe('requestCode (step 1)', () => {
-  it('rejects an invalid email client-side without hitting the network', async () => {
-    const result = await useAuthStore.getState().requestCode('not-an-email');
+  it('rejects an invalid phone client-side without hitting the network', async () => {
+    const result = await useAuthStore.getState().requestCode('12345');
 
     expect(result.ok).toBe(false);
     expect(mockRequestOtp).not.toHaveBeenCalled();
     expect(useAuthStore.getState().otpId).toBeNull();
   });
 
-  it('stores the otp_id + dev_code and the pending email on success', async () => {
+  it('stores the otp_id + dev_code and the pending phone on success', async () => {
     mockRequestOtp.mockResolvedValue({ ok: true, otpId: 'otp-1', devCode: '123456' });
 
-    const result = await useAuthStore.getState().requestCode('  driver@example.com ');
+    const result = await useAuthStore.getState().requestCode('  622 55 12 88 ');
 
     expect(result).toEqual({ ok: true });
-    expect(mockRequestOtp).toHaveBeenCalledWith({ email: 'driver@example.com' });
+    expect(mockRequestOtp).toHaveBeenCalledWith({ phone: '+224622551288' });
     const s = useAuthStore.getState();
     expect(s.otpId).toBe('otp-1');
-    expect(s.pendingEmail).toBe('driver@example.com');
+    expect(s.pendingPhone).toBe('+224622551288');
     expect(s.devCode).toBe('123456');
     expect(s.error).toBeNull();
   });
 
-  it('surfaces a rate-limit message and stays on the email step', async () => {
+  it('surfaces a rate-limit message and stays on the phone step', async () => {
     mockRequestOtp.mockResolvedValue({
       ok: false,
       kind: 'rate_limited',
       message: 'Trop de demandes.',
     });
 
-    const result = await useAuthStore.getState().requestCode('driver@example.com');
+    const result = await useAuthStore.getState().requestCode('622551288');
 
     expect(result).toEqual({ ok: false, error: 'Trop de demandes.' });
     expect(useAuthStore.getState().otpId).toBeNull();
@@ -84,7 +84,7 @@ describe('requestCode (step 1)', () => {
 
 describe('verifyCode (step 2)', () => {
   beforeEach(() => {
-    useAuthStore.setState({ otpId: 'otp-1', pendingEmail: 'driver@example.com' });
+    useAuthStore.setState({ otpId: 'otp-1', pendingPhone: '+224622551288' });
   });
 
   it('verifies a valid code: persists tokens, caches the user, becomes authenticated', async () => {
@@ -155,14 +155,14 @@ describe('verifyCode (step 2)', () => {
 });
 
 describe('resendCode', () => {
-  it('re-requests an OTP for the pending email', async () => {
-    useAuthStore.setState({ otpId: 'old', pendingEmail: 'driver@example.com' });
+  it('re-requests an OTP for the pending phone', async () => {
+    useAuthStore.setState({ otpId: 'old', pendingPhone: '+224622551288' });
     mockRequestOtp.mockResolvedValue({ ok: true, otpId: 'otp-2' });
 
     const result = await useAuthStore.getState().resendCode();
 
     expect(result).toEqual({ ok: true });
-    expect(mockRequestOtp).toHaveBeenCalledWith({ email: 'driver@example.com' });
+    expect(mockRequestOtp).toHaveBeenCalledWith({ phone: '+224622551288' });
     expect(useAuthStore.getState().otpId).toBe('otp-2');
   });
 });

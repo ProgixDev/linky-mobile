@@ -8,16 +8,16 @@
 #     the screen auto-fills the dev code. With real email, drive sign-in via Argent.
 appId: com.linky.driver.dev
 env:
-  DRIVER_EMAIL: driver@example.com
+  DRIVER_PHONE: '622551288'
 ---
 - launchApp:
     clearState: true
 # Cold start is unauthenticated → the auth guard shows the sign-in (email OTP) screen.
 - assertVisible:
-    id: 'auth-email'
+    id: 'auth-phone'
 - tapOn:
-    id: 'auth-email'
-- inputText: ${DRIVER_EMAIL}
+    id: 'auth-phone'
+- inputText: ${DRIVER_PHONE}
 - tapOn:
     id: 'auth-request-code'
 # Stub mode: the dev code auto-fills the code step; verify to authenticate.

@@ -13,7 +13,16 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 const IS_DEV = process.env.APP_VARIANT === 'development';
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview';
 
-const name = IS_DEV ? 'Linky Driver (Dev)' : IS_PREVIEW ? 'Linky Driver (Preview)' : 'Linky Driver';
+// « Depose » remplace « Linky Driver » le 2026-09-10 (client : « Linky driver va
+// etre appele "Depose" finalement. Comme deposer un colis ou une personne »).
+//
+// SEUL LE NOM AFFICHE CHANGE. Le slug ('linky-driver'), le schema d'URL
+// ('linkydriver') et l'identifiant de paquet ('com.linky.driver') restent : les
+// toucher creerait un nouveau projet EAS, invaliderait les jetons de
+// notification deja enregistres et ferait perdre l'historique du store. Le nom
+// qu'on lit sur l'ecran d'accueil et l'identite technique n'ont aucune raison
+// d'etre le meme mot.
+const name = IS_DEV ? 'Dépose (Dev)' : IS_PREVIEW ? 'Dépose (Preview)' : 'Dépose';
 const bundleId = IS_DEV
   ? 'com.linky.driver.dev'
   : IS_PREVIEW
@@ -67,7 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Camera is used for the delivery QR-handoff (spec 002, ADR-0009) only.
     infoPlist: {
       NSCameraUsageDescription:
-        'Linky Driver uses the camera to scan the customer’s order QR code at handoff, to confirm the delivery and release the seller’s payment.',
+        'Dépose uses the camera to scan the customer’s order QR code at handoff, to confirm the delivery and release the seller’s payment.',
     },
   },
   android: {
@@ -99,7 +108,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-camera',
       {
         cameraPermission:
-          'Linky Driver uses the camera to scan the customer’s order QR code at handoff, to confirm the delivery and release the seller’s payment.',
+          'Dépose uses the camera to scan the customer’s order QR code at handoff, to confirm the delivery and release the seller’s payment.',
         recordAudioAndroid: false,
       },
     ],
@@ -149,7 +158,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-location',
       {
         locationWhenInUsePermission:
-          'Linky Driver utilise ta position pour afficher la carte de tes livraisons et te guider vers les clients.',
+          'Dépose utilise ta position pour afficher la carte de tes livraisons et te guider vers les clients.',
       },
     ],
     [
@@ -162,9 +171,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-image-picker',
       {
         photosPermission:
-          'Linky Driver accède à tes photos pour choisir ta photo de profil / de candidature.',
+          'Dépose accède à tes photos pour choisir ta photo de profil / de candidature.',
         cameraPermission:
-          'Linky Driver utilise la caméra pour scanner le QR de la livraison et prendre ta photo.',
+          'Dépose utilise la caméra pour scanner le QR de la livraison et prendre ta photo.',
       },
     ],
     [

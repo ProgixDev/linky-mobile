@@ -9,4 +9,4 @@ appId: com.linky.driver.dev
 - launchApp:
     clearState: true
 - assertVisible:
-    id: 'auth-email'
+    id: 'auth-phone'

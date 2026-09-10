@@ -6,8 +6,25 @@ import { z } from 'zod';
  * see docs/security/checklist.md SEC-INPUT-001.
  */
 
-/** Client-side email shape check before any network call. */
-export const EmailSchema = z.email({ error: 'Enter a valid email address' });
+/**
+ * Numero mobile guineen, rendu en E.164 pour le serveur.
+ *
+ * LE CLIENT A DEMANDE L'INSCRIPTION PAR TELEPHONE UNIQUEMENT le 2026-09-10 :
+ * « permettre l'inscription sur Linky driver avec numero de telephone
+ * uniquement et meme si celui a ete utilise sur Linky (marketplace) ».
+ *
+ * On accepte ce que les gens tapent — espaces, indicatif colle, +224 — et on
+ * n'impose la forme qu'a la fin. Exiger une saisie propre sur un ecran de
+ * connexion, c'est refuser des gens pour un espace.
+ *
+ * `otp-request` attend du E.164 strict (_shared/validate.ts:1-4), d'ou la
+ * recomposition en +224 apres controle.
+ */
+export const GnPhoneSchema = z
+  .string()
+  .transform((v) => v.replace(/\D/g, '').replace(/^224/, ''))
+  .refine((d) => /^6\d{8}$/.test(d), { error: 'Numéro invalide (9 chiffres, commence par 6)' })
+  .transform((d) => `+224${d}`);
 
 /** The buyer/livreur OTP is always a 6-digit numeric code. */
 export const OtpCodeSchema = z
@@ -70,7 +87,11 @@ export type OtpErrorKind =
   | 'invalid' // OTP_INVALID — wrong code
   | 'expired' // OTP_EXPIRED / OTP_ALREADY_USED — code no longer usable
   | 'not_found' // OTP_NOT_FOUND — unknown/expired otp_id
-  | 'delivery_failed' // OTP_DELIVERY_FAILED — email couldn't be sent
+  | 'delivery_failed' // OTP_DELIVERY_FAILED — le code n'a pas pu partir
   | 'offline' // transport failure — no connection (money/auth stays online)
-  | 'email_in_marketplace' // EMAIL_IN_MARKETPLACE — email already a Linky customer; can't be a livreur
+  // 'email_in_marketplace' a ete RETIRE le 2026-09-10. Le garde serveur qui le
+  // levait n'existe que pour le canal e-mail (otp-request/index.ts:29) ; depuis
+  // que cette app s'authentifie par telephone, il ne peut plus se declencher.
+  // Le client a d'ailleurs demande l'inverse : un numero deja connu du
+  // marketplace DOIT pouvoir devenir livreur.
   | 'error'; // anything else — generic, no internal leak

@@ -5,16 +5,16 @@
 # Cold start is auth-gated, so this signs in first with a seeded account.
 appId: com.linky.driver.dev
 env:
-  DRIVER_EMAIL: driver@example.com
+  DRIVER_PHONE: '622551288'
   DRIVER_PASSWORD: changeme
 ---
 - launchApp:
     clearState: true
 - assertVisible:
-    id: 'auth-email'
+    id: 'auth-phone'
 - tapOn:
-    id: 'auth-email'
-- inputText: ${DRIVER_EMAIL}
+    id: 'auth-phone'
+- inputText: ${DRIVER_PHONE}
 - tapOn:
     id: 'auth-password'
 - inputText: ${DRIVER_PASSWORD}

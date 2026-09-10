@@ -12,7 +12,7 @@ import {
   verifyOtp,
   type ProfilePatch,
 } from '../lib/auth-api';
-import { AuthUserSchema, EmailSchema, OtpCodeSchema, type AuthUser } from './schema';
+import { AuthUserSchema, GnPhoneSchema, OtpCodeSchema, type AuthUser } from './schema';
 
 type Status = 'loading' | 'authenticated' | 'unauthenticated';
 type Result = { ok: true } | { ok: false; error: string };
@@ -42,21 +42,22 @@ type AuthState = {
   status: Status;
   user: AuthUser | null;
   error: string | null;
-  // Transient OTP flow state (not persisted): the in-flight otp_id, the email it
-  // was sent to (for resend), and a dev-only echoed code (stub mode).
+  // Etat transitoire du flux OTP (non persiste) : l'otp_id en cours, le numero
+  // auquel le code est parti (pour le renvoi), et un code echo en mode stub.
   otpId: string | null;
-  pendingEmail: string | null;
+  /** Le numero en E.164 auquel le code a ete envoye (pour le renvoi). */
+  pendingPhone: string | null;
   devCode: string | null;
 
   /** Boot: validate the stored refresh token and rehydrate the session. */
   init: () => Promise<void>;
-  /** Step 1 — email → request an OTP. Validates the email client-side first. */
-  requestCode: (email: string) => Promise<Result>;
+  /** Step 1 — numero → demande d'OTP. Le numero est valide et normalise ici. */
+  requestCode: (phone: string) => Promise<Result>;
   /** Step 2 — verify the 6-digit code → persist tokens → authenticated. */
   verifyCode: (code: string) => Promise<Result>;
-  /** Re-send a code to the pending email (the screen gates this behind a cooldown). */
+  /** Renvoie un code au numero en cours (l'ecran impose le delai d'attente). */
   resendCode: () => Promise<Result>;
-  /** Back to the email step (clears the in-flight OTP). */
+  /** Retour a l'etape du numero (annule l'OTP en cours). */
   resetOtp: () => void;
   signOut: () => Promise<void>;
   /** In-app account deletion (store-compliance). Hits the backend `delete-account`. */
@@ -70,7 +71,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   error: null,
   otpId: null,
-  pendingEmail: null,
+  pendingPhone: null,
   devCode: null,
 
   init: async () => {
@@ -90,22 +91,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
   },
 
-  requestCode: async (email) => {
-    const parsed = EmailSchema.safeParse(email.trim());
+  requestCode: async (phone) => {
+    const parsed = GnPhoneSchema.safeParse(phone);
     if (!parsed.success) {
-      const error = parsed.error.issues[0]?.message ?? 'Enter a valid email address';
+      const error = parsed.error.issues[0]?.message ?? 'Numéro invalide';
       set({ error });
       return { ok: false, error };
     }
     set({ error: null });
-    const result = await requestOtp({ email: parsed.data });
+    const result = await requestOtp({ phone: parsed.data });
     if (!result.ok) {
       set({ error: result.message });
       return { ok: false, error: result.message };
     }
     set({
       otpId: result.otpId,
-      pendingEmail: parsed.data,
+      pendingPhone: parsed.data,
       devCode: result.devCode ?? null,
       error: null,
     });
@@ -138,19 +139,19 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       status: 'authenticated',
       error: null,
       otpId: null,
-      pendingEmail: null,
+      pendingPhone: null,
       devCode: null,
     });
     return { ok: true };
   },
 
   resendCode: async () => {
-    const { pendingEmail } = get();
-    if (!pendingEmail) return { ok: false, error: 'No email to resend to' };
-    return get().requestCode(pendingEmail);
+    const { pendingPhone } = get();
+    if (!pendingPhone) return { ok: false, error: 'Aucun numéro à qui renvoyer le code' };
+    return get().requestCode(pendingPhone);
   },
 
-  resetOtp: () => set({ otpId: null, pendingEmail: null, devCode: null, error: null }),
+  resetOtp: () => set({ otpId: null, pendingPhone: null, devCode: null, error: null }),
 
   signOut: async () => {
     // Stop pushes to this device FIRST — the unregister call is authed, so it must
@@ -163,7 +164,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       status: 'unauthenticated',
       error: null,
       otpId: null,
-      pendingEmail: null,
+      pendingPhone: null,
       devCode: null,
     });
   },

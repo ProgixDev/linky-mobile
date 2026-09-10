@@ -15,7 +15,7 @@ import { AppText, LinkyMark, Screen } from '@/shared/ui';
 const AUTO_ADVANCE_MS = 1900;
 
 /**
- * Animated welcome — a branded Linky Driver logo reveal + tagline on cold launch
+ * Animated welcome — a branded Dépose logo reveal + tagline on cold launch
  * (first install only; gated by use-welcome-gate). The mark scales/fades in and the
  * tagline staggers underneath, then it auto-advances to get-started; tapping anywhere
  * skips immediately. Respects reduced motion (instant, no transform animation). It's a
@@ -72,7 +72,7 @@ export function WelcomeScreen() {
             <LinkyMark size={124} />
           </Animated.View>
           <Animated.View style={tagStyle} className="items-center gap-1">
-            <AppText variant="display">Linky Driver</AppText>
+            <AppText variant="display">Dépose</AppText>
             <AppText variant="caption">L’app des livreurs Linky</AppText>
           </Animated.View>
         </View>

@@ -56,27 +56,33 @@ enforces).
   Maestro flow covers navigation, the detail/scan affordances, and the permission-denied
   path.
 
-## CUJ-004 — Livreur signs in (email OTP)
+## CUJ-004 — Livreur signs in (phone OTP)
 
 - **Owner:** founder (driver app)
 - **Flow:** `.maestro/flows/sign-in-cuj.yaml` · Smoke: `.maestro/flows/smoke.yaml`
-- **Journey:** launch (cold, unauthenticated) → enter email → “Send code” → receive the
-  6-digit code by email (Linky SMTP) → enter it → land authenticated on the deliveries
-  home; the tokens persist in secure storage so a relaunch skips sign-in.
-- **Edge cases agents must try:** invalid email (inline error, no request fired); wrong
+- **Journey:** launch (cold, unauthenticated) → enter the Guinean mobile number →
+  “Send code” → receive the 6-digit code by SMS or WhatsApp (Prelude) → enter it → land
+  authenticated on the deliveries home; the tokens persist in secure storage so a
+  relaunch skips sign-in.
+- **The phone replaced the email on 2026-09-10**, at the client's request: a courier in
+  Guinea has a number long before an email address, and a number **already used on the
+  Linky marketplace must be able to sign in** — it opens the session on that same
+  account. The server guard that refused a known identity is scoped to the email channel
+  (`otp-request/index.ts:29`), so it no longer fires.
+- **Edge cases agents must try:** invalid number (inline error, no request fired); wrong
   code (clear error, stay on the code step, no session stored); expired/already-used code
   (told to request a new one); rate-limited resend (backend allows 3/min — the resend
   button shows a 60s cooldown); offline at request or verify (clear “connexion impossible”,
-  nothing released/stored); “use a different email” returns to step 1; a stale stored
+  nothing released/stored); “change phone” returns to step 1; a stale stored
   refresh token on boot → silently back to sign-in (never a hung spinner); after sign-out
   the next user on the device must re-authenticate (no leaked session).
 - **Performance budget:** the code step appears < 1s after “Send code” on 3G; verify →
   deliveries home < 2s.
-- **Coverage note:** the OTP code is dynamic, so Maestro deterministically covers email
+- **Coverage note:** the OTP code is dynamic, so Maestro deterministically covers number
   entry → request → the code step, and — in stub mode (otp-request echoes a `dev_code`) —
   the screen auto-fills that code so the flow can complete to the deliveries home. Real
-  email delivery and the full authenticated round-trip are verified via `/verify-ui`
-  (Argent) against a seeded livreur.
+  SMS/WhatsApp delivery and the full authenticated round-trip are verified via
+  `/verify-ui` (Argent) against a seeded livreur.
 
 ## Template for new CUJs
 

@@ -35,34 +35,34 @@ beforeEach(() => {
     user: null,
     error: null,
     otpId: null,
-    pendingEmail: null,
+    pendingPhone: null,
     devCode: null,
   });
 });
 
 describe('SignInScreen — OTP flow', () => {
-  it('starts on the email step', () => {
+  it('starts on the phone step', () => {
     render(<SignInScreen />);
-    expect(screen.getByTestId('auth-email')).toBeTruthy();
+    expect(screen.getByTestId('auth-phone')).toBeTruthy();
     expect(screen.queryByTestId('auth-code')).toBeNull();
   });
 
-  it('email → send code advances to the code step and surfaces the dev code', async () => {
+  it('phone → send code advances to the code step and surfaces the dev code', async () => {
     mockRequestOtp.mockResolvedValue({ ok: true, otpId: 'otp-1', devCode: '123456' });
     render(<SignInScreen />);
 
-    fireEvent.changeText(screen.getByTestId('auth-email'), 'driver@example.com');
+    fireEvent.changeText(screen.getByTestId('auth-phone'), '622551288');
     fireEvent.press(screen.getByTestId('auth-request-code'));
 
     await waitFor(() => expect(screen.getByTestId('auth-code')).toBeTruthy());
-    expect(mockRequestOtp).toHaveBeenCalledWith({ email: 'driver@example.com' });
+    expect(mockRequestOtp).toHaveBeenCalledWith({ phone: '+224622551288' });
     expect(screen.getByTestId('auth-dev-code')).toHaveTextContent('Code (dev) : 123456');
     // Resend is gated by the cooldown right after a send.
     expect(screen.getByTestId('auth-resend')).toHaveTextContent(/Renvoyer dans \d+s/);
   });
 
   it('valid code → verify → authenticated', async () => {
-    useAuthStore.setState({ otpId: 'otp-1', pendingEmail: 'driver@example.com' });
+    useAuthStore.setState({ otpId: 'otp-1', pendingPhone: '+224622551288' });
     mockVerifyOtp.mockResolvedValue({ ok: true, bundle });
     render(<SignInScreen />);
 
@@ -74,7 +74,7 @@ describe('SignInScreen — OTP flow', () => {
   });
 
   it('does not verify until the code is 6 digits (button disabled)', async () => {
-    useAuthStore.setState({ otpId: 'otp-1', pendingEmail: 'driver@example.com' });
+    useAuthStore.setState({ otpId: 'otp-1', pendingPhone: '+224622551288' });
     render(<SignInScreen />);
 
     fireEvent.changeText(screen.getByTestId('auth-code'), '12'); // too short
@@ -83,7 +83,7 @@ describe('SignInScreen — OTP flow', () => {
     expect(mockVerifyOtp).not.toHaveBeenCalled();
   });
 
-  it('shows the server error message on a failed request and stays on the email step', async () => {
+  it('shows the server error message on a failed request and stays on the phone step', async () => {
     mockRequestOtp.mockResolvedValue({
       ok: false,
       kind: 'rate_limited',
@@ -91,28 +91,28 @@ describe('SignInScreen — OTP flow', () => {
     });
     render(<SignInScreen />);
 
-    fireEvent.changeText(screen.getByTestId('auth-email'), 'driver@example.com');
+    fireEvent.changeText(screen.getByTestId('auth-phone'), '622551288');
     fireEvent.press(screen.getByTestId('auth-request-code'));
 
     await waitFor(() =>
       expect(screen.getByTestId('auth-error')).toHaveTextContent('Trop de demandes.'),
     );
-    expect(screen.getByTestId('auth-email')).toBeTruthy(); // still email step
+    expect(screen.getByTestId('auth-phone')).toBeTruthy(); // still phone step
     expect(screen.queryByTestId('auth-code')).toBeNull();
   });
 
-  it('“use a different email” returns to the email step', async () => {
+  it('“change phone” returns to the phone step', async () => {
     useAuthStore.setState({
       otpId: 'otp-1',
-      pendingEmail: 'driver@example.com',
+      pendingPhone: '+224622551288',
       devCode: '123456',
     });
     render(<SignInScreen />);
     expect(screen.getByTestId('auth-code')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('auth-change-email'));
+    fireEvent.press(screen.getByTestId('auth-change-phone'));
 
-    await waitFor(() => expect(screen.getByTestId('auth-email')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('auth-phone')).toBeTruthy());
     expect(screen.queryByTestId('auth-code')).toBeNull();
   });
 });

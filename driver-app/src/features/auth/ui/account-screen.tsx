@@ -53,11 +53,7 @@ export function AccountScreen() {
           {/* Surfaces the store error (e.g. « livraison en cours ») — the old
               screen swallowed it and Delete looked like it did nothing. */}
           {error ? (
-            <AppText
-              variant="caption"
-              className="text-center text-danger"
-              testID="account-error"
-            >
+            <AppText variant="caption" className="text-center text-danger" testID="account-error">
               {error}
             </AppText>
           ) : null}

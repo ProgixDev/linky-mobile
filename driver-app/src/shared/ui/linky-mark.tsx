@@ -17,7 +17,7 @@ export interface LinkyMarkProps {
 }
 
 /**
- * LinkyMark — the in-app Linky Driver brand mark, rendered from the same SVG
+ * LinkyMark — the in-app Dépose brand mark, rendered from the same SVG
  * master that produces the app icon (assets/brand/linky-driver-mark.svg): a white
  * isometric parcel box with a saffron centre "tape" and a saffron "24h/7" badge,
  * on an emerald gradient tile. Vector (react-native-svg) so it is crisp at every
@@ -31,7 +31,7 @@ export function LinkyMark({ size = 72, rounded = true, testID = 'linky-mark' }: 
       viewBox="0 0 512 512"
       testID={testID}
       accessibilityRole="image"
-      accessibilityLabel="Linky Driver"
+      accessibilityLabel="Dépose"
     >
       <Defs>
         <LinearGradient
