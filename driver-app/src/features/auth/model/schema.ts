@@ -33,9 +33,10 @@ export const OtpCodeSchema = z
   .regex(/^\d{6}$/, 'Enter the 6-digit code');
 
 /**
- * `otp-request` response. `dev_code` is ONLY present when the deployed function
- * has no email transport configured (stub mode) — it lets QA proceed without an
- * inbox. In real delivery the field is absent (the code is emailed via Linky SMTP).
+ * Reponse d'`otp-request`. `dev_code` n'est present QUE si la fonction deployee
+ * n'a aucun transport configure (mode stub) — il permet a la recette d'avancer
+ * sans telephone. En livraison reelle le champ est absent : le code part par SMS
+ * ou WhatsApp (Prelude), depuis le passage au telephone le 2026-09-10.
  */
 export const OtpRequestResponseSchema = z.object({
   otp_id: z.string().min(1),

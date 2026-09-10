@@ -198,8 +198,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     policy: 'fingerprint',
   },
   updates: {
-    // TODO(company): set after `eas init` + `eas update:configure`
-    // url: 'https://u.expo.dev/<EAS_PROJECT_ID>',
+    // MISES A JOUR A DISTANCE, activees le 2026-09-10. Jusqu'ici cette app ne
+    // pouvait recevoir AUCUN correctif sans un build complet — l'URL etait
+    // restee un TODO depuis la creation du projet.
+    url: 'https://u.expo.dev/8b8fdbe2-6af0-47bb-bc0b-7c5dfa1d6c88',
   },
   owner: 'linkyorg',
   extra: {
