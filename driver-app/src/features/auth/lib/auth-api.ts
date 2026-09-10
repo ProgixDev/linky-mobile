@@ -60,15 +60,31 @@ function kindForCode(status: number, code: string): OtpErrorKind {
     case 'OTP_NOT_FOUND':
       return 'not_found';
     case 'OTP_DELIVERY_FAILED':
+    case 'OTP_DELIVERY_UNAVAILABLE':
       return 'delivery_failed';
     default:
       return 'error';
   }
 }
 
+/**
+ * Codes dont le message du serveur ne doit PAS etre montre tel quel.
+ *
+ * OTP_DELIVERY_UNAVAILABLE dit, pour le canal telephone : « L'envoi de SMS
+ * n'est pas encore active. Connecte-toi plutot par email. » (otp-request/
+ * index.ts:220-223). Cette phrase est juste pour le marketplace, qui a toujours
+ * un ecran e-mail — elle est IMPOSSIBLE A SUIVRE ici depuis que Depose ne
+ * propose plus que le telephone. On lui substitue notre propre texte.
+ *
+ * Corriger le serveur aurait touche les deux applications ; le defaut n'existe
+ * que du cote ou l'e-mail a disparu, donc le correctif vit ici.
+ */
+const IGNORE_SERVER_MESSAGE: ReadonlySet<string> = new Set(['OTP_DELIVERY_UNAVAILABLE']);
+
 function mapError(e: unknown): { kind: OtpErrorKind; message: string } {
   if (e instanceof ApiError) {
     const kind = kindForCode(e.status, e.code);
+    if (IGNORE_SERVER_MESSAGE.has(e.code)) return { kind, message: FALLBACK[kind] };
     return { kind, message: e.message_fr || FALLBACK[kind] };
   }
   return { kind: 'error', message: FALLBACK.error };
