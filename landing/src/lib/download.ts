@@ -11,7 +11,23 @@
 // No code edit or redeploy needed here — "latest" resolves automatically.
 export const ANDROID_APK_PATH = '/linky.apk';
 
-// Companion driver app — served the same way (Blob + vercel.json rewrite/headers).
+// L'application des livreurs, « Dépose » (ex-« Linky Driver »).
+//
+// ELLE A QUITTÉ VERCEL BLOB le 2026-09-10 pour la même release GitHub que
+// l'application principale : le Blob avait déjà été suspendu une fois, et rien
+// ne justifiait de garder deux hébergements pour deux fichiers.
+//
+// LES DEUX APK VIVENT DANS LA MÊME RELEASE, et c'est délibéré. `releases/latest`
+// ne désigne qu'UNE release : publier l'app livreur sous son propre tag lui a
+// fait voler le « latest » à l'app principale, dont le lien est tombé en 404
+// le temps que je m'en aperçoive. Un seul « latest » portant les deux fichiers
+// rend cette collision impossible.
+//
+// EN CONTREPARTIE : toute nouvelle release DOIT porter les DEUX fichiers,
+// sinon le lien de celui qu'on oublie casse en silence. Pour publier :
+//   gh release create vX.Y.Z <linky.apk> <linky-driver.apk> --repo ProgixDev/linky-downloads
+// et pour n'en renouveler qu'un, ajouter le fichier à la release existante :
+//   gh release upload vX.Y.Z <fichier> --repo ProgixDev/linky-downloads --clobber
 export const DRIVER_APK_PATH = '/linky-driver.apk';
 
 // Shown next to the download CTA so users know what they're getting.

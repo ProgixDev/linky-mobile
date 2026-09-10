@@ -38,7 +38,7 @@ export function CTABand({ release = null }: { release?: AndroidRelease | null })
                   href={DRIVER_APK_PATH}
                   fileName="linky-driver.apk"
                   kicker="App livreur"
-                  title="Linky Driver"
+                  title="Dépose"
                   variant="onDarkGhost"
                 />
               </div>

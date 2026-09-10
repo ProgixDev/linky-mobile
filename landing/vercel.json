@@ -8,7 +8,7 @@
     },
     {
       "source": "/linky-driver.apk",
-      "destination": "https://njii6olstwjlpvas.public.blob.vercel-storage.com/linky-driver.apk",
+      "destination": "https://github.com/ProgixDev/linky-downloads/releases/latest/download/linky-driver.apk",
       "permanent": false
     }
   ],
