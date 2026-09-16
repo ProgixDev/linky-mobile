@@ -20,6 +20,7 @@ import { ToastProvider } from '../src/components/feedback/Toast';
 import { BuyerGateProvider } from '../src/components/feedback/BuyerGate';
 import { UpdateBanner } from '../src/components/feedback/UpdateBanner';
 import { usePushRegistration, useNotificationTapRouting } from '../src/lib/push';
+import { useProfileSync } from '../src/lib/profileSync';
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -33,6 +34,10 @@ const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
 function PushBootstrap() {
   usePushRegistration();
   useNotificationTapRouting();
+  // Recharge le profil a l'ouverture, puis pose « Vous etes ou ? » aux comptes
+  // sans region de paiement (client 2026-09-17). Monte ici pour la meme raison
+  // que le routage des notifications : il faut etre sous le navigateur racine.
+  useProfileSync();
   return null;
 }
 
@@ -87,6 +92,9 @@ export default function RootLayout() {
                       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
                         <Stack.Screen name="(onboarding)" />
                         <Stack.Screen name="(tabs)" />
+                        {/* Question unique « Vous etes ou ? » des comptes sans region.
+                            Pas de geste retour : la reponse est obligatoire. */}
+                        <Stack.Screen name="region" options={{ gestureEnabled: false, animation: 'fade' }} />
                         <Stack.Screen
                           name="product/[id]"
                           options={{ presentation: 'card', animation: 'slide_from_right' }}

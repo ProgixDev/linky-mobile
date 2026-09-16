@@ -592,6 +592,9 @@ verify_jwt = false
 [functions.list-my-phones]
 verify_jwt = false
 
+[functions.get-me]
+verify_jwt = false
+
 [functions.phone-add-request]
 verify_jwt = false
 

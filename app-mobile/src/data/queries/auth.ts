@@ -232,3 +232,16 @@ export function useUploadAvatar() {
     },
   });
 }
+
+/**
+ * Le profil tel qu'il est en base MAINTENANT (fonction get-me).
+ *
+ * L'application ne le recevait qu'a la connexion ou en reponse a
+ * update-profile : une correction faite hors de l'application (region de
+ * paiement declaree par l'equipe, role accorde par l'administration) restait
+ * invisible jusqu'a la reconnexion suivante. Appele une fois par ouverture de
+ * l'application, par src/lib/profileSync.ts.
+ */
+export async function fetchMe(): Promise<{ user: AuthUser }> {
+  return apiPost<{ user: AuthUser }>({ path: '/get-me', body: {} });
+}
