@@ -88,6 +88,16 @@ export function IdentityPill({ mode }: { mode: ProMode }) {
         paddingLeft: 6,
         paddingRight: 14,
         height: 48,
+        // UN NOM LONG NE DOIT PAS POUSSER LES BOUTONS HORS DE L'ECRAN (client
+        // 2026-09-16, agence « Residence Souanou Haidara » : le bouton « + » de
+        // publication etait coupe a droite). En React Native un element de
+        // rangee ne retrecit PAS par defaut (flexShrink vaut 0, contrairement au
+        // web) : la pastille prenait toute sa largeur naturelle, l'espaceur
+        // tombait a zero et la cloche puis « + » debordaient. flexShrink laisse
+        // la pastille ceder la place ; la cloche et « + », a largeur fixe, ne
+        // retrecissent pas.
+        flexShrink: 1,
+        minWidth: 0,
         borderRadius: 999,
         backgroundColor: colors.card,
         borderWidth: 1,
@@ -119,7 +129,10 @@ export function IdentityPill({ mode }: { mode: ProMode }) {
           )}
         </View>
       )}
-      <View>
+      {/* La colonne de texte doit AUSSI pouvoir retrecir : sans cela,
+          numberOfLines={1} ne se declenche jamais, le texte n'etant jamais
+          contraint a une largeur plus petite que la sienne. */}
+      <View style={{ flexShrink: 1, minWidth: 0 }}>
         <Text
           style={{
             fontSize: 14.5,
@@ -141,6 +154,7 @@ export function IdentityPill({ mode }: { mode: ProMode }) {
             letterSpacing: 0.4,
             marginTop: 2,
           }}
+          numberOfLines={1}
         >
           {subtitle}
         </Text>
