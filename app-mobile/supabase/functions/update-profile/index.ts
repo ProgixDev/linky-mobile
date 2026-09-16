@@ -32,6 +32,10 @@ interface Body {
   // abroad. true forces the 'abroad' payment profile client-side regardless of
   // phone; false (default) keeps the phone-based rule.
   payment_abroad_override?: boolean;
+  // Region de paiement DECLAREE A L'INSCRIPTION (client 2026-09-16). Ecrite une
+  // seule fois : tant qu'elle est NULL. Voir le verrou dans le handler et la
+  // migration 20260916_01.
+  payment_profile?: 'guinea' | 'abroad';
 }
 
 const V1_ROLES = new Set(['buyer', 'seller', 'agent', 'livreur']);
@@ -64,6 +68,7 @@ function valid(b: unknown): b is Body {
   if (x.profile_public !== undefined && typeof x.profile_public !== 'boolean') return false;
   if (x.personalize_feed !== undefined && typeof x.personalize_feed !== 'boolean') return false;
   if (x.payment_abroad_override !== undefined && typeof x.payment_abroad_override !== 'boolean') return false;
+  if (x.payment_profile !== undefined && x.payment_profile !== 'guinea' && x.payment_profile !== 'abroad') return false;
   // At least one updatable field must be present — otherwise this is a no-op
   // that wastes an idempotency key.
   if (
@@ -73,7 +78,8 @@ function valid(b: unknown): b is Body {
     x.avatar_url === undefined &&
     x.profile_public === undefined &&
     x.personalize_feed === undefined &&
-    x.payment_abroad_override === undefined
+    x.payment_abroad_override === undefined &&
+    x.payment_profile === undefined
   ) {
     return false;
   }
@@ -139,13 +145,69 @@ Deno.serve(makePost<Body>('/v1/profile/update', valid, async ({ sb, body, req })
     patch.personalize_feed = body.personalize_feed;
   }
   if (body.payment_abroad_override !== undefined) {
-    patch.payment_abroad_override = body.payment_abroad_override;
+    // Un compte dont la region a ete DECLAREE a l'inscription ne se corrige plus
+    // par cet interrupteur. Il a disparu de l'application le 2026-09-16, mais
+    // une version plus ancienne peut encore l'envoyer : sans ce garde, elle
+    // afficherait Stripe a un compte verrouille en Guinee pendant que la
+    // nouvelle version afficherait Lengopay — le moyen de paiement dependrait
+    // de la version installee. On l'ignore donc des qu'une region existe.
+    const { data: declared } = await sb
+      .from('users')
+      .select('payment_profile')
+      .eq('id', userId)
+      .single();
+    if ((declared as { payment_profile: string | null } | null)?.payment_profile == null) {
+      patch.payment_abroad_override = body.payment_abroad_override;
+    }
   }
 
-  const { error: eUpd } = await sb
-    .from('users')
-    .update(patch)
-    .eq('id', userId);
+  // LE VERROU DE LA REGION DE PAIEMENT (client 2026-09-16 : « verrouiller au
+  // moment de l'inscription »).
+  //
+  // L'ecriture est CONDITIONNELLE, `payment_profile is null`, et c'est la base
+  // qui tranche — pas une lecture suivie d'une ecriture, qui laisserait deux
+  // appels concurrents poser chacun leur valeur. Si rien n'a ete ecrit, la
+  // colonne etait deja remplie : meme valeur, c'est un renvoi sans effet (un
+  // reessai reseau de l'inscription, par exemple) ; valeur differente, c'est
+  // une tentative de changer de region, refusee.
+  //
+  // Place AVANT la mise a jour principale : un refus ne doit laisser derriere
+  // lui aucun autre champ modifie.
+  if (body.payment_profile !== undefined) {
+    const { data: written, error: eLock } = await sb
+      .from('users')
+      .update({ payment_profile: body.payment_profile })
+      .eq('id', userId)
+      .is('payment_profile', null)
+      .select('id');
+    if (eLock) {
+      console.error('[update-profile] payment_profile write error:', eLock);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur mise à jour du profil');
+    }
+    if (!written || written.length === 0) {
+      const { data: current, error: eCur } = await sb
+        .from('users')
+        .select('payment_profile')
+        .eq('id', userId)
+        .single();
+      if (eCur || !current) {
+        console.error('[update-profile] payment_profile read error:', eCur);
+        throwApi('INTERNAL_ERROR', 500, 'Erreur lecture profil');
+      }
+      if ((current as { payment_profile: string | null }).payment_profile !== body.payment_profile) {
+        throwApi('PAYMENT_PROFILE_LOCKED', 409,
+          'Ta région de paiement a été choisie à l’inscription et ne peut plus être modifiée. Contacte l’équipe Linky si tu as changé de pays.');
+      }
+    }
+  }
+
+  // Seul payment_profile a pu etre envoye : il n'y a alors rien d'autre a ecrire.
+  const { error: eUpd } = Object.keys(patch).length === 0
+    ? { error: null }
+    : await sb
+      .from('users')
+      .update(patch)
+      .eq('id', userId);
   if (eUpd) {
     // Check-constraint violation surfaces as 23514 — bubble up as validation.
     if (eUpd.code === '23514') {
@@ -157,7 +219,7 @@ Deno.serve(makePost<Body>('/v1/profile/update', valid, async ({ sb, body, req })
 
   const { data: user, error: eSel } = await sb
     .from('users')
-    .select('id, display_name, avatar_url, locale, kyc_status, city, roles, is_admin, profile_public, personalize_feed, payment_abroad_override')
+    .select('id, display_name, avatar_url, locale, kyc_status, city, roles, is_admin, profile_public, personalize_feed, payment_abroad_override, payment_profile')
     .eq('id', userId)
     .single();
   if (eSel || !user) {

@@ -28,8 +28,13 @@ export interface AuthUser {
   personalize_feed?: boolean;
   // Diaspora override — forces usePaymentProfile() to 'abroad' regardless of a
   // Guinean (+224) phone number. Undefined/false = the phone-based rule applies
-  // (see src/lib/paymentProfile.ts). Set via settings/privacy.tsx.
+  // (see src/lib/paymentProfile.ts). N'est plus reglable dans l'application
+  // depuis le 2026-09-16 : conserve pour les comptes anterieurs.
   payment_abroad_override?: boolean;
+  // Region de paiement DECLAREE A L'INSCRIPTION (client 2026-09-16). Quand elle
+  // est presente, elle prime sur toute deduction. null/undefined = compte
+  // anterieur, region deduite de l'indicatif. Ecrite une seule fois.
+  payment_profile?: 'guinea' | 'abroad' | null;
 }
 
 export interface TokenBundle {
@@ -171,6 +176,9 @@ export interface UpdateProfileInput {
   // true forces the 'abroad' payment profile regardless of phone dial code —
   // for a diaspora account that kept a +224 number (2026-09-05).
   payment_abroad_override?: boolean;
+  // Region declaree a l'inscription. Le serveur ne l'ecrit que tant qu'elle
+  // est vide ; une valeur differente ensuite est refusee (PAYMENT_PROFILE_LOCKED).
+  payment_profile?: 'guinea' | 'abroad';
 }
 export function useUpdateProfile() {
   return useMutation({

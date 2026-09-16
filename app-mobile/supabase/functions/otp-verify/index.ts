@@ -188,7 +188,7 @@ Deno.serve(makePost<Body>('/v1/otp/verify', valid, async ({ sb, body, req }) => 
     // et le bouton « Carte bancaire » repasse silencieusement de Stripe a
     // Lengopay a la reconnexion suivante (reinstallation, second appareil,
     // session revoquee). L'utilisateur avait pourtant coche la case.
-    .select('id, display_name, avatar_url, locale, kyc_status, city, roles, profile_public, personalize_feed, payment_abroad_override')
+    .select('id, display_name, avatar_url, locale, kyc_status, city, roles, profile_public, personalize_feed, payment_abroad_override, payment_profile')
     .eq('id', userId)
     .single();
   if (eUser || !user) {

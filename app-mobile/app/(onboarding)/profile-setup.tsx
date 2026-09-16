@@ -22,6 +22,7 @@ import { ROLE_FROM_UI, useAuth } from '../../src/stores/auth';
 import * as ImagePicker from 'expo-image-picker';
 import { useUpdateProfile, useUploadAvatar, type AvatarMime } from '../../src/data/queries/auth';
 import { useToast } from '../../src/components/feedback/Toast';
+import { clearSignupRegion, readSignupRegion } from '../../src/lib/signupRegion';
 
 type RoleId = 'buy' | 'sell' | 'agent';
 
@@ -117,16 +118,27 @@ export default function ProfileSetupRoute() {
       (id) => ROLE_FROM_UI[id as 'buy' | 'sell' | 'agent'],
     );
     setRolesInStore(canonical);
+    // La region declaree sur « Vous etes ou ? » (client 2026-09-16). Envoyee
+    // avec le reste du profil, dans le MEME appel : elle ne peut pas etre
+    // enregistree sans que l'inscription le soit aussi. Absente = on n'envoie
+    // rien, le serveur ne verrouille rien — voir src/lib/signupRegion.ts.
+    const region = readSignupRegion();
     try {
       const res = await updateProfile.mutateAsync({
         display_name: trimmedName,
         city: trimmedCity,
         roles: canonical,
         ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+        ...(region ? { payment_profile: region } : {}),
       });
       if (currentUser) {
         signIn({ ...currentUser, ...res.user });
       }
+      // On n'efface la region que si le serveur la RENVOIE : c'est la seule
+      // preuve qu'elle a ete ecrite. Un update-profile anterieur a ce
+      // changement ignore le champ sans erreur et repond 200 — l'effacer sur la
+      // seule foi de ce 200 perdrait la declaration sans laisser de trace.
+      if (region && res.user?.payment_profile === region) clearSignupRegion();
     } catch {
       // T.1.fix — also persist display_name + city locally so the toast
       // message is true. Without this, MMKV holds nothing for those fields

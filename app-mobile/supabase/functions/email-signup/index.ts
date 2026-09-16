@@ -89,6 +89,12 @@ Deno.serve(makePost<Body>('/v1/auth/email/signup', valid, async ({ sb, body, req
         profile_public: true,
         personalize_feed: true,
         payment_abroad_override: false,
+        // Compte neuf : la region n'est pas encore declaree. Elle s'ecrit a
+        // l'etape de profil de l'inscription (update-profile), une seule fois.
+        // Meme forme que les autres fonctions de connexion — c'est une
+        // divergence de forme qui avait deja fait perdre un reglage a la
+        // reconnexion (voir le commentaire ci-dessus).
+        payment_profile: null,
       },
     },
   };

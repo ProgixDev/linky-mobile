@@ -26,6 +26,13 @@ export const STORAGE_KEYS = {
   // « Pas intéressé / Masquer » on the Découvrir feed — composite keys
   // `${kind}:${id}` the feed filters out (client 2026-07-30). Local-only for V1.
   hiddenListings: 'discover.hidden',
+  // Region de paiement choisie sur l'ecran « Vous etes ou ? » de l'INSCRIPTION,
+  // gardee jusqu'a l'etape de profil qui l'enregistre sur le serveur, puis
+  // effacee. Persistee (et non tenue en memoire comme `channel` du store auth)
+  // parce qu'elle est ecrite une seule fois et verrouillee : un redemarrage de
+  // l'app entre les deux ecrans ne doit JAMAIS la remplacer par une valeur par
+  // defaut. Voir src/lib/signupRegion.ts.
+  signupRegion: 'onboarding.signupRegion',
 } as const;
 
 export const SECURE_KEYS = {

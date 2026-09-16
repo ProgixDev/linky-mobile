@@ -13,6 +13,7 @@ import { toToastMessage } from '../../src/lib/api';
 import { useToast } from '../../src/components/feedback/Toast';
 import { maskEmail, maskPhone } from '../../src/lib/format';
 import { haptic } from '../../src/lib/haptics';
+import { clearSignupRegion } from '../../src/lib/signupRegion';
 
 const CODE_LENGTH = 6;
 
@@ -177,6 +178,12 @@ export default function OtpRoute() {
         // as before. was_created omitted from the response means "unknown" —
         // treat as new for safety (existing email-signup path doesn't set it).
         if (was_created === false) {
+          // Un compte EXISTANT ne redeclare pas sa region. Si une inscription
+          // abandonnee a laisse une region en attente sur ce telephone, on l'efface
+          // ici : elle ne doit jamais pouvoir etre ecrite — et verrouillee — sur un
+          // autre compte que celui pour lequel elle a ete choisie.
+          clearSignupRegion();
+
           // CRITICAL (client 2026-08-06): completeOnboarding() is what
           // persists `auth.onboardingDone` to MMKV, and app/index.tsx routes
           // on exactly that flag at every cold start. Only done.tsx (the END

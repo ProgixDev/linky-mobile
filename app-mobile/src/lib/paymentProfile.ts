@@ -31,8 +31,20 @@
 //
 // CAS NON COUVERT PAR LA REGLE, ET C'EST VOULU : la diaspora qui a GARDE sa
 // carte SIM guinieenne en vivant a l'etranger. Plutot que de deviner encore
-// plus fort, users.payment_abroad_override (reglable dans Reglages >
-// Confidentialite) laisse la personne le declarer elle-meme.
+// plus fort, users.payment_abroad_override laissait la personne le declarer
+// elle-meme dans Reglages > Confidentialite.
+//
+// CE N'ETAIT PAS UNE SOLUTION, ET LA BASE LE DIT : au 2026-09-16, sur 20
+// comptes, AUCUN n'avait jamais active cet interrupteur. Le client : « Le bouton
+// est trop cache pour activer. On peut deja verrouiller au moment de
+// l'inscription. »
+//
+// DEPUIS, LA REGION DECLAREE PRIME. L'inscription enregistre la reponse a
+// « Vous etes ou ? » dans users.payment_profile, une seule fois. Quand elle
+// existe, plus aucune deduction ne s'applique : ajouter plus tard un numero +224
+// ne fait plus basculer un compte « a l'etranger » en Guinee. La regle de
+// l'indicatif ne sert plus que de REPLI, pour les comptes anterieurs a ce
+// changement (region NULL).
 import { useMemo } from 'react';
 import { useMyPhones } from '../data/queries/phones';
 import { useAuth } from '../stores/auth';
@@ -66,11 +78,19 @@ export function usePaymentProfile(): PaymentProfileState {
   // l'etranger classait a tort en 'guinea' sans aucun moyen de corriger.
   // Reglable dans Reglages > Confidentialite ; false = comportement inchange.
   const abroadOverride = useAuth((s) => s.user?.payment_abroad_override) ?? false;
+  const declared = useAuth((s) => s.user?.payment_profile) ?? null;
   return useMemo(() => {
     const list = phones ?? [];
     // Le numero principal fait foi ; a defaut, le premier verifie.
     const primary = list.find((p) => p.is_primary) ?? list[0] ?? null;
     const e164 = primary?.e164 ?? null;
+    // La region DECLAREE a l'inscription prime sur toute deduction.
+    if (declared === 'guinea' || declared === 'abroad') {
+      // Elle ne depend d'aucune requete : on la connait des l'ouverture de la
+      // session. Inutile de faire attendre l'ecran de paiement le chargement
+      // des numeros, ni de masquer les cartes si cette requete echoue.
+      return { profile: declared, loading: false, e164 };
+    }
     return {
       profile: abroadOverride ? 'abroad' : profileFromPhone(e164),
       // UNE REQUETE EN ECHEC N'EST PAS UNE ABSENCE DE NUMERO.
@@ -89,5 +109,5 @@ export function usePaymentProfile(): PaymentProfileState {
       loading: isLoading || isError,
       e164,
     };
-  }, [phones, isLoading, isError, abroadOverride]);
+  }, [phones, isLoading, isError, abroadOverride, declared]);
 }

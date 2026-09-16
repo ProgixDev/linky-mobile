@@ -10,6 +10,7 @@ import { Text } from '../../src/components/primitives/Text';
 import { Button, IconButton } from '../../src/components/primitives/Button';
 import { useAuth } from '../../src/stores/auth';
 import { haptic } from '../../src/lib/haptics';
+import { clearSignupRegion, saveSignupRegion } from '../../src/lib/signupRegion';
 
 type Channel = 'phone' | 'email';
 
@@ -131,6 +132,9 @@ export default function AuthChoiceRoute() {
               // l'identifiant sur un ecran separe : un seul ecran porte les deux
               // champs. Le choix email/telephone ne sert plus qu'a l'inscription.
               if (isLogin) {
+                // Connexion d'un compte existant : aucune region a declarer, et
+                // aucune region en attente ne doit survivre a ce parcours.
+                clearSignupRegion();
                 // Le canal choisi ici decide du champ affiche a l'ecran suivant :
                 // un seul champ, celui que l'utilisateur vient de designer.
                 router.push({
@@ -139,6 +143,13 @@ export default function AuthChoiceRoute() {
                 } as never);
                 return;
               }
+              // INSCRIPTION : la reponse a « Vous etes ou ? » devient la region de
+              // paiement du compte (client 2026-09-16 : « verrouiller au moment de
+              // l'inscription »). Elle est gardee jusqu'a l'etape de profil, qui
+              // l'enregistre une seule fois. En CONNEXION on ne touche a rien : on
+              // est deja sorti plus haut, et la region d'un compte existant ne se
+              // redeclare pas en se reconnectant.
+              saveSignupRegion(choice === 'phone' ? 'guinea' : 'abroad');
               router.push({
                 pathname: choice === 'phone' ? '/(onboarding)/phone' : '/(onboarding)/email',
                 params: isLogin ? { mode: 'login' } : {},

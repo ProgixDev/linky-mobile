@@ -13,6 +13,7 @@ import { useEmailSignin, usePhoneSignin, useRequestOtp } from '../../src/data/qu
 import { toToastMessage } from '../../src/lib/api';
 import { useToast } from '../../src/components/feedback/Toast';
 import { haptic } from '../../src/lib/haptics';
+import { clearSignupRegion } from '../../src/lib/signupRegion';
 
 // Opt-in alternative to the email-OTP flow (client 2026-08-05): anyone who set
 // a password from Profil → Mot de passe can skip the OTP round-trip entirely.
@@ -104,6 +105,11 @@ export default function PasswordSigninRoute() {
       // A password can only be set by an already-onboarded account (Profil →
       // Mot de passe requires being signed in), so this is always a returning
       // user — straight to the app, never profile-setup.
+      // Un compte EXISTANT ne redeclare pas sa region. Si une inscription
+      // abandonnee a laisse une region en attente sur ce telephone, on l'efface
+      // ici : elle ne doit jamais pouvoir etre ecrite — et verrouillee — sur un
+      // autre compte que celui pour lequel elle a ete choisie.
+      clearSignupRegion();
       completeOnboarding();
       haptic.success();
       router.replace('/(tabs)');
