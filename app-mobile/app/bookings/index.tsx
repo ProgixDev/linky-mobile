@@ -1,5 +1,5 @@
 // Tenant's rental bookings list (location par jour / par mois).
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -11,33 +11,16 @@ import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { BookingCard } from '../../src/components/booking/BookingUI';
 import { useMyBookings } from '../../src/data/queries';
-import { FilterChips, type FilterChip } from '../../src/components/nav/FilterChips';
-import { useTranslation } from 'react-i18next';
-import type { BookingStatus } from '../../src/data/types';
+import { FilterChips } from '../../src/components/nav/FilterChips';
+import { filterBookings, useBookingFilterChips, type BookingFilter } from '../../src/lib/bookingFilters';
 
 // DEMANDE DU CLIENT, 2026-09-09 : « On pourra rajouter un filtre ici comme pour
-// la partie Commandes — Toute / En attente / Active / Annulee ».
-//
-// CINQ PASTILLES ET NON QUATRE. Une reservation connait NEUF statuts, et ses
-// quatre libelles n'en couvraient que sept : une location terminee ne serait
-// apparue nulle part, sauf sous « Toutes ». Un filtre qui rend une ligne
-// introuvable est pire que pas de filtre — d'ou « Terminees ».
-//
-// CHAQUE STATUT TOMBE DANS EXACTEMENT UNE CASE, y compris 'disputed' (range
-// avec les actives : un litige porte sur un sejour en cours) et 'refunded'
-// (range avec les annulees : l'argent est revenu, la location n'a pas eu lieu).
-const BUCKETS: Record<Exclude<BookingFilter, 'all'>, BookingStatus[]> = {
-  pending: ['requested', 'accepted'],
-  active: ['paid', 'active', 'disputed'],
-  completed: ['completed'],
-  cancelled: ['cancelled', 'rejected', 'refunded'],
-};
-
-type BookingFilter = 'all' | 'pending' | 'active' | 'completed' | 'cancelled';
+// la partie Commandes ». Les cases et leurs libelles vivent dans
+// src/lib/bookingFilters.ts, partages avec l'ecran « Reservations » de l'agent :
+// les deux parties d'une meme location doivent lire le meme etat.
 
 export default function BookingsRoute() {
   const { colors } = useTheme();
-  const { t } = useTranslation();
   const q = useMyBookings();
   const [filter, setFilter] = useState<BookingFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -47,19 +30,8 @@ export default function BookingsRoute() {
   }, [q]);
 
   const bookings = q.data ?? [];
-  const FILTERS: FilterChip<BookingFilter>[] = useMemo(
-    () => [
-      { id: 'all', label: t('bookings.filterAll') },
-      { id: 'pending', label: t('bookings.filterPending') },
-      { id: 'active', label: t('bookings.filterActive') },
-      { id: 'completed', label: t('bookings.filterCompleted') },
-      { id: 'cancelled', label: t('bookings.filterCancelled') },
-    ],
-    [t],
-  );
-  const filtered = filter === 'all'
-    ? bookings
-    : bookings.filter((b) => BUCKETS[filter].includes(b.status));
+  const FILTERS = useBookingFilterChips();
+  const filtered = filterBookings(bookings, filter);
 
   if (q.isError && bookings.length === 0) {
     return (
