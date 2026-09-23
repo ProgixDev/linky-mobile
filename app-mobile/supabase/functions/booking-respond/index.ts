@@ -38,10 +38,22 @@ Deno.serve(makePost<Body>('/v1/bookings/respond', valid, async ({ sb, body, req 
       .from('bookings')
       .select('id, period, start_date, end_date')
       .eq('property_id', bk.property_id)
-      .in('status', ['accepted', 'paid', 'active'])
+      .in('status', ['accepted', 'paid', 'active', 'disputed'])
       .neq('id', bk.id);
+    // UNE VENTE EST EXCLUSIVE, AU MEME TITRE QU'UN BAIL AU MOIS. Sans elle dans
+    // cette liste, la comparaison de dates s'appliquait a une vente — dont
+    // end_date est NULL. En JS, `'2026-09-23' < null` devient NaN < 0, donc
+    // false : aucun conflit detecte. Le vendeur pouvait accepter DEUX acheteurs
+    // sur le meme bien ; les deux payaient, confirm_booking_payment n'en
+    // confirmait qu'un et rendait 'conflict' pour l'autre, qui restait debite
+    // sans ecriture au grand livre ni remboursement. booking-request connait
+    // deja cette regle (isExclusive, :128) ; booking-respond ne l'avait jamais eue.
+    //
+    // 'disputed' rejoint la liste des statuts qui occupent le bien : un sejour
+    // gele par un litige n'a pas libere ses nuits.
+    const isExclusive = (p: string) => p === 'month' || p === 'sale';
     const conflict = (others ?? []).some((o) => {
-      if (o.period === 'month' || bk.period === 'month') return true;
+      if (isExclusive(o.period) || isExclusive(bk.period)) return true;
       return o.start_date < (bk.end_date as string) && bk.start_date < (o.end_date as string);
     });
     if (conflict) throwApi('DATES_UNAVAILABLE', 409, 'Ces dates ne sont plus disponibles.');

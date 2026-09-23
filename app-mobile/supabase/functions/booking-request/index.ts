@@ -123,7 +123,9 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
     .from('bookings')
     .select('id, period, start_date, end_date, status')
     .eq('property_id', prop.id)
-    .in('status', ['paid', 'active']);
+    // 'disputed' compte comme occupe : un sejour gele par un litige tient
+    //  toujours les nuits, et son argent dort en sequestre.
+    .in('status', ['paid', 'active', 'disputed']);
   const endStr = body.period === 'day' ? body.end_date! : null;
   const isExclusive = (p: string) => p === 'month' || p === 'sale';
   const overlaps = (existing ?? []).some((b) => {

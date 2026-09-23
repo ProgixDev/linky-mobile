@@ -36,7 +36,11 @@ Deno.serve(makePost<Body>('/v1/properties/availability', valid, async ({ sb, bod
     .from('bookings')
     .select('period, start_date, end_date')
     .eq('property_id', body.property_id)
-    .in('status', ['paid', 'active'])
+    // 'disputed' bloque aussi. Un litige gele l'argent ET le creneau : sans lui
+    // ici, le calendrier affichait LIBRES les nuits d'un sejour conteste, et un
+    // second locataire pouvait les payer. La garde de chevauchement de
+    // booking-request lit la meme liste, les deux doivent rester d'accord.
+    .in('status', ['paid', 'active', 'disputed'])
     .order('start_date', { ascending: true });
   if (error) {
     console.error('[property-availability] query error:', error);

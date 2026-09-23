@@ -359,6 +359,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
         app: 'marketplace',
       });
     }
+    if (outcome === 'noop_dead') {
+      // Encaisse sur une reservation annulee/refusee/remboursee : le sequestre
+      // ne sera jamais credite. Meme gravite qu'un conflit de dates, et meme
+      // traitement — on accuse reception (inutile que Stripe rejoue) mais on
+      // hurle, parce que seul un remboursement manuel repare ca.
+      console.error('[stripe-webhook] CRITICAL booking already dead — charge captured, NOT credited, manual refund required', {
+        stripe_pi: pi.id, booking_id: bookingId, amount: pi.amount,
+      });
+      return json({ received: true, booking_dead: true }, 200);
+    }
     return json({ received: true, booking: outcome }, 200);
   }
 
