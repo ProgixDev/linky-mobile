@@ -88,7 +88,36 @@ export default function BookingsRoute() {
         ) : (
           <View style={{ paddingHorizontal: 20, paddingTop: 6, gap: 10 }}>
             {filtered.map((b) => (
-              <BookingCard key={b.id} booking={b} onPress={() => router.push(`/bookings/${b.id}` as never)} />
+              <BookingCard
+                key={b.id}
+                booking={b}
+                onPress={() => router.push(`/bookings/${b.id}` as never)}
+                // « PROLONGER » (client 2026-09-23) — renvoie au calendrier du
+                // bien, ou le locataire choisit ses nouvelles dates. Ce n'est
+                // pas une modification de la reservation en cours : c'en est une
+                // nouvelle, avec son contrat et son paiement. Le calendrier
+                // refuse deja les dates deja occupees.
+                //
+                // SEULEMENT SUR UN SEJOUR A LA JOURNEE EN COURS. 'paid' est
+                // ecarte — on n'a pas encore emmenage, il n'y a rien a
+                // prolonger ; 'disputed' aussi — proposer d'allonger un sejour
+                // en litige serait deplace. C'est exactement l'etiquette
+                // « Bail actif » que le client montrait sur sa capture.
+                //
+                // LE MOIS EST EXCLU, ET CE N'EST PAS UN OUBLI. Au paiement d'un
+                // bail mensuel, le bien passe en 'reserved' (20260706_01), et
+                // booking-request refuse toute demande sur un bien qui n'est pas
+                // 'active' : PROPERTY_INACTIVE, « Cette annonce n'est plus
+                // disponible ». Le bouton enverrait donc le locataire vers un
+                // calendrier qui finit en erreur. Prolonger un bail au mois
+                // demande une regle serveur — autoriser le locataire EN PLACE a
+                // reserver son propre bien reserve — qui n'existe pas encore.
+                onExtend={
+                  b.status === 'active' && b.period === 'day'
+                    ? () => router.push(`/property/${b.propertyId}/book` as never)
+                    : undefined
+                }
+              />
             ))}
           </View>
         )}
