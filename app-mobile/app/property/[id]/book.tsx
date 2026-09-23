@@ -4,7 +4,7 @@
 // then sends the request to the landlord (booking-request). La visite en
 // ligne a ete retiree le 2026-09-09 : le rendez-vous se prend par le chat.
 import { useBuyerGate } from '../../../src/components/feedback/BuyerGate';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,7 +20,8 @@ import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { BookingCalendar } from '../../../src/components/booking/BookingCalendar';
 import { formatBookingDate } from '../../../src/components/booking/BookingUI';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
-import { useProperty, useRequestBooking } from '../../../src/data/queries';
+import { useMyBookings, useProperty, useRequestBooking } from '../../../src/data/queries';
+import { addMonthsClamped } from '../../../src/lib/dates';
 import { usePropertyAvailability } from '../../../src/data/queries/bookings';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
@@ -33,7 +34,12 @@ function nightsBetween(start: string, end: string): number {
 }
 
 export default function BookPropertyRoute() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `extend` = l'identifiant du bail au mois que l'on prolonge (client
+  // 2026-09-18 : « un bouton "Prolonger" qui renvoie vers le calendrier de
+  // reservation »). Dans ce mode, la date de depart n'est PAS choisie : elle
+  // est la fin du bail en cours. L'ecran l'affiche verrouillee, et le serveur
+  // la recalcule de son cote — il ignore celle qu'on lui envoie.
+  const { id, extend } = useLocalSearchParams<{ id: string; extend?: string }>();
   const { colors, radii } = useTheme();
   const { data: prop, isLoading, isError, refetch } = useProperty(id);
   const request = useRequestBooking();
@@ -41,10 +47,26 @@ export default function BookPropertyRoute() {
   const { show } = useToast();
   const { requireBuyer } = useBuyerGate();
 
+  const myBookings = useMyBookings();
+  const parentLease = extend
+    ? (myBookings.data ?? []).find((b) => b.id === extend) ?? null
+    : null;
+  const isExtension = !!extend;
+  // Meme rabotage que Postgres et que le serveur (_shared/dates.ts) : un bail
+  // signe un 31 janvier se termine un 28 fevrier, pas un 3 mars.
+  const extendStart = parentLease?.months
+    ? addMonthsClamped(parentLease.startDate, parentLease.months)
+    : null;
+
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
   const [months, setMonths] = useState(12);
   const [note, setNote] = useState('');
+
+  // La date de depart d'une prolongation ne se choisit pas.
+  useEffect(() => {
+    if (extendStart && startDate !== extendStart) setStartDate(extendStart);
+  }, [extendStart, startDate]);
 
   const period: 'day' | 'month' = prop?.perMonth ? 'month' : 'day';
   const rent = prop?.priceGnf ?? 0;
@@ -59,11 +81,14 @@ export default function BookPropertyRoute() {
     }
     if (!startDate) return { nights: 0, deposit: 0, amount: 0, fees: 0, total: 0, ready: false };
     // Monthly: 1st month + a 1-month caution, held in escrow (client 2026-07-29).
-    const dep = rent;
+    // PAS de seconde caution sur une prolongation : celle du bail initial est
+    // deja chez le proprietaire et n'a pas ete restituee. Meme regle que le
+    // serveur (booking-request), qui recalcule tout de son cote.
+    const dep = isExtension ? 0 : rent;
     const a = rent + dep;
     const f = platformFeeGnf(a);
     return { nights: 0, deposit: dep, amount: a, fees: f, total: a + f, ready: true };
-  }, [period, startDate, endDate, rent]);
+  }, [period, startDate, endDate, rent, isExtension]);
 
   // Le premier mois TEL QUE L'ANNONCE L'AFFICHE. La caution prend le reste du
   // total, ce qui garantit que les deux lignes s'additionnent exactement.
@@ -90,6 +115,7 @@ export default function BookPropertyRoute() {
         period,
         startDate,
         ...(period === 'day' ? { endDate: endDate! } : { months }),
+        ...(extend ? { extendBookingId: extend } : {}),
         note,
       },
       {
@@ -110,7 +136,7 @@ export default function BookPropertyRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Réserver ce logement" back />
+      <TopBar title={isExtension ? "Prolonger le bail" : "Réserver ce logement"} back />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -128,6 +154,24 @@ export default function BookPropertyRoute() {
             </Text>
           </View>
 
+          {/* PROLONGATION : la date de reprise ne se choisit pas, elle se
+              constate. Afficher un calendrier serait mentir — le serveur
+              recalcule de toute facon la fin du bail en cours et ignore ce que
+              l'ecran envoie. On montre donc la date, verrouillee, et on explique
+              d'ou elle vient. */}
+          {isExtension ? (
+            <View>
+              <MicroLabel label="Reprise du bail" />
+              <View style={{ padding: 14, borderRadius: radii.lg, backgroundColor: colors.bgSunken, borderWidth: 1, borderColor: colors.border, gap: 4 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700' }}>
+                  {extendStart ? `À partir du ${formatBookingDate(extendStart)}` : 'À la fin du bail en cours'}
+                </Text>
+                <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                  La prolongation démarre le jour où ton bail actuel se termine. Aucune nouvelle caution ne t’est demandée.
+                </Text>
+              </View>
+            </View>
+          ) : (
           <View>
             <MicroLabel label={period === 'day' ? 'Dates du séjour' : "Date d'emménagement"} />
             <BookingCalendar
@@ -154,6 +198,7 @@ export default function BookPropertyRoute() {
               </Text>
             )}
           </View>
+          )}
 
           {period === 'month' && (
             <View>
@@ -187,7 +232,9 @@ export default function BookPropertyRoute() {
                 </Pressable>
               </View>
               <Text variant="micro" tone="muted" style={{ marginTop: 6, letterSpacing: 0, textTransform: 'none' }}>
-                1er mois + caution (1 mois) payés dans l'app ; les mois suivants et la restitution de la caution se règlent directement avec le propriétaire.
+                {isExtension
+                  ? "1 mois de loyer payé dans l'app ; aucune nouvelle caution. Les mois suivants se règlent directement avec le propriétaire."
+                  : "1er mois + caution (1 mois) payés dans l'app ; les mois suivants et la restitution de la caution se règlent directement avec le propriétaire."}
               </Text>
             </View>
           )}
@@ -245,7 +292,11 @@ export default function BookPropertyRoute() {
               ) : (
                 <>
                   <RecapRow label="Premier mois de loyer (frais inclus)" value={formatGNF(firstMonthWithFee)} />
-                  <RecapRow label="Caution (1 mois, frais inclus)" value={formatGNF(total - firstMonthWithFee)} />
+                  {/* Pas de ligne « Caution » a 0 GNF sur une prolongation :
+                      elle n'est pas facturee, l'afficher n'aurait rien dit. */}
+                  {!isExtension && (
+                    <RecapRow label="Caution (1 mois, frais inclus)" value={formatGNF(total - firstMonthWithFee)} />
+                  )}
                 </>
               )}
               <View style={{ height: 1, backgroundColor: colors.border }} />

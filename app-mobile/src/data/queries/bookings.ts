@@ -11,6 +11,10 @@ export interface RequestBookingInput {
   endDate?: string;       // daily only (exclusive check-out)
   months?: number;        // monthly only
   note?: string;
+  /** Prolongation d'un bail au mois en cours. Le serveur derive lui-meme la
+   *  date de debut (la fin du bail parent) : startDate n'est alors qu'un
+   *  affichage. */
+  extendBookingId?: string;
 }
 
 export interface PropertyAvailability {
@@ -75,11 +79,14 @@ export function useRequestBooking() {
           ...(input.endDate ? { end_date: input.endDate } : {}),
           ...(input.months ? { months: input.months } : {}),
           ...(input.note?.trim() ? { note: input.note.trim() } : {}),
+          ...(input.extendBookingId ? { extend_booking_id: input.extendBookingId } : {}),
         },
       });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      // Une prolongation change ce que le calendrier du bien doit montrer.
+      qc.invalidateQueries({ queryKey: ['property-availability'] });
     },
   });
 }

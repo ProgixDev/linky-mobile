@@ -13,6 +13,7 @@
 //   (one-sided escrow credit + accepted→paid).
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
+import { addMonthsClamped, todayConakry } from '@shared/dates.ts';
 import { requireUser } from '@shared/auth.ts';
 import {
   initForRail, toLocalGnAccount, LENGOPAY_MAX_AMOUNT_MINOR, isGnE164,
@@ -78,7 +79,7 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
 
   const { data: bk, error: eBk } = await sb
     .from('bookings')
-    .select('id, tenant_id, status, total_minor, currency')
+    .select('id, tenant_id, status, total_minor, currency, period, start_date, end_date, months')
     .eq('id', body.booking_id)
     .maybeSingle();
   if (eBk) { console.error('[booking-sign-pay] lookup:', eBk); throwApi('INTERNAL_ERROR', 500, 'Erreur base de données'); }
@@ -88,6 +89,37 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
     throwApi('INVALID_STATUS', 409, bk.status === 'paid'
       ? 'Cette réservation est déjà payée.'
       : "Le propriétaire n'a pas encore signé cette réservation.");
+  }
+
+  // ── ON NE PAIE PAS UN SEJOUR DEJA FINI ────────────────────────────────────
+  // Rien n'a jamais regarde la date ici. Une reservation acceptee en aout et
+  // jamais payee restait payable aujourd'hui : le locataire envoyait son argent
+  // en sequestre pour des nuits revolues, et le proprietaire n'avait plus rien
+  // a livrer. Le balayage qui expire les reservations ne rattrape pas ce cas —
+  // il compte 7 jours depuis updated_at, pas depuis la date du sejour, donc
+  // toute reservation « reveillee » (une notification, un coup d'oeil qui
+  // touche la ligne) repartait pour un tour.
+  //
+  // ON NE REFUSE QUE CE QUI EST ENTIEREMENT PASSE, pas ce qui a commence. Un
+  // sejour en cours garde une valeur : il reste des nuits a occuper, et le
+  // locataire qui paie en retard sait ce qu'il achete. Une VENTE n'a pas de
+  // fin : elle n'est pas concernee.
+  //
+  // Le jour est celui de Conakry, comme partout ailleurs dans la machine de
+  // reservation (complete_ended_bookings, cancel_paid_booking).
+  const today = todayConakry();
+  // end_date est la date de SORTIE, exclue : un sejour « du 10 au 11 » n'a plus
+  // aucune nuit a vendre le 11. D'ou `<=` et non `<`.
+  const stayEnd = bk.period === 'day'
+    ? (bk.end_date as string | null)
+    : bk.period === 'month' && bk.months
+      ? addMonthsClamped(bk.start_date as string, bk.months as number)
+      : null;
+  if (stayEnd && stayEnd <= today) {
+    throwApi('STAY_ALREADY_ENDED', 409,
+      bk.period === 'day'
+        ? 'Ce séjour est terminé : il ne peut plus être payé. Fais une nouvelle demande pour de nouvelles dates.'
+        : 'Ce bail est arrivé à son terme : il ne peut plus être payé. Fais une nouvelle demande.');
   }
 
   const method = body.payment_method ?? 'orange-money';

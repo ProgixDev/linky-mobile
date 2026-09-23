@@ -214,6 +214,7 @@ export default function BookingDetailRoute() {
   };
 
   const isSale = booking.period === 'sale';
+  const isExtension = !!booking.extendsBookingId;
   // STATUS_CHANGED veut dire « ton ecran est en retard » : on recharge au lieu
   // de laisser l'utilisateur devant une erreur qu'il ne peut pas comprendre.
   const onCancelError = (e: unknown) => {
@@ -439,12 +440,26 @@ export default function BookingDetailRoute() {
         )}
         {booking.status === 'paid' && (
           <HoldToConfirmButton
-            label={isSale ? 'Maintenir pour confirmer la remise du bien' : "Maintenir pour confirmer l'emménagement"}
+            // ON N'EMMENAGE PAS DEUX FOIS. Une prolongation se confirme le jour
+            // ou le nouveau terme commence, pas par une remise de cles : demander
+            // a quelqu'un qui vit deja la de « confirmer son emmenagement »
+            // l'aurait fait hesiter devant un bouton qui libere de l'argent.
+            label={
+              isExtension
+                ? 'Maintenir pour confirmer la prolongation'
+                : isSale
+                  ? 'Maintenir pour confirmer la remise du bien'
+                  : "Maintenir pour confirmer l'emménagement"
+            }
             onConfirm={() =>
               checkin.mutate(booking.id, {
                 onSuccess: () =>
                   show(
-                    isSale ? 'Remise confirmée — montant versé au vendeur ✅' : 'Emménagement confirmé — loyer versé au propriétaire ✅',
+                    isSale
+                      ? 'Remise confirmée — montant versé au vendeur ✅'
+                      : isExtension
+                        ? 'Prolongation confirmée — loyer versé au propriétaire ✅'
+                        : 'Emménagement confirmé — loyer versé au propriétaire ✅',
                     'success',
                   ),
                 onError: (e) => show(toToastMessage(e, 'Impossible de confirmer.'), 'danger'),

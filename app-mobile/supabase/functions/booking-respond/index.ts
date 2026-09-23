@@ -22,7 +22,7 @@ Deno.serve(makePost<Body>('/v1/bookings/respond', valid, async ({ sb, body, req 
 
   const { data: bk, error: eBk } = await sb
     .from('bookings')
-    .select('id, landlord_id, tenant_id, property_id, status, period, start_date, end_date, property_snapshot')
+    .select('id, landlord_id, tenant_id, property_id, status, period, start_date, end_date, property_snapshot, extends_booking_id')
     .eq('id', body.booking_id)
     .maybeSingle();
   if (eBk) { console.error('[booking-respond] lookup:', eBk); throwApi('INTERNAL_ERROR', 500, 'Erreur base de données'); }
@@ -36,7 +36,7 @@ Deno.serve(makePost<Body>('/v1/bookings/respond', valid, async ({ sb, body, req 
     // tenants could pay (review DEFECT-1). The landlord accepts one at a time.
     const { data: others } = await sb
       .from('bookings')
-      .select('id, period, start_date, end_date')
+      .select('id, period, start_date, end_date, tenant_id, extends_booking_id')
       .eq('property_id', bk.property_id)
       .in('status', ['accepted', 'paid', 'active', 'disputed'])
       .neq('id', bk.id);
@@ -51,8 +51,25 @@ Deno.serve(makePost<Body>('/v1/bookings/respond', valid, async ({ sb, body, req 
     //
     // 'disputed' rejoint la liste des statuts qui occupent le bien : un sejour
     // gele par un litige n'a pas libere ses nuits.
+    // LA CHAINE, PAS LA SEULE LIGNE PARENTE — meme raisonnement que
+    // booking-request : au deuxieme renouvellement, le bail d'ORIGINE est
+    // toujours exclusif et ferait refuser au bailleur la prolongation de son
+    // propre locataire.
+    const chain = new Set<string>();
+    if (bk.extends_booking_id) {
+      const byId = new Map((others ?? []).map((o) => [o.id as string, o]));
+      let cursor: string | null = bk.extends_booking_id as string;
+      for (let hops = 0; cursor && hops < 40; hops++) {
+        chain.add(cursor);
+        const row = byId.get(cursor);
+        cursor = row ? ((row.extends_booking_id as string | null) ?? null) : null;
+      }
+    }
     const isExclusive = (p: string) => p === 'month' || p === 'sale';
     const conflict = (others ?? []).some((o) => {
+      // Les baux de la chaine que l'on prolonge ne sont pas des conflits, a
+      // condition qu'ils appartiennent au meme locataire.
+      if (chain.has(o.id as string) && o.tenant_id === bk.tenant_id) return false;
       if (isExclusive(o.period) || isExclusive(bk.period)) return true;
       return o.start_date < (bk.end_date as string) && bk.start_date < (o.end_date as string);
     });

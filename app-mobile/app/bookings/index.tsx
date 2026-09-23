@@ -13,6 +13,8 @@ import { BookingCard } from '../../src/components/booking/BookingUI';
 import { useMyBookings } from '../../src/data/queries';
 import { FilterChips } from '../../src/components/nav/FilterChips';
 import { filterBookings, useBookingFilterChips, type BookingFilter } from '../../src/lib/bookingFilters';
+import { addMonthsClamped } from '../../src/lib/dates';
+import type { Booking } from '../../src/data/types';
 
 // DEMANDE DU CLIENT, 2026-09-09 : « On pourra rajouter un filtre ici comme pour
 // la partie Commandes ». Les cases et leurs libelles vivent dans
@@ -30,6 +32,29 @@ export default function BookingsRoute() {
   }, [q]);
 
   const bookings = q.data ?? [];
+
+  // PROLONGER — ce que l'on refuse de proposer, et pourquoi.
+  //
+  // * une prolongation VIVANTE existe deja : reproposer le bouton produisait une
+  //   seconde demande identique. Le bailleur en recevait deux, acceptait la
+  //   premiere, et se prenait un 409 « ces dates ne sont plus disponibles » sur
+  //   la seconde — pour son propre locataire, sur un bien que personne d'autre
+  //   n'avait reserve ;
+  // * le terme du bail est deja passe (cas d'un bail reste 'paid' faute de
+  //   confirmation d'emmenagement, que rien ne termine) : la reprise tomberait
+  //   dans le passe et le serveur refuserait. Autant ne rien proposer.
+  const all = q.data ?? [];
+  const hasLiveExtension = (id: string) =>
+    all.some((x) => x.extendsBookingId === id
+      && ['requested', 'accepted', 'paid', 'active', 'disputed'].includes(x.status));
+  const extendHandler = (b: Booking) => {
+    if (b.status !== 'active' && b.status !== 'paid') return undefined;
+    if (hasLiveExtension(b.id)) return undefined;
+    if (b.period === 'day') return () => router.push(`/property/${b.propertyId}/book` as never);
+    if (b.period !== 'month' || !b.months) return undefined;
+    if (addMonthsClamped(b.startDate, b.months) <= new Date().toISOString().slice(0, 10)) return undefined;
+    return () => router.push(`/property/${b.propertyId}/book?extend=${b.id}` as never);
+  };
   const FILTERS = useBookingFilterChips();
   const filtered = filterBookings(bookings, filter);
 
@@ -112,11 +137,15 @@ export default function BookingsRoute() {
                 // calendrier qui finit en erreur. Prolonger un bail au mois
                 // demande une regle serveur — autoriser le locataire EN PLACE a
                 // reserver son propre bien reserve — qui n'existe pas encore.
-                onExtend={
-                  b.status === 'active' && b.period === 'day'
-                    ? () => router.push(`/property/${b.propertyId}/book` as never)
-                    : undefined
-                }
+                // PROLONGER (client 2026-09-18) : « quand le statut de la
+                // reservation est en "Actives", rajouter un bouton "Prolonger"
+                // qui renvoie vers le calendrier de reservation ». Le mensuel
+                // passe le parametre `extend` : le calendrier verrouille alors
+                // la date de depart sur la fin du bail en cours, et le serveur
+                // la recalcule de son cote sans faire confiance a l'ecran.
+                // 'paid' compte autant qu"'active' : le bail est deja paye,
+                // seule la confirmation d'emmenagement manque.
+                onExtend={extendHandler(b)}
               />
             ))}
           </View>

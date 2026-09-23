@@ -29,7 +29,7 @@ Deno.serve(makePost<Body>('/v1/bookings/list-mine', valid, async ({ sb, body, re
 
   const { data, error } = await sb
     .from('bookings')
-    .select('id, property_id, landlord_id, period, start_date, end_date, months, rent_minor, amount_minor, fees_minor, total_minor, status, note, property_snapshot, contract, landlord_signed_at, tenant_signed_at, events, created_at')
+    .select('id, property_id, landlord_id, period, start_date, end_date, months, rent_minor, amount_minor, fees_minor, total_minor, status, note, property_snapshot, contract, landlord_signed_at, tenant_signed_at, events, created_at, extends_booking_id')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -61,6 +61,7 @@ Deno.serve(makePost<Body>('/v1/bookings/list-mine', valid, async ({ sb, body, re
     property: r.property_snapshot,
     contract: r.contract,
     landlordSignedAt: r.landlord_signed_at,
+    extendsBookingId: r.extends_booking_id ?? null,
     tenantSignedAt: r.tenant_signed_at,
     events: r.events,
     createdAt: r.created_at,

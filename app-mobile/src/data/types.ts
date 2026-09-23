@@ -301,6 +301,9 @@ export interface Booking {
   };
   contract: BookingContract | null;
   landlordSignedAt: string | null;
+  /** Bail au mois que cette reservation prolonge, s'il y en a un. Change ce que
+   *  l'ecran demande de confirmer : on n'emmenage pas deux fois. */
+  extendsBookingId?: string | null;
   tenantSignedAt: string | null;
   events: { at: string; label: string }[];
   createdAt: string;
