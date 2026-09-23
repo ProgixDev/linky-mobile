@@ -22,7 +22,7 @@ import { BookingStatusChip, ContractView, BookingTimeline, bookingPeriodText } f
 import { useMyBookings, useBookingSignPay, useCancelBooking, useConfirmCheckin } from '../../src/data/queries';
 import { PaymentMethodPicker, LENGOPAY_METHOD } from '../../src/components/payment/PaymentMethodPicker';
 import { useToast } from '../../src/components/feedback/Toast';
-import { toToastMessage } from '../../src/lib/api';
+import { ApiError, toToastMessage } from '../../src/lib/api';
 import { formatGNF } from '../../src/lib/format';
 import { contractIsSigned, contractPdfAvailable, shareContractPdf } from '../../src/lib/contractPdf';
 import { formatGnPhone, gnOperatorMismatch } from '../../src/lib/gnPhone';
@@ -214,6 +214,16 @@ export default function BookingDetailRoute() {
   };
 
   const isSale = booking.period === 'sale';
+  // STATUS_CHANGED veut dire « ton ecran est en retard » : on recharge au lieu
+  // de laisser l'utilisateur devant une erreur qu'il ne peut pas comprendre.
+  const onCancelError = (e: unknown) => {
+    if (e instanceof ApiError && e.code === 'STATUS_CHANGED') {
+      void q.refetch();
+      show('Ta réservation a changé d’état. On la recharge.', 'info');
+      return;
+    }
+    show(toToastMessage(e, "Impossible d'annuler."), 'danger');
+  };
   // L'heure n'est lue qu'au rendu : la limite ne bouge pas pendant qu'on lit
   // l'écran, et le serveur retranche de toute façon.
   const cancelWindow = paidCancelWindow(booking, Date.now());
@@ -443,19 +453,21 @@ export default function BookingDetailRoute() {
             disabled={checkin.isPending}
           />
         )}
-        {(booking.status === 'requested' || booking.status === 'accepted') && (
+        {/* Pas pendant qu'un paiement est en vol : le serveur refuse desormais
+            (PAYMENT_IN_PROGRESS), autant ne pas proposer le geste. */}
+        {(booking.status === 'requested' || booking.status === 'accepted') && !awaitingPayment && (
           <Button
             variant="outline"
             label="Annuler la demande"
             disabled={cancel.isPending}
             loading={cancel.isPending}
             onPress={() =>
-              cancel.mutate(booking.id, {
+              cancel.mutate({ bookingId: booking.id, expectedStatus: booking.status === 'requested' ? 'requested' : 'accepted' }, {
                 onSuccess: () => {
                   show('Réservation annulée.', 'info');
                   router.back();
                 },
-                onError: (e) => show(toToastMessage(e, "Impossible d'annuler."), 'danger'),
+                onError: (e) => onCancelError(e),
               })
             }
           />
@@ -481,12 +493,12 @@ export default function BookingDetailRoute() {
                     text: 'Annuler et être remboursé',
                     style: 'destructive',
                     onPress: () =>
-                      cancel.mutate(booking.id, {
+                      cancel.mutate({ bookingId: booking.id, expectedStatus: 'paid' }, {
                         onSuccess: () => {
                           show('Réservation annulée — montant remboursé sur ton portefeuille ✅', 'success');
                           router.back();
                         },
-                        onError: (e) => show(toToastMessage(e, "Impossible d'annuler."), 'danger'),
+                        onError: (e) => onCancelError(e),
                       }),
                   },
                 ],

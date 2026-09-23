@@ -146,11 +146,23 @@ export function useBookingSignPay() {
  *  /booking-cancel : avant paiement rien n'a bouge, apres paiement le sequestre
  *  revient au portefeuille (client 2026-09-23, fenetre de 48 h). Le portefeuille
  *  et le bien sont donc invalides eux aussi : un remboursement les change. */
+export interface CancelBookingInput {
+  bookingId: string;
+  /** L'etat que l'ECRAN affichait au moment du geste. Le serveur refuse de
+   *  rembourser si la ligne a change entre-temps : le cache tient 5 minutes et
+   *  ne se rafraichit pas au retour au premier plan, et un remboursement ne doit
+   *  pas partir sous un bouton qui disait « Annuler la demande ». */
+  expectedStatus: 'requested' | 'accepted' | 'paid';
+}
+
 export function useCancelBooking() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (bookingId: string) => {
-      return apiPost<{ ok: true; refunded: boolean }>({ path: '/booking-cancel', body: { booking_id: bookingId } });
+    mutationFn: async ({ bookingId, expectedStatus }: CancelBookingInput) => {
+      return apiPost<{ ok: true; refunded: boolean }>({
+        path: '/booking-cancel',
+        body: { booking_id: bookingId, expected_status: expectedStatus },
+      });
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
