@@ -2,9 +2,10 @@
 //   requested → Annuler
 //   accepted  → Signer & payer (hold-to-confirm signature → Stripe sheet)
 //   paid      → Confirmer l'emménagement (hold-to-confirm → escrow release)
+//             OU Annuler la réservation, jusqu'à 48 h avant (→ remboursement)
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
@@ -25,6 +26,7 @@ import { toToastMessage } from '../../src/lib/api';
 import { formatGNF } from '../../src/lib/format';
 import { contractIsSigned, contractPdfAvailable, shareContractPdf } from '../../src/lib/contractPdf';
 import { formatGnPhone, gnOperatorMismatch } from '../../src/lib/gnPhone';
+import { paidCancelWindow, formatCancelDeadline } from '../../src/lib/bookingCancelWindow';
 import { usePayerPhone } from '../../src/lib/payerPhone';
 import type { PaymentMethod } from '../../src/data/types';
 
@@ -212,6 +214,10 @@ export default function BookingDetailRoute() {
   };
 
   const isSale = booking.period === 'sale';
+  // L'heure n'est lue qu'au rendu : la limite ne bouge pas pendant qu'on lit
+  // l'écran, et le serveur retranche de toute façon.
+  const cancelWindow = paidCancelWindow(booking, Date.now());
+  const cancelDeadlineText = formatCancelDeadline(booking.startDate);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -453,6 +459,58 @@ export default function BookingDetailRoute() {
               })
             }
           />
+        )}
+        {/* ANNULATION APRES PAIEMENT — « une sécurité pour le client »
+            (demande du 2026-09-23). Bouton discret : l'action attendue à ce
+            stade reste de confirmer l'emménagement, juste au-dessus. Il passe
+            par une alerte parce qu'il déplace de l'argent, alors que le bouton
+            d'avant paiement ne fait qu'effacer une demande. */}
+        {booking.status === 'paid' && cancelWindow === 'open' && (
+          <Button
+            variant="outline"
+            label="Annuler la réservation"
+            disabled={cancel.isPending}
+            loading={cancel.isPending}
+            onPress={() =>
+              Alert.alert(
+                'Annuler la réservation ?',
+                `${formatGNF(booking.totalGnf)} te seront remboursés sur ton portefeuille Linky, frais compris. Cette réservation sera libérée et tu ne pourras pas revenir en arrière.`,
+                [
+                  { text: 'Garder ma réservation', style: 'cancel' },
+                  {
+                    text: 'Annuler et être remboursé',
+                    style: 'destructive',
+                    onPress: () =>
+                      cancel.mutate(booking.id, {
+                        onSuccess: () => {
+                          show('Réservation annulée — montant remboursé sur ton portefeuille ✅', 'success');
+                          router.back();
+                        },
+                        onError: (e) => show(toToastMessage(e, "Impossible d'annuler."), 'danger'),
+                      }),
+                  },
+                ],
+              )
+            }
+          />
+        )}
+        {/* La date limite s'affiche AVEC le bouton : la « sécurité » demandée
+            par le client n'en est une que si le locataire sait jusqu'à quand
+            elle joue. */}
+        {booking.status === 'paid' && cancelWindow === 'open' && cancelDeadlineText && (
+          <Text variant="micro" tone="muted" style={{ textAlign: 'center', letterSpacing: 0, textTransform: 'none' }}>
+            Remboursement intégral jusqu’au {cancelDeadlineText}.
+          </Text>
+        )}
+        {/* Fenêtre passée : on l'explique, plutôt que de laisser un bouton qui
+            se ferait refuser par le serveur. Le texte ne date pas la limite —
+            une location à la journée se réserve souvent pour le lendemain, et
+            « c'était possible jusqu'au 21 » se lirait comme un droit qu'on
+            aurait laissé filer alors qu'il n'a jamais été ouvert. */}
+        {booking.status === 'paid' && cancelWindow === 'closed' && (
+          <Text variant="micro" tone="muted" style={{ textAlign: 'center', letterSpacing: 0, textTransform: 'none' }}>
+            L’annulation en ligne s’arrête 48 h avant l’emménagement. Contacte {isSale ? 'le vendeur' : 'le propriétaire'} ou l’équipe Linky.
+          </Text>
         )}
       </KeyboardAwareScrollView>
     </SafeAreaView>

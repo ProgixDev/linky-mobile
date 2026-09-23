@@ -142,14 +142,23 @@ export function useBookingSignPay() {
   });
 }
 
+/** Annulation par le locataire. `refunded` distingue les deux cas que couvre
+ *  /booking-cancel : avant paiement rien n'a bouge, apres paiement le sequestre
+ *  revient au portefeuille (client 2026-09-23, fenetre de 48 h). Le portefeuille
+ *  et le bien sont donc invalides eux aussi : un remboursement les change. */
 export function useCancelBooking() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (bookingId: string) => {
-      return apiPost<{ ok: true }>({ path: '/booking-cancel', body: { booking_id: bookingId } });
+      return apiPost<{ ok: true; refunded: boolean }>({ path: '/booking-cancel', body: { booking_id: bookingId } });
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      if (res.refunded) {
+        qc.invalidateQueries({ queryKey: ['wallet'] });
+        qc.invalidateQueries({ queryKey: ['properties'] });
+        qc.invalidateQueries({ queryKey: ['property-availability'] });
+      }
     },
   });
 }
