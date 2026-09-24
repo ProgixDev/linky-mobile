@@ -388,12 +388,33 @@ export type WalletOrigin =
   | 'withdrawal'  // retraits
   | 'other';
 
+/** Les deux caisses, separees depuis le 2026-09-24 (demande du client).
+ *  Voir les migrations 20260924_04 a _07. */
+export type WalletKind = 'seller' | 'immo';
+
 export interface Wallet {
+  /** La caisse VENDEUR — celle qui PAIE. Ventes d'articles, recharges,
+   *  remboursements recus, achats, boosts d'articles, retraits.
+   *
+   *  Le nom ne change pas, et c'est deliberе : tous les ecrans de paiement
+   *  lisent `balanceGnf` pour savoir si le portefeuille peut regler. Comme
+   *  c'est exactement cette caisse-la qui est debitee cote serveur
+   *  (place_order, pay_booking_from_wallet, purchase_boost), ils restent
+   *  justes sans etre touches. Renommer aurait multiplie les occasions de se
+   *  tromper de caisse sur un ecran d'argent. */
   balanceGnf: number;
+  /** La caisse IMMO — loyers et ventes de biens encaisses. Elle n'existe que
+   *  pour ceux qui en ont gagne : 0 tant qu'aucun loyer n'a ete libere. */
+  immoGnf: number;
+  /** Les deux ensemble. Ce que l'utilisateur possede en tout. */
+  totalGnf: number;
   pendingGnf: number;
   movements: WalletMovement[];
-  /** Net par origine. Une origine qui se solde a zero est absente. */
+  /** Net par origine, TOUTES CAISSES CONFONDUES. Une origine qui se solde a
+   *  zero est absente. */
   originsGnf: Partial<Record<WalletOrigin, number>>;
+  /** Net par origine, caisse par caisse. */
+  originsByKind: Partial<Record<WalletKind, Partial<Record<WalletOrigin, number>>>>;
 }
 
 export interface Message {

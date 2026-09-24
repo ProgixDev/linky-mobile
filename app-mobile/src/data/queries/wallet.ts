@@ -3,10 +3,10 @@
 // shape the existing screens consume. Only GNF is surfaced in the UI for V1.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
-import type { Wallet, WalletMovement, WalletOrigin } from '../types';
+import type { Wallet, WalletKind, WalletMovement, WalletOrigin } from '../types';
 
-interface BalanceRow { wallet_id: string; currency: string; balance_minor: number }
-interface OriginRow { currency: string; origin: string; net_minor: number }
+interface BalanceRow { wallet_id: string; kind?: string; currency: string; balance_minor: number }
+interface OriginRow { kind?: string; currency: string; origin: string; net_minor: number }
 interface HistoryEntry {
   id: string;
   wallet_id: string;
@@ -61,18 +61,43 @@ export function useWallet() {
         apiPost<{ balances: BalanceRow[]; origins?: OriginRow[] }>({ path: '/wallet-balance', body: {} }),
         apiPost<{ entries: HistoryEntry[]; next_cursor: unknown }>({ path: '/wallet-history', body: { limit: 50 } }),
       ]);
-      const gnf = balance.balances.find((b) => b.currency === 'GNF');
-      const balanceGnf = Number(gnf?.balance_minor ?? 0);
+      // DEUX CAISSES DEPUIS LE 2026-09-24. Le serveur rend une ligne PAR
+      // caisse ; l'ancien `.find(currency === 'GNF')` aurait pris la premiere
+      // et ignore l'autre en silence. `kind` est optionnel : un binaire qui
+      // tourne encore sur l'ancienne fonction n'en recoit pas, et tout tombe
+      // alors dans la caisse vendeur — c'est-a-dire le comportement d'avant.
+      const gnfRows = balance.balances.filter((b) => b.currency === 'GNF');
+      const sumKind = (k: string) =>
+        gnfRows
+          .filter((b) => (b.kind ?? 'seller') === k)
+          .reduce((n, b) => n + Number(b.balance_minor ?? 0), 0);
+      const balanceGnf = sumKind('seller');
+      const immoGnf = sumKind('immo');
       const movements = (history.entries ?? []).filter((e) => e.currency === 'GNF').map(toMovement);
       // `origins` est optionnel : un binaire qui tourne encore sur l'ancienne
       // fonction serveur ne le recevra pas, et l'ecran doit rester correct —
       // il affiche alors le solde sans sa ventilation.
       const originsGnf: Wallet['originsGnf'] = {};
+      const originsByKind: Wallet['originsByKind'] = {};
       for (const row of balance.origins ?? []) {
         if (row.currency !== 'GNF') continue;
-        originsGnf[row.origin as WalletOrigin] = Number(row.net_minor);
+        const o = row.origin as WalletOrigin;
+        const k = (row.kind ?? 'seller') as WalletKind;
+        // Le serveur groupe desormais par caisse : une meme origine peut donc
+        // arriver deux fois. On additionne au lieu d'ecraser.
+        originsGnf[o] = (originsGnf[o] ?? 0) + Number(row.net_minor);
+        const bucket = (originsByKind[k] ??= {});
+        bucket[o] = (bucket[o] ?? 0) + Number(row.net_minor);
       }
-      return { balanceGnf, pendingGnf: 0, movements, originsGnf };
+      return {
+        balanceGnf,
+        immoGnf,
+        totalGnf: balanceGnf + immoGnf,
+        pendingGnf: 0,
+        movements,
+        originsGnf,
+        originsByKind,
+      };
     },
   });
 }

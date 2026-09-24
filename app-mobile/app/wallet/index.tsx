@@ -95,8 +95,11 @@ export default function WalletRoute() {
         }
       >
         <View style={{ paddingHorizontal: 16 }}>
+          {/* LE TOTAL, et non la seule caisse vendeur : cet ecran repond a
+              « combien ai-je ? ». La repartition entre les deux caisses se lit
+              juste en dessous, et chaque tableau de bord Pro montre la sienne. */}
           <WalletGlanceCard
-            balanceGnf={wallet.balanceGnf}
+            balanceGnf={wallet.totalGnf}
             large
             onRecharger={WALLET_TOPUP_ENABLED ? () => router.push('/wallet/recharger') : undefined}
             onRetirer={() => router.push('/wallet/retirer')}

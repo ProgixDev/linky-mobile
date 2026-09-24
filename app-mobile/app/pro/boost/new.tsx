@@ -94,7 +94,13 @@ export default function BoostNewRoute() {
   // ete ouvert en aout — voyait une liste sans rien de selectionne, puis un
   // « Solde insuffisant » au moment de payer, pour un moyen de paiement qu'il
   // n'avait jamais choisi. Le panier a exactement ce garde-fou depuis toujours.
-  const walletPayable = (wallet.data?.balanceGnf ?? 0) > 0;
+  // La caisse qui PAIE depend de ce qu'on met en avant : purchase_boost debite
+  // la caisse vendeur, purchase_property_boost la caisse immo (20260924_05).
+  // Afficher l'autre solde ferait promettre un paiement que le serveur refuse.
+  const boostWalletGnf = selected?.kind === 'property'
+    ? (wallet.data?.immoGnf ?? 0)
+    : (wallet.data?.balanceGnf ?? 0);
+  const walletPayable = boostWalletGnf > 0;
   useEffect(() => {
     if (method === 'wallet' && !wallet.isLoading && !walletPayable) setMethod('orange-money');
   }, [method, wallet.isLoading, walletPayable]);
@@ -335,7 +341,7 @@ export default function BoostNewRoute() {
                 haptic.light();
                 setMethod(m as BoostPayMethod);
               }}
-              walletBalanceGnf={wallet.data?.balanceGnf ?? null}
+              walletBalanceGnf={boostWalletGnf}
             />
           </View>
         )}

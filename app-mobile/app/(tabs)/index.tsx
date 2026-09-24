@@ -313,7 +313,11 @@ function BuyerHome() {
               confident "0 GNF / ≈ 0 €" for seconds. Pass ready state so
               the hero shows "—" until the wallet query resolves. */}
           <HomeWalletCard
-            balanceGnf={wallet?.balanceGnf ?? 0}
+            // Le TOTAL : cette carte repond a « combien ai-je ? ». Depuis la
+            // separation des caisses (2026-09-24), balanceGnf ne porte plus que
+            // la caisse vendeur — s'en contenter ici aurait fait disparaitre
+            // l'argent immobilier de l'ecran d'accueil.
+            balanceGnf={wallet?.totalGnf ?? 0}
             ready={walletReady}
             onRecharger={WALLET_TOPUP_ENABLED ? () => router.push('/wallet/recharger') : undefined}
             onTap={() => router.push('/wallet')}

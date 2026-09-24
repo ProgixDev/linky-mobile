@@ -40,6 +40,7 @@ import {
   useDeleteProperty,
 } from '../../data/queries';
 import { WalletOrigins } from '../wallet/WalletOrigins';
+import type { WalletKind } from '../../data/types';
 import { useWallet } from '../../data/queries/wallet';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sheet } from '../sheets/Sheet';
@@ -251,7 +252,7 @@ export function ShopDashboard() {
   return (
     <View>
       <View style={{ paddingHorizontal: 20 }}>
-        <WalletHero onTap={() => router.push('/seller/payouts')} />
+        <WalletHero kind="seller" onTap={() => router.push('/seller/payouts')} />
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
@@ -874,7 +875,7 @@ export function EstateDashboard() {
         {/* Phase U.0-B3 — Estate shares the wallet hero (the wallet is per-user,
             not per-mode) ; drops the «LOCATIFS» framing since there's no
             rentals-only ledger split in V1. */}
-        <WalletHero onTap={() => router.push('/wallet')} />
+        <WalletHero kind="immo" onTap={() => router.push('/wallet')} />
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
@@ -1007,16 +1008,25 @@ export function EstateDashboard() {
 // Wrong money for any seller with released orders. Now: real wallet balance
 // labelled SOLDE DISPONIBLE, same figure as seller/payouts. Loading/error
 // degrade gracefully to "—" with a small retry.
+// LA CAISSE DU METIER, ET ELLE SEULE (client 2026-09-24 : « la separation des
+// differents Wallets "Vendeur" et "Immo" »). C'est CETTE carte qui l'avait
+// trouble le 2026-09-09 : la meme, avec le meme solde, s'affichait sur son
+// tableau de bord boutique ET sur celui de son agence — il y voyait de l'argent
+// sans avoir eu la moindre reservation. Chacune montre desormais sa propre
+// caisse, et la ventilation qui la compose.
 function WalletHero({
   onTap,
+  kind = 'seller',
 }: {
   onTap?: () => void;
+  kind?: WalletKind;
 }) {
   const { t } = useTranslation();
   const wallet = useWallet();
   const isLoading = wallet.isLoading;
   const isError = wallet.isError;
-  const value = isLoading || isError ? '—' : formatGNF(wallet.data?.balanceGnf ?? 0).replace(' GNF', '');
+  const amount = kind === 'immo' ? (wallet.data?.immoGnf ?? 0) : (wallet.data?.balanceGnf ?? 0);
+  const value = isLoading || isError ? '—' : formatGNF(amount).replace(' GNF', '');
   const subline = isError
     ? t('proDashboard.walletSubError')
     : isLoading
@@ -1111,7 +1121,7 @@ function WalletHero({
               boutique et a celui de l'agence : c'est precisement ce qui avait
               trouble le client, qui voyait un solde sur son ecran immobilier
               sans avoir eu la moindre reservation. La ligne le dit. */}
-          <WalletOrigins origins={wallet.data?.originsGnf} />
+          <WalletOrigins origins={wallet.data?.originsByKind?.[kind]} />
         </View>
       </View>
     </Pressable>
