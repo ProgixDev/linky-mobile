@@ -217,7 +217,7 @@
     "qaWithdraw": "Retirer",
     "qaSell": "Vendre",
     "qaTopup": "Recharger",
-    "qaWallet": "Wallet",
+    "qaWallet": "Portefeuille",
     "catMode": "Mode",
     "catElectronique": "Électronique",
     "catMaison": "Maison",
@@ -229,7 +229,7 @@
     "decouvrirBadge": "NOUVEAU",
     "decouvrirTitle": "Découvrez des annonces",
     "decouvrirSub": "Comme dans les réseaux sociaux.",
-    "walletOpen": "Voir le wallet"
+    "walletOpen": "Voir le portefeuille"
   },
   "wallet": {
     "title": "Mon portefeuille",
@@ -260,7 +260,7 @@
     "transactions": "Transactions",
     "noTransactions": "Aucune transaction pour le moment.",
     "topupBientot": "Recharge — bientôt",
-    "topupSub": "La recharge du wallet arrive très bientôt.",
+    "topupSub": "La recharge du portefeuille arrive très bientôt.",
     "withdrawTitle": "Retirer",
     "withdrawSub": "Choisissez un montant et confirmez avec votre code.",
     "withdrawAmount": "Montant",
@@ -269,7 +269,7 @@
     "withdrawSuccess": "Demande de retrait envoyée.",
     "withdrawError": "Impossible d'envoyer la demande.",
     "rechargeTitle": "Recharger",
-    "rechargeSub": "Ajoutez des fonds à votre wallet.",
+    "rechargeSub": "Ajoutez des fonds à votre portefeuille.",
     "rechargeAmount": "Montant",
     "rechargeConfirm": "Continuer le paiement",
     "withdrawalStatus": {
@@ -312,7 +312,7 @@
     },
     "envoyer": {
       "topbar": "Envoyer",
-      "betaNote": "Envoi entre wallets en bêta — disponible pendant la phase de test. Confirmez bien le numéro : un envoi ne peut pas être annulé.",
+      "betaNote": "Envoi entre portefeuilles en bêta — disponible pendant la phase de test. Confirmez bien le numéro : un envoi ne peut pas être annulé.",
       "balanceLabel": "Solde disponible",
       "recipientLabel": "Destinataire",
       "phoneInputLabel": "Numéro du destinataire",
@@ -1178,7 +1178,7 @@
     "sectionOther": "Autres options",
     "comingSoonBadge": "Bientôt",
     "comingSoonToast": "Bientôt disponible — payez par carte bancaire en attendant.",
-    "walletLinky": "Wallet Linky",
+    "walletLinky": "Portefeuille Linky",
     "codTitle": "Payer à la livraison",
     "codHint": "Vous réglez en espèces au livreur",
     "sectionOnDelivery": "À la livraison",
@@ -1247,7 +1247,7 @@
       "mobileMoneyNote": "Tu paies sans quitter l’application : entre ton numéro, puis confirme la demande sur ton téléphone — ou saisis le code reçu par SMS.",
       "mobileMoney": "Orange Money ou MTN",
       "mobileMoneyHint": "Tu choisis ton opérateur à l’étape suivante",
-      "lengopayGuinea": "Carte bancaire, Wallet ou Mobile Money",
+      "lengopayGuinea": "Carte bancaire, Portefeuille ou Mobile Money",
       "lengopayGuineaHint": "Paycard, Kulu, Soutra, Orange Money ou MTN — tu choisis à l’étape suivante",
       "soutraMoney": "Soutra Money",
       "soutraMoneyHint": "Tu finis le paiement sur la page Soutra Money",
@@ -1371,7 +1371,7 @@
       "ventes": "Ventes",
       "retraits": "Retraits",
       "visites": "Visites",
-      "wallet": "Wallet",
+      "wallet": "Portefeuille",
       "kyc": "KYC",
       "scan": "Scanner"
     },
@@ -1834,13 +1834,13 @@
     "dateSuffix": " le {{date}}",
     "buyer": {
       "refundedTitle": "Litige résolu",
-      "refundedBody": "{{amount}} remboursés sur votre wallet{{dateSuffix}}.",
+      "refundedBody": "{{amount}} remboursés sur votre portefeuille{{dateSuffix}}.",
       "releasedTitle": "Litige clos",
       "releasedBody": "Commande libérée au vendeur{{dateSuffix}}."
     },
     "seller": {
       "releasedTitle": "Litige résolu en votre faveur",
-      "releasedBody": "{{amount}} libérés sur votre wallet{{dateSuffix}}.",
+      "releasedBody": "{{amount}} libérés sur votre portefeuille{{dateSuffix}}.",
       "refundedTitle": "Litige tranché en faveur de l'acheteur",
       "refundedBody": "Aucun versement pour cette commande."
     }
