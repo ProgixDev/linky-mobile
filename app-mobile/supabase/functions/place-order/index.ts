@@ -57,9 +57,14 @@ interface Body {
 // 'kulu' rouvert le 2026-09-07 avec la phase 3 : l'ecran de saisie du code
 // (app/checkout/otp.tsx) et lengopay-confirm-otp existent desormais, donc
 // un paiement Kulu peut etre TERMINE. Il etait bloque ici entre-temps.
+// 'cod' = paiement a la livraison, en especes (client 2026-09-24). Il n'ouvre
+// AUCUN rail : rien n'est encaisse a la commande. La commande reste 'placed'
+// comme celles des rails externes, et se cloture par confirm_cod_order_receipt
+// — sans aucune ecriture au grand livre, puisque l'argent n'a jamais transite
+// par Linky (migration 20260924_02).
 const METHODS = new Set([
   'orange-money', 'mtn-money', 'card', 'wallet',
-  'kulu', 'soutramoney', 'lengopay-card', 'paycard',
+  'kulu', 'soutramoney', 'lengopay-card', 'paycard', 'cod',
 ]);
 const DELIVERY_MODES = new Set(['pickup', 'delivery']);
 const PHONE_RE = /^\+224\d{9}$/;
@@ -257,6 +262,60 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     // opts to mapOrder — scanToken stays undefined so it can't be read back
     // by the buyer who just placed the order.
     return { body: { order: mapOrder(paidRow) } };
+  }
+
+  if (body.payment_method === 'cod') {
+    // LE STATUT EST 'paid', ET C'EST DELIBERE MALGRE L'APPARENCE.
+    //
+    // place_order a cree la commande en 'placed', comme pour les rails
+    // externes qui attendent leur cron. Mais 'placed' est un CUL-DE-SAC pour
+    // les especes : set-order-tracking, admin_assign_delivery et la file
+    // « A assigner » de la console exigent tous 'paid' ou 'preparing'. Une
+    // commande en especes y serait restee inexpediable, sans livreur
+    // assignable et invisible de l'administration — le bouton « Livrer par
+    // Linky » n'aurait mene nulle part.
+    //
+    // 'paid' ne veut pas dire « Linky detient l'argent » : il veut dire « le
+    // vendeur peut y aller ». Ce que Linky detient se lit au grand livre, et
+    // la commande en especes n'y a AUCUNE ligne — c'est precisement ce que
+    // verifient les quatre gardes COD_ORDER posees sur les chemins de
+    // liberation (20260924_02 et _03). Sans elles, ce statut aurait ouvert
+    // quatre vidanges du sequestre poole ; avec elles, il ne fait qu'ouvrir
+    // le parcours de preparation.
+    const { data: codPaid, error: eCodPaid } = await sb
+      .from('orders')
+      .update({
+        status: 'paid',
+        events: [
+          ...(((row as OrderRow).events as unknown[] | null) ?? []),
+          { at: new Date().toISOString(), label: 'Commande confirmée — à régler en espèces à la livraison' },
+        ],
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', (row as OrderRow).id)
+      .eq('status', 'placed')
+      .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at')
+      .maybeSingle();
+    if (eCodPaid || !codPaid) {
+      console.error('[place-order] cod flip error:', eCodPaid);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur création commande');
+    }
+    // Rien a encaisser : la commande attend son livreur. Le vendeur est
+    // prevenu tout de suite — sans quoi il ne saurait jamais qu'il a une
+    // commande a preparer, puisque aucun cron ne viendra la confirmer.
+    const codRow = codPaid as OrderRow;
+    const buyerNameCod = await displayNameOf(sb, userId);
+    notifyDetached(sb, {
+      userIds: [codRow.seller_id],
+      category: 'order',
+      title: 'Nouvelle commande — paiement à la livraison',
+      body: `${buyerNameCod} a commandé pour ${formatGNF(Number(codRow.total_minor))}. Le montant sera encaissé à la livraison.`,
+      iconHint: 'truck',
+      deeplink: `/seller/orders/${codRow.id}`,
+      refType: 'order',
+      refId: codRow.id,
+    });
+    return { body: { order: mapOrder(codRow) } };
   }
 
   if (body.payment_method === 'card') {

@@ -117,7 +117,11 @@ Deno.serve(makePost<Body>('/v1/orders/set-tracking', valid, async ({ sb, body, r
       updated_at: nowIso,
     })
     .eq('id', body.order_id)
-    .eq('status', 'paid')
+    // Une commande en especes porte 'paid' des sa creation — au sens « le
+    // vendeur peut y aller », pas « Linky detient l'argent » (place-order le
+    // documente). On tolere 'placed' en plus pour elle : si le basculement
+    // avait echoue, la commande resterait sinon inexpediable a jamais.
+    .in('status', order.payment_method === 'cod' ? ['paid', 'placed'] : ['paid'])
     .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at')
     .maybeSingle();
 

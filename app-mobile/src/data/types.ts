@@ -21,7 +21,7 @@ export type OrderStatus =
  *  parce que le serveur ne devine pas le pays : c'est le moyen choisi qui
  *  décide du rail. */
 export type PaymentMethod =
-  | 'orange-money' | 'mtn-money' | 'card' | 'wallet'
+  | 'orange-money' | 'mtn-money' | 'card' | 'wallet' | 'cod'
   | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard';
 
 /** Ce qu'il reste à faire à l'acheteur après l'initialisation du paiement.

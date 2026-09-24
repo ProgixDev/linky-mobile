@@ -3,7 +3,7 @@ import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Truck, Package, MapPin, Building2 } from 'lucide-react-native';
+import { Truck, Package, MapPin, Building2, Bike } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../../src/theme/ThemeProvider';
@@ -18,22 +18,44 @@ import { ActivityIndicator } from 'react-native';
 import { DetailStateScreen } from '../../../../src/components/feedback/DetailState';
 
 interface Carrier {
-  id: 'jefa' | 'sopex' | 'self' | 'pickup';
+  id: 'jefa' | 'sopex' | 'self' | 'pickup' | 'linky';
   label: string;
   desc: string;
   Icon: LucideIcon;
+  /** Visible mais inactif. Le client a demande le 2026-09-24 de garder Jefa et
+   *  SOPEX a l'ecran sans qu'on puisse les choisir : « je n'ai pas encore de
+   *  partenaire pour la livraison donc on peut rendre ces deux options non
+   *  cliquables pour le moment sans supprimer completement. Si je fais un
+   *  partenariat avec un service de livraison on va les activer a ce moment. »
+   *  Les retirer aurait efface l'information qu'ils existent au catalogue. */
+  disabled?: boolean;
 }
 
 // Phase I.8 — CARRIERS carries i18n keys ; component memos resolved list.
 // IMPORTANT : the label sent to the backend in the carrier field MUST stay
 // language-stable (buyer-side timeline reads "Jefa Delivery" not the
 // translated word) ; the rendered label is per-language for UX.
-const CARRIER_DEFS = [
-  { id: 'jefa' as const, labelKey: 'seller.shipCarrierJefaLabel', descKey: 'seller.shipCarrierJefaDesc', Icon: Truck },
-  { id: 'sopex' as const, labelKey: 'seller.shipCarrierSopexLabel', descKey: 'seller.shipCarrierSopexDesc', Icon: Package },
-  { id: 'self' as const, labelKey: 'seller.shipCarrierSelfLabel', descKey: 'seller.shipCarrierSelfDesc', Icon: MapPin },
-  { id: 'pickup' as const, labelKey: 'seller.shipCarrierPickupLabel', descKey: 'seller.shipCarrierPickupDesc', Icon: Building2 },
+//
+// LA LISTE DEPEND DE CE QUE L'ACHETEUR A CHOISI. Demande du client, 2026-09-24 :
+// « en rouge, l'option retrait sur place n'a plus lieu d'etre puisque c'est une
+// livraison a domicile que le client a choisi. Tu peux le remplacer par
+// "Livrer par Linky" ». Proposer « Retrait sur place » sur une commande a
+// livrer revenait a offrir au vendeur de defaire le choix de l'acheteur.
+// L'inverse reste vrai : sur une commande en retrait, c'est « Livrer par
+// Linky » qui n'a pas de sens.
+const CARRIER_PARTNERS = [
+  { id: 'jefa' as const, labelKey: 'seller.shipCarrierJefaLabel', descKey: 'seller.shipCarrierJefaDesc', Icon: Truck, disabled: true },
+  { id: 'sopex' as const, labelKey: 'seller.shipCarrierSopexLabel', descKey: 'seller.shipCarrierSopexDesc', Icon: Package, disabled: true },
 ];
+const CARRIER_SELF = { id: 'self' as const, labelKey: 'seller.shipCarrierSelfLabel', descKey: 'seller.shipCarrierSelfDesc', Icon: MapPin, disabled: false };
+const CARRIER_LINKY = { id: 'linky' as const, labelKey: 'seller.shipCarrierLinkyLabel', descKey: 'seller.shipCarrierLinkyDesc', Icon: Bike, disabled: false };
+const CARRIER_PICKUP = { id: 'pickup' as const, labelKey: 'seller.shipCarrierPickupLabel', descKey: 'seller.shipCarrierPickupDesc', Icon: Building2, disabled: false };
+
+function carrierDefs(deliveryMode: string | undefined) {
+  return deliveryMode === 'pickup'
+    ? [...CARRIER_PARTNERS, CARRIER_SELF, CARRIER_PICKUP]
+    : [...CARRIER_PARTNERS, CARRIER_SELF, CARRIER_LINKY];
+}
 // Stable backend labels (FR, source of truth on server). Used in
 // shipMutation regardless of UI language so the buyer timeline stays
 // consistent across languages.
@@ -42,25 +64,36 @@ const CARRIER_BACKEND_LABELS: Record<Carrier['id'], string> = {
   sopex: 'SOPEX Express',
   self: 'Je livre moi-même',
   pickup: 'Retrait sur place',
+  linky: 'Livrer par Linky',
 };
 
 export default function ShipRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [carrier, setCarrier] = useState<Carrier['id']>('jefa');
+  // 'jefa' etait le defaut ; il est desormais inactif. Un defaut inactif
+  // aurait grise le bouton « Confirmer l'expedition » sans rien expliquer.
+  const [carrier, setCarrier] = useState<Carrier['id']>('self');
   const [tracking, setTracking] = useState('');
+  const { data: order, isLoading, isError, refetch } = useOrder(id);
+  const deliveryMode = order?.deliveryMode;
   const CARRIERS: Carrier[] = useMemo(
     () =>
-      CARRIER_DEFS.map((c) => ({
+      carrierDefs(deliveryMode).map((c) => ({
         id: c.id,
         Icon: c.Icon,
         label: t(c.labelKey),
         desc: t(c.descKey),
+        disabled: c.disabled,
       })),
-    [t],
+    [t, deliveryMode],
   );
-  const { data: order, isLoading, isError, refetch } = useOrder(id);
+  // Des que la commande est lue, on se place sur l'option que l'acheteur
+  // attend : Linky pour une livraison, le retrait pour un retrait.
+    useEffect(() => {
+    if (!deliveryMode) return;
+    setCarrier(deliveryMode === 'pickup' ? 'pickup' : 'linky');
+  }, [deliveryMode]);
   const meId = useAuth((s) => s.user?.id ?? s.authUserId);
   const toast = useToast();
   // Phase X.6b — real submit. Pre-X6b the button was haptic + router.replace
@@ -262,8 +295,15 @@ function CarrierRow({
   onPress: () => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const off = !!carrier.disabled;
   return (
     <Pressable
+      // Inactif : on retire le geste ET on le dit au lecteur d'ecran, plutot
+      // que de laisser un appui sans effet — le doute vaut moins qu'un refus
+      // explique.
+      disabled={off}
+      accessibilityState={{ disabled: off, selected }}
       onPress={() => {
         haptic.selection();
         onPress();
@@ -277,6 +317,7 @@ function CarrierRow({
         flexDirection: 'row',
         gap: 14,
         alignItems: 'center',
+        opacity: off ? 0.45 : 1,
       }}
     >
       <View
@@ -304,6 +345,20 @@ function CarrierRow({
         >
           {carrier.label}
         </Text>
+        {off && (
+          <Text
+            style={{
+              fontSize: 11,
+              fontWeight: '700',
+              color: colors.textFaint,
+              marginTop: 3,
+              letterSpacing: 0.3,
+              lineHeight: 14,
+            }}
+          >
+            {t('seller.shipCarrierSoon')}
+          </Text>
+        )}
         <Text
           style={{
             fontSize: 12.5,

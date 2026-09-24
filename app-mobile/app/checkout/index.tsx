@@ -360,6 +360,21 @@ export default function CheckoutRoute() {
   // chiffre, mais c'est bien leur somme. shopIds.size vaut 1 pour un panier
   // mono-boutique, donc la formule couvre les deux cas sans branche.
   const shopCount = Math.max(shopIds.size, 1);
+  // PAYER A LA LIVRAISON (client 2026-09-24) : « cote client, il faut ajouter
+  // l'option "Payer a la livraison" lorsqu'il choisit l'option livraison a
+  // domicile ». Deux conditions, et elles ne sont pas cosmetiques :
+  //  * LIVRAISON UNIQUEMENT — il n'y a personne pour encaisser un retrait en
+  //    boutique, et la base le refuse (contrainte orders_cod_requires_delivery) ;
+  //  * UNE SEULE BOUTIQUE — un panier multi-boutiques cree une commande PAR
+  //    boutique. Les especes devraient alors se repartir entre plusieurs
+  //    vendeurs sur le pas de la porte, ce que rien ne sait faire aujourd'hui.
+  //    Mieux vaut ne pas proposer que promettre puis echouer.
+  const codAvailable = deliveryMode === 'delivery' && shopCount === 1;
+  // L'acheteur peut choisir les especes PUIS repasser en retrait sur place :
+  // le laisser ainsi enverrait une commande que la base refuse.
+  useEffect(() => {
+    if (selected === 'cod' && !codAvailable) setSelected('orange-money');
+  }, [selected, codAvailable]);
   // Depuis 2026-09-03 le tarif depend de la DISTANCE (client : « 1 km = 2000
   // GNF »), calculee a partir de coordonnees et d'une grille qui ne sortent pas
   // du serveur. On demande donc un devis plutot que de multiplier un forfait :
@@ -678,6 +693,51 @@ export default function CheckoutRoute() {
                 : (payerPhoneDigits.length === 0 ? t('checkout.payerPhoneHint') : undefined)}
             />
           </View>
+        )}
+
+        {codAvailable && (
+          <>
+            <MicroLabel label={t('checkout.sectionOnDelivery')} />
+            <Card padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
+              <Pressable
+                onPress={() => setSelected('cod')}
+                style={{ padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}
+              >
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    backgroundColor: colors.primarySoft,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <I.wallet size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600' }}>{t('checkout.codTitle')}</Text>
+                  <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                    {t('checkout.codHint')}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 999,
+                    backgroundColor: selected === 'cod' ? colors.primary : 'transparent',
+                    borderWidth: selected === 'cod' ? 0 : 1.5,
+                    borderColor: colors.borderStrong,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {selected === 'cod' && <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: '#FFFFFF' }} />}
+                </View>
+              </Pressable>
+            </Card>
+          </>
         )}
 
         {/* « Autre » = wallet only. Card (Stripe) removed from the UI — it

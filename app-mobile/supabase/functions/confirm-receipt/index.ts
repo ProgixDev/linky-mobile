@@ -31,11 +31,24 @@ function valid(b: unknown): b is Body {
 Deno.serve(makePost<Body>('/v1/orders/confirm-receipt', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
 
-  const { error: rpcErr } = await sb.rpc('confirm_order_receipt', {
+  // ESPECES : la liberation du sequestre leve COD_ORDER, parce qu'il n'y a
+  // rien a liberer — et que le sequestre est POOLE, donc virer depuis lui
+  // prendrait l'argent des autres acheteurs. On bascule alors sur la cloture
+  // dediee, qui applique les memes controles (acheteur, statut, verrou QR)
+  // sans ecrire une seule ligne comptable. Le detour plutot qu'une lecture
+  // prealable : le cas courant ne paie pas un aller-retour de plus.
+  let { error: rpcErr } = await sb.rpc('confirm_order_receipt', {
     p_order_id: body.order_id,
     p_caller_id: userId,
     p_scan_token: body.scan_token,
   });
+  if (rpcErr && ((rpcErr as { message?: string } | null)?.message ?? '').includes('COD_ORDER')) {
+    ({ error: rpcErr } = await sb.rpc('confirm_cod_order_receipt', {
+      p_order_id: body.order_id,
+      p_caller_id: userId,
+      p_scan_token: body.scan_token,
+    }));
+  }
   if (rpcErr) {
     const msg = (rpcErr as { message?: string } | null)?.message ?? '';
     // Phase V.3b -- sanitize before logging. The RPC body today never
