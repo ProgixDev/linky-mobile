@@ -35,7 +35,7 @@ interface Body {
    *  Absent = orange-money, pour que les installations anterieures continuent
    *  de fonctionner exactement comme avant. */
   payment_method?: 'card' | 'orange-money' | 'mtn-money'
-                 | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard';
+                 | 'kulu' | 'soutramoney' | 'lengopay-card' | 'paycard' | 'wallet';
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -44,9 +44,16 @@ const CARD_RE = /^[0-9 -]{6,32}$/;
 // 'kulu' rouvert le 2026-09-07 avec la phase 3 : l'ecran de saisie du code
 // (app/checkout/otp.tsx) et lengopay-confirm-otp existent desormais, donc
 // un paiement Kulu peut etre TERMINE. Il etait bloque ici entre-temps.
+// 'wallet' ajoute le 2026-09-24 (client : « dans Réservation, au niveau du
+// paiement le wallet n'apparaît pas, on peut le rajouter »). Il n'y etait pas
+// parce que confirm_booking_payment credite le sequestre A SENS UNIQUE —
+// l'argent vient du rail — et l'emprunter pour un paiement portefeuille aurait
+// credite le sequestre SANS debiter personne. pay_booking_from_wallet
+// (20260924_01) fait le vrai virement, comme place_order le fait deja pour les
+// commandes.
 const METHODS = [
   'card', 'orange-money', 'mtn-money',
-  'kulu', 'soutramoney', 'lengopay-card', 'paycard',
+  'kulu', 'soutramoney', 'lengopay-card', 'paycard', 'wallet',
 ];
 
 function valid(b: unknown): b is Body {
@@ -183,6 +190,33 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
             : { kind: 'poll' },
       },
     };
+  }
+
+  // ── PORTEFEUILLE LINKY ────────────────────────────────────────────────────
+  // Place APRES la garde d'intention vivante : si un paiement Orange est deja
+  // parti, on ne doit pas encaisser une seconde fois par le portefeuille.
+  // Instantane, donc aucune intention n'est creee et il n'y a rien a sonder.
+  if (method === 'wallet') {
+    const { error: eW } = await sb.rpc('pay_booking_from_wallet', {
+      p_booking_id: bk.id,
+      p_tenant_id: tenantId,
+    });
+    if (eW) {
+      const m = eW.message ?? '';
+      if (m.includes('INSUFFICIENT_FUNDS')) {
+        throwApi('INSUFFICIENT_FUNDS', 409,
+          'Solde insuffisant sur ton portefeuille Linky. Choisis un autre moyen de paiement.');
+      }
+      if (m.includes('ALREADY_PAID')) throwApi('INVALID_STATUS', 409, 'Cette réservation est déjà payée.');
+      if (m.includes('BOOKING_CONFLICT')) {
+        throwApi('DATES_UNAVAILABLE', 409, "Ces dates viennent d’être réservées par quelqu’un d’autre.");
+      }
+      if (m.includes('FORBIDDEN')) throwApi('FORBIDDEN', 403, 'Action refusée.');
+      if (m.includes('INVALID_STATUS')) throwApi('INVALID_STATUS', 409, "Cette réservation a changé d’état.");
+      console.error('[booking-sign-pay] wallet rpc:', eW);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur lors du paiement');
+    }
+    return { body: { booking_id: bk.id, next_step: { kind: 'paid' } } };
   }
 
   // ── RAIL CARTE (Stripe) — profils a l'etranger ────────────────────────────

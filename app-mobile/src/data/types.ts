@@ -32,7 +32,10 @@ export type PaymentNextStep =
    *  voyage dans l'étape parce que toutes les surfaces n'exposent pas
    *  l'intention (le panier multi-boutiques ne rend que ses commandes). */
   | { kind: 'otp'; payId: string }
-  | { kind: 'webview'; url: string };
+  | { kind: 'webview'; url: string }
+  /** Portefeuille Linky : le virement est deja fait quand la reponse arrive.
+   *  Aucune intention, rien a sonder — l'ecran n'a qu'a se rafraichir. */
+  | { kind: 'paid' };
 export type DeliveryStatus =
   | 'unassigned'
   | 'assigned'

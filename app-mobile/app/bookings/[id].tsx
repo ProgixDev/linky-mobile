@@ -19,7 +19,7 @@ import { MicroLabel } from '../../src/components/lists/SectionHeader';
 import { TrustStrip } from '../../src/components/primitives/TrustStrip';
 import { DetailStateScreen } from '../../src/components/feedback/DetailState';
 import { BookingStatusChip, ContractView, BookingTimeline, bookingPeriodText } from '../../src/components/booking/BookingUI';
-import { useMyBookings, useBookingSignPay, useCancelBooking, useConfirmCheckin } from '../../src/data/queries';
+import { useMyBookings, useBookingSignPay, useCancelBooking, useConfirmCheckin, useWallet } from '../../src/data/queries';
 import { PaymentMethodPicker, LENGOPAY_METHOD } from '../../src/components/payment/PaymentMethodPicker';
 import { useToast } from '../../src/components/feedback/Toast';
 import { ApiError, toToastMessage } from '../../src/lib/api';
@@ -38,15 +38,19 @@ export default function BookingDetailRoute() {
   const signPay = useBookingSignPay();
   const cancel = useCancelBooking();
   const checkin = useConfirmCheckin();
+  const wallet = useWallet();
   const [payBusy, setPayBusy] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   // Client 2026-09-04 : la reservation n'offrait AUCUN choix de paiement, elle
   // sautait droit au champ telephone. Meme selecteur que le panier desormais.
-  // Le portefeuille n'est PAS propose ici : confirm_booking_payment fait un
-  // credit a sens unique vers le sequestre (l'argent vient du rail), donc s'en
-  // servir pour un paiement portefeuille creerait de la monnaie. Ce rail-la
-  // demande son propre RPC, pas un raccourci.
+  // LE PORTEFEUILLE EST PROPOSE DEPUIS LE 2026-09-24 (client : « dans
+  // Réservation, au niveau du paiement le wallet n'apparaît pas, on peut le
+  // rajouter »). Il ne l'etait pas parce que confirm_booking_payment credite le
+  // sequestre A SENS UNIQUE — l'argent vient du rail — et l'emprunter pour un
+  // paiement portefeuille aurait credite le sequestre sans debiter personne.
+  // Ce rail-la a desormais son propre RPC, pay_booking_from_wallet
+  // (20260924_01), qui fait un vrai virement en partie double.
   const [method, setMethod] = useState<PaymentMethod>(LENGOPAY_METHOD);
   // Le numero QUI PAIE — voir src/lib/payerPhone.ts. Reclame UNIQUEMENT par les
   // rails qui encaissent sur un numero guineen (la diaspora paie avec un compte
@@ -56,6 +60,8 @@ export default function BookingDetailRoute() {
   // Doit rester d'accord avec LENGOPAY_RAILS[...].needsAccount cote serveur :
   // Kulu encaisse SUR un numero, comme Orange et MTN.
   // PayCard aussi : elle encaisse sur un numero ET sur un numero de compte.
+  // Le portefeuille ne passe par aucun rail externe : ni numero payeur, ni
+  // numero de compte. Le reclamer bloquerait un paiement qui n'en a pas besoin.
   const needsAccountNumber = method === 'orange-money' || method === 'mtn-money'
     || method === 'kulu' || method === 'paycard';
   const payerPhone = usePayerPhone();
@@ -170,6 +176,15 @@ export default function BookingDetailRoute() {
         return;
       }
 
+      // PORTEFEUILLE : le virement est deja fait. Pas d'attente, pas de
+      // sondage — on le dit, et on recharge la reservation ET le solde.
+      if (res.next_step?.kind === 'paid') {
+        show('Paiement effectué depuis ton portefeuille ✅', 'success');
+        void q.refetch();
+        void wallet.refetch();
+        return;
+      }
+
       // Soutra Money / carte Lengopay : le locataire finit sur la page du rail,
       // dans la WebView de l'appli. La fermer ramene ici, ou l'ecran sonde —
       // l'issue ne depend jamais de ce que la page affichait.
@@ -213,6 +228,13 @@ export default function BookingDetailRoute() {
     }
   };
 
+  // ON NE LAISSE PAS PARTIR UN PAIEMENT QU'ON SAIT REFUSE. Le selecteur
+  // n'affiche le portefeuille que s'il a un solde, mais ce solde peut etre
+  // inferieur au total. Le serveur le refuserait proprement
+  // (INSUFFICIENT_FUNDS) ; autant le dire avant le geste plutot qu'apres.
+  const walletShort = method === 'wallet'
+    && typeof wallet.data?.balanceGnf === 'number'
+    && wallet.data.balanceGnf < booking.totalGnf;
   const isSale = booking.period === 'sale';
   const isExtension = !!booking.extendsBookingId;
   // STATUS_CHANGED veut dire « ton ecran est en retard » : on recharge au lieu
@@ -375,7 +397,11 @@ export default function BookingDetailRoute() {
         {booking.status === 'accepted' && !awaitingPayment && (
           <View>
             <MicroLabel label="Moyen de paiement" />
-            <PaymentMethodPicker value={method} onChange={setMethod} />
+            <PaymentMethodPicker
+              value={method}
+              onChange={setMethod}
+              walletBalanceGnf={wallet.data?.balanceGnf ?? null}
+            />
           </View>
         )}
 
@@ -429,13 +455,19 @@ export default function BookingDetailRoute() {
         )}
 
         {/* Stage actions */}
+        {booking.status === 'accepted' && !awaitingPayment && walletShort && (
+          <Text variant="micro" tone="muted" style={{ textAlign: 'center', letterSpacing: 0, textTransform: 'none' }}>
+            Ton portefeuille contient {formatGNF(wallet.data?.balanceGnf ?? 0)} — il manque{' '}
+            {formatGNF(booking.totalGnf - (wallet.data?.balanceGnf ?? 0))}. Choisis un autre moyen de paiement.
+          </Text>
+        )}
         {booking.status === 'accepted' && !awaitingPayment && (
           <HoldToConfirmButton
             // Amount lives in the trust strip above — keeping it out of the
             // label stops the text from crowding the 56px pill.
             label={payBusy ? 'Paiement en cours…' : 'Maintenir pour payer'}
             onConfirm={onSignPay}
-            disabled={payBusy || !payerPhoneValid || !payerCardValid}
+            disabled={payBusy || !payerPhoneValid || !payerCardValid || walletShort}
           />
         )}
         {booking.status === 'paid' && (
