@@ -99,6 +99,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: './assets/images/favicon.png',
   },
   plugins: [
+    // VALIDATION DES DEVELOPPEURS ANDROID (echeance Google du 2026-09-30) :
+    // ecrit assets/adi-registration.properties, le fichier de jeton qui prouve
+    // a la Play Console qu'on detient la cle privee du paquet. Voir
+    // plugins/withAdiRegistration.js — et notamment pourquoi un plugin est
+    // indispensable ici (android/ est regenere a chaque build).
+    './plugins/withAdiRegistration',
     'expo-router',
     [
       // Camera for the delivery QR-handoff (spec 002, ADR-0009). QR-only: we never
