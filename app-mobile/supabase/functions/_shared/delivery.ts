@@ -17,7 +17,13 @@
 //
 // ⚠️ À GARDER SYNCHRONISÉ avec le front (app-mobile/src/lib/delivery.ts,
 // DELIVERY_FEE_GNF), qui l'affiche tant que le devis serveur n'a pas répondu.
-export const DELIVERY_FEE_MINOR = 5000;
+//
+// 2026-09-25 : la grille passe a 3 000 GNF/km avec un MINIMUM de 15 000 GNF
+// (client : « de 0 a 4,9km c'est 15 000 GNF, a partir de 5km c'est 3000 GNF /
+// km »). Le repli suit le plancher : a 5 000, une course NON MESURABLE aurait
+// coute trois fois moins que la plus courte des courses mesurables, et il
+// aurait suffi de ne pas poser son point sur la carte pour payer le tiers.
+export const DELIVERY_FEE_MINOR = 15000;
 
 /**
  * L'adresse de livraison retenue pour CE panier.
