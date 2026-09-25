@@ -756,6 +756,7 @@
     "deliveryLivreurLabel": "Livreur",
     "deliveryInTransitNote": "Récupéré · en cours de livraison",
     "deliveryDeliveredNote": "Livraison terminée",
+    "deliveryTrackCta": "Suivre le livreur",
     "deliveryAdminAssignNote": "Un livreur sera assigné par l'équipe Linky.",
     "status": {
       "placed": "À PRÉPARER",

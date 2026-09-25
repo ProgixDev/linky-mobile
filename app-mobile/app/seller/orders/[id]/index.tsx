@@ -338,6 +338,44 @@ export default function SellerOrderDetailRoute() {
                       {t('seller.deliveryDeliveredNote')}
                     </Text>
                   )}
+
+                  {/* SUIVRE LE LIVREUR, COTE VENDEUR AUSSI.
+                      Client, 2026-09-25 : « un suivi des commandes en temps reel
+                      pour les DEUX PARTIES lorsque c'est une livraison, avec
+                      position du livreur sur Map ».
+
+                      L'ecran /track existait deja et le serveur servait deja le
+                      vendeur : get-order autorise l'acheteur ET le vendeur, et
+                      livreurLocation n'est PAS bride a l'acheteur. Il manquait
+                      uniquement la porte d'entree ici — le bouton n'existait que
+                      sur l'ecran de l'acheteur.
+
+                      Memes conditions que chez lui : seulement tant qu'une
+                      course est en cours. Une fois livree, il n'y a plus rien a
+                      suivre, et montrer une derniere position figee laisserait
+                      croire que le livreur est encore en route. */}
+                  {(delivery.status === 'assigned' || delivery.status === 'in_transit') && (
+                    <Pressable
+                      onPress={() => {
+                        haptic.selection();
+                        router.push(`/track/${order.id}` as never);
+                      }}
+                      style={{
+                        height: 48,
+                        borderRadius: 14,
+                        backgroundColor: colors.primary,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        gap: 8,
+                      }}
+                    >
+                      <Truck size={16} color="#FFFFFF" strokeWidth={2} />
+                      <Text style={{ fontSize: 14.5, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0 }}>
+                        {t('seller.deliveryTrackCta')}
+                      </Text>
+                    </Pressable>
+                  )}
                 </>
               ) : (
                 <Text style={{ fontSize: 13, color: colors.textMuted, lineHeight: 18, letterSpacing: 0 }}>

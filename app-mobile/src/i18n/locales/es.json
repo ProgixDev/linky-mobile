@@ -756,6 +756,7 @@
     "deliveryLivreurLabel": "Repartidor",
     "deliveryInTransitNote": "Recogido · en reparto",
     "deliveryDeliveredNote": "Entrega finalizada",
+    "deliveryTrackCta": "Seguir al repartidor",
     "deliveryAdminAssignNote": "El equipo de Linky asignará un repartidor.",
     "status": {
       "placed": "POR PREPARAR",

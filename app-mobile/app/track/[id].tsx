@@ -1,4 +1,11 @@
-// Buyer-side live courier tracking. Polls /get-order every 12s (useOrderTracking)
+// Suivi du livreur en direct, pour L'ACHETEUR ET LE VENDEUR (client
+// 2026-09-25 : « un suivi des commandes en temps reel pour les deux parties
+// lorsque c'est une livraison, avec position du livreur sur Map »). L'ecran
+// servait deja les deux sans le savoir — get-order autorise les deux
+// participants et ne bride pas livreurLocation a l'acheteur ; seul le bouton
+// manquait cote vendeur. Rien ici n'est propre a l'un ou a l'autre.
+//
+// Polls /get-order every 12s (useOrderTracking)
 // and renders the courier's last position + the drop-off on a Mapbox map, following
 // the driver as it moves. Reuses the same Mapbox setup as PropertyLocationMap. The
 // driver streams its GPS from the Linky Driver app (update-livreur-location); this

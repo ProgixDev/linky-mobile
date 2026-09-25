@@ -756,6 +756,7 @@
     "deliveryLivreurLabel": "Courier",
     "deliveryInTransitNote": "Picked up · on the way",
     "deliveryDeliveredNote": "Delivery completed",
+    "deliveryTrackCta": "Track the courier",
     "deliveryAdminAssignNote": "A courier will be assigned by Linky.",
     "status": {
       "placed": "TO PREPARE",
