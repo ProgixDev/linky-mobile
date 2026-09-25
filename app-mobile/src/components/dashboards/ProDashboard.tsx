@@ -1117,11 +1117,21 @@ function WalletHero({
               </Pressable>
             )}
           </View>
-          {/* D'ou vient cet argent. La MEME carte sert au tableau de bord
-              boutique et a celui de l'agence : c'est precisement ce qui avait
-              trouble le client, qui voyait un solde sur son ecran immobilier
-              sans avoir eu la moindre reservation. La ligne le dit. */}
-          <WalletOrigins origins={wallet.data?.originsByKind?.[kind]} />
+          {/* LA VENTILATION N'A PLUS LIEU D'ETRE SUR LA CAISSE VENDEUR.
+              Client, 2026-09-25 : « Les deux wallets sont separes c'est top !
+              Il faudra juste retirer les details dans le wallet Vendeur ».
+
+              Elle avait ete posee le 2026-09-09 comme ETAPE D'ATTENTE, pour
+              repondre a « j'ai pas eu de reservation mais mon Wallet Immo est
+              credite » : une seule caisse, trois tableaux de bord, et la ligne
+              servait a dire d'ou venait l'argent. Les caisses etant desormais
+              separees (2026-09-24), la question ne se pose plus cote vendeur —
+              tout ce qu'on y trouve vient de la boutique.
+
+              Elle reste sur la caisse IMMO, ou elle garde un sens : celle-ci
+              melange les loyers encaisses et les retraits effectues, et le
+              client ne l'a pas demandee en moins. */}
+          {kind === 'immo' && <WalletOrigins origins={wallet.data?.originsByKind?.immo} />}
         </View>
       </View>
     </Pressable>
