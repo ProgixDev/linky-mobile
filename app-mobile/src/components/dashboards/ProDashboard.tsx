@@ -39,7 +39,6 @@ import {
   useDeleteProduct,
   useDeleteProperty,
 } from '../../data/queries';
-import { WalletOrigins } from '../wallet/WalletOrigins';
 import type { WalletKind } from '../../data/types';
 import { useWallet } from '../../data/queries/wallet';
 import { useQueryClient } from '@tanstack/react-query';
@@ -1117,21 +1116,23 @@ function WalletHero({
               </Pressable>
             )}
           </View>
-          {/* LA VENTILATION N'A PLUS LIEU D'ETRE SUR LA CAISSE VENDEUR.
-              Client, 2026-09-25 : « Les deux wallets sont separes c'est top !
-              Il faudra juste retirer les details dans le wallet Vendeur ».
+          {/* PLUS DE VENTILATION PAR ORIGINE, SUR AUCUNE DES DEUX CAISSES.
+              Client, 2026-09-25 : « Il faudra juste retirer les details dans le
+              wallet Vendeur », puis, une fois sa caisse Immo creditee : « Les
+              details apparaissent aussi sur le Wallet Immo. On peut masquer ».
 
-              Elle avait ete posee le 2026-09-09 comme ETAPE D'ATTENTE, pour
-              repondre a « j'ai pas eu de reservation mais mon Wallet Immo est
-              credite » : une seule caisse, trois tableaux de bord, et la ligne
-              servait a dire d'ou venait l'argent. Les caisses etant desormais
-              separees (2026-09-24), la question ne se pose plus cote vendeur —
-              tout ce qu'on y trouve vient de la boutique.
+              Cette ligne avait ete posee le 2026-09-09 comme ETAPE D'ATTENTE :
+              il n'existait alors qu'une caisse, montree sur trois tableaux de
+              bord, et elle servait a repondre a « j'ai pas eu de reservation
+              mais mon Wallet Immo est credite ». Les caisses etant separees
+              depuis le 2026-09-24, chaque tableau de bord ne montre plus que la
+              sienne — la question a laquelle cette ligne repondait ne se pose
+              plus nulle part.
 
-              Elle reste sur la caisse IMMO, ou elle garde un sens : celle-ci
-              melange les loyers encaisses et les retraits effectues, et le
-              client ne l'a pas demandee en moins. */}
-          {kind === 'immo' && <WalletOrigins origins={wallet.data?.originsByKind?.immo} />}
+              Le composant WalletOrigins et les donnees qui l'alimentent
+              (useWallet.originsByKind) sont CONSERVES : le client a change
+              d'avis deux fois sur cet affichage, et le remettre ne coute qu'une
+              ligne ici. */}
         </View>
       </View>
     </Pressable>

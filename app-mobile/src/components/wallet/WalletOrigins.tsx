@@ -4,6 +4,12 @@ import { formatGNF } from '../../lib/format';
 import type { Wallet, WalletOrigin } from '../../data/types';
 
 /**
+ * ⚠ CE COMPOSANT N'EST PLUS RENDU NULLE PART depuis le 2026-09-25. Le client a
+ * demande de masquer la ventilation sur la caisse Vendeur, puis sur la caisse
+ * Immo. Il est conserve — avec les donnees qui l'alimentent — parce qu'il a
+ * change d'avis deux fois sur cet affichage et que le remettre ne coute qu'une
+ * ligne dans ProDashboard.
+ *
  * « D'ou vient cet argent » — la ventilation du solde par origine.
  *
  * DEMANDE DU CLIENT, 2026-09-09 : « j'ai pas eu de reservation de logement mais
