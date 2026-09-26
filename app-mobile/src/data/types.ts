@@ -141,6 +141,12 @@ export interface Property {
   bedrooms?: number;
   areaSqm?: number;
   furnished?: boolean;
+  /**
+   * Identifiants stables du catalogue src/lib/amenities.ts. Absent sur un
+   * serveur non redéployé — d'où l'optionnalité, qui évite à la fiche du bien
+   * de planter pendant la fenêtre entre l'OTA et le déploiement.
+   */
+  amenities?: string[];
   city: string;
   district: string;
   distanceToRoadMeters: number;

@@ -25,6 +25,7 @@ import { useAuth } from '../../../src/stores/auth';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
 import { useTranslation } from 'react-i18next';
 import { PropertyLocationMap } from '../../../src/components/property/PropertyLocationMap';
+import { amenityDef } from '../../../src/lib/amenities';
 import { formatDistance } from '../../../src/lib/format';
 import { priceWithFeeGnf } from '../../../src/lib/fees';
 import { toToastMessage } from '../../../src/lib/api';
@@ -345,6 +346,49 @@ export default function PropertyDetailRoute() {
             <View style={{ marginTop: 18 }}>
               <MicroLabel label={t('property.descriptionHeading')} />
               <Text variant="bodyM">{prop.description}</Text>
+            </View>
+          )}
+
+
+          {/* ÉQUIPEMENTS — affichés pour la première fois le 2026-09-26.
+              Le bailleur les cochait depuis des mois à une étape entière du
+              tunnel ; ils partaient en base, revenaient dans les requêtes, et
+              `mapProperty` les jetait avant l'application. Trouvé en déplaçant
+              cette étape à la demande du client : elle ne servait à rien.
+              Un identifiant inconnu du catalogue est ignoré plutôt qu'affiché
+              en ligne vide — une annonce publiée par une version ultérieure ne
+              doit pas trouer la fiche sur un vieux bundle. */}
+          {(prop.amenities ?? []).length > 0 && (
+            <View style={{ marginTop: 18 }}>
+              <MicroLabel label={t('create.stepAmenitiesLabel')} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {(prop.amenities ?? []).map((id) => {
+                  const def = amenityDef(id);
+                  if (!def) return null;
+                  const Icon = def.Icon;
+                  return (
+                    <View
+                      key={id}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingVertical: 7,
+                        paddingHorizontal: 11,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.card,
+                      }}
+                    >
+                      <Icon size={14} color={colors.primary} strokeWidth={2} />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                        {t(def.labelKey)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
             </View>
           )}
 

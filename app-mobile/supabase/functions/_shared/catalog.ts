@@ -124,6 +124,14 @@ export function mapProperty(r: PropertyRow, photos: string[]) {
     bedrooms: r.bedrooms ?? undefined,
     areaSqm: r.area_sqm ?? undefined,
     furnished: r.furnished ?? undefined,
+    // LES EQUIPEMENTS ETAIENT LUS EN BASE ET JETES ICI. PropertyRow les
+    // declare (donc les requetes les selectionnent bien), mais ce mapper ne
+    // les recopiait pas : un bailleur cochait « Climatisation, Groupe
+    // electrogene, Eau courante » et aucun locataire ne l'a jamais su.
+    // Trouve le 2026-09-26 en deplacant l'etape « Equipements » a la
+    // demande du client — l'etape qu'on venait de rendre plus visible ne
+    // servait a rien.
+    amenities: r.amenities ?? [],
     city: r.city,
     district: r.district ?? '',
     distanceToRoadMeters: r.distance_to_road_m,

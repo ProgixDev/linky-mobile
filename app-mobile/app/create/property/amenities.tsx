@@ -2,21 +2,6 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import {
-  Wifi,
-  Car,
-  Snowflake,
-  ChefHat,
-  Shield,
-  Trees,
-  Waves,
-  ArrowUpDown,
-  Sun,
-  Zap,
-  Droplet,
-  Box,
-} from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Text } from '../../../src/components/primitives/Text';
@@ -25,22 +10,9 @@ import { haptic } from '../../../src/lib/haptics';
 import { useCreateListing } from '../../../src/stores/createListing';
 import { propertyStep } from '../../../src/lib/createSteps';
 import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
+import { AMENITY_DEFS } from '../../../src/lib/amenities';
 
 // Phase I.9 — ids are stable backend keys ; labels resolve via i18n at render.
-const AMENITY_DEFS: { id: string; labelKey: string; Icon: LucideIcon }[] = [
-  { id: 'electricity', labelKey: 'create.amenityElectricity', Icon: Zap },
-  { id: 'water',       labelKey: 'create.amenityWater',       Icon: Droplet },
-  { id: 'ac',          labelKey: 'create.amenityClim',        Icon: Snowflake },
-  { id: 'park',        labelKey: 'create.amenityParking',     Icon: Car },
-  { id: 'sec',         labelKey: 'create.amenitySec',         Icon: Shield },
-  { id: 'pool',        labelKey: 'create.amenityPool',        Icon: Waves },
-  { id: 'garden',      labelKey: 'create.amenityGardenAlt',   Icon: Trees },
-  { id: 'kitchen',     labelKey: 'create.amenityKitchen',     Icon: ChefHat },
-  { id: 'wifi',        labelKey: 'create.amenityWifi',        Icon: Wifi },
-  { id: 'lift',        labelKey: 'create.amenityLift',        Icon: ArrowUpDown },
-  { id: 'terrace',     labelKey: 'create.amenityTerrace',     Icon: Sun },
-  { id: 'cellar',      labelKey: 'create.amenityCellar',      Icon: Box },
-];
 
 export default function AmenitiesRoute() {
   const { colors } = useTheme();
