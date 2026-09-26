@@ -160,7 +160,7 @@ export default function AmenitiesRoute() {
         <Pressable
           onPress={() => {
             haptic.medium();
-            router.push('/create/property/photos');
+            router.push('/create/property/location');
           }}
           style={{
             height: 56,

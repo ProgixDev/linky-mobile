@@ -36,11 +36,15 @@ const PRODUCT_ORDER: ProductStep[] = [
   'preview',
 ];
 
+// « Mettre la page Équipements avant la géo-localisation » (client
+// 2026-09-26). Poser un point sur une carte demande du réseau et de la
+// patience ; cocher des équipements n'en demande aucun. Mettre l'effort le plus
+// coûteux juste avant les photos, elles aussi coûteuses, plutôt qu'au milieu.
 const PROPERTY_ORDER: PropertyStep[] = [
   'owner',
   'details',
-  'location',
   'amenities',
+  'location',
   'photos',
   'preview',
 ];

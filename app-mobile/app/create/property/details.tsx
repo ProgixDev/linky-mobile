@@ -283,7 +283,16 @@ export default function CreatePropertyDetailsRoute() {
             label={t('create.continue')}
             style={{ flex: 1 }}
             disabled={!state.title.trim() || state.priceGnf <= 0 || !state.city.trim()}
-            onPress={() => router.push('/create/property/location')}
+            onPress={() =>
+              router.push(
+                // Un terrain n'a pas d'équipements : il saute l'étape, et c'est
+                // ici que ça se décide depuis que « Équipements » est passé
+                // avant la carte.
+                isTerrain
+                  ? '/create/property/location'
+                  : '/create/property/amenities',
+              )
+            }
           />
         </StickyBottom>
       </KeyboardAvoidingView>

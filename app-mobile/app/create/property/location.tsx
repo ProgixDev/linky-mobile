@@ -195,11 +195,7 @@ export default function CreatePropertyLocationRoute() {
           style={{ flex: 1 }}
           disabled={lat == null || lng == null}
           onPress={() =>
-            router.push(
-              propertyType === 'terrain'
-                ? '/create/property/photos'
-                : '/create/property/amenities',
-            )
+            router.push('/create/property/photos')
           }
         />
       </StickyBottom>
