@@ -1676,7 +1676,10 @@
       "deleteMailError": "Suppression impossible pour le moment. Réessayez.",
       "bientotBadge": "BIENTÔT",
       "exportSuccess": "Export envoyé à {{email}}.",
-      "exportError": "Impossible d'envoyer l'export."
+      "exportError": "Impossible d'envoyer l'export.",
+      "sectionSafety": "Sécurité",
+      "blockedLabel": "Personnes bloquées",
+      "blockedSub": "Gérer les personnes que tu as bloquées"
     },
     "password": {
       "title": "Mot de passe",
@@ -1884,5 +1887,37 @@
   "update": {
     "ready": "Nouvelle version disponible",
     "cta": "Mettre à jour"
+  },
+  "moderation": {
+    "report": "Signaler",
+    "reportTitle": "Signaler ce contenu",
+    "reportSubtitle": "Dis-nous ce qui ne va pas. Un membre de l'équipe Linky regardera.",
+    "reportDetailsLabel": "Précisions (facultatif)",
+    "reportDetailsPlaceholder": "Ajoute un détail si ça aide à comprendre",
+    "reportSubmit": "Envoyer",
+    "reportThanks": "Merci, c'est signalé. On regarde.",
+    "reportError": "Le signalement n'a pas pu être envoyé.",
+    "reasons": {
+      "scam": "Arnaque ou tentative de fraude",
+      "illegal": "Produit ou service interdit",
+      "offensive": "Contenu offensant ou haineux",
+      "spam": "Spam ou publicité",
+      "wrong_info": "Informations fausses ou trompeuses",
+      "other": "Autre"
+    },
+    "block": "Bloquer",
+    "blockTitle": "Bloquer cette personne ?",
+    "blockBody": "Tu ne verras plus ses annonces, ses avis ni ses commentaires, et elle ne verra plus les tiens. Tes commandes et réservations en cours ne changent pas.",
+    "blockDone": "Personne bloquée.",
+    "blockError": "Le blocage n'a pas pu être enregistré.",
+    "unblock": "Débloquer",
+    "unblockDone": "Personne débloquée.",
+    "unblockError": "Le déblocage n'a pas pu être enregistré.",
+    "blockedTitle": "Personnes bloquées",
+    "blockedSubtitle": "Tu ne vois plus ce qu'elles publient.",
+    "blockedEmpty": "Tu n'as bloqué personne.",
+    "blockedEmptySub": "Tu peux bloquer quelqu'un depuis une annonce, un avis ou un commentaire.",
+    "blockedSince": "Bloquée le {{date}}",
+    "unknownUser": "Utilisateur"
   }
 }

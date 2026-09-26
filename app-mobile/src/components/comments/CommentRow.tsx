@@ -14,6 +14,8 @@ export function CommentRow({
   listingId,
   canInteract,
   onReply,
+  onModerate,
+  currentUserId,
   isReply = false,
 }: {
   comment: Comment;
@@ -22,6 +24,11 @@ export function CommentRow({
   /** false when logged out — hide like/reply actions. */
   canInteract: boolean;
   onReply?: (c: Comment) => void;
+  /** Ouvre le menu « Signaler / Bloquer ». Absent = pas de moderation ici
+   *  (l'apercu read-only sur la fiche d'annonce, par exemple). */
+  onModerate?: (c: Comment) => void;
+  /** Sert a NE PAS proposer de se signaler ni de se bloquer soi-meme. */
+  currentUserId?: string | null;
   isReply?: boolean;
 }) {
   const { colors } = useTheme();
@@ -88,6 +95,25 @@ export function CommentRow({
               </Text>
             </Pressable>
           )}
+
+          {/* SIGNALER / BLOQUER — exige par la politique Google Play sur le
+              contenu genere par les utilisateurs. Cache sur SON PROPRE
+              commentaire : se signaler soi-meme n'a pas de sens, et le serveur
+              refuse l'auto-blocage de toute facon. Le geste est discret (une
+              icone, pas un libelle) parce qu'il concerne une minorite de cas et
+              que le mettre en avant sous chaque message donnerait au fil un air
+              de champ de mines. */}
+          {onModerate && comment.authorId !== currentUserId && (
+            <Pressable
+              onPress={() => { haptic.light(); onModerate(comment); }}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Signaler ou bloquer"
+              style={{ marginLeft: 'auto' }}
+            >
+              <I.more size={16} color={colors.textFaint} />
+            </Pressable>
+          )}
         </View>
 
         {/* Replies — nested, oldest-first, no further nesting. */}
@@ -100,6 +126,8 @@ export function CommentRow({
                   kind={kind}
                   listingId={listingId}
                   canInteract={canInteract}
+                  onModerate={onModerate}
+                  currentUserId={currentUserId}
                   isReply
                 />
               </View>

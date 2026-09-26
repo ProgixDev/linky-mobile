@@ -835,3 +835,21 @@ verify_jwt = false
 
 [functions.delivery-quote]
 verify_jwt = false
+
+[functions.report-content]
+verify_jwt = false
+
+[functions.block-user]
+verify_jwt = false
+
+[functions.unblock-user]
+verify_jwt = false
+
+[functions.list-blocked-users]
+verify_jwt = false
+
+[functions.admin-list-reports]
+verify_jwt = false
+
+[functions.admin-resolve-report]
+verify_jwt = false

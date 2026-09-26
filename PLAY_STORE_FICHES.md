@@ -220,9 +220,8 @@ juridiquement, et il dépend de la qualification exacte des prestataires.
 - **Deux comptes de démonstration** pour le formulaire « Accès à
   l'application » — et celui de Dépose doit être un livreur **déjà approuvé**,
   sinon le relecteur ne voit aucune course (section 6).
-- **Signalement et blocage** de contenu : absents, et exigés par la politique sur
-  le contenu généré par les utilisateurs (section 7). C'est du développement, pas
-  un formulaire.
+- **Déploiement du signalement et du blocage** : le code existe (section 7),
+  il reste la migration, les fonctions edge, l'OTA et la console admin.
 - **Décision sur le boost** et Google Play Billing (section 8).
 
 ## 5. URL communes aux deux fiches
@@ -291,19 +290,29 @@ politique Google sur le **contenu généré par les utilisateurs**, qui exige tr
 choses : un moyen de **signaler** un contenu ou un utilisateur, un dispositif de
 **modération**, et la possibilité de **bloquer** un utilisateur abusif.
 
-**Linky n'a aucune des trois** (vérifié le 2026-09-26). Les libellés « Signaler
-un problème » de l'application concernent les bugs, la sécurité et les litiges de
-commande ; `livreur-report-issue` est un livreur qui signale un incident de
-course. Rien ne permet de signaler une annonce, un avis ou un commentaire, ni de
-bloquer quelqu'un.
+Au 2026-09-26 au matin, Linky n'avait **aucune des trois** : les libellés
+« Signaler un problème » de l'application concernaient les bugs, la sécurité et
+les litiges de commande, et `livreur-report-issue` est un livreur qui signale un
+incident de course. Rien ne permettait de signaler une annonce, un avis ou un
+commentaire, ni de bloquer quelqu'un.
 
-C'est un motif de rejet indépendant de tout le reste, et il porte sur trois
-surfaces déjà en production : les annonces, les avis et les commentaires. Ce
-qu'il faut, au minimum : une table `content_reports` polymorphe (comme les
-commentaires le sont déjà), un bouton « Signaler » sur l'annonce, l'avis et le
-commentaire, une liste `blocked_users` qui filtre les listes côté serveur, et une
-file de signalements dans la console admin — qui sait déjà traiter les litiges.
-C'est une demi-journée à une journée de travail, pas un chantier.
+**Les trois sont désormais construites** (même jour, non encore déployées) :
+
+- **Signaler** — feuille `ReportSheet` avec six motifs et un champ libre,
+  accessible depuis une fiche article, une fiche bien et chaque commentaire.
+  Table `content_reports` polymorphe, un signalement par personne et par cible.
+- **Bloquer** — table `blocked_users`, filtre **symétrique** appliqué au fil
+  Découvrir, aux listes d'articles et de biens, aux commentaires et aux avis. Il
+  ne touche jamais une commande ou une réservation en cours : il y a de l'argent
+  en séquestre derrière. Déblocage dans Réglages → Confidentialité → Sécurité.
+- **Modérer** — onglet « Signalements » de la console admin, file des plus
+  anciens d'abord, avec l'aperçu de la cible et le nombre de personnes l'ayant
+  signalée. La suppression du contenu reste un geste distinct, pour garder le cas
+  du contenu limite qu'on laisse en place.
+
+Reste à faire côté production : appliquer la migration `20260926_01`, déployer
+les onze fonctions edge concernées, publier l'OTA sur les deux canaux et
+redéployer la console admin.
 
 ---
 

@@ -7,6 +7,7 @@ import {
   Download,
   Trash2,
   Lock,
+  Ban,
   } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -158,6 +159,22 @@ export default function PrivacyRoute() {
             value={profilePublic}
             onChange={(v) => void onToggleProfilePublic(v)}
             last
+          />
+        </Card>
+
+        {/* SÉCURITÉ — la contrepartie obligatoire du blocage. La politique
+            Google Play sur le contenu généré par les utilisateurs demande de
+            pouvoir bloquer quelqu'un ; un blocage sans marche arrière serait un
+            piège, puisqu'on bloque parfois sur un malentendu. Cet écran est le
+            seul endroit de l'app où l'on débloque. */}
+        <SectionLabel label={t('settings.privacy.sectionSafety')} />
+        <Card>
+          <ActionRow
+            Icon={Ban}
+            label={t('settings.privacy.blockedLabel')}
+            sub={t('settings.privacy.blockedSub')}
+            last
+            onPress={() => router.push('/settings/blocked')}
           />
         </Card>
 

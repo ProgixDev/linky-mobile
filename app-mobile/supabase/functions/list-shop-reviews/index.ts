@@ -5,6 +5,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
+import { loadBlockedIds } from '@shared/blocks.ts';
 
 interface Body {
   shop_id: string;
@@ -32,7 +33,7 @@ interface ReviewRow {
 }
 
 Deno.serve(makePost<Body>('/v1/reviews/list-shop', valid, async ({ sb, body, req }) => {
-  await requireUser(req);
+  const callerId = await requireUser(req);
   const limit = body.limit ?? 20;
 
   const { data, error } = await sb
@@ -45,7 +46,13 @@ Deno.serve(makePost<Body>('/v1/reviews/list-shop', valid, async ({ sb, body, req
     console.error('[list-shop-reviews] query error:', error);
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
-  const rows = (data as ReviewRow[] | null) ?? [];
+  const fetched = (data as ReviewRow[] | null) ?? [];
+
+  // Masquage des auteurs bloques. Filtre apres coup, contrairement aux listes
+  // d'annonces : cette liste n'a pas de curseur, seulement un `limit`, donc
+  // retirer une ligne raccourcit la page sans rien faire sauter.
+  const blocked = await loadBlockedIds(sb, callerId);
+  const rows = blocked.size === 0 ? fetched : fetched.filter((r) => !blocked.has(r.reviewer_id));
 
   // « Profil public » (client 2026-08-06) : anonymize a reviewer who turned it off.
   const nameById = new Map<string, string | null>();

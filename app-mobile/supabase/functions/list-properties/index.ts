@@ -6,6 +6,8 @@
 // its rooms-string into bedrooms_min/bedrooms_max before calling.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
+import { tryGetUser } from '@shared/auth.ts';
+import { loadBlockedIds } from '@shared/blocks.ts';
 import { mapProperty, type PropertyRow } from '@shared/catalog.ts';
 
 interface Cursor { created_at: string; id: string }
@@ -65,7 +67,7 @@ function valid(b: unknown): b is Body {
   return true;
 }
 
-Deno.serve(makePost<Body>('/v1/properties/list', valid, async ({ sb, body }) => {
+Deno.serve(makePost<Body>('/v1/properties/list', valid, async ({ sb, body, req }) => {
   const limit = body.limit ?? 50;
   let q = sb
     .from('properties_with_cover')
@@ -110,6 +112,12 @@ Deno.serve(makePost<Body>('/v1/properties/list', valid, async ({ sb, body }) => 
 
   // Page 1 of a public browse: boosted first, then the created_at keyset.
   if (!body.owner_id && !body.cursor) q = q.order('boosted', { ascending: false });
+
+  // Masquage des bailleurs bloques, dans la requete pour la meme raison que
+  // cote produits : le curseur de pagination doit voir la liste deja filtree.
+  // Un bien porte son `owner_id`, donc pas de detour par les boutiques ici.
+  const blockedOwners = await loadBlockedIds(sb, await tryGetUser(req));
+  if (blockedOwners.size > 0) q = q.not('owner_id', 'in', '(' + [...blockedOwners].join(',') + ')');
 
   const { data, error } = await q
     .order('created_at', { ascending: false })

@@ -1676,7 +1676,10 @@
       "deleteMailError": "No se pudo eliminar por ahora. Inténtelo de nuevo.",
       "bientotBadge": "PRÓXIMAMENTE",
       "exportSuccess": "Exportación enviada a {{email}}.",
-      "exportError": "No se pudo enviar la exportación."
+      "exportError": "No se pudo enviar la exportación.",
+      "sectionSafety": "Seguridad",
+      "blockedLabel": "Personas bloqueadas",
+      "blockedSub": "Gestiona las personas que has bloqueado"
     },
     "password": {
       "title": "Contraseña",
@@ -1884,5 +1887,37 @@
   "update": {
     "ready": "Nueva versión disponible",
     "cta": "Actualizar"
+  },
+  "moderation": {
+    "report": "Denunciar",
+    "reportTitle": "Denunciar este contenido",
+    "reportSubtitle": "Cuéntanos qué pasa. Alguien del equipo de Linky lo revisará.",
+    "reportDetailsLabel": "Detalles (opcional)",
+    "reportDetailsPlaceholder": "Añade un detalle si ayuda",
+    "reportSubmit": "Enviar",
+    "reportThanks": "Gracias, ya está denunciado. Lo revisamos.",
+    "reportError": "No se pudo enviar la denuncia.",
+    "reasons": {
+      "scam": "Estafa o intento de fraude",
+      "illegal": "Producto o servicio prohibido",
+      "offensive": "Contenido ofensivo o de odio",
+      "spam": "Spam o publicidad",
+      "wrong_info": "Información falsa o engañosa",
+      "other": "Otro motivo"
+    },
+    "block": "Bloquear",
+    "blockTitle": "¿Bloquear a esta persona?",
+    "blockBody": "Ya no verás sus anuncios, sus valoraciones ni sus comentarios, y ella no verá los tuyos. Tus pedidos y reservas en curso no cambian.",
+    "blockDone": "Persona bloqueada.",
+    "blockError": "No se pudo guardar el bloqueo.",
+    "unblock": "Desbloquear",
+    "unblockDone": "Persona desbloqueada.",
+    "unblockError": "No se pudo guardar el desbloqueo.",
+    "blockedTitle": "Personas bloqueadas",
+    "blockedSubtitle": "Ya no ves lo que publican.",
+    "blockedEmpty": "No has bloqueado a nadie.",
+    "blockedEmptySub": "Puedes bloquear a alguien desde un anuncio, una valoración o un comentario.",
+    "blockedSince": "Bloqueada el {{date}}",
+    "unknownUser": "Usuario"
   }
 }

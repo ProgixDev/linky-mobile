@@ -15,6 +15,7 @@ import { MoneyText } from '../../../src/components/primitives/MoneyText';
 import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { MicroLabel } from '../../../src/components/lists/SectionHeader';
 import { ListingComments } from '../../../src/components/comments/ListingComments';
+import { useModerationMenu } from '../../../src/components/sheets/useModerationMenu';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useProperty, useTrackView, useFindOrCreateConversation } from '../../../src/data/queries';
@@ -69,6 +70,7 @@ export default function PropertyDetailRoute() {
   // misleading.
   const authUserId = useAuth((s) => s.authUserId);
   const isOwnProperty = !!authUserId && !!prop?.ownerId && authUserId === prop.ownerId;
+  const { openMenu, moderationSheet } = useModerationMenu();
   // Agency (= the shop the property belongs to) — shown as a card linking to the
   // agency page, like the boutique card on a product (client 2026-08-03).
   const { data: agency } = useShop(prop?.shopId);
@@ -206,6 +208,27 @@ export default function PropertyDetailRoute() {
                 >
                   <I.share size={16} color="#0E1311" />
                 </IconButton>
+                {/* SIGNALER / BLOQUER — la politique Google Play sur le contenu
+                    genere par les utilisateurs l'exige des qu'une app publie des
+                    annonces ecrites par ses membres. Cache sur SA PROPRE annonce. */}
+                {!!authUserId && !isOwnProperty && (
+                  <IconButton
+                    variant="secondary"
+                    size={36}
+                    onPress={() => {
+                      haptic.light();
+                      openMenu({
+                        title: prop.title,
+                        targetKind: 'property',
+                        targetId: prop.id,
+                        blockeeId: prop.ownerId,
+                      });
+                    }}
+                    style={{ backgroundColor: 'rgba(255,255,255,0.95)', borderColor: 'transparent' }}
+                  >
+                    <I.more size={16} color="#0E1311" />
+                  </IconButton>
+                )}
                 <IconButton
                   variant="secondary"
                   size={36}
@@ -532,6 +555,9 @@ export default function PropertyDetailRoute() {
           </View>
         )}
       </StickyBottom>
+
+      {/* Une seule feuille pour l'ecran (voir useModerationMenu). */}
+      {moderationSheet}
     </View>
   );
 }

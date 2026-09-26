@@ -12,6 +12,7 @@ import { throwApi } from '@shared/errors.ts';
 // Optional auth: the feed stays public, but a signed-in caller also gets their
 // own heart state per item (never throws on a missing/expired token).
 import { tryGetUser } from '@shared/auth.ts';
+import { loadBlockedIds, loadBlockedShopIds } from '@shared/blocks.ts';
 import {
   mapProduct,
   mapProperty,
@@ -47,6 +48,14 @@ Deno.serve(makePost<Body>('/v1/discover/feed', valid, async ({ sb, body, req }) 
   const limit = body.limit ?? 20;
   const sideLimit = limit;
 
+  // IDENTITE DE L'APPELANT RESOLUE ICI, et non plus juste avant les favoris :
+  // le masquage des personnes bloquees doit entrer dans les DEUX requetes du
+  // feed, donc avant qu'elles ne partent. Un appelant anonyme ou sans blocage
+  // ne paie aucune requete de plus (cf. _shared/blocks.ts).
+  const viewerId = await tryGetUser(req);
+  const blocked = await loadBlockedIds(sb, viewerId);
+  const blockedShops = await loadBlockedShopIds(sb, blocked);
+
   let productsQ = sb
     .from('products')
     .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, created_at')
@@ -62,6 +71,15 @@ Deno.serve(makePost<Body>('/v1/discover/feed', valid, async ({ sb, body, req }) 
     const cursorFilter = `created_at.lt.${created_at},and(created_at.eq.${created_at},id.lt.${id})`;
     productsQ = productsQ.or(cursorFilter);
     propertiesQ = propertiesQ.or(cursorFilter);
+  }
+
+  // Dans la requete, pas apres : le feed pagine au curseur, et un filtre
+  // applique apres `.limit()` ferait sauter des annonces d'une page a l'autre.
+  if (blockedShops.size > 0) {
+    productsQ = productsQ.not('shop_id', 'in', '(' + [...blockedShops].join(',') + ')');
+  }
+  if (blocked.size > 0) {
+    propertiesQ = propertiesQ.not('owner_id', 'in', '(' + [...blocked].join(',') + ')');
   }
 
   const [productsRes, propertiesRes] = await Promise.all([
@@ -136,7 +154,6 @@ Deno.serve(makePost<Body>('/v1/discover/feed', valid, async ({ sb, body, req }) 
   // client 2026-08-05). Serving both from the same source keeps them consistent
   // across reinstalls, devices and failed requests. Anonymous callers get false.
   const favorited = new Set<string>();
-  const viewerId = await tryGetUser(req);
   if (viewerId && ids.length > 0) {
     const productIds = sliced.filter((m) => m.kind === 'product').map((m) => m.id);
     const propertyIds = sliced.filter((m) => m.kind === 'property').map((m) => m.id);

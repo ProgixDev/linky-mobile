@@ -12,6 +12,8 @@ import { Text } from '../../../src/components/primitives/Text';
 import { IconButton } from '../../../src/components/primitives/Button';
 import { I } from '../../../src/icons/Icon';
 import { CommentRow } from '../../../src/components/comments/CommentRow';
+import { useModerationMenu } from '../../../src/components/sheets/useModerationMenu';
+import { useTranslation } from 'react-i18next';
 import {
   useListingComments,
   useAddComment,
@@ -33,6 +35,8 @@ export default function CommentsRoute() {
   const add = useAddComment();
   const me = useAuth((s) => s.authUserId);
   const toast = useToast();
+  const { t } = useTranslation();
+  const { openMenu, moderationSheet } = useModerationMenu();
   const [text, setText] = useState('');
   // When set, the composer posts a reply to this comment.
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
@@ -113,6 +117,18 @@ export default function CommentsRoute() {
                 listingId={id}
                 canInteract={!!me}
                 onReply={setReplyingTo}
+                onModerate={
+                  me
+                    ? (c) =>
+                        openMenu({
+                          title: c.authorName ?? t('moderation.unknownUser'),
+                          targetKind: 'comment',
+                          targetId: c.id,
+                          blockeeId: c.authorId,
+                        })
+                    : undefined
+                }
+                currentUserId={me}
               />
             ))}
           </ScrollView>
@@ -214,6 +230,9 @@ export default function CommentsRoute() {
           </View>
         )}
       </KeyboardAvoidingView>
+
+      {/* Une seule feuille pour tout le fil (voir useModerationMenu). */}
+      {moderationSheet}
     </SafeAreaView>
   );
 }

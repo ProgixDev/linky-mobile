@@ -6,6 +6,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { tryGetUser } from '@shared/auth.ts';
+import { loadBlockedIds } from '@shared/blocks.ts';
 
 interface Body {
   listing_kind: 'product' | 'property';
@@ -58,7 +59,22 @@ Deno.serve(makePost<Body>('/v1/comments/list', valid, async ({ sb, body, req }) 
     console.error('[list-comments] query error:', error);
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
-  const rows = (data as CommentRow[] | null) ?? [];
+  const all = (data as CommentRow[] | null) ?? [];
+
+  // MASQUAGE DES PERSONNES BLOQUEES (cf. _shared/blocks.ts). Filtre ici plutot
+  // que dans la requete : ce endpoint tire deja TOUT le fil pour le nicher, et
+  // le `limit` ne porte que sur les commentaires racines.
+  //
+  // LES REPONSES D'UN COMMENTAIRE MASQUE PARTENT AVEC LUI. Sans cela, elles
+  // deviendraient orphelines : `repliesByParent` les rangerait sous un parent
+  // absent de `tops` et elles disparaitraient de l'affichage sans etre comptees
+  // — un fil amputé au milieu, avec des reponses qui repondent a du vide.
+  const blocked = await loadBlockedIds(sb, callerId);
+  let rows = blocked.size === 0 ? all : all.filter((r) => !blocked.has(r.author_id));
+  if (blocked.size > 0) {
+    const kept = new Set(rows.filter((r) => !r.parent_id).map((r) => r.id));
+    rows = rows.filter((r) => !r.parent_id || kept.has(r.parent_id));
+  }
 
   // Author identity — one batched query + Map (project convention).
   const byId = new Map<string, { displayName: string | null; avatarUrl: string | null }>();

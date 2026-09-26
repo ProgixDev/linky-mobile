@@ -16,3 +16,4 @@ export * from './wallet';
 export * from './messages';
 export * from './kyc';
 export * from './deliveryQuote';
+export * from './moderation';

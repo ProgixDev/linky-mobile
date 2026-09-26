@@ -19,12 +19,14 @@ import {
   Star,
   Sparkles,
   Edit2,
+  MoreVertical,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { ProductCard } from '../../src/components/lists/ProductCard';
 import { ListingComments } from '../../src/components/comments/ListingComments';
+import { useModerationMenu } from '../../src/components/sheets/useModerationMenu';
 import { haptic } from '../../src/lib/haptics';
 import { priceWithFeeGnf } from '../../src/lib/fees';
 import { shareMessage } from '../../src/lib/share';
@@ -85,6 +87,7 @@ export default function ProductDetailRoute() {
   // and place-order both reject self-targets).
   const authUserId = useAuth((s) => s.authUserId);
   const isOwnProduct = !!authUserId && !!shop?.ownerId && authUserId === shop.ownerId;
+  const { openMenu, moderationSheet } = useModerationMenu();
 
   async function onChatPress() {
     if (!shop?.ownerId || !product?.id) return;
@@ -183,6 +186,25 @@ export default function ProductDetailRoute() {
                 >
                   <Share2 size={16} color="#0E1311" strokeWidth={2} />
                 </CircleButton>
+                {/* SIGNALER / BLOQUER — la politique Google Play sur le contenu
+                    genere par les utilisateurs l'exige des qu'une app publie des
+                    annonces ecrites par ses membres. Cache sur SA PROPRE annonce. */}
+                {!!authUserId && !isOwnProduct && (
+                  <CircleButton
+                    onPress={() => {
+                      haptic.light();
+                      openMenu({
+                        title: product.title,
+                        targetKind: 'product',
+                        targetId: product.id,
+                        blockeeId: shop?.ownerId,
+                      });
+                    }}
+                    ariaLabel="Signaler ou bloquer"
+                  >
+                    <MoreVertical size={16} color="#0E1311" strokeWidth={2} />
+                  </CircleButton>
+                )}
                 <CircleButton
                   onPress={() => {
                     haptic.light();
@@ -809,6 +831,9 @@ export default function ProductDetailRoute() {
           )}
         </View>
       </SafeAreaView>
+
+      {/* Une seule feuille pour l'ecran (voir useModerationMenu). */}
+      {moderationSheet}
     </View>
   );
 }

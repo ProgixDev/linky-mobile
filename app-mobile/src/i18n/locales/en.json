@@ -1676,7 +1676,10 @@
       "deleteMailError": "Deletion is not possible right now. Try again.",
       "bientotBadge": "SOON",
       "exportSuccess": "Export sent to {{email}}.",
-      "exportError": "Could not send the export."
+      "exportError": "Could not send the export.",
+      "sectionSafety": "Safety",
+      "blockedLabel": "Blocked people",
+      "blockedSub": "Manage the people you've blocked"
     },
     "password": {
       "title": "Password",
@@ -1884,5 +1887,37 @@
   "update": {
     "ready": "New version available",
     "cta": "Update"
+  },
+  "moderation": {
+    "report": "Report",
+    "reportTitle": "Report this content",
+    "reportSubtitle": "Tell us what's wrong. Someone from the Linky team will look at it.",
+    "reportDetailsLabel": "Details (optional)",
+    "reportDetailsPlaceholder": "Add a detail if it helps",
+    "reportSubmit": "Send",
+    "reportThanks": "Thanks, it's reported. We're looking into it.",
+    "reportError": "The report could not be sent.",
+    "reasons": {
+      "scam": "Scam or fraud attempt",
+      "illegal": "Prohibited product or service",
+      "offensive": "Offensive or hateful content",
+      "spam": "Spam or advertising",
+      "wrong_info": "False or misleading information",
+      "other": "Something else"
+    },
+    "block": "Block",
+    "blockTitle": "Block this person?",
+    "blockBody": "You won't see their listings, reviews or comments any more, and they won't see yours. Your current orders and bookings are unaffected.",
+    "blockDone": "Person blocked.",
+    "blockError": "The block could not be saved.",
+    "unblock": "Unblock",
+    "unblockDone": "Person unblocked.",
+    "unblockError": "The unblock could not be saved.",
+    "blockedTitle": "Blocked people",
+    "blockedSubtitle": "You no longer see what they post.",
+    "blockedEmpty": "You haven't blocked anyone.",
+    "blockedEmptySub": "You can block someone from a listing, a review or a comment.",
+    "blockedSince": "Blocked on {{date}}",
+    "unknownUser": "User"
   }
 }

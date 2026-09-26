@@ -1,5 +1,7 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
+import { tryGetUser } from '@shared/auth.ts';
+import { loadBlockedIds, loadBlockedShopIds } from '@shared/blocks.ts';
 import { mapProduct, type ProductRow } from '@shared/catalog.ts';
 
 interface Cursor { created_at: string; id: string }
@@ -49,7 +51,7 @@ function valid(b: unknown): b is Body {
   return true;
 }
 
-Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body }) => {
+Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body, req }) => {
   const limit = body.limit ?? 50;
   const sortIsRecent = !body.sort || body.sort === 'recent';
   const hasCursor = !!(body.cursor && sortIsRecent);
@@ -99,6 +101,16 @@ Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body }) => {
     if (!hasCursor) q = q.order('boosted', { ascending: false });
     q = q.order('created_at', { ascending: false }).order('id', { ascending: false });
   }
+
+  // MASQUAGE DES VENDEURS BLOQUES — dans la REQUETE, pas apres coup : filtrer
+  // apres `.limit()` rendrait des pages plus courtes que demandees et le
+  // curseur sauterait des annonces. Un produit ne porte pas d'`owner_id`, d'ou
+  // le detour par les boutiques (cf. _shared/blocks.ts).
+  //
+  // Cout pour un appelant anonyme ou sans blocage : zero requete. C'est le cas
+  // de la quasi-totalite des appels sur le chemin le plus chaud de l'app.
+  const blockedShops = await loadBlockedShopIds(sb, await loadBlockedIds(sb, await tryGetUser(req)));
+  if (blockedShops.size > 0) q = q.not('shop_id', 'in', '(' + [...blockedShops].join(',') + ')');
 
   const { data, error } = await q.limit(limit);
   if (error) {
