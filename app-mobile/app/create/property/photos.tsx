@@ -21,6 +21,8 @@ import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
 import { useCreateListing, type PropertyPhoto } from '../../../src/stores/createListing';
+import { propertyStep } from '../../../src/lib/createSteps';
+import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
 import { useRequestPhotoUploadUrl } from '../../../src/data/queries/products';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
@@ -54,6 +56,8 @@ function extForMime(m: AllowedMime): string {
 export default function PropertyPhotosRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const propertyType = useCreateListing((s) => s.propertyType);
+  const step = propertyStep('photos', propertyType);
   const propertyPhotos = useCreateListing((s) => s.propertyPhotos);
   const setVal = useCreateListing((s) => s.set);
   const valid = propertyPhotos.length >= 3;
@@ -271,6 +275,13 @@ export default function PropertyPhotosRoute() {
           title={t('create.photosPropertyTitleAdd')}
           subtitle={t('create.photosPropertySubAdd')}
         />
+
+        <View style={{ paddingHorizontal: 24, marginBottom: 14 }}>
+          <ProgressDots total={step.total} current={step.index} />
+          <Text variant="micro" tone="muted" style={{ marginTop: 10 }}>
+            {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepPhotosLabel') })}
+          </Text>
+        </View>
 
         {/* Cover slot */}
         {propertyPhotos[0] && (

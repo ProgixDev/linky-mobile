@@ -636,7 +636,6 @@
     "previewPropSub": "Voilà comment votre annonce apparaîtra aux acheteurs.",
     "previewPublishPropCta": "Publier le bien",
     "previewPublishingProp": "Publication…",
-    "stepDotsPropPhotos": "Étape 5 / 6 · Photos",
     "photosPropertyTitleAdd": "Ajoutez des photos",
     "photosPropertySubAdd": "Au moins 3 photos, la première sert de couverture.",
     "photosCoverBadge": "COUVERTURE",
@@ -679,7 +678,12 @@
     "videoSourceCamera": "Filmer une vidéo",
     "videoSourceCameraHint": "60 s max, téléphone à l'horizontale",
     "videoSourceGallery": "Choisir dans la galerie",
-    "videoSourceGalleryHint": "Une vidéo de 60 s maximum"
+    "videoSourceGalleryHint": "Une vidéo de 60 s maximum",
+    "stepOwner": "Vous êtes ?",
+    "ownerPrivate": "Propriétaire",
+    "ownerPrivateDesc": "Je loue ou je vends mon propre bien",
+    "ownerAgency": "Agence immobilière",
+    "ownerAgencyDesc": "Je gère des biens régulièrement"
   },
   "seller": {
     "ordersTitle": "Commandes reçues",

@@ -10,6 +10,8 @@ import { diditConfig, kycRequiredToPublish } from '@shared/didit.ts';
 
 interface Body {
   shop_id?: string;
+  /** Étape 1 du tunnel. Optionnel : les bundles antérieurs ne l'envoient pas. */
+  seller_type?: 'particular' | 'merchant';
   title: string;
   description?: string;
   price_minor: number;
@@ -37,6 +39,7 @@ function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
   const x = b as Record<string, unknown>;
   if (x.shop_id !== undefined && !isUuid(x.shop_id)) return false;
+  if (x.seller_type !== undefined && x.seller_type !== 'particular' && x.seller_type !== 'merchant') return false;
   if (typeof x.title !== 'string' || x.title.trim().length < 3 || x.title.length > 120) return false;
   if (x.description !== undefined && (typeof x.description !== 'string' || x.description.length > 2000)) return false;
   if (typeof x.price_minor !== 'number' || !Number.isInteger(x.price_minor) || x.price_minor <= 0 || x.price_minor > 1e12) return false;
@@ -100,8 +103,15 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
       // Personalize the auto-created shop from the owner's first name so buyers
       // never see a generic « Ma boutique » (which read like « my shop » on
       // every listing). Falls back to « Ma boutique » when the name is unset.
-      const firstName = String(caller.display_name ?? '').trim().split(/\s+/)[0];
-      const shopName = firstName ? `Boutique de ${firstName}` : 'Ma boutique';
+      // UN PARTICULIER N'EST PAS UNE BOUTIQUE. Il vend son propre canape, une
+      // fois ; l'afficher sous « Boutique de Mamadou » ment a l'acheteur sur
+      // ce qu'il a en face de lui, et la confiance est precisement ce que
+      // Linky vend. Il parait donc sous son NOM.
+      const fullName = String(caller.display_name ?? '').trim();
+      const firstName = fullName.split(/\s+/)[0];
+      const shopName = body.seller_type === 'particular'
+        ? (fullName || 'Mes annonces')
+        : (firstName ? `Boutique de ${firstName}` : 'Ma boutique');
       const { data: created, error: eIns } = await sb
         .from('shops')
         .insert({

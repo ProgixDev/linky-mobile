@@ -18,6 +18,8 @@ interface PropertyPhotoBody {
 
 interface Body {
   shop_id?: string;
+  /** Étape 1 du tunnel immobilier. Optionnel, comme seller_type cote article. */
+  owner_type?: 'owner' | 'agency';
   type: 'location' | 'vente' | 'terrain';
   title: string;
   description?: string;
@@ -59,6 +61,7 @@ function valid(b: unknown): b is Body {
   if (typeof b !== 'object' || b === null) return false;
   const x = b as Record<string, unknown>;
   if (x.shop_id !== undefined && !isUuid(x.shop_id)) return false;
+  if (x.owner_type !== undefined && x.owner_type !== 'owner' && x.owner_type !== 'agency') return false;
   if (typeof x.type !== 'string' || !TYPES.has(x.type as string)) return false;
   if (typeof x.title !== 'string' || x.title.trim().length < 3 || x.title.length > 120) return false;
   if (x.description !== undefined &&
@@ -133,8 +136,16 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
     } else {
       // Personalize the auto-created agency from the owner's first name (was a
       // generic « Mon agence »). Falls back when the name is unset.
-      const firstName = String(caller.display_name ?? '').trim().split(/\s+/)[0];
-      const shopName = firstName ? `Agence de ${firstName}` : 'Mon agence';
+      // UN PROPRIETAIRE N'EST PAS UNE AGENCE. Celui qui met son appartement en
+      // location une fois se retrouvait annonce aux locataires comme « Agence
+      // de Mamadou » — une qualite qu'il n'a pas, sur le marche ou elle compte
+      // le plus. Il parait sous son NOM ; seule une vraie agence est nommee
+      // comme telle.
+      const fullName = String(caller.display_name ?? '').trim();
+      const firstName = fullName.split(/\s+/)[0];
+      const shopName = body.owner_type === 'owner'
+        ? (fullName || 'Mes biens')
+        : (firstName ? `Agence de ${firstName}` : 'Mon agence');
       // The property location step already requires a real pin (client-side
       // gate in create/property/location.tsx) — reuse it for the agency shop
       // itself instead of leaving it on the city centroid. No new UI needed.

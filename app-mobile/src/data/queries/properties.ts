@@ -60,6 +60,12 @@ export interface CreatePropertyInput {
   lng?: number;
   photos: { url: string; storage_path: string; position: number }[];
   video_url?: string | null;
+  /**
+   * Étape 1 du tunnel immobilier. Ne sert qu'à NOMMER le profil auto-créé à la
+   * première publication : un propriétaire paraît sous son propre nom, une
+   * agence sous « Agence de … ». Sans effet quand le profil existe déjà.
+   */
+  owner_type?: 'owner' | 'agency';
 }
 
 export interface UpdatePropertyInput {

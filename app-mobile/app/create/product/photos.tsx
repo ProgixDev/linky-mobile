@@ -29,6 +29,7 @@ import { useRequestPhotoUploadUrl } from '../../../src/data/queries/products';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 import { optimizePhoto } from '../../../src/lib/photoOptimize';
+import { productStep } from '../../../src/lib/createSteps';
 
 const MAX_PHOTOS = 8;
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -60,6 +61,7 @@ function extForMime(m: AllowedMime): string {
 }
 
 export default function CreatePhotosRoute() {
+  const step = productStep('photos');
   const { colors } = useTheme();
   const { t } = useTranslation();
   const photos = useCreateListing((s) => s.photos);
@@ -267,9 +269,9 @@ export default function CreatePhotosRoute() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('create.topbarTitle')} back />
       <View style={{ paddingHorizontal: 16, paddingBottom: 100 }}>
-        <ProgressDots total={6} current={4} />
+        <ProgressDots total={step.total} current={step.index} />
         <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
-          {t('create.stepDotsWith', { current: 5, total: 6, label: t('create.stepPhotosLabel') })}
+          {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepPhotosLabel') })}
         </Text>
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 6 }}>
           {t('create.stepPhotosTitle')}

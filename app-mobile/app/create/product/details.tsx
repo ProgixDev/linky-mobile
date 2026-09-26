@@ -20,8 +20,10 @@ import { toToastMessage } from '../../../src/lib/api';
 import { priceWithFeeGnf, PLATFORM_FEE_RATE } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { gnfToEur } from '../../../src/lib/currency';
+import { productStep } from '../../../src/lib/createSteps';
 
 export default function CreateProductDetailsRoute() {
+  const step = productStep('details');
   const { colors } = useTheme();
   const { t } = useTranslation();
   const state = useCreateListing();
@@ -51,9 +53,9 @@ export default function CreateProductDetailsRoute() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
         >
-          <ProgressDots total={6} current={3} />
+          <ProgressDots total={step.total} current={step.index} />
           <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
-            {t('create.stepDotsWith', { current: 4, total: 6, label: t('create.stepDetailsLabel') })}
+            {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepDetailsLabel') })}
           </Text>
           <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 18 }}>
             {t('create.stepDetailsTitle')}

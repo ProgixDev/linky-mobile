@@ -11,6 +11,11 @@ export interface PropertyPhoto {
 interface CreateListingState {
   kind: ListingKind;
   sellerType: 'particular' | 'merchant';
+  // Pendant immobilier de sellerType (client 2026-09-26 : « Faire de meme pour
+  // la partie Immo (Proprietaire / Agence Immo) »). Determine le NOM du profil
+  // cree a la premiere publication : un proprietaire parait sous son propre
+  // nom, une agence sous un nom d'agence.
+  ownerType: 'owner' | 'agency';
   category: string;
   title: string;
   description: string;
@@ -48,6 +53,7 @@ interface CreateListingState {
 const DEFAULTS = {
   kind: 'product' as ListingKind,
   sellerType: 'particular' as const,
+  ownerType: 'owner' as const,
   category: '',
   title: '',
   description: '',

@@ -23,6 +23,8 @@ import { Text } from '../../../src/components/primitives/Text';
 import { ScreenHeader } from '../../../src/components/nav/ScreenHeader';
 import { haptic } from '../../../src/lib/haptics';
 import { useCreateListing } from '../../../src/stores/createListing';
+import { propertyStep } from '../../../src/lib/createSteps';
+import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
 
 // Phase I.9 — ids are stable backend keys ; labels resolve via i18n at render.
 const AMENITY_DEFS: { id: string; labelKey: string; Icon: LucideIcon }[] = [
@@ -43,6 +45,8 @@ const AMENITY_DEFS: { id: string; labelKey: string; Icon: LucideIcon }[] = [
 export default function AmenitiesRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const propertyType = useCreateListing((s) => s.propertyType);
+  const step = propertyStep('amenities', propertyType);
   const amenities = useCreateListing((s) => s.amenities);
   const setVal = useCreateListing((s) => s.set);
   const picked = new Set(amenities);
@@ -61,6 +65,13 @@ export default function AmenitiesRoute() {
           title={t('create.stepAmenitiesLabel')}
           subtitle={t('create.stepAmenitiesSubtitle')}
         />
+
+        <View style={{ paddingHorizontal: 24, marginBottom: 14 }}>
+          <ProgressDots total={step.total} current={step.index} />
+          <Text variant="micro" tone="muted" style={{ marginTop: 10 }}>
+            {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepAmenitiesLabel') })}
+          </Text>
+        </View>
 
         <View
           style={{

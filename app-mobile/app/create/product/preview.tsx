@@ -18,8 +18,10 @@ import { priceWithFeeGnf } from '../../../src/lib/fees';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useCreateProduct } from '../../../src/data/queries/products';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
+import { productStep } from '../../../src/lib/createSteps';
 
 export default function CreatePreviewRoute() {
+  const step = productStep('preview');
   const { colors, radii } = useTheme();
   const { t } = useTranslation();
   const state = useCreateListing();
@@ -31,7 +33,10 @@ export default function CreatePreviewRoute() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('create.previewTopbar')} back />
       <View style={{ paddingHorizontal: 16, paddingBottom: 100 }}>
-        <ProgressDots total={6} current={5} />
+        <ProgressDots total={step.total} current={step.index} />
+        <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
+          {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepPreviewLabel') })}
+        </Text>
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 14, marginBottom: 6 }}>
           {t('create.previewTitle')}
         </Text>
@@ -108,6 +113,10 @@ export default function CreatePreviewRoute() {
                 // serveur ne l'a jamais recue, donc rien ne plafonnait le panier
                 // (client 2026-08-13, capture d'un panier a 7 Range Rover).
                 stock: state.quantity,
+                // Le choix de l'etape 1, qui n'atteignait jamais le serveur : il
+                // etait ecrit dans le store et lu nulle part, donc « Particulier »
+                // et « Commercant » produisaient exactement la meme boutique.
+                seller_type: state.sellerType,
                 // Geography simplified per 2026-05-29 client meeting: cities only, no districts.
                 // Only reaches product-create's auto-mint branch (no shop yet) —
                 // undefined for a seller who already has a boutique, and product-create

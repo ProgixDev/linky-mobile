@@ -41,6 +41,12 @@ export interface CreateProductInput {
   /** Only meaningful when the caller has no shop yet — see create/product/location.tsx. */
   shop_lat?: number;
   shop_lng?: number;
+  /**
+   * Étape 1 du tunnel. Ne sert qu'à NOMMER le profil auto-créé à la première
+   * publication : un particulier paraît sous son propre nom, un commerçant
+   * sous « Boutique de … ». Sans effet quand la boutique existe déjà.
+   */
+  seller_type?: 'particular' | 'merchant';
 }
 
 export interface UpdateProductInput {

@@ -622,7 +622,6 @@
     "previewPropSub": "Here's how your listing will appear to buyers.",
     "previewPublishPropCta": "Publish the property",
     "previewPublishingProp": "Publishing…",
-    "stepDotsPropPhotos": "Step 5 / 6 · Photos",
     "photosPropertyTitleAdd": "Add photos",
     "photosPropertySubAdd": "At least 3 photos — the first is the cover.",
     "photosCoverBadge": "COVER",
@@ -679,7 +678,12 @@
     "videoSourceCamera": "Film a video",
     "videoSourceCameraHint": "60 s max, hold the phone sideways",
     "videoSourceGallery": "Pick from gallery",
-    "videoSourceGalleryHint": "A video of 60 s at most"
+    "videoSourceGalleryHint": "A video of 60 s at most",
+    "stepOwner": "You are?",
+    "ownerPrivate": "Owner",
+    "ownerPrivateDesc": "I rent out or sell my own property",
+    "ownerAgency": "Real-estate agency",
+    "ownerAgencyDesc": "I manage properties regularly"
   },
   "seller": {
     "ordersTitle": "Orders received",

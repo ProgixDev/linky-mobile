@@ -636,7 +636,6 @@
     "previewPropSub": "Así es como verán su anuncio los compradores.",
     "previewPublishPropCta": "Publicar el inmueble",
     "previewPublishingProp": "Publicando…",
-    "stepDotsPropPhotos": "Paso 5 / 6 · Fotos",
     "photosPropertyTitleAdd": "Añada fotos",
     "photosPropertySubAdd": "Al menos 3 fotos, la primera sirve de portada.",
     "photosCoverBadge": "PORTADA",
@@ -679,7 +678,12 @@
     "videoSourceCamera": "Grabar un vídeo",
     "videoSourceCameraHint": "60 s máx., teléfono en horizontal",
     "videoSourceGallery": "Elegir de la galería",
-    "videoSourceGalleryHint": "Un vídeo de 60 s como máximo"
+    "videoSourceGalleryHint": "Un vídeo de 60 s como máximo",
+    "stepOwner": "¿Usted es?",
+    "ownerPrivate": "Propietario",
+    "ownerPrivateDesc": "Alquilo o vendo mi propio inmueble",
+    "ownerAgency": "Agencia inmobiliaria",
+    "ownerAgencyDesc": "Gestiono inmuebles con regularidad"
   },
   "seller": {
     "ordersTitle": "Pedidos recibidos",

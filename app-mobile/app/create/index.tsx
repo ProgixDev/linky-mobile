@@ -74,7 +74,7 @@ export default function CreateTypeRoute() {
               onPress={() => {
                 reset();
                 setKind(o.kind);
-                router.push(o.kind === 'product' ? '/create/product/seller' : '/create/property/details');
+                router.push(o.kind === 'product' ? '/create/product/seller' : '/create/property/owner');
               }}
               style={{ marginBottom: 10 }}
             >

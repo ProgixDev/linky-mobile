@@ -11,30 +11,39 @@ import { TopBar } from '../../../src/components/nav/TopBar';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useCreateListing } from '../../../src/stores/createListing';
-import { productStep } from '../../../src/lib/createSteps';
+import { propertyStep } from '../../../src/lib/createSteps';
 
-interface OptionDef {
-  id: 'particular' | 'merchant';
-  title: string;
-  desc: string;
-  icon: IconKey;
-}
+// Première étape du tunnel IMMOBILIER — le pendant exact de
+// create/product/seller.tsx côté article. Demande du client, 2026-09-26 :
+// « Faire de même pour la partie Immo (Propriétaire / Agence Immo) avant
+// d'aller sur la page de détails annonce. »
+//
+// CE QUE LE CHOIX CHANGE VRAIMENT. Il porte le NOM du profil créé à la première
+// publication. Jusqu'ici, quiconque publiait un bien se retrouvait sous « Mon
+// agence » ou « Agence de <prénom> » — y compris le particulier qui met son
+// appartement en location une fois dans sa vie, et qui se voyait soudain
+// présenté aux locataires comme une agence. Le choix n'a d'effet qu'à la
+// PREMIÈRE publication, puisqu'ensuite le profil existe déjà et se renomme
+// depuis son écran.
 
-const OPTION_DEFS: { id: 'particular' | 'merchant'; titleKey: string; descKey: string; icon: IconKey }[] = [
-  { id: 'particular', titleKey: 'create.sellerPart', descKey: 'create.sellerPartDesc', icon: 'user' },
-  { id: 'merchant', titleKey: 'create.sellerMerchant', descKey: 'create.sellerMerchantDesc', icon: 'store' },
+const OPTION_DEFS: { id: 'owner' | 'agency'; titleKey: string; descKey: string; icon: IconKey }[] = [
+  { id: 'owner', titleKey: 'create.ownerPrivate', descKey: 'create.ownerPrivateDesc', icon: 'user' },
+  { id: 'agency', titleKey: 'create.ownerAgency', descKey: 'create.ownerAgencyDesc', icon: 'building' },
 ];
 
-export default function CreateProductSeller() {
+export default function CreatePropertyOwner() {
   const { colors, radii } = useTheme();
   const { t } = useTranslation();
-  const sellerType = useCreateListing((s) => s.sellerType);
+  const ownerType = useCreateListing((s) => s.ownerType);
+  const propertyType = useCreateListing((s) => s.propertyType);
   const setVal = useCreateListing((s) => s.set);
-  const step = productStep('seller');
-  const OPTIONS: OptionDef[] = useMemo(
+  const step = propertyStep('owner', propertyType);
+
+  const OPTIONS = useMemo(
     () => OPTION_DEFS.map((o) => ({ id: o.id, title: t(o.titleKey), desc: t(o.descKey), icon: o.icon })),
     [t],
   );
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('create.topbarTitle')} back />
@@ -44,13 +53,19 @@ export default function CreateProductSeller() {
           {t('create.stepDots', { current: step.number, total: step.total })}
         </Text>
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 18 }}>
-          {t('create.stepSeller')}
+          {t('create.stepOwner')}
         </Text>
         {OPTIONS.map((o) => {
-          const sel = sellerType === o.id;
+          const sel = ownerType === o.id;
           const Icon = I[o.icon];
           return (
-            <Pressable key={o.id} onPress={() => setVal('sellerType', o.id)}>
+            <Pressable
+              key={o.id}
+              onPress={() => setVal('ownerType', o.id)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: sel }}
+              accessibilityLabel={`${o.title}. ${o.desc}`}
+            >
               <View
                 style={{
                   padding: 16,
@@ -80,7 +95,11 @@ export default function CreateProductSeller() {
                   <Text variant="titleM" style={{ fontSize: 14 }}>
                     {o.title}
                   </Text>
-                  <Text variant="micro" tone="muted" style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}>
+                  <Text
+                    variant="micro"
+                    tone="muted"
+                    style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}
+                  >
                     {o.desc}
                   </Text>
                 </View>
@@ -104,7 +123,12 @@ export default function CreateProductSeller() {
         })}
       </View>
       <StickyBottom>
-        <Button size="lg" block label={t('create.continue')} onPress={() => router.push('/create/product/category')} />
+        <Button
+          size="lg"
+          block
+          label={t('create.continue')}
+          onPress={() => router.push('/create/property/details')}
+        />
       </StickyBottom>
     </SafeAreaView>
   );

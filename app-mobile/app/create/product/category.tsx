@@ -11,6 +11,7 @@ import { TopBar } from '../../../src/components/nav/TopBar';
 import { StickyBottom } from '../../../src/components/nav/StickyBottom';
 import { I, type IconKey } from '../../../src/icons/Icon';
 import { useCreateListing } from '../../../src/stores/createListing';
+import { productStep } from '../../../src/lib/createSteps';
 
 type Tint = 'primary' | 'accent' | 'cream' | 'info';
 
@@ -32,6 +33,7 @@ const CATEGORY_DEFS: { code: string; labelKey: string; icon: IconKey; tint: Tint
 ];
 
 export default function CreateCategoryRoute() {
+  const step = productStep('category');
   const { colors, radii } = useTheme();
   const { t } = useTranslation();
   const category = useCreateListing((s) => s.category);
@@ -45,9 +47,9 @@ export default function CreateCategoryRoute() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('create.topbarTitle')} back />
       <View style={{ paddingHorizontal: 16, paddingBottom: 100 }}>
-        <ProgressDots total={6} current={1} />
+        <ProgressDots total={step.total} current={step.index} />
         <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
-          {t('create.stepDotsWith', { current: 2, total: 6, label: t('create.stepCategoryLabel') })}
+          {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepCategoryLabel') })}
         </Text>
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 18 }}>
           {t('create.stepCategoryTitle')}

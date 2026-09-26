@@ -24,6 +24,8 @@ import { priceWithFeeGnf } from '../../../src/lib/fees';
 import { Building2 } from 'lucide-react-native';
 import { formatGNF } from '../../../src/lib/format';
 import { useCreateListing } from '../../../src/stores/createListing';
+import { propertyStep } from '../../../src/lib/createSteps';
+import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
 import { useCreateProperty } from '../../../src/data/queries/properties';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
@@ -55,6 +57,7 @@ export default function PreviewRoute() {
   // Unsplash, suggesting the listing carried a real photo. Now: neutral
   // placeholder (bgSunken + Building2 icon).
   const state = useCreateListing();
+  const step = propertyStep('preview', state.propertyType);
   const reset = useCreateListing((s) => s.reset);
   const createProperty = useCreateProperty();
   const { show } = useToast();
@@ -71,6 +74,13 @@ export default function PreviewRoute() {
             ? t('create.previewSubRental')
             : t('create.previewSubSale')}
         />
+
+        <View style={{ paddingHorizontal: 24, marginBottom: 14 }}>
+          <ProgressDots total={step.total} current={step.index} />
+          <Text variant="micro" tone="muted" style={{ marginTop: 10 }}>
+            {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepPreviewLabel') })}
+          </Text>
+        </View>
 
         {/* Phone-style preview card */}
         <View style={{ paddingHorizontal: 24 }}>
@@ -264,6 +274,8 @@ export default function PreviewRoute() {
               haptic.medium();
               const property = await createProperty.mutateAsync({
                 type: state.propertyType,
+                // Le choix de l'etape 1 « Vous etes ? » (client 2026-09-26).
+                owner_type: state.ownerType,
                 title: state.title,
                 description: state.description.trim() || undefined,
                 price_minor: state.priceGnf,

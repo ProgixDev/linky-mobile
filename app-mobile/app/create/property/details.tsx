@@ -21,6 +21,7 @@ import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 import { priceWithFeeGnf, PLATFORM_FEE_RATE } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
+import { propertyStep } from '../../../src/lib/createSteps';
 
 const PROPERTY_TYPE_DEFS = [
   { id: 'location' as const, labelKey: 'create.typeLocation' },
@@ -39,6 +40,7 @@ export default function CreatePropertyDetailsRoute() {
     [t],
   );
   const isTerrain = state.propertyType === 'terrain';
+  const step = propertyStep('details', state.propertyType);
   // Meme fonction que l'annonce produit (Groq) — jamais reliee cote immo
   // jusqu'ici. Mots-cles = le contexte que le titre seul ne porte pas
   // (ville, quartier, pieces, surface) pour une description plus pertinente.
@@ -79,9 +81,9 @@ export default function CreatePropertyDetailsRoute() {
       <TopBar title={t('create.propTopbarTitleNew')} back />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
-          <ProgressDots total={6} current={2} />
+          <ProgressDots total={step.total} current={step.index} />
           <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
-            {t('create.stepDotsWith', { current: 3, total: 6, label: t('create.stepPropDetailsLabel') })}
+            {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepPropDetailsLabel') })}
           </Text>
           <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 16 }}>
             {t('create.stepPropDetailsTitle')}

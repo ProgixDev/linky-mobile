@@ -21,6 +21,7 @@ import { I } from '../../../src/icons/Icon';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useCreateListing } from '../../../src/stores/createListing';
 import { haptic } from '../../../src/lib/haptics';
+import { productStep } from '../../../src/lib/createSteps';
 
 // Idempotent — same init as CityMapPicker / PropertyLocationMap / property/location.
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? null);
@@ -28,6 +29,7 @@ Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? null);
 const CONAKRY: [number, number] = [-13.5784, 9.6412]; // [lng, lat]
 
 export default function CreateProductLocationRoute() {
+  const step = productStep('location');
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { show } = useToast();
@@ -92,9 +94,9 @@ export default function CreateProductLocationRoute() {
         {/* Shares the "step 4" dot with photos.tsx — this screen only exists for
             first-time sellers, so a permanent 7-dot total would misrepresent the
             common (already-has-a-shop) path that skips straight to photos. */}
-        <ProgressDots total={6} current={4} />
+        <ProgressDots total={step.total} current={step.index} />
         <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
-          {t('create.stepDotsWith', { current: 4, total: 6, label: t('create.stepLocationLabel') })}
+          {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepLocationLabel') })}
         </Text>
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 4 }}>
           {t('create.locationStepTitle')}

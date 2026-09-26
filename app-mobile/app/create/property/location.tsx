@@ -15,6 +15,7 @@ import { I } from '../../../src/icons/Icon';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { useCreateListing } from '../../../src/stores/createListing';
 import { haptic } from '../../../src/lib/haptics';
+import { propertyStep } from '../../../src/lib/createSteps';
 
 // Idempotent — same init as CityMapPicker / PropertyLocationMap.
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? null);
@@ -29,6 +30,7 @@ export default function CreatePropertyLocationRoute() {
   const lng = useCreateListing((s) => s.lng);
   const setVal = useCreateListing((s) => s.set);
   const propertyType = useCreateListing((s) => s.propertyType);
+  const step = propertyStep('location', propertyType);
   const [busy, setBusy] = useState(false);
   const cameraRef = useRef<Camera>(null);
 
@@ -91,9 +93,9 @@ export default function CreatePropertyLocationRoute() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <TopBar title={t('create.locationTopbar')} back />
       <View style={{ paddingHorizontal: 16, paddingBottom: 100 }}>
-        <ProgressDots total={6} current={4} />
+        <ProgressDots total={step.total} current={step.index} />
         <Text variant="micro" tone="muted" style={{ marginTop: 14 }}>
-          {t('create.stepDotsWith', { current: 5, total: 6, label: t('create.stepLocationLabel') })}
+          {t('create.stepDotsWith', { current: step.number, total: step.total, label: t('create.stepLocationLabel') })}
         </Text>
         <Text variant="dispL" style={{ fontSize: 22, marginTop: 6, marginBottom: 4 }}>
           {t('create.locationStepTitle')}
