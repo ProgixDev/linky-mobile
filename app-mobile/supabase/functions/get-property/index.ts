@@ -15,7 +15,7 @@ function valid(b: unknown): b is Body {
 Deno.serve(makePost<Body>('/v1/properties/get', valid, async ({ sb, body }) => {
   const { data: prop, error: propErr } = await sb
     .from('properties_with_cover')
-    .select('id, owner_id, shop_id, type, title, description, price_minor, per_month, bedrooms, area_sqm, furnished, amenities, city, district, distance_to_road_m, lat, lng, video_url, status, view_count, fav_count, created_at')
+    .select('id, owner_id, shop_id, type, title, description, price_minor, per_month, bedrooms, area_sqm, furnished, amenities, city, district, distance_to_road_m, lat, lng, video_url, status, view_count, fav_count, created_at, deposit_basis, deposit_value, deposit_kind, min_nights, min_months')
     .eq('id', body.id)
     .maybeSingle();
   if (propErr) {
@@ -35,5 +35,27 @@ Deno.serve(makePost<Body>('/v1/properties/get', valid, async ({ sb, body }) => {
   }
 
   const photoUrls = (photoRows ?? []).map((p) => p.url as string);
-  return { body: { property: mapProperty(prop as PropertyRow, photoUrls) } };
+  // LA GRILLE DE PRIX — ici et NULLE PART AILLEURS. C'est une jointure sur une
+  // table fille : la payer sur list-properties ou discover-feed, c'est la payer
+  // 50 a 100 fois par page, sur 3G. L'ecran de reservation est le seul qui en
+  // a besoin, et il n'ouvre qu'un bien a la fois.
+  const { data: rates, error: eRates } = await sb
+    .from('property_rates')
+    .select('kind, units, price_minor')
+    .eq('property_id', (prop as { id: string }).id)
+    .order('units', { ascending: true });
+  if (eRates) console.error('[get-property] rates error:', eRates);
+
+  return {
+    body: {
+      property: {
+        ...mapProperty(prop as PropertyRow, photoUrls),
+        rates: ((rates as { kind: string; units: number; price_minor: number }[] | null) ?? []).map((r) => ({
+          kind: r.kind as 'block' | 'tier',
+          units: Number(r.units),
+          priceMinor: Number(r.price_minor),
+        })),
+      },
+    },
+  };
 }));

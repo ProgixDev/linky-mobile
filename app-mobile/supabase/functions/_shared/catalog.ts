@@ -104,6 +104,14 @@ export interface PropertyRow {
   view_count: number;
   fav_count: number;
   boosted?: boolean;
+  // Conditions de location (migration 20260927_01). Optionnelles : une
+  // requete qui ne les selectionne pas rend simplement un bien sans
+  // conditions, ce qui est exactement le comportement d'avant ce lot.
+  deposit_basis?: string | null;
+  deposit_value?: number | string | null;
+  deposit_kind?: string | null;
+  min_nights?: number | null;
+  min_months?: number | null;
   created_at: string;
 }
 
@@ -141,6 +149,15 @@ export function mapProperty(r: PropertyRow, photos: string[]) {
     viewCount: r.view_count,
     favCount: r.fav_count,
     boosted: r.boosted ?? false,
+    // Les CONDITIONS voyagent avec le bien, pas la grille de prix : elles sont
+    // sur la vue, donc gratuites, alors qu'une grille demanderait une jointure
+    // sur chaque page de liste. L'ecran de reservation va chercher la grille
+    // separement, pour UN bien (get-property).
+    depositBasis: (r.deposit_basis as 'amount' | 'months' | 'percent' | null) ?? undefined,
+    depositValue: r.deposit_value == null ? undefined : Number(r.deposit_value),
+    depositKind: (r.deposit_kind as 'caution' | 'agency_fee' | null) ?? undefined,
+    minNights: r.min_nights ?? undefined,
+    minMonths: r.min_months ?? undefined,
     gps: { lat: r.lat ?? 0, lng: r.lng ?? 0 },
     createdAt: r.created_at,
   };

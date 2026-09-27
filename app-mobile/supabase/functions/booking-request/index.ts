@@ -8,6 +8,12 @@
 // rendez-vous physique se convient par le chat de l'application.
 import { makePost } from '@shared/wrap.ts';
 import { platformFee } from '@shared/fees.ts';
+import {
+  quoteRental,
+  resolveDeposit,
+  minStayShortfall,
+  type RateRow,
+} from '@shared/rental-pricing.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
 import { requireBuyerRole } from '@shared/roles.ts';
@@ -31,6 +37,13 @@ interface Body {
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_NIGHTS = 90;
+
+// Les montants ECRITS DANS LES CLAUSES du contrat. Groupage manuel plutot que
+// toLocaleString : le rendu d'une locale depend de l'environnement d'execution,
+// et ces chaines partent dans un document signe qui doit se lire pareil partout.
+// L'espace insecable evite qu'un montant se coupe en fin de ligne.
+const gnf = (n: number): string =>
+  String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + '\u00a0GNF';
 
 function parseDate(s: string): Date | null {
   if (!DATE_RE.test(s)) return null;
@@ -95,7 +108,7 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
   // Property must be an active rental, billing period must match, no self-booking.
   const { data: prop, error: eProp } = await sb
     .from('properties_with_cover')
-    .select('id, owner_id, type, status, title, city, district, price_minor, per_month, cover_url')
+    .select('id, owner_id, type, status, title, city, district, price_minor, per_month, cover_url, deposit_basis, deposit_value, deposit_kind, min_nights, min_months')
     .eq('id', body.property_id)
     .maybeSingle();
   if (eProp) { console.error('[booking-request] property lookup:', eProp); throwApi('INTERNAL_ERROR', 500, 'Erreur base de données'); }
@@ -270,10 +283,123 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
   // de 48 h et recuperer la caution : un bail de douze mois sans aucun depot,
   // alors que le contrat qu'il venait de signer affirmait le contraire.
   const depositAlreadyHeld = !!parentLease && parentLease.status === 'active';
-  const deposit = body.period === 'month' && !depositAlreadyHeld ? rent : 0;
-  const amount = body.period === 'day' ? rent * nights : body.period === 'month' ? rent + deposit : rent;
-  const fees = platformFee(amount);
+
+  // ── SEJOUR MINIMUM (client 2026-09-26) ───────────────────────────────────
+  // Le calendrier le grise deja cote telephone, mais un client modifie envoie
+  // ce qu'il veut : la seule garde qui compte est ici. Une PROLONGATION en est
+  // dispensee — elle reconduit un bail deja en cours, exiger a nouveau « trois
+  // nuits minimum » n'aurait aucun sens.
+  if (!parentLease && body.period !== 'sale') {
+    const units = body.period === 'day' ? nights : (body.months ?? 0);
+    const shortfall = minStayShortfall(
+      body.period as 'day' | 'month',
+      prop.min_nights as number | null,
+      prop.min_months as number | null,
+      units,
+    );
+    if (shortfall !== null) {
+      throwApi(
+        'MIN_STAY',
+        400,
+        body.period === 'day'
+          ? `Ce logement se loue a partir de ${shortfall} nuits.`
+          : `Ce logement se loue a partir de ${shortfall} mois.`,
+      );
+    }
+  }
+
+  // ── GRILLE DE PRIX PAR DUREE (client 2026-09-26) ─────────────────────────
+  // « Tu ne saisis aucune remise. Tu donnes tes prix — la nuit, la semaine, le
+  // mois — et l'application cherche la combinaison la moins chere. »
+  //
+  // Une grille VIDE rend exactement le tarif lineaire d'avant ce lot, au franc :
+  // c'est ce qui rend les annonces deja en ligne insensibles a ce changement.
+  //
+  // UNE PROLONGATION N'INTERROGE PAS LA GRILLE. La clause signee dit « aux
+  // memes conditions » : on reconduit le loyer du bail parent, y compris s'il
+  // avait ete obtenu a un tarif long sejour que le bailleur a depuis retire.
+  let rates: RateRow[] = [];
+  if (!parentLease && body.period !== 'sale') {
+    const { data: rateRows, error: eRates } = await sb
+      .from('property_rates')
+      .select('kind, units, price_minor')
+      .eq('property_id', prop.id);
+    if (eRates) {
+      console.error('[booking-request] rates lookup:', eRates);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur base de donnees');
+    }
+    rates = ((rateRows as { kind: string; units: number; price_minor: number }[] | null) ?? []).map((r) => ({
+      kind: r.kind as 'block' | 'tier',
+      units: Number(r.units),
+      priceMinor: Number(r.price_minor),
+    }));
+  }
+
+  // rentMinor = le sejour entier en journalier, le PREMIER MOIS en mensuel.
+  const quote = parentLease || body.period === 'sale'
+    ? { rentMinor: body.period === 'day' ? rent * nights : rent, fullMinor: 0, discountMinor: 0, parts: [] }
+    : quoteRental(
+        body.period as 'day' | 'month',
+        rent,
+        rates,
+        body.period === 'day' ? nights : (body.months ?? 1),
+      );
+
+  // ── CAUTION / FRAIS D'AGENCE (client 2026-09-26) ─────────────────────────
+  // Sa demande met « 2 mois de caution » et « 10 % de frais d'agence » sous la
+  // meme case a cocher. Ce sont deux objets opposes : l'un revient au locataire
+  // en fin de bail, l'autre jamais. properties.deposit_kind les distingue, et
+  // c'est ce mot qui decide de la CLAUSE du contrat plus bas.
+  //
+  // PAS DE SECONDE CAUTION SUR UNE PROLONGATION dont le bail parent est deja
+  // 'active' : elle est partie chez le proprietaire a l'emmenagement, et sa
+  // restitution se regle hors application en fin de bail. La reclamer une
+  // deuxieme fois ferait payer deux cautions pour un logement jamais quitte.
+  // Tant que le parent n'est que 'paid', l'argent dort encore en sequestre et
+  // reste integralement remboursable : le locataire pourrait prolonger sans
+  // caution puis annuler le parent dans sa fenetre de 48 h.
+  //
+  // LE LOYER MENSUEL QUI SERT DE BASE EST CELUI D'APRES REMISE : deux mois de
+  // caution sur un bail obtenu a 8 000 000 valent 16 000 000, pas 27 000 000.
+  // Le locataire depose une garantie proportionnelle au loyer qu'il paie.
+  const monthlyForDeposit = body.period === 'month' ? quote.rentMinor : 0;
+  const deposit = (parentLease && depositAlreadyHeld) || body.period === 'sale'
+    ? 0
+    : resolveDeposit(
+        prop.deposit_basis as 'amount' | 'months' | 'percent' | null,
+        prop.deposit_value as number | null,
+        monthlyForDeposit,
+        quote.rentMinor,
+      );
+  const depositKind = deposit > 0 ? ((prop.deposit_kind as string | null) ?? 'caution') : null;
+
+  const amount = quote.rentMinor + deposit;
+  // LA COMMISSION NE PORTE PAS SUR LA CAUTION. Elle ne fait que transiter :
+  // elle part chez le bailleur a l'emmenagement et revient au locataire en fin
+  // de bail. Prelever 5 % dessus, c'est 800 000 GNF sur l'exemple meme du
+  // client (8 000 000 de loyer, deux mois de caution) preleves sur de l'argent
+  // qui n'est a personne. Jusqu'ici c'etait le cas, par effet de bord d'un
+  // `platformFee(amount)` ou amount incluait deja la caution.
+  const fees = platformFee(quote.rentMinor);
   const total = amount + fees;
+
+  // LE LOYER UNITAIRE INSCRIT AU CONTRAT. En mensuel c'est celui d'APRES
+  // remise : c'est le loyer reellement convenu, et c'est lui qu'une
+  // PROLONGATION reconduira « aux memes conditions » (booking-request relit
+  // parentLease.rent_minor). Un bail de douze mois obtenu a 8 000 000 se
+  // prolonge donc a 8 000 000, et non au tarif plein — ce qui est la seule
+  // lecture honnete de la clause signee.
+  // En journalier, il reste le prix de la nuit : le detail de la remise vit
+  // dans rate_plan.parts, puisqu'un sejour decoupe n'a pas de prix unitaire.
+  const rentUnit = body.period === 'month' ? quote.rentMinor : rent;
+
+  // Fige le decoupage retenu. Trace d'audit : le prix d'une reservation est
+  // IMMUABLE des la demande — aucune fonction ne fait jamais
+  // « update bookings set amount_minor » — donc personne ne relira ceci pour
+  // recalculer quoi que ce soit.
+  const ratePlan = quote.parts.length > 0 || quote.discountMinor > 0
+    ? { parts: quote.parts, full_minor: quote.fullMinor, stay_minor: quote.rentMinor }
+    : null;
 
   const tenantName = await displayNameOf(sb, tenantId);
   const landlordName = await displayNameOf(sb, prop.owner_id as string);
@@ -293,8 +419,18 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
     start_date: startStr,
     end_date: endStr,
     months: body.period === 'month' ? body.months : null,
-    rent_minor: rent,
+    rent_minor: rentUnit,
     deposit_minor: deposit,
+    // « caution » ou « agency_fee ». C'est ce mot qui decide de la clause
+    // ci-dessous : promettre une restitution sur des frais d'agence serait
+    // faux, et le document est signe.
+    deposit_kind: depositKind,
+    // Le sejour hors caution, ce qu'il aurait coute au tarif plein, et l'ecart.
+    // Un lecteur refait l'addition avec les nombres que le bailleur a tapes.
+    stay_minor: quote.rentMinor,
+    full_minor: quote.fullMinor,
+    discount_minor: quote.discountMinor,
+    rate_parts: quote.parts,
     amount_minor: amount,
     fees_minor: fees,
     total_minor: total,
@@ -309,18 +445,45 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
       : [
           "Le locataire verse via Linky le montant indiqué ; les fonds sont conservés en séquestre jusqu'à la confirmation de l'emménagement.",
           "À la remise des clés, le locataire confirme l'emménagement dans l'application et le loyer est versé au propriétaire.",
+          // LA CLAUSE SUIT LA NATURE DU DEPOT, ET NON PLUS UNE HYPOTHESE EN DUR.
+          // Avant ce lot, la caution valait toujours un mois et la clause
+          // promettait toujours sa restitution. Le bailleur peut desormais
+          // declarer des FRAIS D'AGENCE, qui ne se rendent jamais : le
+          // document doit le dire, sinon il promet ce que personne ne tiendra.
           ...(body.period === 'month'
             ? depositAlreadyHeld
               ? [
                   'Cette prolongation reconduit le bail en cours à compter de son terme, aux mêmes conditions.',
-                  "Le montant à la signature correspond à un mois de loyer. Aucune nouvelle caution n'est demandée : celle du bail initial reste acquise jusqu'à la fin de la location.",
-                  'Les loyers des mois suivants et la restitution de la caution en fin de bail sont réglés directement entre les parties.',
+                  "Le montant à la signature correspond à un mois de loyer. Aucun nouveau dépôt n'est demandé : celui du bail initial reste acquis jusqu'à la fin de la location.",
+                  'Les loyers des mois suivants sont réglés directement entre les parties.',
                 ]
-              : [
-                  'Le montant à la signature comprend le premier mois de loyer et une caution équivalente à un mois de loyer.',
-                  'Les loyers des mois suivants et la restitution de la caution en fin de bail sont réglés directement entre les parties.',
+              : deposit > 0
+                ? [
+                    depositKind === 'agency_fee'
+                      ? `Le montant à la signature comprend le premier mois de loyer et des frais d'agence de ${gnf(deposit)}, définitivement acquis au bailleur.`
+                      : `Le montant à la signature comprend le premier mois de loyer et une caution de ${gnf(deposit)}.`,
+                    depositKind === 'agency_fee'
+                      ? 'Les loyers des mois suivants sont réglés directement entre les parties. Les frais d\'agence ne sont pas remboursables.'
+                      : 'Les loyers des mois suivants et la restitution de la caution en fin de bail sont réglés directement entre les parties.',
+                  ]
+                : [
+                    'Le montant à la signature correspond au premier mois de loyer. Aucune caution n\'est demandée.',
+                    'Les loyers des mois suivants sont réglés directement entre les parties.',
+                  ]
+            : deposit > 0
+              ? [
+                  'Le présent contrat couvre la totalité du séjour indiqué.',
+                  depositKind === 'agency_fee'
+                    ? `Il comprend des frais de ${gnf(deposit)}, définitivement acquis au bailleur.`
+                    : `Il comprend une caution de ${gnf(deposit)}, restituée en fin de séjour directement entre les parties.`,
                 ]
-            : ['Le présent contrat couvre la totalité du séjour indiqué.']),
+              : ['Le présent contrat couvre la totalité du séjour indiqué.']),
+          // LA REMISE LONGUE DUREE N'EST PAS EXECUTOIRE EN MENSUEL : seul le
+          // premier mois transite par Linky. L'ecrire au contrat est le seul
+          // endroit ou elle devient opposable entre les parties.
+          ...(body.period === 'month' && quote.discountMinor > 0 && body.months
+            ? [`Le loyer mensuel de ${gnf(rentUnit)} est consenti pour un engagement de ${body.months} mois.`]
+            : []),
           'En cas de désaccord, les parties peuvent ouvrir un litige via Linky ; une médiation est proposée sous 48 heures.',
           'Le présent contrat est régi par le droit guinéen.',
         ],
@@ -346,10 +509,19 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
       end_date: endStr,
       months: body.period === 'month' ? body.months : null,
       extends_booking_id: parentLease ? parentLease.id : null,
-      rent_minor: rent,
+      rent_minor: rentUnit,
       amount_minor: amount,
       fees_minor: fees,
       total_minor: total,
+      // La VENTILATION. amount_minor ne change pas de sens : il reste ce que
+      // touche le bailleur, caution comprise, et release_booking continue de le
+      // verser en un seul virement. Ces colonnes disent seulement de quoi il est
+      // fait — pour le contrat, pour la console admin qui arbitre un litige, et
+      // pour qu'une restitution partielle soit un jour exprimable.
+      deposit_minor: deposit,
+      deposit_kind: depositKind,
+      discount_minor: quote.discountMinor,
+      rate_plan: ratePlan,
       property_snapshot: snapshot,
       note: body.note?.trim() ?? '',
       contract,

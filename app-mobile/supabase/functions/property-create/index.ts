@@ -16,7 +16,7 @@ interface PropertyPhotoBody {
   position: number;
 }
 
-interface Body {
+interface Body extends RentalTermsBody {
   shop_id?: string;
   /** Étape 1 du tunnel immobilier. Optionnel, comme seller_type cote article. */
   owner_type?: 'owner' | 'agency';
@@ -38,6 +38,13 @@ interface Body {
   photos: PropertyPhotoBody[];
   video_url?: string | null;
 }
+
+import {
+  validRentalTerms,
+  rentalTermsPatch,
+  rateRows,
+  type RentalTermsBody,
+} from '@shared/rental-terms.ts';
 
 const URL_RE = /^https?:\/\/[^\s]{8,500}$/i;
 const SAFE_PATH_RE = /^[A-Za-z0-9._\-\/]{1,200}$/;
@@ -89,6 +96,9 @@ function valid(b: unknown): b is Body {
   if (!x.photos.every(validPhoto)) return false;
   if (x.video_url !== undefined && x.video_url !== null &&
       (typeof x.video_url !== 'string' || !URL_RE.test(x.video_url))) return false;
+  // Caution, sejour minimum, grille de prix (client 2026-09-26). Tous
+  // optionnels : un bundle anterieur ne les envoie pas et publie comme avant.
+  if (!validRentalTerms(x)) return false;
   return true;
 }
 
@@ -214,6 +224,38 @@ Deno.serve(makePost<Body>('/v1/properties/create', valid, async ({ sb, body, req
   if (body.video_url) {
     const { error: eVid } = await sb.from('properties').update({ video_url: body.video_url }).eq('id', newId);
     if (eVid) console.error('[property-create] video_url update error:', eVid);
+  }
+
+  // ── CONDITIONS DE LOCATION — meme patron que video_url ci-dessus ─────────
+  // create_property_with_photos a une liste de colonnes FIGEE (20260530_02:27)
+  // et une colonne absente y serait SILENCIEUSEMENT perdue, exactement comme
+  // sellerType l'etait. Plutot que de recreer cette fonction SECURITY DEFINER
+  // — avec le re-revoke a ne pas oublier et le risque de repartir d'un fichier
+  // perime — on ecrit par un UPDATE de suivi, comme la video depuis le
+  // 2026-07-26.
+  //
+  // CE N'EST PAS « au mieux » COMME LA VIDEO : une annonce publiee sans sa
+  // caution ferait signer un contrat faux. Un echec est donc journalise ET
+  // remonte, meme si l'annonce existe deja — le bailleur la retrouvera dans sa
+  // boutique et pourra la corriger, plutot que de la croire conforme.
+  const terms = rentalTermsPatch(body, body.type, per_month);
+  if (Object.keys(terms).length > 0) {
+    const { error: eTerms } = await sb.from('properties').update(terms).eq('id', newId);
+    if (eTerms) {
+      console.error('[property-create] rental terms update error:', eTerms);
+      throwApi('TERMS_NOT_SAVED', 500,
+        'Annonce creee, mais ses conditions de location n\'ont pas pu etre enregistrees. Modifie-la pour les ajouter.');
+    }
+  }
+
+  const rows = rateRows(newId as string, body.rates, body.type, per_month);
+  if (rows.length > 0) {
+    const { error: eRates } = await sb.from('property_rates').insert(rows);
+    if (eRates) {
+      console.error('[property-create] rates insert error:', eRates);
+      throwApi('RATES_NOT_SAVED', 500,
+        'Annonce creee, mais ses tarifs par duree n\'ont pas pu etre enregistres. Modifie-la pour les ajouter.');
+    }
   }
 
   // Read back via the view (cover + photo_count for free) plus all photo URLs in order

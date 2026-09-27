@@ -62,5 +62,26 @@ Deno.serve(makePost<Body>('/v1/properties/availability', valid, async ({ sb, bod
     .filter((r) => r.period === 'day' && r.end_date)
     .map((r) => ({ start: r.start_date, end: r.end_date as string }));
 
-  return { body: { blocked_by_monthly: blockedByMonthly, ranges } };
+  // LE SEJOUR MINIMUM VOYAGE AVEC LA DISPONIBILITE. Le calendrier est deja
+  // l'appelant de cette fonction : lui faire ouvrir une seconde requete pour
+  // savoir a partir de combien de nuits il doit accepter une selection serait
+  // un aller-retour de plus sur une connexion lente, pour deux entiers.
+  //
+  // Ce n'est qu'un CONFORT D'AFFICHAGE. La garde qui compte est celle de
+  // booking-request : un client modifie envoie les dates qu'il veut, et c'est
+  // le serveur qui refuse au moment de la demande.
+  const { data: terms } = await sb
+    .from('properties')
+    .select('min_nights, min_months')
+    .eq('id', body.property_id)
+    .maybeSingle();
+
+  return {
+    body: {
+      blocked_by_monthly: blockedByMonthly,
+      ranges,
+      min_nights: (terms as { min_nights?: number | null } | null)?.min_nights ?? null,
+      min_months: (terms as { min_months?: number | null } | null)?.min_months ?? null,
+    },
+  };
 }));

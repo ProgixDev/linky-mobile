@@ -147,6 +147,28 @@ export interface Property {
    * de planter pendant la fenêtre entre l'OTA et le déploiement.
    */
   amenities?: string[];
+  /**
+   * CONDITIONS DE LOCATION (client 2026-09-26). Toutes optionnelles : un serveur
+   * non redéployé ne les renvoie pas, et une annonce sans conditions se comporte
+   * exactement comme avant ce lot.
+   *
+   * `depositValue` change d'UNITÉ selon `depositBasis` — francs, nombre de mois,
+   * ou points de base (1000 = 10 %). Les deux vivent dans la même ligne, jamais
+   * séparément : c'est la leçon de wallets(kind), un nombre dont l'unité vit
+   * ailleurs finit par être lu au hasard.
+   */
+  depositBasis?: 'amount' | 'months' | 'percent';
+  depositValue?: number;
+  depositKind?: 'caution' | 'agency_fee';
+  /** Séjour minimum. Celui qui ne correspond pas à la période est muet. */
+  minNights?: number;
+  minMonths?: number;
+  /**
+   * La grille de prix par durée. Renvoyée par get-property SEULEMENT : c'est une
+   * jointure, et la payer sur chaque page de liste coûterait 50 à 100 fois son
+   * prix, sur 3G. Absente = tarif linéaire.
+   */
+  rates?: { kind: 'block' | 'tier'; units: number; priceMinor: number }[];
   city: string;
   district: string;
   distanceToRoadMeters: number;

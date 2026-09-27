@@ -10,7 +10,14 @@ import { mapProperty, type PropertyRow } from '@shared/catalog.ts';
 
 interface PropertyPhotoBody { url: string; storage_path: string; position: number }
 
-interface Body {
+import {
+  validRentalTerms,
+  rentalTermsPatch,
+  rateRows,
+  type RentalTermsBody,
+} from '@shared/rental-terms.ts';
+
+interface Body extends RentalTermsBody {
   id: string;
   type?: 'location' | 'vente' | 'terrain';
   title?: string;
@@ -63,6 +70,8 @@ function valid(b: unknown): b is Body {
   if (x.bedrooms !== undefined && x.bedrooms !== null && (typeof x.bedrooms !== 'number' || !Number.isInteger(x.bedrooms) || x.bedrooms < 0 || x.bedrooms > 50)) return false;
   if (x.area_sqm !== undefined && x.area_sqm !== null && (typeof x.area_sqm !== 'number' || !Number.isInteger(x.area_sqm) || x.area_sqm < 0 || x.area_sqm > 1_000_000)) return false;
   if (x.furnished !== undefined && x.furnished !== null && typeof x.furnished !== 'boolean') return false;
+  // Caution, sejour minimum, grille de prix (client 2026-09-26).
+  if (!validRentalTerms(x)) return false;
   if (x.amenities !== undefined) {
     if (!Array.isArray(x.amenities) || x.amenities.length > 20) return false;
     if (!x.amenities.every((a) => typeof a === 'string' && a.length > 0 && a.length <= 30)) return false;
@@ -123,6 +132,15 @@ Deno.serve(makePost<Body>('/v1/properties/update', valid, async ({ sb, body, req
   if (body.video_url !== undefined)          patch.video_url = body.video_url === null ? null : body.video_url;
   if (body.status !== undefined)             patch.status = body.status;
 
+  // ── CONDITIONS DE LOCATION ───────────────────────────────────────────────
+  // La periode EFFECTIVE apres ce patch, pas celle d'avant : le bailleur peut
+  // basculer /jour <-> /mois dans la meme requete ou il change sa caution, et
+  // « 2 mois de caution » n'a aucun sens sur une annonce a la journee.
+  const effType = (patch.type ?? (own as { type?: string }).type ?? 'location') as
+    'location' | 'vente' | 'terrain';
+  const effPerMonth = (patch.per_month ?? (own as { per_month?: boolean }).per_month ?? true) as boolean;
+  Object.assign(patch, rentalTermsPatch(body, effType, effPerMonth));
+
   // Photos: atomic replacement via RPC. Pre-normalize positions to 0..N-1 so the
   // cover ends up at position 0 regardless of client-sent values; the RPC trusts
   // what we send.
@@ -149,6 +167,34 @@ Deno.serve(makePost<Body>('/v1/properties/update', valid, async ({ sb, body, req
   if (error) {
     console.error('[property-update] update error:', error);
     throwApi('INTERNAL_ERROR', 500, 'Erreur mise à jour');
+  }
+
+  // ── LA GRILLE DE PRIX : REMPLACEE EN BLOC ────────────────────────────────
+  // Un simple delete-puis-insert suffit ici, et c'est delibere : RIEN ne
+  // reference property_rates. Une reservation FIGE son propre bareme dans
+  // bookings.rate_plan des la demande, et le prix d'une reservation est
+  // immuable — aucune fonction ne fait jamais « update bookings set
+  // amount_minor ». Retirer une ligne de grille ne peut donc pas rendre une
+  // reservation existante irresolvable, contrairement a ce qu'on devra faire
+  // pour les declinaisons d'articles.
+  //
+  // Les deux ecritures ne sont PAS dans une transaction : si l'insert echoue
+  // apres le delete, l'annonce retombe au tarif lineaire — visible, corrigible,
+  // et jamais plus cher pour le locataire que ce que le bailleur a annonce.
+  if (body.rates !== undefined) {
+    const { error: eDel } = await sb.from('property_rates').delete().eq('property_id', body.id);
+    if (eDel) {
+      console.error('[property-update] rates delete error:', eDel);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur mise à jour des tarifs');
+    }
+    const rows = rateRows(body.id, body.rates, effType, effPerMonth);
+    if (rows.length > 0) {
+      const { error: eIns } = await sb.from('property_rates').insert(rows);
+      if (eIns) {
+        console.error('[property-update] rates insert error:', eIns);
+        throwApi('INTERNAL_ERROR', 500, 'Erreur mise à jour des tarifs');
+      }
+    }
   }
 
   // Read back via the view + ordered photo URLs for the response shape.
