@@ -47,6 +47,8 @@ export interface CreateProductInput {
    * sous « Boutique de … ». Sans effet quand la boutique existe déjà.
    */
   seller_type?: 'particular' | 'merchant';
+  /** « À donner » : le serveur force alors price_minor à 0. */
+  is_gift?: boolean;
 }
 
 export interface UpdateProductInput {

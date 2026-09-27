@@ -77,6 +77,10 @@ export function mapProduct(r: ProductRow) {
     district: r.district ?? undefined,
     // null = quantite non renseignee (annonces d'avant le stock) : aucune limite.
     stock: r.stock ?? null,
+    // « A donner » (client 2026-09-26). Absent d'une ligne lue par une
+    // requete qui ne le selectionne pas : on retombe sur false, donc sur le
+    // comportement d'avant ce lot.
+    isGift: (r as { is_gift?: boolean }).is_gift ?? false,
     createdAt: r.created_at,
   };
 }

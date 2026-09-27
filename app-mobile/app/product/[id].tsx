@@ -176,7 +176,9 @@ export default function ProductDetailRoute() {
                     void Share.share({
                       title: product.title,
                       message: shareMessage(
-                        `${product.title} — ${formatGNF(priceWithFeeGnf(product.priceGnf))} sur Linky`,
+                        product.isGift
+                          ? `${product.title} — à donner sur Linky`
+                          : `${product.title} — ${formatGNF(priceWithFeeGnf(product.priceGnf))} sur Linky`,
                         'product',
                         product.id,
                       ),
@@ -376,7 +378,9 @@ export default function ProductDetailRoute() {
                 includeFontPadding: false,
               }}
             >
-              {formatGNF(priceWithFeeGnf(product.priceGnf)).replace(' GNF', '')}
+              {product.isGift
+                ? t('create.giftBadge')
+                : formatGNF(priceWithFeeGnf(product.priceGnf)).replace(' GNF', '')}
             </Text>
             <Text
               style={{

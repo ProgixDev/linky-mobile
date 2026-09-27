@@ -12,6 +12,7 @@ interface Body {
   title?: string;
   description?: string;
   price_minor?: number;
+  is_gift?: boolean;
   category?: string;
   condition?: 'neuf' | 'occasion' | 'reconditionné';
   photos?: string[];
@@ -31,7 +32,8 @@ function valid(b: unknown): b is Body {
   if (typeof x.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.id)) return false;
   if (x.title !== undefined && (typeof x.title !== 'string' || x.title.trim().length < 3 || x.title.length > 120)) return false;
   if (x.description !== undefined && (typeof x.description !== 'string' || x.description.length > 2000)) return false;
-  if (x.price_minor !== undefined && (typeof x.price_minor !== 'number' || !Number.isInteger(x.price_minor) || x.price_minor <= 0 || x.price_minor > 1e12)) return false;
+  if (x.is_gift !== undefined && typeof x.is_gift !== 'boolean') return false;
+  if (x.price_minor !== undefined && (typeof x.price_minor !== 'number' || !Number.isInteger(x.price_minor) || x.price_minor < 0 || x.price_minor > 1e12)) return false;
   if (x.category !== undefined && !isValidCategory(x.category)) return false;
   if (x.condition !== undefined && !isValidCondition(x.condition)) return false;
   if (x.photos !== undefined) {
@@ -71,7 +73,32 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (body.title !== undefined)       patch.title = body.title.trim();
   if (body.description !== undefined) patch.description = body.description.trim();
-  if (body.price_minor !== undefined) patch.price_minor = body.price_minor;
+  // ┌─ LA MISE A JOUR PARTIELLE, PIEGE LE PLUS BANAL ────────────────────────┐
+  // Basculer une annonce existante en don, puis changer d'avis, est le geste
+  // le plus courant du vendeur — et les deux sens cassent si on se contente de
+  // recopier les champs recus.
+  //
+  //   is_gift=true sans prix  -> on FORCE 0, sinon l'ancien prix reste et la
+  //                              contrainte de base rejette avec un 500 opaque.
+  //   is_gift=false sans prix -> on refuse EXPLICITEMENT : sans nouveau prix
+  //                              l'annonce resterait a 0, donc invendable, et
+  //                              le vendeur ne saurait pas pourquoi.
+  // └────────────────────────────────────────────────────────────────────────┘
+  if (body.is_gift === true) {
+    patch.is_gift = true;
+    patch.price_minor = 0;
+  } else if (body.is_gift === false) {
+    if (body.price_minor === undefined || body.price_minor <= 0) {
+      throwApi('PRICE_REQUIRED', 400,
+        'Indique un prix pour remettre cet article en vente.');
+    }
+    patch.is_gift = false;
+    patch.price_minor = body.price_minor;
+  } else if (body.price_minor !== undefined) {
+    // Le drapeau n'est pas touche : un prix nul n'a de sens que si l'annonce
+    // est deja un don, et la base tranchera.
+    patch.price_minor = body.price_minor;
+  }
   if (body.category !== undefined)    patch.category = body.category;
   if (body.condition !== undefined)   patch.condition = body.condition;
   if (body.photos !== undefined)      patch.photos = body.photos;
@@ -83,7 +110,7 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
 
   const { data, error } = await sb
     .from('products').update(patch).eq('id', body.id)
-    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, created_at')
+    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, is_gift, created_at')
     .single();
   if (error || !data) {
     console.error('[product-update] update error:', error);

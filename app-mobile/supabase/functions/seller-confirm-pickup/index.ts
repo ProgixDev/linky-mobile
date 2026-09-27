@@ -41,11 +41,27 @@ function scrubUuids(s: string | undefined): string | undefined {
 Deno.serve(makePost<Body>('/v1/orders/seller-confirm-pickup', valid, async ({ sb, body, req }) => {
   const userId = await requireUser(req);
 
-  const { error: rpcErr } = await sb.rpc('seller_confirm_pickup', {
+  let { error: rpcErr } = await sb.rpc('seller_confirm_pickup', {
     p_order_id:   body.order_id,
     p_seller_id:  userId,
     p_scan_token: body.scan_token,
   });
+  // ┌─ C'EST ICI QU'UN DON SE CLOT, ET NULLE PART AILLEURS ─────────────────┐
+  // Un don est en RETRAIT obligatoire. Et depuis l'inversion du QR du
+  // 2026-08-22, sur un retrait c'est le VENDEUR qui scanne le code affiche par
+  // l'acheteur : l'ecran de confirmation choisit l'endpoint sur le role
+  // (app/order/[id]/confirm.tsx). Sans ce repli, la garde GIFT_ORDER posee sur
+  // seller_confirm_pickup rendrait le don impossible a remettre — par
+  // personne. Le donneur aurait cede son article et la commande serait restee
+  // ouverte pour toujours.
+  // └────────────────────────────────────────────────────────────────────────┘
+  if (rpcErr && ((rpcErr as { message?: string } | null)?.message ?? '').includes('GIFT_ORDER')) {
+    ({ error: rpcErr } = await sb.rpc('confirm_gift_order_receipt', {
+      p_order_id:   body.order_id,
+      p_caller_id:  userId,
+      p_scan_token: body.scan_token,
+    }));
+  }
   if (rpcErr) {
     const msg = (rpcErr as { message?: string } | null)?.message ?? '';
     const e = rpcErr as { code?: string; message?: string; details?: string; hint?: string };

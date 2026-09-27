@@ -49,6 +49,17 @@ Deno.serve(makePost<Body>('/v1/orders/confirm-receipt', valid, async ({ sb, body
       p_scan_token: body.scan_token,
     }));
   }
+  // DON : meme raisonnement que les especes. Le sequestre est POOLE et cette
+  // commande n'y a jamais rien depose — la liberation leve donc GIFT_ORDER, et
+  // on bascule sur la cloture dediee, qui applique les memes controles (QR,
+  // statut, identite) sans ecrire une seule ligne comptable.
+  if (rpcErr && ((rpcErr as { message?: string } | null)?.message ?? '').includes('GIFT_ORDER')) {
+    ({ error: rpcErr } = await sb.rpc('confirm_gift_order_receipt', {
+      p_order_id: body.order_id,
+      p_caller_id: userId,
+      p_scan_token: body.scan_token,
+    }));
+  }
   if (rpcErr) {
     const msg = (rpcErr as { message?: string } | null)?.message ?? '';
     // Phase V.3b -- sanitize before logging. The RPC body today never

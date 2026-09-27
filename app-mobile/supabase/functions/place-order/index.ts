@@ -176,6 +176,84 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
       }
     }
   }
+  // ┌─ « A DONNER » : LE SERVEUR DECIDE, LE CLIENT NE PROPOSE PAS ───────────┐
+  // On relit products.is_gift DANS LA BASE. Rien de ce que le telephone envoie
+  // ne peut transformer un article payant en don, ni l'inverse — et un bundle
+  // ancien, qui ignore tout des dons, ne peut pas non plus commander un article
+  // gratuit par le chemin payant.
+  //
+  // Une seule requete, sur des identifiants qu'on a deja : le cas courant paie
+  // un aller-retour, et c'est le prix de la garantie. Le faire APRES coup,
+  // depuis l'erreur du RPC, obligerait a deviner.
+  // └────────────────────────────────────────────────────────────────────────┘
+  const { data: giftRows, error: eGift } = await sb
+    .from('products')
+    .select('id, is_gift')
+    .in('id', items.map((i) => i.product_id));
+  if (eGift) {
+    console.error('[place-order] gift lookup:', eGift);
+    throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+  }
+  const gifts = ((giftRows as { id: string; is_gift: boolean }[] | null) ?? [])
+    .filter((r) => r.is_gift);
+
+  if (gifts.length > 0) {
+    // UN DON NE SE MELANGE PAS A UN ACHAT. Deux raisons, et la seconde suffit :
+    // un panier mixte aurait un total strictement positif, donc une intention
+    // de paiement, donc de l'argent en sequestre — dont une part correspondrait
+    // a un article gratuit. La contrainte orders_gift_is_free_pickup le
+    // refuserait, mais bien plus tard et avec un message illisible.
+    if (items.length > 1) {
+      throwApi('GIFT_ALONE', 400,
+        'Un article à donner se commande seul, sans autre article.');
+    }
+
+    const { data: giftId, error: eGiftRpc } = await sb.rpc('place_gift_order', {
+      p_buyer_id:   userId,
+      p_product_id: items[0].product_id,
+      p_quantity:   items[0].quantity,
+    });
+    if (eGiftRpc || !giftId) {
+      const gm = (eGiftRpc as { message?: string } | null)?.message ?? '';
+      console.error('[place-order] gift rpc error:', eGiftRpc);
+      if (gm.includes('PRODUCT_NOT_FOUND'))     throwApi('PRODUCT_NOT_FOUND', 404, 'Produit introuvable.');
+      if (gm.includes('NOT_A_GIFT'))            throwApi('NOT_A_GIFT', 400, "Cet article n'est plus à donner.");
+      if (gm.includes('PRODUCT_NOT_AVAILABLE')) throwApi('PRODUCT_NOT_AVAILABLE', 400, 'Article indisponible.');
+      if (gm.includes('BUYER_IS_SELLER'))       throwApi('BUYER_IS_SELLER', 400, "Tu ne peux pas prendre ton propre don.");
+      if (gm.includes('OUT_OF_STOCK'))          throwApi('OUT_OF_STOCK', 400, "Ce don a déjà été pris.");
+      if (gm.includes('INSUFFICIENT_STOCK'))    throwApi('INSUFFICIENT_STOCK', 400, "Il n'en reste plus assez.");
+      if (gm.includes('INVALID_QUANTITY'))      throwApi('INVALID_BODY', 400, 'Quantité invalide.');
+      throwApi('INTERNAL_ERROR', 500, 'Erreur création commande');
+    }
+
+    const { data: giftRow, error: eRead } = await sb
+      .from('orders')
+      .select('id, reference, buyer_id, seller_id, shop_id, product_id, product_snapshot, quantity, amount_minor, fees_minor, total_minor, payment_method, currency, status, events, release_at, created_at')
+      .eq('id', giftId as string)
+      .maybeSingle();
+    if (eRead || !giftRow) {
+      console.error('[place-order] gift read-back:', eRead);
+      throwApi('INTERNAL_ERROR', 500, 'Erreur création commande');
+    }
+
+    // Le donneur est prevenu TOUT DE SUITE : aucun cron ne viendra confirmer
+    // ce don, et sans cette notification il ne saurait jamais que quelqu'un
+    // l'attend. Meme raisonnement que le paiement a la livraison.
+    const gRow = giftRow as OrderRow;
+    const takerName = await displayNameOf(sb, userId);
+    notifyDetached(sb, {
+      userIds: [gRow.seller_id],
+      category: 'order',
+      title: 'Ton don a trouvé preneur',
+      body: `${takerName} vient de réserver « ${(gRow.product_snapshot as { title?: string })?.title ?? 'ton article'} ». Convenez d'un moment pour la remise.`,
+      iconHint: 'check',
+      deeplink: `/seller/orders/${gRow.id}`,
+      refType: 'order',
+      refId: gRow.id,
+    });
+    return { body: { order: mapOrder(gRow) } };
+  }
+
   const { data: newId, error: rpcErr } = await sb.rpc('place_order_multi', {
     p_buyer_id: userId,
     p_items: items,

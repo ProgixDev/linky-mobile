@@ -15,6 +15,8 @@ interface Body {
   title: string;
   description?: string;
   price_minor: number;
+  /** « A donner » : l'article est cede gratuitement. Force price_minor a 0. */
+  is_gift?: boolean;
   category: string;
   condition: 'neuf' | 'occasion' | 'reconditionné';
   photos: string[];
@@ -42,7 +44,13 @@ function valid(b: unknown): b is Body {
   if (x.seller_type !== undefined && x.seller_type !== 'particular' && x.seller_type !== 'merchant') return false;
   if (typeof x.title !== 'string' || x.title.trim().length < 3 || x.title.length > 120) return false;
   if (x.description !== undefined && (typeof x.description !== 'string' || x.description.length > 2000)) return false;
-  if (typeof x.price_minor !== 'number' || !Number.isInteger(x.price_minor) || x.price_minor <= 0 || x.price_minor > 1e12) return false;
+  if (x.is_gift !== undefined && typeof x.is_gift !== 'boolean') return false;
+  // UN DON A UN PRIX DE ZERO, et c'est le SEUL cas ou zero est accepte. La
+  // base pose la meme regle dans les deux sens (products_gift_price_check) :
+  // ici on refuse tot, avec un message, plutot que de laisser remonter une
+  // violation de contrainte que le vendeur ne comprendrait pas.
+  if (typeof x.price_minor !== 'number' || !Number.isInteger(x.price_minor) || x.price_minor > 1e12) return false;
+  if (x.is_gift === true ? x.price_minor !== 0 : x.price_minor <= 0) return false;
   if (!isValidCategory(x.category)) return false;
   if (!isValidCondition(x.condition)) return false;
   if (!Array.isArray(x.photos) || x.photos.length > 8) return false;
@@ -131,7 +139,8 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     shop_id: shopId,
     title: body.title.trim(),
     description: body.description?.trim() ?? '',
-    price_minor: body.price_minor,
+    price_minor: body.is_gift ? 0 : body.price_minor,
+    is_gift: body.is_gift ?? false,
     category: body.category,
     condition: body.condition,
     photos: body.photos,
@@ -144,7 +153,7 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
   const { data, error } = await sb
     .from('products')
     .insert(insert)
-    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, created_at')
+    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, is_gift, created_at')
     .single();
   if (error || !data) {
     console.error('[product-create] insert error:', error);

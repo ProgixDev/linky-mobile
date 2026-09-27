@@ -68,7 +68,11 @@ export function ProductCard({
       onPress={() => router.push(`/product/${product.id}`)}
       style={{ gap: 8 }}
       accessibilityRole="button"
-      accessibilityLabel={`${product.title}, ${formatGNF(priceWithFeeGnf(product.priceGnf))}`}
+      accessibilityLabel={
+        product.isGift
+          ? `${product.title}, ${t('create.giftBadge')}`
+          : `${product.title}, ${formatGNF(priceWithFeeGnf(product.priceGnf))}`
+      }
     >
       <View style={{ position: 'relative', aspectRatio: 1, borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.bgSunken }}>
         <Image
@@ -236,7 +240,9 @@ export function ProductCard({
             2026-09-08). product.priceGnf reste ce que le vendeur touche ;
             le +5 % est un habillage d'affichage, jamais stocke gonfle. */}
         <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'], marginTop: 2 }}>
-          {formatGNF(priceWithFeeGnf(product.priceGnf))}
+          {product.isGift
+            ? t('create.giftBadge')
+            : formatGNF(priceWithFeeGnf(product.priceGnf))}
         </Text>
         {/* Location line. Pre-fix this rendered product.shopId — a mock-era
             leftover ('s_mamadou_shop') that shows a raw UUID with real data. */}

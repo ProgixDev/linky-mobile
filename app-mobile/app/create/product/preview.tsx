@@ -97,7 +97,7 @@ export default function CreatePreviewRoute() {
         <Button
           label={createProduct.isPending ? t('create.previewPublishing') : t('create.previewPublish')}
           style={{ flex: 2 }}
-          disabled={createProduct.isPending || !state.title.trim() || state.priceGnf <= 0 || state.photos.length === 0 || !state.city.trim()}
+          disabled={createProduct.isPending || !state.title.trim() || (!state.isGift && state.priceGnf <= 0) || state.photos.length === 0 || !state.city.trim()}
           onPress={async () => {
             try {
               const body = {
@@ -117,6 +117,10 @@ export default function CreatePreviewRoute() {
                 // etait ecrit dans le store et lu nulle part, donc « Particulier »
                 // et « Commercant » produisaient exactement la meme boutique.
                 seller_type: state.sellerType,
+                // « A donner » : le serveur remet le prix a 0 de son cote,
+                // mais on l'envoie deja a 0 pour que le recapitulatif de cet
+                // ecran et la ligne enregistree ne puissent pas differer.
+                is_gift: state.isGift,
                 // Geography simplified per 2026-05-29 client meeting: cities only, no districts.
                 // Only reaches product-create's auto-mint branch (no shop yet) —
                 // undefined for a seller who already has a boutique, and product-create

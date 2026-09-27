@@ -708,7 +708,11 @@
     "ratePriceFromMonths": "À partir de {{count}} mois — loyer mensuel (GNF)",
     "ratePlaceholder": "Aucun tarif",
     "ratePerNight": "Soit {{amount}} la nuit.",
-    "rateNoDiscount": "Ce prix n'est pas avantageux : il ne sera jamais proposé."
+    "rateNoDiscount": "Ce prix n'est pas avantageux : il ne sera jamais proposé.",
+    "giftTitle": "À donner",
+    "giftHint": "Tu cèdes cet article gratuitement. Le preneur vient le chercher.",
+    "giftBadge": "À donner",
+    "giftPickupOnly": "Retrait sur place — un don ne se livre pas."
   },
   "seller": {
     "ordersTitle": "Commandes reçues",
@@ -1317,7 +1321,8 @@
     "paycardPlaceholder": "Le numéro inscrit sur ta carte",
     "paycardHint": "On l’envoie à PayCard pour lancer le paiement ; Linky ne le conserve pas.",
     "payerPhoneLabelPaycard": "Numéro de téléphone (pour recevoir le code)",
-    "payerPhoneHintPaycard": "Le code de validation PayCard arrive sur ce numéro."
+    "payerPhoneHintPaycard": "Le code de validation PayCard arrive sur ce numéro.",
+    "giftCta": "Réserver ce don"
   },
   "orders": {
     "title": "Mes commandes",

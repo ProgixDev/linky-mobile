@@ -21,6 +21,8 @@ import { priceWithFeeGnf, PLATFORM_FEE_RATE } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { gnfToEur } from '../../../src/lib/currency';
 import { productStep } from '../../../src/lib/createSteps';
+import { Switch } from '../../../src/components/primitives/Switch';
+import { haptic } from '../../../src/lib/haptics';
 
 export default function CreateProductDetailsRoute() {
   const step = productStep('details');
@@ -120,24 +122,69 @@ export default function CreateProductDetailsRoute() {
               />
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+            {/* ── « À DONNER » (client 2026-09-26) ──────────────────────────
+                Placé AVANT le prix, pas après : l'ordre de lecture doit suivre
+                la décision. Un vendeur qui donne n'a pas à remplir un champ
+                prix pour le voir ensuite barré — il coche, et le champ
+                disparaît. */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: state.isGift ? colors.primary : colors.border,
+                backgroundColor: state.isGift ? colors.primarySoft : colors.card,
+              }}
+            >
               <View style={{ flex: 1 }}>
-                <Input
-                  label={t('create.fieldPrice')}
-                  value={new Intl.NumberFormat('fr-FR').format(state.priceGnf)}
-                  onChangeText={(txt) => state.set('priceGnf', Number(txt.replace(/\D/g, '')) || 0)}
-                  keyboardType="number-pad"
-                  trailingIcon="check"
-                  helperText={state.priceGnf > 0
-                    ? t('create.buyerSeesPrice', {
-                        amount: formatGNF(priceWithFeeGnf(state.priceGnf)),
-                        rate: PLATFORM_FEE_RATE * 100,
-                        base: formatGNF(state.priceGnf),
-                      })
-                    : t('create.fieldEur', { amount: gnfToEur(state.priceGnf) })}
-                />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+                  {t('create.giftTitle')}
+                </Text>
+                <Text
+                  variant="micro"
+                  tone="muted"
+                  style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}
+                >
+                  {t('create.giftHint')}
+                </Text>
               </View>
-              <View style={{ width: 100 }}>
+              <Switch
+                value={state.isGift}
+                onChange={(v: boolean) => {
+                  haptic.light();
+                  state.set('isGift', v);
+                  // Le prix est remis a zero DES la bascule, et non a la
+                  // publication : le recapitulatif de l'ecran suivant doit
+                  // montrer ce qui sera reellement enregistre.
+                  if (v) state.set('priceGnf', 0);
+                }}
+              />
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {!state.isGift && (
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label={t('create.fieldPrice')}
+                    value={new Intl.NumberFormat('fr-FR').format(state.priceGnf)}
+                    onChangeText={(txt) => state.set('priceGnf', Number(txt.replace(/\D/g, '')) || 0)}
+                    keyboardType="number-pad"
+                    trailingIcon="check"
+                    helperText={state.priceGnf > 0
+                      ? t('create.buyerSeesPrice', {
+                          amount: formatGNF(priceWithFeeGnf(state.priceGnf)),
+                          rate: PLATFORM_FEE_RATE * 100,
+                          base: formatGNF(state.priceGnf),
+                        })
+                      : t('create.fieldEur', { amount: gnfToEur(state.priceGnf) })}
+                  />
+                </View>
+              )}
+              <View style={state.isGift ? { flex: 1 } : { width: 100 }}>
                 <Input
                   label={t('create.fieldQuantity')}
                   value={String(state.quantity)}
@@ -193,7 +240,7 @@ export default function CreateProductDetailsRoute() {
           <Button
             label={t('create.continue')}
             style={{ flex: 1 }}
-            disabled={!state.title.trim() || state.priceGnf <= 0 || !state.city.trim() || myShop.isLoading}
+            disabled={!state.title.trim() || (!state.isGift && state.priceGnf <= 0) || !state.city.trim() || myShop.isLoading}
             onPress={() =>
               router.push(hasShop ? '/create/product/photos' : '/create/product/location')
             }

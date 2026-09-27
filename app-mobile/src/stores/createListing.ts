@@ -22,6 +22,8 @@ interface CreateListingState {
   description: string;
   priceGnf: number;
   quantity: number;
+  /** « À donner » (client 2026-09-26). Met le prix à 0 et le verrouille. */
+  isGift: boolean;
   condition: 'neuf' | 'occasion' | 'reconditionné';
   photos: string[];
   // Property-specific
@@ -64,6 +66,7 @@ const DEFAULTS = {
   description: '',
   priceGnf: 0,
   quantity: 1,
+  isGift: false,
   condition: 'occasion' as const,
   photos: [] as string[],
   propertyType: 'location' as const,

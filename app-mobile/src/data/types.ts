@@ -126,9 +126,19 @@ export interface Product {
   /** Quantité disponible déclarée par le vendeur. `null` = non renseignée
    *  (annonces publiées avant le stock) : aucun plafond au panier. */
   stock?: number | null;
+  /** « À donner » : cédé gratuitement, priceGnf vaut 0. */
+  isGift?: boolean;
   createdAt: string;
 }
 
+/**
+ * « À donner » (client 2026-09-26). Un article cédé gratuitement : priceGnf
+ * vaut 0, et la base le verrouille dans les deux sens — un don ne peut pas
+ * avoir de prix, un article payant ne peut pas valoir zéro.
+ *
+ * Optionnel : un serveur non redéployé ne renvoie pas le champ, et l'annonce
+ * se comporte alors exactement comme avant ce lot.
+ */
 export interface Property {
   id: ID;
   ownerId: ID;

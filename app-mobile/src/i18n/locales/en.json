@@ -708,7 +708,11 @@
     "ratePriceFromMonths": "From {{count}} months — monthly rent (GNF)",
     "ratePlaceholder": "No rate",
     "ratePerNight": "That is {{amount}} per night.",
-    "rateNoDiscount": "This price is not cheaper: it will never be offered."
+    "rateNoDiscount": "This price is not cheaper: it will never be offered.",
+    "giftTitle": "Give away",
+    "giftHint": "You give this item for free. The taker comes to collect it.",
+    "giftBadge": "Free to take",
+    "giftPickupOnly": "Pickup only — a giveaway is not delivered."
   },
   "seller": {
     "ordersTitle": "Orders received",
@@ -1317,7 +1321,8 @@
     "paycardPlaceholder": "The number printed on your card",
     "paycardHint": "It goes to PayCard to start the payment; Linky does not keep it.",
     "payerPhoneLabelPaycard": "Phone number (to receive the code)",
-    "payerPhoneHintPaycard": "The PayCard confirmation code is sent to this number."
+    "payerPhoneHintPaycard": "The PayCard confirmation code is sent to this number.",
+    "giftCta": "Reserve this giveaway"
   },
   "orders": {
     "title": "My orders",

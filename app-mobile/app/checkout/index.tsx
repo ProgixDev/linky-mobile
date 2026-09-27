@@ -304,6 +304,30 @@ export default function CheckoutRoute() {
   // revenir.
   const allLoaded = queries.every((q) => !q.isLoading && !!q.data);
 
+  // ┌─ « À DONNER » ─────────────────────────────────────────────────────────
+  // Le panier est un don quand TOUS ses articles le sont. Le mélange est
+  // refusé côté serveur (GIFT_ALONE) et ne peut donc pas arriver ici : un
+  // booléen suffit, pas besoin de compter.
+  //
+  // On exige `allLoaded` : tant qu'un article charge, `isGift` vaut undefined
+  // et `every` serait faux — l'écran afficherait brièvement un paiement pour
+  // un don. Le bouton est de toute façon bloqué sur allLoaded.
+  // └────────────────────────────────────────────────────────────────────────┘
+  const isGiftCart = allLoaded && queries.length > 0 && queries.every((q) => q.data?.isGift === true);
+
+  // UN DON NE SE LIVRE PAS : il faudrait que QUELQU'UN paie les 15 000 GNF
+  // minimum de course, pour un objet gratuit. Faire payer l'acheteur, c'est le
+  // litige assure ; faire payer le donneur, c'est le faire payer pour donner.
+  // La base le reclame (orders_gift_is_free_pickup) et le serveur l'impose ;
+  // l'ecran doit dire la meme chose, sinon l'acheteur choisit une livraison qui
+  // n'aura pas lieu.
+  //
+  // Un effet plutot qu'une valeur derivee : deliveryMode est deja un etat, et
+  // le basculer laisse l'adresse, les frais et le bouton se recalculer seuls.
+  useEffect(() => {
+    if (isGiftCart && deliveryMode !== 'pickup') setDeliveryMode('pickup');
+  }, [isGiftCart, deliveryMode]);
+
   // Un article n'a pas pu etre relu (reseau, produit supprime). Plutot qu'un
   // bouton grise sans explication, on renvoie au panier, qui purge tout seul
   // les lignes dont le produit n'existe plus.
@@ -846,7 +870,9 @@ export default function CheckoutRoute() {
                 ? 'Revenir au panier'
                 : needsAddress
                   ? 'Ajouter une adresse de livraison'
-                  : t('checkout.payCta', { amount: formatGNF(total) })
+                  : isGiftCart
+                    ? t('checkout.giftCta')
+                    : t('checkout.payCta', { amount: formatGNF(total) })
           }
           onPress={() => {
             // DERNIER FILET avant que l'argent ne parte. Les ecrans amont
