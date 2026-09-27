@@ -5,6 +5,13 @@
 // the listing). Wired to useUpdateProperty -> /property-update, which replaces
 // photos atomically via replace_property_photos.
 import { useMemo, useState } from 'react';
+import { RentalTermsFields } from '../../../src/components/property/RentalTermsFields';
+import {
+  termsFromProperty,
+  termsToBody,
+  EMPTY_TERMS,
+  type RentalTermsDraft,
+} from '../../../src/lib/rentalTermsDraft';
 import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -102,6 +109,7 @@ export default function PropertyEditRoute() {
   const [uploading, setUploading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoUploading, setVideoUploading] = useState(false);
+  const [terms, setTerms] = useState<RentalTermsDraft>(EMPTY_TERMS);
   const [hydrated, setHydrated] = useState(false);
 
   if (prop && !hydrated) {
@@ -118,6 +126,10 @@ export default function PropertyEditRoute() {
     setFurnished(prop.furnished ?? false);
     setPhotos((prop.photos ?? []).map((u) => ({ url: u, storage_path: pathFromUrl(u) })));
     setVideoUrl(prop.videoUrl ?? null);
+    // Les conditions viennent de get-property, seule requete a renvoyer la
+    // grille de prix (c'est une jointure : la payer sur chaque page de liste
+    // couterait 50 a 100 fois son prix, sur 3G).
+    setTerms(termsFromProperty(prop));
     setHydrated(true);
   }
 
@@ -149,7 +161,11 @@ export default function PropertyEditRoute() {
       distance !== prop.distanceToRoadMeters ||
       furnished !== (prop.furnished ?? false) ||
       photosDirty ||
-      videoDirty);
+      videoDirty ||
+      // Comparaison par serialisation : les deux brouillons ont exactement
+      // la meme forme, et une egalite champ par champ oublierait la
+      // prochaine ligne de grille qu'on ajoutera.
+      JSON.stringify(terms) !== JSON.stringify(termsFromProperty(prop)));
   const canSave = dirty && !!title.trim() && price > 0 && !!city.trim() && photos.length >= 1;
 
   async function uploadAsset(asset: PickedAsset): Promise<EditPhoto | null> {
@@ -310,6 +326,11 @@ export default function PropertyEditRoute() {
             }
           : {}),
         ...(videoDirty ? { video_url: videoUrl } : {}),
+        // CONDITIONS DE LOCATION. Toujours envoyees, meme inchangees : le
+        // serveur ecrit null quand une condition est retiree, et distinguer
+        // « absent » de « efface » demanderait un troisieme etat pour rien.
+        // Sur une vente ou un terrain, property-update les efface de lui-meme.
+        ...termsToBody(terms, perMonth ? 'month' : 'day'),
       });
       toast.show(t('propertyEdit.successToast'), 'success');
       if (router.canGoBack()) router.back();
@@ -550,6 +571,18 @@ export default function PropertyEditRoute() {
                 />
               </View>
             </View>
+
+            {/* CONDITIONS DE LOCATION — meme composant que le tunnel de
+                creation, meme place : juste sous le prix, dont elles dependent
+                toutes. */}
+            {type === 'location' && (
+              <RentalTermsFields
+                period={perMonth ? 'month' : 'day'}
+                basePriceGnf={price}
+                value={terms}
+                onChange={setTerms}
+              />
+            )}
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>

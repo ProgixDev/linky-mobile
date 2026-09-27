@@ -22,6 +22,7 @@ import { toToastMessage } from '../../../src/lib/api';
 import { priceWithFeeGnf, PLATFORM_FEE_RATE } from '../../../src/lib/fees';
 import { formatGNF } from '../../../src/lib/format';
 import { propertyStep } from '../../../src/lib/createSteps';
+import { RentalTermsFields } from '../../../src/components/property/RentalTermsFields';
 
 const PROPERTY_TYPE_DEFS = [
   { id: 'location' as const, labelKey: 'create.typeLocation' },
@@ -224,6 +225,20 @@ export default function CreatePropertyDetailsRoute() {
                 />
               </View>
             </View>
+
+            {/* CONDITIONS DE LOCATION — caution, séjour minimum, tarif par
+                durée (client 2026-09-26). Placées juste sous le prix, parce
+                qu'elles en dépendent toutes : la caution en mois se calcule
+                dessus, et la ligne grise des tarifs par durée compare à lui.
+                Une VENTE ou un TERRAIN n'en a aucune. */}
+            {state.propertyType === 'location' && (
+              <RentalTermsFields
+                period={state.rentalPeriod}
+                basePriceGnf={state.priceGnf}
+                value={state.rentalTerms}
+                onChange={(next) => state.set('rentalTerms', next)}
+              />
+            )}
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>

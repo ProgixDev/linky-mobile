@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { EMPTY_TERMS, type RentalTermsDraft } from '../lib/rentalTermsDraft';
 
 export type ListingKind = 'product' | 'property';
 
@@ -28,6 +29,10 @@ interface CreateListingState {
   // Rental billing period — only meaningful when propertyType === 'location'.
   // 'month' maps to per_month=true (the historical default), 'day' to false.
   rentalPeriod: 'day' | 'month';
+  // Conditions de location : caution, sejour minimum, grille de prix
+  // (client 2026-09-26). Un seul champ plutot que huit : le formulaire les
+  // manipule ensemble et les envoie ensemble.
+  rentalTerms: RentalTermsDraft;
   rooms: number;
   areaSqm: number;
   city: string;
@@ -63,6 +68,7 @@ const DEFAULTS = {
   photos: [] as string[],
   propertyType: 'location' as const,
   rentalPeriod: 'month' as 'day' | 'month',
+  rentalTerms: EMPTY_TERMS,
   rooms: 0,
   areaSqm: 0,
   city: '',

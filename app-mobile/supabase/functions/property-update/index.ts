@@ -182,7 +182,17 @@ Deno.serve(makePost<Body>('/v1/properties/update', valid, async ({ sb, body, req
   // apres le delete, l'annonce retombe au tarif lineaire — visible, corrigible,
   // et jamais plus cher pour le locataire que ce que le bailleur a annonce.
   if (body.rates !== undefined) {
-    const { error: eDel } = await sb.from('property_rates').delete().eq('property_id', body.id);
+    // ON N'EFFACE QUE LA GRILLE DE LA PERIODE COURANTE. Les deux genres
+    // coexistent dans la table exactement pour ca : un bailleur qui bascule
+    // /jour <-> /mois pour comparer retrouve sa saisie en revenant, au lieu de
+    // la reperdre a chaque aller-retour. La grille de l'autre periode n'est
+    // pas lue par le moteur — elle est INERTE, pas fausse.
+    const wantedKind = effPerMonth ? 'tier' : 'block';
+    const { error: eDel } = await sb
+      .from('property_rates')
+      .delete()
+      .eq('property_id', body.id)
+      .eq('kind', wantedKind);
     if (eDel) {
       console.error('[property-update] rates delete error:', eDel);
       throwApi('INTERNAL_ERROR', 500, 'Erreur mise à jour des tarifs');

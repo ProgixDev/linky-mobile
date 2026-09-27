@@ -25,6 +25,7 @@ import { Building2 } from 'lucide-react-native';
 import { formatGNF } from '../../../src/lib/format';
 import { useCreateListing } from '../../../src/stores/createListing';
 import { propertyStep } from '../../../src/lib/createSteps';
+import { termsToBody } from '../../../src/lib/rentalTermsDraft';
 import { ProgressDots } from '../../../src/components/primitives/ProgressDots';
 import { useCreateProperty } from '../../../src/data/queries/properties';
 import { useToast } from '../../../src/components/feedback/Toast';
@@ -276,6 +277,10 @@ export default function PreviewRoute() {
                 type: state.propertyType,
                 // Le choix de l'etape 1 « Vous etes ? » (client 2026-09-26).
                 owner_type: state.ownerType,
+                // Conditions de location. Sur une vente ou un terrain le
+                // serveur les efface de toute facon : les envoyer ne coute
+                // rien et evite un embranchement de plus ici.
+                ...termsToBody(state.rentalTerms, state.rentalPeriod),
                 title: state.title,
                 description: state.description.trim() || undefined,
                 price_minor: state.priceGnf,
