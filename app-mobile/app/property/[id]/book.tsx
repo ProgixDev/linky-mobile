@@ -20,6 +20,11 @@ import { TrustStrip } from '../../../src/components/primitives/TrustStrip';
 import { BookingCalendar } from '../../../src/components/booking/BookingCalendar';
 import { formatBookingDate } from '../../../src/components/booking/BookingUI';
 import { DetailStateScreen } from '../../../src/components/feedback/DetailState';
+import {
+  quoteRental,
+  resolveDeposit,
+  minStayShortfall,
+} from '../../../src/lib/rentalPricing';
 import { useMyBookings, useProperty, useRequestBooking } from '../../../src/data/queries';
 import { addMonthsClamped } from '../../../src/lib/dates';
 import { usePropertyAvailability } from '../../../src/data/queries/bookings';
@@ -71,28 +76,77 @@ export default function BookPropertyRoute() {
   const period: 'day' | 'month' = prop?.perMonth ? 'month' : 'day';
   const rent = prop?.priceGnf ?? 0;
 
-  const { nights, total, ready } = useMemo(() => {
-    if (period === 'day') {
-      if (!startDate || !endDate) return { nights: 0, deposit: 0, amount: 0, fees: 0, total: 0, ready: false };
-      const n = nightsBetween(startDate, endDate);
-      const a = n * rent;
-      const f = platformFeeGnf(a);
-      return { nights: n, deposit: 0, amount: a, fees: f, total: a + f, ready: n >= 1 && n <= 90 };
-    }
-    if (!startDate) return { nights: 0, deposit: 0, amount: 0, fees: 0, total: 0, ready: false };
-    // Monthly: 1st month + a 1-month caution, held in escrow (client 2026-07-29).
-    // PAS de seconde caution sur une prolongation : celle du bail initial est
-    // deja chez le proprietaire et n'a pas ete restituee. Meme regle que le
-    // serveur (booking-request), qui recalcule tout de son cote.
-    const dep = isExtension ? 0 : rent;
-    const a = rent + dep;
-    const f = platformFeeGnf(a);
-    return { nights: 0, deposit: dep, amount: a, fees: f, total: a + f, ready: true };
-  }, [period, startDate, endDate, rent, isExtension]);
+  // ── LE MEME MOTEUR QUE LE SERVEUR, AU FRANC ─────────────────────────────
+  // Cet ecran ne « pre-affiche » pas une estimation : le locataire SIGNE le
+  // montant qu'il lit ici. Le calcul doit donc etre identique a celui de
+  // booking-request, pas equivalent. D'ou rentalPricing.ts, jumeau octet pour
+  // octet de _shared/rental-pricing.ts — et scripts/check-twins.mjs qui refuse
+  // qu'ils divergent.
+  //
+  // Une PROLONGATION n'interroge ni la grille ni le sejour minimum : elle
+  // reconduit le bail parent « aux memes conditions », et le serveur reprend
+  // son loyer tel quel.
+  const {
+    nights,
+    quote,
+    deposit,
+    fees,
+    total,
+    shortfall,
+    ready,
+  } = useMemo(() => {
+    const empty = {
+      nights: 0,
+      quote: { rentMinor: 0, fullMinor: 0, discountMinor: 0, parts: [] as { units: number; priceMinor: number; count: number }[] },
+      deposit: 0,
+      fees: 0,
+      total: 0,
+      shortfall: null as number | null,
+      ready: false,
+    };
+    if (period === 'day' ? !startDate || !endDate : !startDate) return empty;
 
-  // Le premier mois TEL QUE L'ANNONCE L'AFFICHE. La caution prend le reste du
-  // total, ce qui garantit que les deux lignes s'additionnent exactement.
-  const firstMonthWithFee = rent + platformFeeGnf(rent);
+    const n = period === 'day' ? nightsBetween(startDate!, endDate!) : 0;
+    const units = period === 'day' ? n : months;
+    const rates = isExtension ? [] : (prop?.rates ?? []);
+    const q = isExtension
+      ? { rentMinor: period === 'day' ? n * rent : rent, fullMinor: 0, discountMinor: 0, parts: [] }
+      : quoteRental(period, rent, rates, units);
+
+    // La caution suit le loyer REMISE : deux mois sur un bail obtenu a
+    // 8 000 000 valent 16 000 000, pas 27 000 000.
+    const dep = isExtension
+      ? 0
+      : resolveDeposit(
+          prop?.depositBasis,
+          prop?.depositValue,
+          period === 'month' ? q.rentMinor : 0,
+          q.rentMinor,
+        );
+
+    // LA COMMISSION NE PORTE PAS SUR LA CAUTION — elle ne fait que transiter.
+    const f = platformFeeGnf(q.rentMinor);
+    const miss = isExtension
+      ? null
+      : minStayShortfall(period, prop?.minNights, prop?.minMonths, units);
+
+    return {
+      nights: n,
+      quote: q,
+      deposit: dep,
+      fees: f,
+      total: q.rentMinor + dep + f,
+      shortfall: miss,
+      ready: miss === null && (period === 'day' ? n >= 1 && n <= 90 : true),
+    };
+  }, [period, startDate, endDate, rent, isExtension, months, prop]);
+
+  // Le loyer commission comprise. Les deux lignes du recapitulatif
+  // s'additionnent desormais EXACTEMENT sur le total, par construction : la
+  // commission ne porte plus que sur le loyer, la caution est un nombre entier
+  // a part. L'ancien bricolage — « la caution recoit le reste » — n'a plus lieu
+  // d'etre.
+  const rentWithFee = quote.rentMinor + fees;
 
   if (isLoading || isError || !prop) {
     return <DetailStateScreen loading={isLoading} title="Réserver" onRetry={() => void refetch()} />;
@@ -279,29 +333,75 @@ export default function BookPropertyRoute() {
                   rattrape pas. Le tarif a la nuit, commission comprise, est
                   deja en tete de cet ecran — rien n'est perdu.
 
-                  EN MENSUEL, la ligne « premier mois » vaut exactement le prix
-                  affiche sur l'annonce, et la caution recoit le RESTE. La somme
-                  des deux lignes tombe donc toujours sur le total, quel que
-                  soit l'arrondi — et le chiffre que le client compare a
-                  l'annonce est celui qu'il attend. */}
+                  LA CAUTION NE « RECOIT » PLUS LE RESTE. Depuis le 2026-09-27
+                  la commission ne porte que sur le loyer : les lignes
+                  s'additionnent exactement sur le total par construction, et
+                  non plus par un report d'arrondi. Le depot est un nombre
+                  entier a part, celui que le bailleur a declare. */}
               {period === 'day' ? (
                 <RecapRow
                   label={`Séjour · ${nights} nuit${nights > 1 ? 's' : ''} (frais inclus)`}
-                  value={formatGNF(total)}
+                  value={formatGNF(rentWithFee)}
                 />
               ) : (
+                <RecapRow label="Premier mois de loyer (frais inclus)" value={formatGNF(rentWithFee)} />
+              )}
+
+              {/* LA REMISE, NOMMEE. Sans cette ligne le locataire verrait un
+                  total plus bas que le tarif affiche sur l'annonce sans savoir
+                  pourquoi — et douterait du chiffre au lieu de s'en rejouir.
+                  Le detail du decoupage (« 1 mois + 2 semaines + 1 nuit ») dit
+                  d'ou vient le prix, avec les nombres que le bailleur a lui-meme
+                  saisis : l'addition se refait a la main. */}
+              {quote.discountMinor > 0 && (
                 <>
-                  <RecapRow label="Premier mois de loyer (frais inclus)" value={formatGNF(firstMonthWithFee)} />
-                  {/* Pas de ligne « Caution » a 0 GNF sur une prolongation :
-                      elle n'est pas facturee, l'afficher n'aurait rien dit. */}
-                  {!isExtension && (
-                    <RecapRow label="Caution (1 mois, frais inclus)" value={formatGNF(total - firstMonthWithFee)} />
+                  <RecapRow
+                    label={`Tarif normal · ${formatGNF(quote.fullMinor + platformFeeGnf(quote.fullMinor))}`}
+                    value={`− ${formatGNF(quote.discountMinor + platformFeeGnf(quote.fullMinor) - fees)}`}
+                  />
+                  {quote.parts.length > 1 && (
+                    <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                      {quote.parts
+                        .map((pt) =>
+                          `${pt.count > 1 ? `${pt.count} × ` : ''}${pt.units === 1 ? '1 nuit' : `${pt.units} nuits`}`,
+                        )
+                        .join(' + ')}
+                    </Text>
                   )}
                 </>
+              )}
+
+              {/* LE DEPOT EST NOMME POUR CE QU'IL EST. Le bailleur choisit
+                  entre une caution — qu'il rend — et des frais d'agence, qui
+                  lui restent acquis. Afficher « Caution » sur des frais non
+                  remboursables serait un mensonge que le contrat signe
+                  repeterait. Pas de ligne a 0 : sur une prolongation, ou sur une
+                  annonce sans depot, elle n'aurait rien a dire. */}
+              {deposit > 0 && (
+                <RecapRow
+                  label={prop.depositKind === 'agency_fee' ? "Frais d'agence" : 'Caution'}
+                  value={formatGNF(deposit)}
+                />
               )}
               <View style={{ height: 1, backgroundColor: colors.border }} />
               <RecapRow label="Total à payer à la signature" value={formatGNF(total)} bold />
             </View>
+          )}
+
+          {/* LE SEJOUR MINIMUM SE DIT. Un bouton grise sans explication est la
+              pire des reponses : le locataire recommence sa selection sans
+              comprendre, puis abandonne. Ici il lit la regle et sait quoi
+              changer. Le serveur la revalide de son cote (booking-request) —
+              ceci n'est qu'un confort, jamais la garde. */}
+          {shortfall !== null && (
+            <TrustStrip tone="accent">
+              <Text style={{ color: colors.accentText, fontSize: 11.5 }}>
+                <Text style={{ fontWeight: '700' }}>Séjour minimum. </Text>
+                {period === 'day'
+                  ? `Ce logement se loue à partir de ${shortfall} nuits.`
+                  : `Ce logement se loue à partir de ${shortfall} mois.`}
+              </Text>
+            </TrustStrip>
           )}
 
           <TrustStrip tone="primary">

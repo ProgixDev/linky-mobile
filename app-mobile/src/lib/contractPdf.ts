@@ -166,11 +166,20 @@ export function contractHtml(b: Booking): string {
     ? row('Prix du bien', formatGNF(c.amount_minor))
     : [
         row(c.period === 'day' ? 'Loyer / jour' : 'Loyer / mois', formatGNF(c.rent_minor)),
-        c.period === 'day'
-          ? row('Montant du séjour', formatGNF(c.amount_minor))
-          : c.deposit_minor
-            ? row('Caution (1 mois)', formatGNF(c.deposit_minor))
-            : '',
+        // Voir BookingUI : le sejour se lit HORS depot, sinon le document
+        // compte deux fois le meme argent. Le repli sur amount_minor sert aux
+        // contrats signes avant le 2026-09-27.
+        c.period === 'day' ? row('Montant du séjour', formatGNF(c.stay_minor ?? c.amount_minor)) : '',
+        c.discount_minor && c.discount_minor > 0
+          ? row('Tarif normal', formatGNF(c.full_minor ?? 0)) +
+            row('Remise durée', '− ' + formatGNF(c.discount_minor))
+          : '',
+        c.deposit_minor && c.deposit_minor > 0
+          ? row(
+              c.deposit_kind === 'agency_fee' ? "Frais d'agence (non remboursables)" : 'Caution',
+              formatGNF(c.deposit_minor),
+            )
+          : '',
       ].join('');
 
   // La commission garde sa ligne, comme a l'ecran : le proprietaire lit ce

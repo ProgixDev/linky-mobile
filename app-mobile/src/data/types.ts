@@ -301,8 +301,27 @@ export interface BookingContract {
   start_date: string;
   end_date: string | null;
   months: number | null;
+  /**
+    * Le loyer UNITAIRE convenu : par nuit en journalier, par mois en mensuel —
+    * et en mensuel c'est celui d'APRÈS remise, puisque c'est lui qu'une
+    * prolongation reconduit « aux mêmes conditions ».
+    */
   rent_minor: number;
-  deposit_minor?: number; // monthly caution (1 month); absent/0 for daily
+  /**
+   * Part de `amount_minor` qui est un dépôt. PAS un montant supplémentaire :
+   * `amount_minor` le contient déjà. Ancien commentaire (« caution d'un mois,
+   * absent en journalier ») périmé depuis le 2026-09-27 : le bailleur déclare
+   * désormais son montant, sur les deux périodes.
+   */
+  deposit_minor?: number;
+  /** 'caution' se restitue, 'agency_fee' jamais. Absent sur les contrats d'avant. */
+  deposit_kind?: 'caution' | 'agency_fee' | null;
+  /** Le séjour (ou le 1er mois) HORS dépôt. Absent sur les contrats d'avant. */
+  stay_minor?: number;
+  /** Le même séjour au tarif plein, et l'écart. Absents sur les contrats d'avant. */
+  full_minor?: number;
+  discount_minor?: number;
+  rate_parts?: { units: number; priceMinor: number; count: number }[];
   amount_minor: number;
   fees_minor: number;
   total_minor: number;

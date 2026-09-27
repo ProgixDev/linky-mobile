@@ -174,11 +174,34 @@ export function ContractView({ booking }: { booking: Booking }) {
       ) : (
         <>
           <ContractRow k={c.period === 'day' ? 'Loyer / jour' : 'Loyer / mois'} v={formatGNF(c.rent_minor)} />
-          {c.period === 'day' ? (
-            <ContractRow k="Montant" v={formatGNF(c.amount_minor)} />
-          ) : c.deposit_minor ? (
-            <ContractRow k="Caution (1 mois)" v={formatGNF(c.deposit_minor)} />
-          ) : null}
+          {/* LE SEJOUR SE LIT HORS DEPOT. `amount_minor` contient la caution
+              depuis toujours en mensuel, et desormais aussi en journalier des
+              que le bailleur en declare une : l'afficher ici, puis afficher la
+              caution en dessous, compterait deux fois le meme argent et le
+              document ne s'additionnerait plus. `stay_minor` est absent des
+              contrats signes AVANT le 2026-09-27 — pour ceux-la, amount_minor
+              EST le sejour, puisqu'aucune caution n'existait en journalier. */}
+          {c.period === 'day' && (
+            <ContractRow k="Montant du séjour" v={formatGNF(c.stay_minor ?? c.amount_minor)} />
+          )}
+          {/* REMISE LONGUE DUREE : le contrat doit porter le tarif plein et
+              l'ecart, sinon la remise n'est opposable nulle part — en mensuel,
+              seul le premier mois transite par Linky. */}
+          {!!c.discount_minor && c.discount_minor > 0 && (
+            <>
+              <ContractRow k="Tarif normal" v={formatGNF(c.full_minor ?? 0)} />
+              <ContractRow k="Remise durée" v={`− ${formatGNF(c.discount_minor)}`} />
+            </>
+          )}
+          {/* LE DEPOT, NOMME POUR CE QU'IL EST. « Caution (1 mois) » etait en
+              dur : c'est faux des que le bailleur declare deux mois, un montant
+              fixe, ou des frais d'agence — qui, eux, ne se rendent jamais. */}
+          {!!c.deposit_minor && c.deposit_minor > 0 && (
+            <ContractRow
+              k={c.deposit_kind === 'agency_fee' ? "Frais d'agence (non remboursables)" : 'Caution'}
+              v={formatGNF(c.deposit_minor)}
+            />
+          )}
         </>
       )}
       {/* CONTRAT SIGNE : ce document est valide par appui long par les deux
