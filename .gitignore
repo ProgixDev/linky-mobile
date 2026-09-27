@@ -51,3 +51,19 @@ hero-with-bg.png
 **/.playwright-mcp/
 .vercel
 .env*
+
+# ── SECRETS QUI NE DOIVENT JAMAIS ENTRER DANS LE DÉPÔT ────────────────────────
+# Ajouté le 2026-09-27, après qu'une clé de compte de service Firebase ait
+# circulé par erreur. Elle n'a jamais touché le dépôt, mais rien ne l'en
+# empêchait : `.env*` ne couvre pas un fichier JSON déposé dans le projet.
+#
+# `google-services.json` n'est PAS visé : il n'est pas secret (il ne contient
+# que des identifiants publics d'application) et il est volontairement forcé
+# dans git pour le build Android bare — voir android/app/.
+*service-account*.json
+*serviceaccount*.json
+*-adminsdk-*.json
+*.pem
+*.p12
+*.jks
+*.keystore
