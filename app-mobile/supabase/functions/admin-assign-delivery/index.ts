@@ -90,6 +90,7 @@ Deno.serve(makePost<Body>('/v1/admin/deliveries/assign', valid, async ({ sb, bod
     notifyDetached(sb, {
       userIds: [d.livreur_id],
       category: 'order',
+      kind: 'delivery',
       title: 'Nouvelle livraison',
       body: reference ? `La commande ${reference} t'a été assignée.` : "Une livraison t'a été assignée.",
       iconHint: 'bolt',

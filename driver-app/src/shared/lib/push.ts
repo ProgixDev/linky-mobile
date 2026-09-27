@@ -20,10 +20,32 @@ import { Platform } from 'react-native';
 
 import { apiPost } from './api';
 import { logger } from './logger';
+import {
+  ALL_CHANNELS,
+  CHANNELS,
+  CHANNELS_VERSION,
+  DECISION_ACCEPT,
+  DECISION_CATEGORY_ID,
+  DECISION_DECLINE,
+  playsSoundInForeground,
+  type NotifyKind,
+} from './notify-kinds';
 import { appStorage } from './storage';
 
-/** Android channel for new-delivery pushes (created at runtime, high importance). */
-export const DELIVERY_CHANNEL_ID = 'deliveries';
+/**
+ * Android channel for new-delivery pushes.
+ *
+ * ⚠️ REMPLACÉ le 2026-09-29 par les canaux versionnés de `notify-kinds.ts`, qui
+ * sont les MÊMES des deux côtés (marketplace et Dépose) parce que c'est le
+ * SERVEUR qui les nomme dans chaque push. L'ancien identifiant `deliveries`
+ * n'était d'ailleurs jamais utilisé : le backend n'envoyait aucun `channelId`,
+ * donc les notifications atterrissaient sur le canal de repli d'Expo, affiché
+ * « Miscellaneous » dans les réglages du téléphone.
+ *
+ * Conservé exporté : un canal déjà créé sur un appareil ne peut pas être
+ * modifié, et le supprimer se voit dans les réglages Android.
+ */
+export const DELIVERY_CHANNEL_ID = CHANNELS.delivery.id;
 
 /** The last Expo push token we registered — kept so sign-out can unregister it. */
 const PUSH_TOKEN_KEY = 'push-token-v1';
@@ -53,30 +75,78 @@ function projectId(): string | undefined {
  */
 export function configureForegroundHandler(): void {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
+    handleNotification: async (notification) => {
+      const kind = (notification.request.content.data?.kind as NotifyKind | undefined) ?? 'delivery';
+      return {
+        shouldShowBanner: true,
+        shouldShowList: true,
+        // Une course sonne toujours ; une information de service, non. Le
+        // livreur doit pouvoir garder l'app ouverte sans être harcelé.
+        shouldPlaySound: playsSoundInForeground(kind),
+        shouldSetBadge: true,
+      };
+    },
   });
 }
 
-/** Create the Linky-green, high-importance "Livraisons" channel (Android only). */
-export async function ensureDeliveryChannel(): Promise<void> {
+const IMPORTANCE = {
+  max: Notifications.AndroidImportance.MAX,
+  high: Notifications.AndroidImportance.HIGH,
+  default: Notifications.AndroidImportance.DEFAULT,
+} as const;
+
+/**
+ * Crée TOUS les canaux de `notify-kinds.ts` (Android uniquement).
+ *
+ * Les identifiants sont partagés avec l'app marketplace : c'est le serveur qui
+ * nomme le canal dans chaque push, et nommer un canal absent de l'appareil fait
+ * disparaître la notification — sans son, sans bandeau, sans erreur. Créer un
+ * canal existant est un no-op, donc cet appel est rejoué à chaque démarrage.
+ */
+export async function ensureChannels(): Promise<void> {
   if (Platform.OS !== 'android') return;
-  try {
-    await Notifications.setNotificationChannelAsync(DELIVERY_CHANNEL_ID, {
-      name: 'Livraisons',
-      importance: Notifications.AndroidImportance.HIGH,
-      lightColor: '#0E6E55', // Linky green
-      sound: 'default',
-      vibrationPattern: [0, 250, 250, 250],
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    });
-  } catch (e) {
-    logger.warn('[push] ensureDeliveryChannel failed', e);
+  for (const c of ALL_CHANNELS) {
+    try {
+      await Notifications.setNotificationChannelAsync(c.id, {
+        name: c.name,
+        description: c.description,
+        importance: IMPORTANCE[c.importance],
+        vibrationPattern: c.vibration,
+        enableVibrate: true,
+        lightColor: '#0E6E55', // Linky green
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        ...(c.sound ? { sound: `${c.sound}.wav` } : {}),
+      });
+    } catch (e) {
+      logger.warn(`[push] canal ${c.id} non créé`, e);
+    }
   }
+}
+
+/**
+ * Les deux boutons Accepter / Refuser du bandeau. Ils ouvrent l'application :
+ * expo-notifications ne déclenche aucun écouteur quand l'app a été TUÉE, donc un
+ * bouton qui prétendrait répondre sans l'ouvrir mentirait une fois sur deux.
+ */
+export async function ensureDecisionCategory(): Promise<void> {
+  try {
+    await Notifications.setNotificationCategoryAsync(DECISION_CATEGORY_ID, [
+      { identifier: DECISION_ACCEPT, buttonTitle: 'Accepter', options: { opensAppToForeground: true } },
+      {
+        identifier: DECISION_DECLINE,
+        buttonTitle: 'Refuser',
+        options: { opensAppToForeground: true, isDestructive: true },
+      },
+    ]);
+  } catch (e) {
+    logger.warn('[push] catégorie de décision non enregistrée', e);
+  }
+}
+
+/** Conservé pour les appelants existants : crée désormais tous les canaux. */
+export async function ensureDeliveryChannel(): Promise<void> {
+  await ensureChannels();
+  await ensureDecisionCategory();
 }
 
 /** Current OS push-permission status (does NOT prompt). */
@@ -126,6 +196,9 @@ export async function registerPushToken(): Promise<string | null> {
         platform: Platform.OS === 'ios' ? 'ios' : 'android',
         device_label: Platform.OS === 'ios' ? 'iOS' : 'Android',
         app: APP_KIND,
+        // Ce que CE bundle sait faire : le serveur ne nommera un canal que si
+        // cette version le couvre.
+        channels_v: CHANNELS_VERSION,
       },
     });
     await appStorage.set(PUSH_TOKEN_KEY, token);
@@ -198,7 +271,11 @@ export async function presentLocalNotification(input: {
         title: input.title,
         body: input.body,
         sound: 'default',
-        data: { deeplink: input.deeplink ?? null, category: input.category ?? null },
+        // `kind` explicite : c'est lui que lit le gestionnaire de premier plan
+        // pour décider de jouer un son. Sans lui, ce repli hors-FCM retomberait
+        // sur la valeur par défaut et pourrait devenir muet le jour où celle-ci
+        // change — or c'est précisément le seul signal d'un livreur sans FCM.
+        data: { deeplink: input.deeplink ?? null, category: input.category ?? null, kind: 'delivery' },
       },
       trigger: null, // immediate — the foreground handler presents it as a banner
     });

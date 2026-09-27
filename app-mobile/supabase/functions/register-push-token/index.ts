@@ -26,6 +26,13 @@ interface Body {
   platform: 'ios' | 'android';
   device_label?: string;
   app?: AppKind;
+  /**
+   * La version du jeu de canaux de notification que CE bundle a creee au
+   * demarrage (notifyKinds.ts -> CHANNELS_VERSION). Absente = bundle anterieur
+   * aux canaux nommes : le serveur n'enverra alors aucun channelId, parce que
+   * nommer un canal absent de l'appareil rend la notification INVISIBLE.
+   */
+  channels_v?: number;
 }
 
 const EXPO_TOKEN_RE = /^Expo(nent)?PushToken\[.+\]$/;
@@ -37,6 +44,10 @@ function valid(b: unknown): b is Body {
   if (x.platform !== 'ios' && x.platform !== 'android') return false;
   if (x.device_label !== undefined && (typeof x.device_label !== 'string' || x.device_label.length > 80)) return false;
   if (x.app !== undefined && x.app !== 'marketplace' && x.app !== 'driver') return false;
+  if (x.channels_v !== undefined) {
+    if (typeof x.channels_v !== 'number' || !Number.isInteger(x.channels_v)) return false;
+    if (x.channels_v < 0 || x.channels_v > 1000) return false;
+  }
   return true;
 }
 
@@ -50,6 +61,9 @@ Deno.serve(makePost<Body>('/v1/push/register-token', valid, async ({ sb, body, r
       platform: body.platform,
       device_label: body.device_label ?? null,
       app: body.app ?? 'marketplace',
+      // Ecrit a CHAQUE demarrage : c'est ce qui fait remonter un appareil de 0 a 1
+      // des qu'il prend la mise a jour, sans rattrapage a faire en base.
+      channels_v: body.channels_v ?? 0,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'token' },

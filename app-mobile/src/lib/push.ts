@@ -21,18 +21,104 @@ import { storage, STORAGE_KEYS } from './storage';
 import { isOpenableDeeplink } from './deeplink';
 import { useAuth } from '../stores/auth';
 import { usePrefs } from '../stores/prefs';
+import {
+  ALL_CHANNELS,
+  CHANNELS_VERSION,
+  DECISION_ACCEPT,
+  DECISION_CATEGORY_ID,
+  DECISION_DECLINE,
+  playsSoundInForeground,
+  type NotifyKind,
+} from './notifyKinds';
 
-// Foreground display : show the banner even while the app is open. Sounds
-// off — in-app realtime (messages) already surfaces the event; the banner
-// is enough.
+// ┌─ CE QUI SE PASSE QUAND L'APP EST DEJA OUVERTE ─────────────────────────┐
+// Le son etait coupe pour TOUT, avec un raisonnement valable pour la
+// messagerie : le temps reel affiche deja le message, un bip de plus n'apprend
+// rien. Mais la meme ligne rendait muette l'arrivee d'une COMMANDE — un vendeur
+// qui a son application ouverte sur le comptoir n'entendait rien du tout. C'est
+// exactement ce que le client decrit : « ils peuvent recevoir une commande sans
+// le savoir ».
+//
+// Le son depend donc maintenant du TON de l'evenement : les demandes et les
+// echecs sonnent, la messagerie et les informations restent discretes.
+// └───────────────────────────────────────────────────────────────────────────┘
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const kind = (notification.request.content.data?.kind as NotifyKind | undefined) ?? 'info';
+    return {
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: playsSoundInForeground(kind),
+      shouldSetBadge: false,
+    };
+  },
 });
+
+const IMPORTANCE = {
+  max: Notifications.AndroidImportance.MAX,
+  high: Notifications.AndroidImportance.HIGH,
+  default: Notifications.AndroidImportance.DEFAULT,
+} as const;
+
+/**
+ * LES CANAUX, UN PAR TYPE D'EVENEMENT (client 2026-09-28 : « des sons de
+ * notification speciale pour les commandes, reservations et livraisons »).
+ *
+ * Sur Android le son et la vibration appartiennent au CANAL, pas au message :
+ * c'est le seul moyen d'en avoir plusieurs. Et un canal est IMMUABLE une fois
+ * cree — d'ou les identifiants versionnes de notifyKinds.ts.
+ *
+ * Appele a CHAQUE demarrage : creer un canal existant est un no-op, et une
+ * nouvelle installation doit les avoir avant le premier push. Tant que les
+ * fichiers son du client ne sont pas integres (ils exigent un build), ce sont
+ * les motifs de VIBRATION qui distinguent deja les trois evenements.
+ */
+export async function ensureChannels(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  for (const c of ALL_CHANNELS) {
+    try {
+      await Notifications.setNotificationChannelAsync(c.id, {
+        name: c.name,
+        description: c.description,
+        importance: IMPORTANCE[c.importance],
+        vibrationPattern: c.vibration,
+        enableVibrate: true,
+        lightColor: '#0E6E55',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        ...(c.sound ? { sound: `${c.sound}.wav` } : {}),
+      });
+    } catch (e) {
+      // Un canal qui echoue ne doit pas empecher les autres d'exister : sans
+      // canal, le push qui le nomme ne s'afficherait pas du tout.
+      console.warn(`[push] canal ${c.id} non cree :`, e);
+    }
+  }
+}
+
+/**
+ * LES DEUX BOUTONS DANS LE BANDEAU. Ils OUVRENT l'application, volontairement :
+ * expo-notifications ne declenche aucun ecouteur quand l'app a ete TUEE, donc un
+ * bouton qui repond « sans ouvrir » mentirait une fois sur deux. Celui-ci amene
+ * toujours a l'ecran ou la decision se prend pour de bon.
+ */
+export async function ensureDecisionCategory(): Promise<void> {
+  try {
+    await Notifications.setNotificationCategoryAsync(DECISION_CATEGORY_ID, [
+      {
+        identifier: DECISION_ACCEPT,
+        buttonTitle: 'Accepter',
+        options: { opensAppToForeground: true },
+      },
+      {
+        identifier: DECISION_DECLINE,
+        buttonTitle: 'Refuser',
+        options: { opensAppToForeground: true, isDestructive: true },
+      },
+    ]);
+  } catch (e) {
+    console.warn('[push] categorie de decision non enregistree :', e);
+  }
+}
 
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   // Simulators have no push transport — skip silently.
@@ -46,12 +132,8 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
   if (status !== 'granted') return null;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Notifications Linky',
-      importance: Notifications.AndroidImportance.MAX,
-    });
-  }
+  await ensureChannels();
+  await ensureDecisionCategory();
 
   const projectId = (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)
     ?.eas?.projectId;
@@ -74,6 +156,10 @@ export async function registerPushToken(): Promise<void> {
         token,
         platform: Platform.OS === 'ios' ? 'ios' : 'android',
         device_label: Device.modelName ?? undefined,
+        // Ce que CE bundle sait faire. Le serveur ne nommera un canal que si
+        // cette version le couvre — nommer un canal absent rend la
+        // notification invisible sur Android.
+        channels_v: CHANNELS_VERSION,
       },
     });
     storage.set(STORAGE_KEYS.pushToken, token);
@@ -127,6 +213,7 @@ export function usePushRegistration(): void {
             token,
             platform: Platform.OS === 'ios' ? 'ios' : 'android',
             device_label: Device.modelName ?? undefined,
+            channels_v: CHANNELS_VERSION,
           },
         });
         // Re-check after the await : if the user logged out mid-flight,
@@ -142,6 +229,31 @@ export function usePushRegistration(): void {
       cancelled = true;
     };
   }, [authUserId, notifications]);
+}
+
+/**
+ * L'INTENTION POSEE PAR UN BOUTON DU BANDEAU, en attente d'etre ramassee.
+ *
+ * Les deux boutons ouvrent l'application (voir ensureDecisionCategory) : ils ne
+ * peuvent donc pas repondre tout seuls. Ils deposent ici ce que la personne a
+ * voulu, et l'ecran de decision le ramasse a son ouverture pour le lui proposer
+ * deja pret — un toucher au lieu de trois, sans jamais decider a sa place.
+ *
+ * Volontairement en memoire et NON persiste : une intention vieille d'un
+ * redemarrage ne veut plus rien dire, et la rejouer serait pire que l'oublier.
+ */
+let pendingDecision: { refType: string | null; refId: string | null; action: 'accept' | 'decline' } | null = null;
+
+/** Ramasse l'intention (et l'efface : elle ne vaut qu'une fois). */
+export function takePendingDecision(refId?: string) {
+  const d = pendingDecision;
+  if (!d) return null;
+  // Si l'ecran precise QUELLE demande il affiche, on ne lui rend l'intention
+  // que si elle le concerne : sinon un « Refuser » pose sur une reservation
+  // s'appliquerait a la premiere fiche ouverte ensuite.
+  if (refId && d.refId && d.refId !== refId) return null;
+  pendingDecision = null;
+  return d;
 }
 
 export function useNotificationTapRouting(): void {
@@ -169,7 +281,17 @@ export function useNotificationTapRouting(): void {
       // Authed routes only ; if the user isn't signed in, DROP the
       // deeplink rather than push it into a 401 loop.
       if (!isOnboarded || !authUserId) return;
-      const deeplink = response.notification.request.content.data?.deeplink;
+      const content = response.notification.request.content;
+      // Le bandeau portait-il les deux boutons, et lequel a ete presse ?
+      const act = response.actionIdentifier;
+      if (act === DECISION_ACCEPT || act === DECISION_DECLINE) {
+        pendingDecision = {
+          refType: (content.data?.refType as string | null) ?? null,
+          refId: (content.data?.refId as string | null) ?? null,
+          action: act === DECISION_ACCEPT ? 'accept' : 'decline',
+        };
+      }
+      const deeplink = content.data?.deeplink;
       if (isOpenableDeeplink(deeplink)) {
         router.push(deeplink as never);
       }

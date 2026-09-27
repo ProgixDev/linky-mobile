@@ -12,6 +12,7 @@
 //   booking step) polls the pay_id and calls confirm_booking_payment on success
 //   (one-sided escrow credit + accepted→paid).
 import { makePost } from '@shared/wrap.ts';
+import { notifyBookingPaid } from '@shared/booking-paid-push.ts';
 import { throwApi } from '@shared/errors.ts';
 import { addMonthsClamped, todayConakry } from '@shared/dates.ts';
 import { requireUser } from '@shared/auth.ts';
@@ -216,6 +217,11 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
       console.error('[booking-sign-pay] wallet rpc:', eW);
       throwApi('INTERNAL_ERROR', 500, 'Erreur lors du paiement');
     }
+    // Paiement instantane : il n'y a aucune intention, donc aucun cron ne
+    // viendra confirmer cette reservation. Si on ne previent pas ici, le
+    // bailleur n'apprendra jamais rien — meme raisonnement que le paiement a
+    // la livraison cote commandes.
+    await notifyBookingPaid(sb, bk.id as string);
     return { body: { booking_id: bk.id, next_step: { kind: 'paid' } } };
   }
 

@@ -60,6 +60,7 @@ Deno.serve(makePost<Body>('/v1/orders/dispute', valid, async ({ sb, body, req })
   notifyDetached(sb, {
     userIds: [orderRow.seller_id],
     category: 'order',
+    kind: 'failure',
     title: 'Litige ouvert',
     body: `${buyerName} a signalé un problème sur ta commande.`,
     iconHint: 'shield',

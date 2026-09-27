@@ -106,6 +106,10 @@ Deno.serve(makePost<Body>('/v1/bookings/respond', valid, async ({ sb, body, req 
   notifyDetached(sb, {
     userIds: [bk.tenant_id as string],
     category: 'booking',
+    // Le TON suit la decision : l'accord sonne comme une confirmation,
+    // le refus comme un echec. C'est exactement la distinction que le
+    // client demande a entendre sans regarder l'ecran.
+    kind: body.decision === 'accept' ? 'success' : 'failure',
     title: body.decision === 'accept' ? 'Réservation acceptée' : 'Réservation refusée',
     body: body.decision === 'accept'
       ? `${landlordName} a signé le contrat pour « ${title} ». Signe et paie pour finaliser.`

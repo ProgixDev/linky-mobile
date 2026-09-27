@@ -17,8 +17,39 @@
 // as enhanced security stays off for the EAS project.
 
 import type { SupabaseClient } from '@shared/db.ts';
+import {
+  channelIdFor,
+  iosSoundFor,
+  DECISION_CATEGORY_ID,
+  type NotifyKind,
+} from '@shared/notify-kinds.ts';
+
+export type { NotifyKind };
 
 export type NotifyCategory = 'order' | 'message' | 'visit' | 'promo' | 'system' | 'booking';
+
+/**
+ * LA CATEGORIE DIT LE DOMAINE, LE `kind` DIT LE TON.
+ *
+ * `category` existe depuis le debut et pilote la boite in-app (icone, filtre) :
+ * elle range une notification par sujet — commande, reservation, message. Elle
+ * ne dit PAS si l'evenement est une bonne ou une mauvaise nouvelle, or c'est
+ * exactement ce que le client demande d'entendre : un son pour ce qui aboutit,
+ * un autre pour ce qui echoue.
+ *
+ * On ne touche donc pas a `category` (34 appels et la boite in-app en dependent)
+ * et on ajoute `kind`, qui choisit le canal Android, le son iOS, la priorite et
+ * la vibration. Non renseigne, il se deduit de la categorie : les appels
+ * existants gardent un comportement sense sans etre tous reecrits.
+ */
+const KIND_FROM_CATEGORY: Record<NotifyCategory, NotifyKind> = {
+  order: 'order',
+  booking: 'booking',
+  message: 'message',
+  visit: 'info',
+  promo: 'info',
+  system: 'info',
+};
 
 /** Which app's device tokens a push targets. Mirrors push_tokens.app. */
 export type NotifyApp = 'marketplace' | 'driver';
@@ -42,6 +73,21 @@ export interface NotifyInput {
    * durable notifications row is always written for every recipient regardless).
    */
   app?: NotifyApp;
+  /**
+   * Le TON de l'evenement : il choisit le canal Android (donc le son et la
+   * vibration), le son iOS et la priorite d'acheminement. Absent = deduit de
+   * `category`.
+   */
+  kind?: NotifyKind;
+  /**
+   * Vrai quand la notification porte une DEMANDE que le destinataire doit
+   * trancher : elle affiche alors les deux boutons Accepter / Refuser, qui
+   * ouvrent l'ecran de decision.
+   *
+   * A ne poser QUE s'il existe vraiment un endroit ou trancher. Un bouton
+   * « Accepter » qui ouvre un ecran sans decision est pire que pas de bouton.
+   */
+  decision?: boolean;
 }
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
@@ -78,12 +124,29 @@ export async function notify(sb: SupabaseClient, input: NotifyInput): Promise<vo
     // The in-app notifications rows above are written for EVERY recipient
     // regardless of `app` (the in-app inbox is per-user, app-agnostic). Only the
     // Expo device push is scoped to one app's tokens when `app` is set.
-    let tokenQuery = sb.from('push_tokens').select('token').in('user_id', userIds);
-    if (input.app) tokenQuery = tokenQuery.eq('app', input.app);
-    const { data: tokens, error: tokErr } = await tokenQuery;
-    if (tokErr) {
-      console.error('[push] token fetch failed:', tokErr);
-      return;
+    // `channels_v` dit quels canaux CE telephone a reellement crees. On le lit
+    // avec un repli sur l'ancienne forme : si la colonne n'existe pas encore
+    // (fonction deployee avant sa migration), on continue sans canal plutot que
+    // de faire taire toutes les notifications du produit.
+    const tokenCols = 'token, channels_v';
+    let tokens: { token: string; channels_v?: number }[] | null = null;
+    {
+      let q = sb.from('push_tokens').select(tokenCols).in('user_id', userIds);
+      if (input.app) q = q.eq('app', input.app);
+      const { data, error } = await q;
+      if (error) {
+        console.error('[push] token fetch (with channels_v) failed:', error);
+        let q2 = sb.from('push_tokens').select('token').in('user_id', userIds);
+        if (input.app) q2 = q2.eq('app', input.app);
+        const { data: d2, error: e2 } = await q2;
+        if (e2) {
+          console.error('[push] token fetch failed:', e2);
+          return;
+        }
+        tokens = (d2 ?? []) as { token: string }[];
+      } else {
+        tokens = (data ?? []) as { token: string; channels_v?: number }[];
+      }
     }
     if (!tokens?.length) return;
 
@@ -94,13 +157,37 @@ export async function notify(sb: SupabaseClient, input: NotifyInput): Promise<vo
     const accessToken = Deno.env.get('LINKY_EXPO_PUSH_TOKEN');
     if (accessToken) headers.authorization = `Bearer ${accessToken}`;
 
-    const messages = tokens.map((t) => ({
-      to: t.token,
-      title: input.title,
-      body: input.body,
-      sound: 'default',
-      data: { deeplink: input.deeplink ?? null, category: input.category },
-    }));
+    const kind: NotifyKind = input.kind ?? KIND_FROM_CATEGORY[input.category] ?? 'info';
+
+    // « high » reveille l'appareil malgre le Doze ; on ne le reserve pas aux
+    // seules demandes a trancher, parce qu'un paiement refuse qui arrive une
+    // heure plus tard ne sert a rien non plus.
+    const priority = kind === 'message' || kind === 'info' ? 'default' : 'high';
+
+    const messages = tokens.map((t) => {
+      // ANDROID : le son appartient au CANAL, pas au push. Et nommer un canal
+      // que l'appareil n'a pas cree fait disparaitre la notification en
+      // silence — d'ou le `null` prudent pour les bundles anterieurs.
+      const channelId = channelIdFor(kind, Number(t.channels_v ?? 0));
+      return {
+        to: t.token,
+        title: input.title,
+        body: input.body,
+        // iOS : c'est CE champ qui porte le son. Android l'ignore.
+        sound: iosSoundFor(kind),
+        priority,
+        ...(channelId ? { channelId } : {}),
+        ...(input.decision ? { categoryId: DECISION_CATEGORY_ID } : {}),
+        data: {
+          deeplink: input.deeplink ?? null,
+          category: input.category,
+          kind,
+          decision: input.decision === true,
+          refType: input.refType ?? null,
+          refId: input.refId ?? null,
+        },
+      };
+    });
 
     for (let i = 0; i < messages.length; i += CHUNK) {
       const chunk = messages.slice(i, i + CHUNK);

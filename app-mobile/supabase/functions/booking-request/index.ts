@@ -546,6 +546,7 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
   notifyDetached(sb, {
     userIds: [prop.owner_id as string],
     category: 'booking',
+    decision: !instant,
     title: instant
       ? 'Nouvelle réservation'
       : body.period === 'sale' ? 'Nouvelle demande d\'achat' : 'Nouvelle demande de réservation',

@@ -43,6 +43,7 @@ Deno.serve(makePost<Body>('/v1/bookings/checkin-confirm', valid, async ({ sb, bo
     notifyDetached(sb, {
       userIds: [bk.landlord_id as string],
       category: 'booking',
+      kind: 'success',
       title: 'Loyer versé',
       body: `Emménagement confirmé pour « ${title} » — ${formatGNF(Number(bk.amount_minor))} versés sur ton wallet.`,
       iconHint: 'check',

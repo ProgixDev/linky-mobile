@@ -98,6 +98,7 @@ Deno.serve(makePost<Body>('/v1/admin/disputes/resolve', valid, async ({ sb, body
     notifyDetached(sb, {
       userIds: [orderRow.buyer_id],
       category: 'order',
+      kind: 'success',
       title: 'Litige résolu',
       body: `${formatGNF(Number(orderRow.total_minor))} remboursés sur ton wallet.`,
       iconHint: 'shield',
@@ -108,6 +109,7 @@ Deno.serve(makePost<Body>('/v1/admin/disputes/resolve', valid, async ({ sb, body
     notifyDetached(sb, {
       userIds: [orderRow.seller_id],
       category: 'order',
+      kind: 'failure',
       title: "Litige tranché en faveur de l'acheteur",
       body: 'Aucun versement pour cette commande.',
       iconHint: 'shield',
@@ -119,6 +121,7 @@ Deno.serve(makePost<Body>('/v1/admin/disputes/resolve', valid, async ({ sb, body
     notifyDetached(sb, {
       userIds: [orderRow.buyer_id],
       category: 'order',
+      kind: 'success',
       title: 'Litige clos',
       body: 'Commande libérée au vendeur.',
       iconHint: 'shield',
@@ -129,6 +132,7 @@ Deno.serve(makePost<Body>('/v1/admin/disputes/resolve', valid, async ({ sb, body
     notifyDetached(sb, {
       userIds: [orderRow.seller_id],
       category: 'order',
+      kind: 'success',
       title: 'Litige résolu en ta faveur',
       body: `${formatGNF(Number(orderRow.amount_minor))} libérés sur ton wallet.`,
       iconHint: 'shield',

@@ -25,6 +25,16 @@ const COUPLES = [
   // rouge en permanence, donc inutile. On les ajoutera un par un, apres
   // alignement.
   ['src/lib/rentalPricing.ts', 'supabase/functions/_shared/rental-pricing.ts'],
+  // notifyKinds decide des IDENTIFIANTS DE CANAL Android. Si le serveur nomme un
+  // canal que l'app n'a pas cree, Android n'affiche RIEN — pas de son, pas de
+  // bandeau, aucune erreur nulle part. La divergence y est donc silencieuse et
+  // totale, ce qui en fait le pire des deux jumeaux a laisser deriver.
+  ['src/lib/notifyKinds.ts', 'supabase/functions/_shared/notify-kinds.ts'],
+  // TROISIEME exemplaire, dans l'app livreur : c'est un projet Expo separe (SDK
+  // 56 contre 55 ici), il ne peut importer ni l'un ni l'autre. Et il DOIT
+  // pourtant connaitre les memes identifiants, puisque c'est le serveur qui
+  // nomme le canal dans le push qu'il envoie a Depose.
+  ['src/lib/notifyKinds.ts', '../driver-app/src/shared/lib/notify-kinds.ts'],
 ];
 
 const sha = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');

@@ -106,6 +106,7 @@ Deno.serve(makePost<Body>('/v1/bookings/cancel', valid, async ({ sb, body, req }
     notifyDetached(sb, {
       userIds: [bk.landlord_id as string],
       category: 'booking',
+      kind: 'failure',
       title: 'Réservation annulée',
       body: `${tenantNameRefund} a annulé sa réservation pour « ${titleRefund} ». Le montant lui a été remboursé.`,
       iconHint: 'shield',
@@ -160,6 +161,7 @@ Deno.serve(makePost<Body>('/v1/bookings/cancel', valid, async ({ sb, body, req }
   notifyDetached(sb, {
     userIds: [bk.landlord_id as string],
     category: 'booking',
+    kind: 'failure',
     title: 'Réservation annulée',
     body: `${tenantName} a annulé sa demande pour « ${title} ».`,
     iconHint: 'shield',

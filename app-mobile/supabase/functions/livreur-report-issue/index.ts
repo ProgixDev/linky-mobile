@@ -70,6 +70,7 @@ Deno.serve(makePost<Body>('/v1/deliveries/livreur-report-issue', valid, async ({
     notifyDetached(sb, {
       userIds: [order.seller_id as string],
       category: 'order',
+      kind: 'failure',
       title: 'Problème de livraison',
       body: `Le livreur a signalé un problème (${reasonFr}) sur la commande #${order.reference}.`,
       iconHint: 'warn',

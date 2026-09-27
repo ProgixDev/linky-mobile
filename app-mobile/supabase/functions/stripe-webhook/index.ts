@@ -54,6 +54,7 @@
 import type Stripe from 'stripe';
 import { serviceClient } from '@shared/db.ts';
 import { constructWebhookEvent } from '@shared/stripe.ts';
+import { notifyBookingPaid } from '@shared/booking-paid-push.ts';
 import { notifyOrderPaid } from '@shared/order-paid-push.ts';
 import { notifyDetached } from '@shared/push.ts';
 
@@ -346,18 +347,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return json({ received: true, booking_conflict: true }, 200);
     }
     if (outcome === 'confirmed') {
-      const title = ((bk.property_snapshot as { title?: string } | null)?.title) ?? 'votre bien';
-      notifyDetached(sb, {
-        userIds: [bk.landlord_id as string],
-        category: 'booking',
-        title: 'Réservation payée',
-        body: `Le contrat pour « ${title} » est signé — le loyer est sécurisé en séquestre.`,
-        iconHint: 'check',
-        deeplink: `/agent/leases/${bookingId}`,
-        refType: 'booking',
-        refId: bookingId,
-        app: 'marketplace',
-      });
+      // Meme notification que les deux autres rails, au meme endroit : c'est
+      // en la laissant ici et nulle part ailleurs qu'on s'etait retrouve avec
+      // un seul rail sur trois qui prevenait le bailleur.
+      await notifyBookingPaid(sb, bookingId);
     }
     if (outcome === 'noop_dead') {
       // Encaisse sur une reservation annulee/refusee/remboursee : le sequestre

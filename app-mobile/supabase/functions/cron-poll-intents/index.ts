@@ -40,6 +40,7 @@ import { serviceClient } from '@shared/db.ts';
 // Aucune intention v1 ne peut survivre au deploiement : le balayage TTL de
 // 15 min les termine proprement, comme un paiement abandonne.
 import { getStatusForRail } from '@shared/lengopay.ts';
+import { notifyBookingPaid } from '@shared/booking-paid-push.ts';
 import { notifyOrderPaid } from '@shared/order-paid-push.ts';
 import { stripeClient } from '@shared/stripe.ts';
 
@@ -53,6 +54,9 @@ interface PendingIntent {
   attempts_count: number;
   status: string;
   rail_status: string | null;
+  /** Les trois selecteurs renvoient `SETOF payment_intents` : la ligne porte donc
+   *  toujours ses rattachements. Seul le lot reservation lit celui-ci. */
+  booking_id?: string | null;
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -164,6 +168,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
             p_error_code: null, p_error_message: null,
           });
           if (oErr) throw new Error(`process_booking_intent_outcome failed: ${oErr.message}`);
+          // LE BAILLEUR APPREND ENFIN QUE SON LOCATAIRE A PAYE. Ce cron est le
+          // chemin de TOUS les paiements Orange/MTN, donc de la quasi-totalite
+          // des reservations guineennes : il ne notifiait personne, alors que
+          // le rail carte, lui, le faisait depuis toujours.
+          if (intent.booking_id) await notifyBookingPaid(sb, intent.booking_id);
           bkCompleted++;
         } else if (status.status === 'failed' || status.status === 'cancelled') {
           await sb.rpc('process_booking_intent_outcome', {
