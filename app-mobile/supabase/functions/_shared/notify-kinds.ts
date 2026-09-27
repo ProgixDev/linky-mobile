@@ -42,12 +42,22 @@ export type NotifyKind =
  * retombe sur le canal par défaut, silencieuse mais VISIBLE. Sans ce garde-fou,
  * le jour où l'on ajoute les vrais sons, tous les téléphones restés sur
  * l'ancienne version cesseraient d'afficher quoi que ce soit.
+ *
+ * ── VERSION 2 (2026-09-27) : les sons du client ──────────────────────────────
+ * C'est exactement le cas prévu. Les fichiers son d'Abdoulaye sont arrivés ;
+ * comme le son d'un canal ne peut pas être modifié après sa création, il a
+ * fallu de nouveaux identifiants — `linky.order.v2` et ses pairs. La v1 reste
+ * DÉCRITE et adressable : un téléphone qui n'a pas encore pris la mise à jour
+ * continue de recevoir ses notifications sur ses canaux v1, sans son
+ * personnalisé mais avec sa vibration. C'est `channelIdFor` qui fait
+ * correspondre la version de l'APPAREIL, et surtout pas la version courante.
  */
-export const CHANNELS_VERSION = 1;
+export const CHANNELS_VERSION = 2;
 
 export interface ChannelSpec {
   kind: NotifyKind;
-  /** Identifiant du canal Android, VERSIONNÉ. Jamais réutilisé pour un autre son. */
+  /** Identifiant du canal Android POUR LA VERSION COURANTE. Jamais réutilisé
+   *  pour un autre son : c'est `channelId(kind, v)` qui adresse les anciennes. */
   id: string;
   /** Ce que l'utilisateur lit dans les réglages Android de l'application. */
   name: string;
@@ -61,10 +71,16 @@ export interface ChannelSpec {
    * Nom du fichier son embarqué, SANS extension (res/raw sur Android,
    * bundle sur iOS). `null` = son système.
    *
-   * Reste `null` en version 1 : un son personnalisé est un réglage de BUILD
-   * (le fichier est copié dans le natif au prebuild), il ne peut pas arriver
-   * par une mise à jour OTA. Le jour où les fichiers du client sont intégrés,
-   * on incrémente CHANNELS_VERSION et on crée des identifiants `.v2`.
+   * Renseigné depuis la version 2 avec les fichiers fournis par le client.
+   * `null` = son système (messagerie et informations : elles n'ont pas à se
+   * faire remarquer).
+   *
+   * ⚠️ Un son personnalisé est un réglage de BUILD — le fichier est embarqué
+   * dans le binaire, il n'arrive JAMAIS par une mise à jour OTA. Un téléphone
+   * qui prend cette version 2 sans avoir le nouveau binaire créera bien ses
+   * canaux, mais Android ne trouvera pas la ressource et retombera sur le son
+   * par défaut : la notification s'affiche quand même, elle sonne simplement
+   * comme avant. C'est la dégradation voulue.
    */
   sound: string | null;
 }
@@ -72,52 +88,55 @@ export interface ChannelSpec {
 export const CHANNELS: Record<NotifyKind, ChannelSpec> = {
   order: {
     kind: 'order',
-    id: 'linky.order.v1',
+    id: 'linky.order.v2',
     name: 'Commandes',
     description: "Une nouvelle commande vient d'arriver dans ta boutique.",
     importance: 'max',
     vibration: [0, 200, 100, 200, 100, 400],
-    sound: null,
+    sound: 'notif_commande',
   },
   booking: {
     kind: 'booking',
-    id: 'linky.booking.v1',
+    id: 'linky.booking.v2',
     name: 'Réservations',
     description: 'Une demande de réservation ou une signature attend ta réponse.',
     importance: 'max',
     vibration: [0, 400, 150, 400],
-    sound: null,
+    // Le client a proposé lui-même de partager ce son entre commandes et
+    // réservations (« on met le 1er pour les notifs de commandes et de
+    // réservations »). Les deux restent distinguées par leur VIBRATION.
+    sound: 'notif_commande',
   },
   delivery: {
     kind: 'delivery',
-    id: 'linky.delivery.v1',
+    id: 'linky.delivery.v2',
     name: 'Livraisons',
     description: "Une course t'a été confiée, ou son état a changé.",
     importance: 'max',
     vibration: [0, 120, 80, 120, 80, 120, 80, 120],
-    sound: null,
+    sound: 'notif_livraison',
   },
   success: {
     kind: 'success',
-    id: 'linky.success.v1',
+    id: 'linky.success.v2',
     name: 'Confirmations',
     description: 'Paiement accepté, réservation confirmée, retrait effectué.',
     importance: 'high',
     vibration: [0, 180],
-    sound: null,
+    sound: 'notif_validation',
   },
   failure: {
     kind: 'failure',
-    id: 'linky.failure.v1',
+    id: 'linky.failure.v2',
     name: 'Échecs et annulations',
     description: "Un paiement n'a pas abouti, ou une demande a été annulée.",
     importance: 'high',
     vibration: [0, 500, 200, 500],
-    sound: null,
+    sound: 'notif_echec',
   },
   message: {
     kind: 'message',
-    id: 'linky.message.v1',
+    id: 'linky.message.v2',
     name: 'Messages',
     description: 'Messagerie entre acheteurs et vendeurs.',
     importance: 'high',
@@ -126,7 +145,7 @@ export const CHANNELS: Record<NotifyKind, ChannelSpec> = {
   },
   info: {
     kind: 'info',
-    id: 'linky.info.v1',
+    id: 'linky.info.v2',
     name: 'Informations',
     description: 'Annonces et informations de Linky.',
     importance: 'default',
@@ -150,10 +169,19 @@ export const ALL_CHANNELS: ChannelSpec[] = [
  * L'identifiant de canal à envoyer à CET appareil, ou `null` s'il ne faut pas
  * en envoyer. `deviceVersion` vient de push_tokens.channels_v : 0 = un bundle
  * antérieur à ce lot, qui n'a créé aucun de ces canaux.
+ *
+ * ⚠️ ON REND L'IDENTIFIANT DE LA VERSION DE L'APPAREIL, jamais celui de la
+ * version courante. Un téléphone resté en v1 n'a que des canaux `…v1` ; lui
+ * envoyer `linky.order.v2` ferait disparaître la notification en silence —
+ * c'est précisément le piège que tout ce mécanisme de versions existe pour
+ * éviter. On plafonne à CHANNELS_VERSION au cas où un appareil annoncerait une
+ * version que ce serveur ne connaît pas encore (déploiement en cours).
  */
 export function channelIdFor(kind: NotifyKind, deviceVersion: number): string | null {
   if (!Number.isFinite(deviceVersion) || deviceVersion < 1) return null;
-  return CHANNELS[kind]?.id ?? null;
+  if (!CHANNELS[kind]) return null;
+  const v = Math.min(Math.floor(deviceVersion), CHANNELS_VERSION);
+  return `linky.${kind}.v${v}`;
 }
 
 /**

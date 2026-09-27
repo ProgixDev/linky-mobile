@@ -205,7 +205,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         icon: './assets/images/android-icon-monochrome.png',
         color: '#0E6E55',
-        defaultChannel: 'linky.delivery.v1',
+        defaultChannel: 'linky.delivery.v2',
+        // LES SONS DU CLIENT. Le plugin les copie dans res/raw au prebuild —
+        // c'est la voie officielle en projet managed, et la SEULE : un son
+        // n'arrive jamais par une mise a jour OTA, il est embarque dans le
+        // binaire. Un canal qui les nomme sans qu'ils soient dans le build
+        // retombe silencieusement sur le son systeme.
+        sounds: [
+          './assets/sounds/notif_commande.wav',
+          './assets/sounds/notif_livraison.wav',
+          './assets/sounds/notif_validation.wav',
+          './assets/sounds/notif_echec.wav',
+        ],
         enableBackgroundRemoteNotifications: false,
       },
     ],

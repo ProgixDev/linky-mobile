@@ -103,8 +103,22 @@ const IMPORTANCE = {
  * disparaître la notification — sans son, sans bandeau, sans erreur. Créer un
  * canal existant est un no-op, donc cet appel est rejoué à chaque démarrage.
  */
-export async function ensureChannels(): Promise<void> {
-  if (Platform.OS !== 'android') return;
+/**
+ * Crée les canaux et rend la version RÉELLEMENT disponible sur cet appareil.
+ *
+ * Déclarer la version VISÉE plutôt que celle OBTENUE rouvrirait le piège que ce
+ * mécanisme existe pour fermer : si la création échoue — fichier son absent du
+ * binaire, ce qui arrive dès qu'un ancien build prend une mise à jour OTA plus
+ * récente — le serveur nommerait un canal inexistant et la notification
+ * disparaîtrait, sans son, sans bannière et sans erreur nulle part.
+ *
+ * En cas de doute on rend 0 : le serveur n'envoie alors aucun channelId et la
+ * notification s'affiche sur le canal par défaut. Perdre le son est une
+ * dégradation ; perdre la notification serait une panne.
+ */
+export async function ensureChannels(): Promise<number> {
+  if (Platform.OS !== 'android') return CHANNELS_VERSION;
+  let ok = true;
   for (const c of ALL_CHANNELS) {
     try {
       await Notifications.setNotificationChannelAsync(c.id, {
@@ -117,10 +131,19 @@ export async function ensureChannels(): Promise<void> {
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         ...(c.sound ? { sound: `${c.sound}.wav` } : {}),
       });
+      // On RELIT : setNotificationChannelAsync peut rendre la main sans avoir
+      // rien créé, et c'est le seul moyen de le savoir.
+      const pose = await Notifications.getNotificationChannelAsync(c.id);
+      if (!pose) {
+        ok = false;
+        logger.warn(`[push] canal ${c.id} introuvable après création`);
+      }
     } catch (e) {
+      ok = false;
       logger.warn(`[push] canal ${c.id} non créé`, e);
     }
   }
+  return ok ? CHANNELS_VERSION : 0;
 }
 
 /**
@@ -143,9 +166,12 @@ export async function ensureDecisionCategory(): Promise<void> {
   }
 }
 
+/** La version de canaux effectivement disponible, relue à chaque enregistrement. */
+let channelsReady = 0;
+
 /** Conservé pour les appelants existants : crée désormais tous les canaux. */
 export async function ensureDeliveryChannel(): Promise<void> {
-  await ensureChannels();
+  channelsReady = await ensureChannels();
   await ensureDecisionCategory();
 }
 
@@ -198,7 +224,7 @@ export async function registerPushToken(): Promise<string | null> {
         app: APP_KIND,
         // Ce que CE bundle sait faire : le serveur ne nommera un canal que si
         // cette version le couvre.
-        channels_v: CHANNELS_VERSION,
+        channels_v: channelsReady,
       },
     });
     await appStorage.set(PUSH_TOKEN_KEY, token);

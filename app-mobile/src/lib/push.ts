@@ -54,6 +54,10 @@ Notifications.setNotificationHandler({
   },
 });
 
+/** La version de canaux effectivement disponible, relue a chaque
+ *  enregistrement. 0 tant qu'on n'a rien pu creer. */
+let channelsReady = 0;
+
 const IMPORTANCE = {
   max: Notifications.AndroidImportance.MAX,
   high: Notifications.AndroidImportance.HIGH,
@@ -73,8 +77,27 @@ const IMPORTANCE = {
  * fichiers son du client ne sont pas integres (ils exigent un build), ce sont
  * les motifs de VIBRATION qui distinguent deja les trois evenements.
  */
-export async function ensureChannels(): Promise<void> {
-  if (Platform.OS !== 'android') return;
+/**
+ * Cree les canaux et rend la version REELLEMENT disponible sur cet appareil.
+ *
+ * ┌─ POURQUOI UN RETOUR, ET PAS UN `void` ─────────────────────────────────┐
+ * Le jeton declare `channels_v`, et le serveur s'en sert pour decider s'il
+ * peut nommer un canal. Declarer la version VISEE plutot que celle OBTENUE
+ * rouvre exactement le piege que tout ce mecanisme existe pour fermer : si la
+ * creation echoue — un fichier son absent du binaire, par exemple, ce qui
+ * arrive des qu'un ancien build prend une mise a jour OTA plus recente — le
+ * serveur nommerait un canal inexistant et la notification disparaitrait, sans
+ * son, sans banniere et sans erreur nulle part.
+ *
+ * On verifie donc chaque canal APRES l'avoir cree. En cas de doute on rend 0 :
+ * le serveur n'envoie alors aucun channelId, et la notification s'affiche sur
+ * le canal par defaut — son generique, mais VISIBLE. Perdre le son est une
+ * degradation ; perdre la notification serait une panne.
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
+export async function ensureChannels(): Promise<number> {
+  if (Platform.OS !== 'android') return CHANNELS_VERSION;
+  let ok = true;
   for (const c of ALL_CHANNELS) {
     try {
       await Notifications.setNotificationChannelAsync(c.id, {
@@ -87,12 +110,22 @@ export async function ensureChannels(): Promise<void> {
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         ...(c.sound ? { sound: `${c.sound}.wav` } : {}),
       });
+      // On RELIT : setNotificationChannelAsync peut rendre la main sans avoir
+      // rien cree, et c'est le seul moyen de le savoir.
+      const pose = await Notifications.getNotificationChannelAsync(c.id);
+      if (!pose) {
+        ok = false;
+        console.warn(`[push] canal ${c.id} introuvable apres creation`);
+      }
     } catch (e) {
-      // Un canal qui echoue ne doit pas empecher les autres d'exister : sans
-      // canal, le push qui le nomme ne s'afficherait pas du tout.
+      // Un canal qui echoue ne doit pas empecher les autres d'exister, mais il
+      // interdit d'annoncer cette version : le serveur nommerait un canal
+      // absent et la notification disparaitrait.
+      ok = false;
       console.warn(`[push] canal ${c.id} non cree :`, e);
     }
   }
+  return ok ? CHANNELS_VERSION : 0;
 }
 
 /**
@@ -132,7 +165,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
   if (status !== 'granted') return null;
 
-  await ensureChannels();
+  channelsReady = await ensureChannels();
   await ensureDecisionCategory();
 
   const projectId = (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)
@@ -159,7 +192,7 @@ export async function registerPushToken(): Promise<void> {
         // Ce que CE bundle sait faire. Le serveur ne nommera un canal que si
         // cette version le couvre — nommer un canal absent rend la
         // notification invisible sur Android.
-        channels_v: CHANNELS_VERSION,
+        channels_v: channelsReady,
       },
     });
     storage.set(STORAGE_KEYS.pushToken, token);
@@ -213,7 +246,7 @@ export function usePushRegistration(): void {
             token,
             platform: Platform.OS === 'ios' ? 'ios' : 'android',
             device_label: Device.modelName ?? undefined,
-            channels_v: CHANNELS_VERSION,
+            channels_v: channelsReady,
           },
         });
         // Re-check after the await : if the user logged out mid-flight,
