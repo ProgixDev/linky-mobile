@@ -47,14 +47,46 @@ export default function BookingsRoute() {
   const hasLiveExtension = (id: string) =>
     all.some((x) => x.extendsBookingId === id
       && ['requested', 'accepted', 'paid', 'active', 'disputed'].includes(x.status));
+  // ┌─ « PROLONGER » EXIGE D'AVOIR EMMENAGE (client 2026-09-27) ─────────────
+  // « Il faut d'abord occuper le logement avant de prolonger son sejour. »
+  // 'paid' etait accepte jusqu'ici, au motif que le bail etait deja paye et
+  // qu'il ne manquait que la confirmation. Le client tranche l'inverse, et la
+  // regle d'ARGENT lui donne raison : booking-request ne dispense de la
+  // seconde caution que si le bail parent est 'active' — parce qu'alors seule-
+  // ment elle est reellement partie chez le proprietaire. Sur un parent 'paid',
+  // l'argent dort encore en sequestre et reste integralement remboursable ; la
+  // prolongation reclamait donc une DEUXIEME caution, sans que rien a l'ecran
+  // ne l'explique. Le bouton promettait une suite simple et ouvrait sur une
+  // surprise.
+  // └────────────────────────────────────────────────────────────────────────┘
   const extendHandler = (b: Booking) => {
-    if (b.status !== 'active' && b.status !== 'paid') return undefined;
+    if (b.status !== 'active') return undefined;
     if (hasLiveExtension(b.id)) return undefined;
     if (b.period === 'day') return () => router.push(`/property/${b.propertyId}/book` as never);
     if (b.period !== 'month' || !b.months) return undefined;
     if (addMonthsClamped(b.startDate, b.months) <= new Date().toISOString().slice(0, 10)) return undefined;
     return () => router.push(`/property/${b.propertyId}/book?extend=${b.id}` as never);
   };
+  // AVANT L'EMMENAGEMENT, « MODIFIER » PREND SA PLACE (client 2026-09-27 :
+  // « on pourrait aller plus loin en remplacant le bouton Prolonger par
+  // Modifier ma reservation [...] du statut En attente jusqu'a la confirmation
+  // de l'amenagement »).
+  //
+  // CE QU'IL Y A DERRIERE, POUR QUE L'ETIQUETTE NE MENTE PAS : l'ecran de
+  // detail permet d'annuler — la demande tant qu'elle n'est pas payee, et le
+  // sejour paye jusqu'a 48 h avant l'emmenagement, avec remboursement integral.
+  // « Modifier », ici, veut donc dire « annuler et reprendre d'autres dates »,
+  // ce qui est la seule modification qui existe aujourd'hui. Le jour ou un vrai
+  // changement de dates sera possible, il se posera au meme endroit.
+  //
+  // Toucher la carte mene deja au detail ; ce bouton n'y ajoute pas un chemin,
+  // il REND VISIBLE ce qu'on peut faire a ce stade — la ou l'ancien bouton
+  // proposait au contraire quelque chose qui n'etait pas encore permis.
+  const manageHandler = (b: Booking) => {
+    if (!['requested', 'accepted', 'paid'].includes(b.status)) return undefined;
+    return () => router.push(`/bookings/${b.id}` as never);
+  };
+
   const FILTERS = useBookingFilterChips();
   const filtered = filterBookings(bookings, filter);
 
@@ -143,9 +175,14 @@ export default function BookingsRoute() {
                 // passe le parametre `extend` : le calendrier verrouille alors
                 // la date de depart sur la fin du bail en cours, et le serveur
                 // la recalcule de son cote sans faire confiance a l'ecran.
-                // 'paid' compte autant qu"'active' : le bail est deja paye,
-                // seule la confirmation d'emmenagement manque.
+                // CE QUI SUIT A ETE RENVERSE LE 2026-09-27. On lisait ici
+                // que « 'paid' compte autant qu'active' ». Le client a tranche
+                // l'inverse — on occupe d'abord, on prolonge ensuite — et la
+                // regle de caution allait deja dans ce sens. Voir extendHandler.
                 onExtend={extendHandler(b)}
+                // Les deux ne coexistent jamais : extendHandler exige 'active',
+                // manageHandler exige un statut anterieur.
+                onManage={manageHandler(b)}
               />
             ))}
           </View>

@@ -2,7 +2,7 @@
 // Used by the tenant screens (/bookings) and the landlord screens (/agent/leases).
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
-import { CalendarDays, CalendarPlus, Check, Clock, FileText, X as XIcon } from 'lucide-react-native';
+import { CalendarDays, CalendarPlus, Check, Clock, FileText, Pencil, X as XIcon } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { formatGNF } from '../../lib/format';
@@ -72,6 +72,12 @@ export function bookingPeriodText(b: Booking): string {
  * reservation est en "Actives", rajouter un bouton "Prolonger" qui renvoie vers
  * le calendrier de reservation »).
  *
+ * `onManage` — « Modifier », son pendant AVANT l'emmenagement (client
+ * 2026-09-27 : « Il faut d'abord occuper le logement avant de prolonger son
+ * sejour [...] on pourrait remplacer le bouton Prolonger par Modifier ma
+ * reservation »). Les deux ne coexistent jamais : la liste n'en fournit qu'un,
+ * selon le statut.
+ *
  * IL EST OPTIONNEL, ET C'EST LE POINT. Cette carte sert AUSSI la liste de
  * l'agent (app/agent/leases/index.tsx) : un bouton pose ici sans condition
  * proposerait au proprietaire de prolonger le sejour de son locataire, ce qui
@@ -82,10 +88,12 @@ export function BookingCard({
   booking,
   onPress,
   onExtend,
+  onManage,
 }: {
   booking: Booking;
   onPress: () => void;
   onExtend?: () => void;
+  onManage?: () => void;
 }) {
   const { colors } = useTheme();
   const cover = booking.property?.cover_url ?? null;
@@ -122,11 +130,11 @@ export function BookingCard({
       </View>
       <View style={{ alignSelf: 'flex-start', alignItems: 'flex-end', gap: 8 }}>
         <BookingStatusChip status={booking.status} />
-        {onExtend && (
+        {(onExtend || onManage) && (
           <Pressable
-            onPress={onExtend}
+            onPress={onExtend ?? onManage}
             accessibilityRole="button"
-            accessibilityLabel="Prolonger ce séjour"
+            accessibilityLabel={onExtend ? 'Prolonger ce séjour' : 'Modifier ma réservation'}
             // Le toucher ne doit pas remonter a la carte, qui ouvre le detail.
             hitSlop={6}
             style={{
@@ -141,9 +149,11 @@ export function BookingCard({
               backgroundColor: colors.bgSunken,
             }}
           >
-            <CalendarPlus size={13} color={colors.text} strokeWidth={2} />
+            {onExtend
+              ? <CalendarPlus size={13} color={colors.text} strokeWidth={2} />
+              : <Pencil size={13} color={colors.text} strokeWidth={2} />}
             <Text style={{ fontSize: 12, fontWeight: '700', letterSpacing: 0, includeFontPadding: false }}>
-              Prolonger
+              {onExtend ? 'Prolonger' : 'Modifier'}
             </Text>
           </Pressable>
         )}
