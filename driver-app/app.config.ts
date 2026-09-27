@@ -93,6 +93,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // (aapt check), not only inferred from expo-notifications. CAMERA / location come
     // from expo-camera + expo-image-picker + expo-location.
     permissions: ['android.permission.POST_NOTIFICATIONS'],
+    // SANS CE FICHIER, AUCUN JETON FCM N'EST OBTENABLE en build autonome — c'est
+    // la cause des 0 jetons enregistres cote livreur, et donc du fait qu'aucun
+    // livreur n'a jamais pu etre alerte. Le paquet `com.linky.driver` doit
+    // exister dans le projet Firebase `linky-757d0` pour que ce fichier le
+    // contienne ; l'app marketplace a le sien depuis toujours.
+    //
+    // Le projet est en mode managed (aucun android/ dans git) : c'est EAS qui
+    // genere le natif au build, et il lit cette cle pour y deposer le fichier.
+    googleServicesFile: './google-services.json',
   },
   web: {
     output: 'static',
@@ -184,14 +193,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     [
       // New-delivery push. `icon` is the white-on-transparent small-icon (reuses the
-      // monochrome adaptive icon) tinted Linky-green; the high-importance "deliveries"
-      // channel is created at runtime (registerForDeliveryPush). iOS APNS key is the
-      // owner blocker for standalone delivery (FCM google-services.json on Android).
+      // monochrome adaptive icon) tinted Linky-green.
+      //
+      // `defaultChannel` ecrit `default_notification_channel_id` dans le
+      // manifeste : c'est le canal qu'Android utilise quand un push n'en nomme
+      // aucun. Il valait 'deliveries', un identifiant que l'app ne cree PLUS
+      // depuis le passage aux canaux versionnes (2026-09-27) — le manifeste
+      // pointait donc dans le vide. Il doit nommer un canal reellement cree par
+      // ensureChannels(), donc celui de notify-kinds.ts.
       'expo-notifications',
       {
         icon: './assets/images/android-icon-monochrome.png',
         color: '#0E6E55',
-        defaultChannel: 'deliveries',
+        defaultChannel: 'linky.delivery.v1',
         enableBackgroundRemoteNotifications: false,
       },
     ],
