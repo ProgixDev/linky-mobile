@@ -124,6 +124,17 @@ language plpgsql
 security definer
 set search_path to ''
 as $fn$
+#variable_conflict use_column
+-- LA DIRECTIVE CI-DESSUS DOIT ETRE LE PREMIER ELEMENT DU CORPS, avant meme un
+-- commentaire : plpgsql ne lit les options de compilation qu'en tete.
+--
+-- AMBIGUITE LEVEE UNE FOIS POUR TOUTES. `kind` et `ref_id` sont a la fois des
+-- parametres de SORTIE de cette fonction (returns table) et des colonnes de
+-- notification_nudges : dans `on conflict (kind, ref_id)`, plpgsql ne peut pas
+-- deviner lequel on designe, et refuse (42702). La directive dit que la colonne
+-- gagne, ce qui est le sens voulu partout ici — les variables propres a la
+-- fonction (p_limit, v_ladder) ne portent aucun nom de colonne, elles ne sont
+-- donc pas concernees.
 declare
   -- L'ECHELLE. Quatre rappels, de plus en plus espaces, puis le silence : au
   -- dela on ne rend service a personne, et les balayages existants prennent le
@@ -135,7 +146,10 @@ begin
   -- (a) Noter ce qu'on voit pour la premiere fois.
   insert into public.notification_nudges (kind, ref_id)
   select t.kind, t.ref_id from public.pending_nudge_targets() t
-  on conflict (kind, ref_id) do nothing;
+  -- Par la CONTRAINTE et non par les colonnes : `on conflict (kind, ref_id)`
+  -- reintroduirait l'ambiguite que la directive ci-dessus vient de lever, et
+  -- une seule des deux protections suffirait — les deux coutent une ligne.
+  on conflict on constraint notification_nudges_pkey do nothing;
 
   -- (b) Oublier ce qui n'attend plus personne. C'est CE menage qui arrete la
   --     relance : des que le vendeur expedie, que le proprietaire repond ou que
