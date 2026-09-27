@@ -132,3 +132,26 @@ et une restitution.
 Le sceptique a réfuté #4 (`products.stock` n'est plus une porte sur une annonce à
 déclinaisons). #5 (le `NULL` survit à la bascule « À donner » → don illimité) **n'a pas été
 vérifié** : à confirmer, il dépend de la même prémisse.
+
+---
+
+# ✅ TRAITÉ le 2026-09-27 (`c23ee48`, migration `20260929_03`)
+
+| # | quoi | où |
+|---|---|---|
+| **#15** | argent : panier multi-boutiques + don | corrigé et déployé (`c2ffba7`) |
+| **#13** | la garde bloquait **à vie** après une seule vente | migration `_03` |
+| **#11** | sens déclinaisons → simple non gardé | migration `_03` |
+| **#8** | ordre de saisie non conservé (colonne `position`) | migration `_03` + `get-product` |
+| **#6** | champ « Quantité » qui ment | OTA |
+| **#19 / #9** | limite de 20 dite à la saisie + `maxLength` | OTA |
+| **#18** | pas de plafond sur le stock par combinaison | `_shared/variants.ts` |
+| **#17 / #7** | ordre patch/matrice selon le sens de la bascule | `product-update` |
+| **#1** | ligne de panier périmée : réparée au lieu de bloquer | OTA |
+| **#3** | clé React de la fiche commande | OTA |
+
+**Reste ouvert :** #12 (`stock_taken` inconditionnel — demande une chirurgie sur les
+deux fonctions de commande, délibérément reporté), #2 (le remède du panier crée une
+ligne sœur — #1 en retire la cause la plus fréquente), #16 (`product-create` publie
+avant d'écrire la matrice — #18 en ferme le déclencheur principal), #14 (console de
+litige sans la combinaison), #10 (ordre de verrouillage), #5 (à confirmer).
