@@ -171,19 +171,35 @@ export default function CreatePropertyLocationRoute() {
         </View>
 
         <View style={{ marginTop: 14 }}>
-          {/* CENTRE DANS LA PAGE (client 2026-09-08). Sans `style` ni `block`, le
-              composant applique alignSelf: 'flex-start' — et dans une colonne
-              c'est l'axe HORIZONTAL : le bouton se collait a gauche, avec un
-              vide a sa droite sous une carte, elle, pleine largeur.
-              Le texte etait deja centre a l'interieur (justifyContent: 'center'
-              dans Button) ; c'est le bouton entier qui etait decale. */}
+          {/* DEUX PLAINTES, DEUX ANS D'ECART, LE MEME BOUTON.
+              2026-09-08 : sans `style` ni `block`, Button applique
+              alignSelf: 'flex-start' — dans une colonne c'est l'axe HORIZONTAL,
+              donc le bouton se collait a gauche sous une carte pleine largeur.
+              Corrige alors par alignSelf: 'center'.
+              2026-09-27 : le bouton etait bien centre, mais son CONTENU
+              paraissait pousse a droite. `block` regle les deux d'un coup — le
+              bouton prend la largeur de la carte, et son
+              justifyContent: 'center' centre l'icone et le libelle sur toute
+              cette largeur. On ne touche pas a la primitive Button : elle sert
+              partout, et un changement de justification s'y verrait sur des
+              dizaines d'ecrans. */}
           <Button
             variant="secondary"
             label={busy ? t('create.locationMyPositionBusy') : t('create.locationMyPosition')}
             disabled={busy}
             onPress={handleMyPosition}
             leading={<I.pin size={14} color={colors.text} />}
-            style={{ alignSelf: 'center' }}
+            // PLEINE LARGEUR, ET PAS alignSelf: 'center' (client 2026-09-27).
+            // Le bouton etait DEJA centre depuis le 2026-09-08 — mais son
+            // CONTENU, lui, paraissait pousse a droite : l'icone et le libelle
+            // ne tombaient pas sur l'axe du bouton. Plutot que de corriger la
+            // primitive Button, qui sert partout et dont un changement de
+            // justification se verrait sur des dizaines d'ecrans, on donne ici
+            // au bouton la largeur de la CARTE au-dessus. Son
+            // justifyContent: 'center' centre alors le contenu sur toute cette
+            // largeur, et le bouton s'aligne sur les bords de la carte au lieu
+            // de flotter dessous.
+            block
           />
         </View>
       </View>
