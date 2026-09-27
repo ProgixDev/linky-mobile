@@ -385,6 +385,26 @@ export default function CartRoute() {
               );
               return;
             }
+            // ┌─ UN DON SE PREND SEUL ────────────────────────────────────────┐
+            // Le serveur le refuse desormais des deux cotes (GIFT_ALONE en
+            // mono-boutique ET en lot), mais se faire refuser APRES avoir choisi
+            // son moyen de paiement, sans savoir quel article pose probleme, est
+            // une impasse : le panier n'est pas vide, donc la tentative suivante
+            // echoue a l'identique.
+            //
+            // On le dit donc ici, en NOMMANT le don. Le melange partait
+            // jusqu'ici au paiement sans un mot et facturait 15 000 GNF de
+            // livraison pour un objet gratuit.
+            // └──────────────────────────────────────────────────────────────┘
+            const gift = items.find(({ product }) => product.isGift === true);
+            if (gift && items.length > 1) {
+              haptic.light();
+              toast.show(
+                `« ${gift.product.title} » est un don : il se commande seul, sans autre article.`,
+                'info',
+              );
+              return;
+            }
             haptic.light();
             router.push('/checkout');
           }}

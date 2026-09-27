@@ -122,6 +122,46 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     throwApi('STRIPE_NOT_CONFIGURED', 503, 'Le paiement par carte arrive bientôt.');
   }
 
+  // ┌─ UN DON NE SE MELANGE A RIEN, ET CE CHEMIN L'AVAIT OUBLIE ────────────┐
+  // place-order (mono-boutique) relit products.is_gift et refuse GIFT_ALONE.
+  // Cette fonction-ci ne l'a jamais fait, et le RPC deploye non plus : un
+  // panier contenant un don de la boutique A et un article payant de la
+  // boutique B partait donc ICI, parce que isBatch ne regarde que le nombre de
+  // boutiques.
+  //
+  // CE QUE CA COUTAIT, verifie maillon par maillon :
+  //   - isGiftCart cote appli exige que TOUS les articles soient des dons, donc
+  //     le panier mixte n'est pas force en retrait : la commande du don part en
+  //     livraison avec amount_minor = 0 et total_minor = 15 000 (le forfait) ;
+  //   - l'acheteur est DEBITE 15 000 GNF pour un objet gratuit — exactement ce
+  //     que le lot « A donner » interdit ;
+  //   - la contrainte orders_gift_is_free_pickup ne proteste pas : elle est
+  //     conditionnee a payment_method = 'gift', or ici le moyen est celui que
+  //     l'acheteur a choisi ;
+  //   - les six portes GIFT_ORDER testent la meme chose, donc aucune ne se leve ;
+  //   - a la reception, confirm_order_receipt fait post_transfer(..., 0), que
+  //     post_transfer refuse (INVALID_AMOUNT) et que personne ne traduit : 500
+  //     opaque a CHAQUE tentative. La commande n'est JAMAIS closable et les
+  //     15 000 GNF restent dans le sequestre POOLE.
+  //
+  // On refuse donc ici, avant la moindre ecriture, avec le meme code et le meme
+  // message que le chemin mono-boutique. Relu EN BASE et jamais depuis le corps
+  // de la requete : rien de ce que le telephone envoie ne peut transformer un
+  // article payant en don, ni l'inverse.
+  // └────────────────────────────────────────────────────────────────────────┘
+  const { data: giftRows, error: eGift } = await sb
+    .from('products')
+    .select('id, is_gift')
+    .in('id', body.items.map((i) => i.product_id));
+  if (eGift) {
+    console.error('[place-orders-batch] gift lookup:', eGift);
+    throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+  }
+  if (((giftRows as { id: string; is_gift: boolean }[] | null) ?? []).some((r) => r.is_gift)) {
+    throwApi('GIFT_ALONE', 400,
+      'Un article à donner se commande seul, sans autre article.');
+  }
+
   const deliveryMode = body.delivery_mode ?? 'delivery';
   // Le frais de livraison est decide cote serveur — le corps de la requete ne
   // porte jamais de montant. Depuis 2026-09-03 le RPC calcule la distance PAR
