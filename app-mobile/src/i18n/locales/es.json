@@ -734,7 +734,8 @@
     "variantsChoiceRequired": "Hay que elegir de nuevo",
     "variantsPickSize": "Talla",
     "variantsPickColor": "Color",
-    "variantsRemaining": "Quedan {{count}}."
+    "variantsRemaining": "Quedan {{count}}.",
+    "variantsTooMany": "Veinte combinaciones como máximo ({{max}}). Quita una talla o un color."
   },
   "seller": {
     "ordersTitle": "Pedidos recibidos",

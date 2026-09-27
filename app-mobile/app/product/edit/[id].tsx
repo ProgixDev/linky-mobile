@@ -627,6 +627,7 @@ export default function ProductEditRoute() {
               />
             )}
 
+            {!variants.enabled && (
             <Input
               label="Quantité disponible"
               value={stock}
@@ -645,6 +646,7 @@ export default function ProductEditRoute() {
                     : `L’acheteur ne pourra pas en commander plus de ${Number(stock)}.`
               }
             />
+            )}
 
             {/* TAILLES ET COULEURS — sous la quantité, dont elles prennent le
                 relais : dès que l'option est cochée, c'est la matrice qui porte

@@ -29,7 +29,7 @@ export default function CartRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const toast = useToast();
-  const { lines, setQuantity, remove } = useCart();
+  const { lines, setQuantity, remove, dropVariant } = useCart();
   const { requireBuyer } = useBuyerGate();
 
   // One real-backend fetch per cart line; shared cache with useProduct on the
@@ -75,6 +75,28 @@ export default function CartRoute() {
     line.variantId ? (product.variants ?? []).find((v) => v.id === line.variantId) : undefined;
   const needsChoice = (line: (typeof lines)[number], product: Product) =>
     product.hasVariants === true && !lineVariant(line, product);
+
+  // LE SENS INVERSE, QUI N'ETAIT PAS COUVERT : la ligne PORTE une declinaison
+  // alors que l'annonce n'en a plus (le vendeur est repasse en article simple).
+  // Le serveur refuse alors VARIANT_UNEXPECTED et tue TOUT le lot — pour un
+  // article que rien a l'ecran ne signalait. Comme l'annonce n'a plus de
+  // declinaison, une ligne simple est exactement ce qu'il faut : on repare,
+  // on ne demande rien.
+  const staleVariant = (line: (typeof lines)[number], product: Product) =>
+    product.hasVariants !== true && !!line.variantId;
+
+  // Repare les lignes devenues incoherentes des que les annonces sont relues.
+  // Silencieux et idempotent : dropVariant ne fait rien s'il n'y a rien a
+  // reparer, donc l'effet ne peut pas boucler.
+  useEffect(() => {
+    queries.forEach((q, i) => {
+      const p = q.data;
+      const l = lines[i];
+      if (!p || !l) return;
+      if (staleVariant(l, p)) dropVariant(l.productId);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queries.map((q) => `${q.data?.id ?? ''}:${q.data?.hasVariants ?? ''}`).join(',')]);
 
   const allLoaded = queries.every((q) => !q.isLoading);
   const items = lines

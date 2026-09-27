@@ -38,6 +38,20 @@ interface CartState {
     variant?: { id: string; label?: string },
   ) => void;
   remove: (productId: string, variantId?: string) => void;
+  /**
+   * Retire la déclinaison d'une ligne dont l'annonce n'en a PLUS.
+   *
+   * Le vendeur a le droit de repasser son annonce en article simple ; la ligne
+   * de panier, elle, garde la combinaison choisie et le serveur la refuse alors
+   * (`VARIANT_UNEXPECTED`) — en tuant TOUT le lot, qui est transactionnel, pour
+   * un article dont rien ne signalait le problème. Comme l'annonce n'a plus de
+   * déclinaison, une ligne simple est exactement ce qu'il faut : on répare au
+   * lieu de demander à l'acheteur de deviner.
+   *
+   * Fusionne si une ligne simple du même article existe déjà, sinon les deux se
+   * retrouveraient à se disputer la même identité.
+   */
+  dropVariant: (productId: string) => void;
   setQuantity: (productId: string, quantity: number, variantId?: string) => void;
   /** Retire toutes les lignes d'une boutique — appele apres une commande
    *  reussie, pour ne vider QUE le groupe paye et laisser les autres en place. */
@@ -139,6 +153,23 @@ export const useCart = create<CartState>((set, get) => {
 
     remove: (productId, variantId) =>
       persistSet({ lines: get().lines.filter((l) => !sameLine(l, productId, variantId)) }),
+
+    dropVariant: (productId) => {
+      const s = get();
+      const stale = s.lines.filter((l) => l.productId === productId && l.variantId);
+      if (stale.length === 0) return;
+      const qty = stale.reduce((n, l) => n + l.quantity, 0);
+      const shopId = stale[0].shopId;
+      const kept = s.lines.filter((l) => !(l.productId === productId && l.variantId));
+      const plain = kept.find((l) => l.productId === productId);
+      persistSet({
+        lines: plain
+          ? kept.map((l) =>
+              l.productId === productId ? { ...l, quantity: l.quantity + qty } : l,
+            )
+          : [...kept, { productId, quantity: qty, shopId }],
+      });
+    },
 
     setQuantity: (productId, quantity, variantId) => {
       const s = get();

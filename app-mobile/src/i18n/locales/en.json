@@ -734,7 +734,8 @@
     "variantsChoiceRequired": "Choice needed again",
     "variantsPickSize": "Size",
     "variantsPickColor": "Colour",
-    "variantsRemaining": "Only {{count}} left."
+    "variantsRemaining": "Only {{count}} left.",
+    "variantsTooMany": "Twenty combinations maximum ({{max}}). Remove a size or a colour."
   },
   "seller": {
     "ordersTitle": "Orders received",

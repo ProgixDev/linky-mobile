@@ -185,6 +185,7 @@ export default function CreateProductDetailsRoute() {
                   />
                 </View>
               )}
+              {!state.variants.enabled && (
               <View style={state.isGift ? { flex: 1 } : { width: 100 }}>
                 <Input
                   label={t('create.fieldQuantity')}
@@ -201,6 +202,7 @@ export default function CreateProductDetailsRoute() {
                   keyboardType="number-pad"
                 />
               </View>
+              )}
             </View>
 
             {/* TAILLES ET COULEURS — juste sous la quantité, dont elles

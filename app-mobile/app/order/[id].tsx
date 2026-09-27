@@ -110,7 +110,11 @@ export default function OrderRoute() {
               }]
           ).map((it, idx) => (
             <View
-              key={it.productId}
+              // (article, declinaison) et non l'article seul : une commande
+              // peut porter le 41 ET le 44 de la meme chaussure depuis que le
+              // doublon se compte par combinaison (20260928_03). L'ecran
+              // vendeur le fait deja ainsi.
+              key={`${it.productId}:${(it as { variantLabel?: string }).variantLabel ?? ''}`}
               style={{
                 flexDirection: 'row',
                 gap: 10,

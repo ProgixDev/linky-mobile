@@ -17,6 +17,11 @@ export interface VariantBody {
 /** Le plafond. Six tailles × trois couleurs = 18 : l'exemple du client tient. */
 export const MAX_VARIANTS = 20;
 
+/** Le plafond de quantité d'UNE combinaison. Identique à celui de products.stock
+ *  dans product-create / product-update — la table fille ne doit pas être une
+ *  porte dérobée vers un stock que l'API refuserait en direct. */
+export const MAX_VARIANT_STOCK = 100_000;
+
 export function validVariants(x: unknown): boolean {
   if (x === undefined) return true;
   if (!Array.isArray(x) || x.length > MAX_VARIANTS) return false;
@@ -36,6 +41,19 @@ export function validVariants(x: unknown): boolean {
 
     if (v.stock !== undefined && v.stock !== null) {
       if (typeof v.stock !== 'number' || !Number.isInteger(v.stock) || v.stock < 0) return false;
+      // LE MEME PLAFOND QUE products.stock, ET POUR LA MEME RAISON.
+      //
+      // Il manquait ici, et la colonne fille est un `integer` : 9999999999
+      // faisait echouer le cast dans replace_product_variants (« value out of
+      // range »), message qu'aucune traduction ne reconnait, donc 500 opaque —
+      // et sur une CREATION, l'annonce etait deja publiee a ce moment-la.
+      // Trois combinaisons a 999999999 passaient chacune le cast mais faisaient
+      // deborder la somme de la remontee, cette fois depuis un declencheur.
+      //
+      // Accessoirement, sans plafond ici, 20 combinaisons a 50 000 000 posaient
+      // products.stock a un milliard : le plafond de l'annonce simple se
+      // contournait par la table fille.
+      if (v.stock > MAX_VARIANT_STOCK) return false;
     }
 
     // Deux lignes identiques se contrediraient ; la clé primaire les refuserait

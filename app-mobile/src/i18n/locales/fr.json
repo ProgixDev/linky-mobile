@@ -734,7 +734,8 @@
     "variantsChoiceRequired": "Choix à refaire",
     "variantsPickSize": "Taille",
     "variantsPickColor": "Couleur",
-    "variantsRemaining": "Il en reste {{count}}."
+    "variantsRemaining": "Il en reste {{count}}.",
+    "variantsTooMany": "Vingt combinaisons au maximum ({{max}}). Retire une taille ou une couleur."
   },
   "seller": {
     "ordersTitle": "Commandes reçues",

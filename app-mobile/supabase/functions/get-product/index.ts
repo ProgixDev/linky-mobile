@@ -34,7 +34,14 @@ Deno.serve(makePost<Body>('/v1/products/get', valid, async ({ sb, body }) => {
     // donnent L, M, S, XL — l'acheteur croirait l'appli cassee, et le vendeur
     // verrait ses propres tailles melangees dans son formulaire (la matrice
     // reconstruit ses deux listes depuis CETTE reponse).
-    .order('created_at', { ascending: true })
+    //
+    // ⚠️ `created_at` NE PEUT PAS servir, et c'est l'audit qui m'a repris :
+    // toutes les lignes d'un meme enregistrement partagent l'horodatage de la
+    // TRANSACTION, donc ce critere ne discrimine rien ; et `uuidv7()` est ici
+    // « millisecondes + 10 octets aleatoires », sans compteur, donc trier sur
+    // `id` revient a tirer au sort. Seule `position`, ecrite depuis l'ordre du
+    // tableau envoye par le telephone (20260929_03), tient la promesse.
+    .order('position', { ascending: true })
     .order('id', { ascending: true });
   if (eVar) console.error('[get-product] variants error:', eVar);
 

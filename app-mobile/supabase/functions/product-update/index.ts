@@ -121,50 +121,58 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
   if (body.district !== undefined)    patch.district = body.district === null ? null : body.district.trim() || null;
   if (body.status !== undefined)      patch.status = body.status;
 
-  // ── LA MATRICE, ECRITE AVANT LE PATCH ────────────────────────────────────
-  // ┌─ L'ORDRE COMPTE, ET CE N'EST PAS UNE QUESTION DE STYLE ────────────────┐
-  // La contrainte products_gift_has_no_variants (20260928_02) refuse qu'une
-  // annonce soit A LA FOIS un don et a declinaisons. Le geste legitime « cette
-  // annonce a tailles devient un don » arrive donc ici avec is_gift=true ET
-  // variants=[] : si le patch partait d'abord, il violerait la contrainte AVANT
-  // que la matrice ne soit retiree, et le vendeur lirait un 500 opaque pour une
-  // operation parfaitement valide.
+  // ── LA MATRICE ET LE PATCH, DANS L'ORDRE QUE LE GESTE IMPOSE ─────────────
+  // ┌─ POURQUOI CE N'EST PAS UNE QUESTION DE STYLE ──────────────────────────┐
+  // La contrainte products_gift_has_no_variants refuse qu'une annonce soit A LA
+  // FOIS un don et a declinaisons. Les deux gestes legitimes se croisent donc,
+  // et ils exigent des ordres OPPOSES :
   //
-  // Consequence assumee dans l'autre sens : si la matrice est posee et que le
-  // patch echoue ensuite, l'annonce garde ses declinaisons et son ancien titre.
-  // Rien d'incoherent — la remontee a fait son travail — et le vendeur n'a qu'a
-  // reenregistrer.
+  //   « cette annonce a tailles devient un don »  -> is_gift=true, variants=[]
+  //     La MATRICE D'ABORD : sinon le patch pose is_gift alors que
+  //     has_variants vaut encore true, et la contrainte le refuse.
+  //
+  //   « ce don redevient un article a tailles »   -> is_gift=false, variants=[...]
+  //     LE PATCH D'ABORD : sinon replace_product_variants relit is_gift EN BASE,
+  //     le trouve encore a true, et leve GIFT_HAS_NO_VARIANTS — un message qui
+  //     reproche au vendeur un etat qu'il vient precisement de supprimer dans le
+  //     meme formulaire. Et comme le refus interrompt tout, son nouveau prix et
+  //     son nouveau titre etaient perdus avec.
+  //
+  // Ce second sens est le SEUL chemin que l'interface propose pour decliner un
+  // article donne (la matrice n'apparait qu'une fois « A donner » decoche) : il
+  // etait donc systematiquement refuse.
   // └────────────────────────────────────────────────────────────────────────┘
-  // replace_product_variants fait un DIFF : elle pose ce qui arrive, MASQUE ce
-  // qui disparait mais a deja ete commande (sinon order_items.variant_id
-  // pointerait dans le vide), et supprime le reste. Elle REFUSE de convertir
-  // une annonce qui retient encore des unites : products.stock deviendrait un
-  // agregat, et la reservation d'un acheteur qui a deja paye s'evaporerait.
-  if (body.variants !== undefined) {
-    const { error: eVar } = await sb.rpc('replace_product_variants', {
-      p_product_id: body.id,
-      p_variants: variantsPayload(body.variants),
-    });
-    if (eVar) {
-      const vm = (eVar as { message?: string } | null)?.message ?? '';
-      console.error('[product-update] variants error:', eVar);
-      if (vm.includes('LIVE_ORDERS')) {
-        throwApi('LIVE_ORDERS', 409,
-          "Des commandes sont en cours sur cet article. Tu pourras ajouter des tailles et des couleurs une fois qu'elles seront terminees.");
+  async function writeVariants(): Promise<void> {
+    if (body.variants !== undefined) {
+      const { error: eVar } = await sb.rpc('replace_product_variants', {
+        p_product_id: body.id,
+        p_variants: variantsPayload(body.variants),
+      });
+      if (eVar) {
+        const vm = (eVar as { message?: string } | null)?.message ?? '';
+        console.error('[product-update] variants error:', eVar);
+        if (vm.includes('LIVE_ORDERS')) {
+          throwApi('LIVE_ORDERS', 409,
+            "Des commandes sont en cours sur cet article. Tu pourras ajouter des tailles et des couleurs une fois qu'elles seront terminees.");
+        }
+        if (vm.includes('GIFT_HAS_NO_VARIANTS')) {
+          throwApi('GIFT_HAS_NO_VARIANTS', 400,
+            "Un article a donner ne se decline pas en tailles ni en couleurs.");
+        }
+        if (vm.includes('TOO_MANY_VARIANTS')) {
+          throwApi('TOO_MANY_VARIANTS', 400, 'Vingt combinaisons au maximum.');
+        }
+        if (vm.includes('VARIANT_PRICE_PARTIAL')) {
+          throwApi('INVALID_BODY', 400, 'Un prix doit etre indique sur toutes les combinaisons, ou sur aucune.');
+        }
+        throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement des declinaisons');
       }
-      if (vm.includes('GIFT_HAS_NO_VARIANTS')) {
-        throwApi('GIFT_HAS_NO_VARIANTS', 400,
-          "Un article a donner ne se decline pas en tailles ni en couleurs.");
-      }
-      if (vm.includes('TOO_MANY_VARIANTS')) {
-        throwApi('TOO_MANY_VARIANTS', 400, 'Vingt combinaisons au maximum.');
-      }
-      if (vm.includes('VARIANT_PRICE_PARTIAL')) {
-        throwApi('INVALID_BODY', 400, 'Un prix doit etre indique sur toutes les combinaisons, ou sur aucune.');
-      }
-      throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement des declinaisons');
     }
   }
+
+  // Sortie du don : le patch d'abord, pour que la RPC lise le bon etat.
+  const leavingGift = body.is_gift === false;
+  if (!leavingGift) await writeVariants();
 
   const { data, error } = await sb
     .from('products').update(patch).eq('id', body.id)
@@ -181,6 +189,8 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
     }
     throwApi('INTERNAL_ERROR', 500, 'Erreur mise à jour');
   }
+
+  if (leavingGift) await writeVariants();
 
   return { body: { product: mapProduct(data as ProductRow) } };
 }));

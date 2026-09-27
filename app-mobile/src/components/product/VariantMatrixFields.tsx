@@ -11,6 +11,8 @@ import {
   combos,
   comboKey,
   totalStock,
+  MAX_AXIS_LEN,
+  MAX_VARIANTS,
   type VariantsDraft,
 } from '../../lib/variantsDraft';
 
@@ -47,6 +49,24 @@ export function VariantMatrixFields({
   const list = combos(value);
   const total = totalStock(value);
 
+  // ┌─ LA LIMITE SE DIT ICI, OU ELLE EST ENCORE UTILE ───────────────────────┐
+  // Au-delà de vingt combinaisons, le serveur refuse dans sa validation de
+  // FORME — donc avant le handler, avec le « Corps invalide » générique, sans
+  // dire ni la règle ni le nombre. Le message soigné écrit dans les deux
+  // fonctions edge est inatteignable par construction.
+  //
+  // Un vendeur de chaussures qui saisit 5 tailles et 5 couleurs traversait donc
+  // tout le tunnel, téléversait ses photos, remplissait 25 cases, et lisait
+  // « Corps invalide ». On refuse maintenant la valeur de trop AU MOMENT où il
+  // l'ajoute, en disant combien il en reste — c'est le seul instant où
+  // l'information sert à quelque chose.
+  // └───────────────────────────────────────────────────────────────────────┘
+  const fits = (patch: Partial<VariantsDraft>) =>
+    combos({ ...value, ...patch }).length <= MAX_VARIANTS;
+  const canAddSize = fits({ sizes: [...value.sizes, '\u0000probe'] });
+  const canAddColor = fits({ colors: [...value.colors, '\u0000probe'] });
+  const tooMany = t('create.variantsTooMany', { max: MAX_VARIANTS });
+
   return (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -78,12 +98,16 @@ export function VariantMatrixFields({
             placeholder={t('create.variantsSizesPlaceholder')}
             values={value.sizes}
             onChange={(sizes) => set({ sizes })}
+            canAdd={canAddSize}
+            blockedMessage={tooMany}
           />
           <TagField
             label={t('create.variantsColors')}
             placeholder={t('create.variantsColorsPlaceholder')}
             values={value.colors}
             onChange={(colors) => set({ colors })}
+            canAdd={canAddColor}
+            blockedMessage={tooMany}
           />
 
           {list.length === 0 ? (
@@ -167,22 +191,38 @@ function TagField({
   placeholder,
   values,
   onChange,
+  canAdd,
+  blockedMessage,
 }: {
   label: string;
   placeholder: string;
   values: string[];
   onChange: (next: string[]) => void;
+  /** Faux quand une valeur de plus dépasserait le plafond de combinaisons. */
+  canAdd: boolean;
+  blockedMessage: string;
 }) {
   const { colors, radii } = useTheme();
   const { t } = useTranslation();
   const [draft, setDraft] = useState('');
+  const [blocked, setBlocked] = useState(false);
 
   const commit = () => {
     const v = draft.trim();
     if (v === '') return;
     // Le doublon est refusé en silence : le vendeur voit que rien ne s'ajoute
-    // parce que la valeur est déjà là, juste au-dessus.
-    if (!values.includes(v)) onChange([...values, v]);
+    // parce que la valeur est déjà là, juste au-dessus. Le plafond, lui, se
+    // DIT : rien à l'écran ne permettrait de le deviner.
+    if (values.includes(v)) {
+      setDraft('');
+      return;
+    }
+    if (!canAdd) {
+      setBlocked(true);
+      return;
+    }
+    setBlocked(false);
+    onChange([...values, v]);
     setDraft('');
   };
 
@@ -198,7 +238,12 @@ function TagField({
           <Input
             label={label}
             value={draft}
-            onChangeText={setDraft}
+            onChangeText={(txt) => {
+              // maxLength plutot qu'un refus a l'enregistrement : au-dela de 40
+              // signes le serveur rend « Corps invalide », sans dire quel champ.
+              setDraft(txt.slice(0, MAX_AXIS_LEN));
+              if (blocked) setBlocked(false);
+            }}
             placeholder={placeholder}
             returnKeyType="done"
             onSubmitEditing={commit}
@@ -213,13 +258,21 @@ function TagField({
             width: 46, height: 46, borderRadius: radii.md,
             alignItems: 'center', justifyContent: 'center',
             borderWidth: 1,
-            borderColor: draft.trim() ? colors.primary : colors.border,
-            backgroundColor: draft.trim() ? colors.primarySoft : colors.card,
+            borderColor: !canAdd ? colors.border : draft.trim() ? colors.primary : colors.border,
+            backgroundColor: !canAdd
+              ? colors.bgSunken
+              : draft.trim() ? colors.primarySoft : colors.card,
+            opacity: canAdd ? 1 : 0.5,
           }}
         >
-          <I.plus size={18} color={draft.trim() ? colors.primary : colors.textFaint} />
+          <I.plus size={18} color={canAdd && draft.trim() ? colors.primary : colors.textFaint} />
         </Pressable>
       </View>
+      {blocked && (
+        <Text variant="micro" tone="danger" style={{ letterSpacing: 0, textTransform: 'none' }}>
+          {blockedMessage}
+        </Text>
+      )}
       {values.length > 0 && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {values.map((v) => (

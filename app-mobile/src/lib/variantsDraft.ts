@@ -19,6 +19,20 @@ export interface VariantsDraft {
   stock: Record<string, number | null>;
 }
 
+/**
+ * Le plafond de combinaisons. DOIT rester égal à MAX_VARIANTS de
+ * `supabase/functions/_shared/variants.ts` : au-delà, le serveur refuse dans sa
+ * validation de forme, donc AVANT le handler — le vendeur reçoit alors le
+ * « Corps invalide » générique de wrap.ts, qui ne dit ni la règle ni le nombre,
+ * après avoir rempli toutes ses cases. Le message soigné écrit dans les deux
+ * fonctions edge (« Vingt combinaisons au maximum. ») est inatteignable par
+ * construction : c'est donc ICI que la limite doit se dire.
+ */
+export const MAX_VARIANTS = 20;
+
+/** La longueur maximale d'une valeur d'axe, même raison, même fichier. */
+export const MAX_AXIS_LEN = 40;
+
 export const EMPTY_VARIANTS: VariantsDraft = {
   enabled: false,
   sizes: [],
