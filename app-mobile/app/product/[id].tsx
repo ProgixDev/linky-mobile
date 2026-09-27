@@ -36,6 +36,8 @@ import { useFavorites } from '../../src/stores/favorites';
 import { useCart } from '../../src/stores/cart';
 import { useBuyerGate } from '../../src/components/feedback/BuyerGate';
 import { useStockGate } from '../../src/lib/stockGate';
+import { useVariantSelection, VariantPicker } from '../../src/components/product/VariantPicker';
+import { variantLabel } from '../../src/lib/variantsDraft';
 import { useAuth } from '../../src/stores/auth';
 import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
@@ -75,7 +77,19 @@ export default function ProductDetailRoute() {
   // Declare AVANT le retour anticipe de la ligne 97 : un hook ne peut pas etre
   // appele conditionnellement. Tant que le produit charge, la garde porte sur
   // un identifiant vide et laisse passer — sans effet, l'ecran n'est pas rendu.
-  const gate = useStockGate({ id: product?.id ?? '', stock: product?.stock });
+  // LE CHOIX DE LA DECLINAISON. Declare ici, avant le retour anticipe, pour la
+  // meme raison que la garde ci-dessous : un hook ne peut pas etre conditionnel.
+  // Tant que l'annonce charge, la liste est vide et le selecteur est inactif.
+  const sel = useVariantSelection(product?.variants);
+  const gate = useStockGate({
+    id: product?.id ?? '',
+    // Sur une annonce a declinaisons, la verite est la quantite de la
+    // COMBINAISON choisie, jamais le total de l'annonce : il reste peut-etre
+    // huit paires, mais aucune en 44 noire. Tant que rien n'est choisi on garde
+    // le total, qui suffit a dire « rupture » quand tout est epuise.
+    stock: sel.active && sel.selected ? sel.selected.stock : product?.stock,
+    variantId: sel.selected?.id,
+  });
   const { show } = useToast();
   const [photoIdx, setPhotoIdx] = useState(0);
   const { data: shop } = useShop(product?.shopId);
@@ -402,6 +416,16 @@ export default function ProductDetailRoute() {
             </Text>
           </View>
         </View>
+
+        {/* ===== Tailles et couleurs ===== */}
+        {/* Sous le prix et AVANT la description : c'est une decision d'achat,
+            pas une caracteristique. L'acheteur qui descend lire le detail a deja
+            choisi sa taille, et les deux boutons du bas savent quoi commander. */}
+        {sel.active && (
+          <View style={{ paddingHorizontal: 24, paddingTop: 18 }}>
+            <VariantPicker sel={sel} />
+          </View>
+        )}
 
         {/* ===== Description ===== */}
         {/* Moved above the specs (client 2026-07-26) to match the property
@@ -759,18 +783,32 @@ export default function ProductDetailRoute() {
                     show(t('product.outOfStockToast'), 'info');
                     return;
                   }
+                  // RIEN SANS COMBINAISON. Le serveur refuse (VARIANT_REQUIRED)
+                  // une commande qui n'en designe pas : mieux vaut le dire ici,
+                  // ou le choix est a portee de doigt, qu'au paiement.
+                  if (sel.incomplete) {
+                    show(t('create.variantsPick'), 'info');
+                    return;
+                  }
                   if (gate.capReached) {
                     show(t('product.stockCapToast', { count: gate.declared ?? 0 }), 'info');
                     return;
                   }
-                  addToCart(product.id, product.shopId);
+                  addToCart(
+                    product.id,
+                    product.shopId,
+                    1,
+                    sel.selected
+                      ? { id: sel.selected.id, label: variantLabel(sel.selected) }
+                      : undefined,
+                  );
                   show(t('product.addedToCart'), 'success');
                 }}
                 style={{
                   flex: 1,
                   height: 52,
                   borderRadius: 999,
-                  backgroundColor: gate.canAdd ? colors.primary : colors.borderStrong,
+                  backgroundColor: gate.canAdd && !sel.incomplete ? colors.primary : colors.borderStrong,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -801,8 +839,27 @@ export default function ProductDetailRoute() {
                   // efface le panier de quelqu'un a qui on refuse ensuite l'acces
                   // au paiement — une perte silencieuse, pour rien.
                   if (!requireBuyer()) return;
+                  // Les deux gardes qui manquaient a CE bouton : il vidait le
+                  // panier et partait au paiement sans regarder le stock, pour se
+                  // faire refuser par le serveur une fois le moyen de reglement
+                  // choisi. Le refus arrive maintenant avant la perte du panier.
+                  if (gate.outOfStock) {
+                    show(t('product.outOfStockToast'), 'info');
+                    return;
+                  }
+                  if (sel.incomplete) {
+                    show(t('create.variantsPick'), 'info');
+                    return;
+                  }
                   // « Acheter » = buy THIS article now, so the cart is reset to it.
-                  replaceCart(product.id, product.shopId);
+                  replaceCart(
+                    product.id,
+                    product.shopId,
+                    1,
+                    sel.selected
+                      ? { id: sel.selected.id, label: variantLabel(sel.selected) }
+                      : undefined,
+                  );
                   router.push('/checkout');
                 }}
                 style={{

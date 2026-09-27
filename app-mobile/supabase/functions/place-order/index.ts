@@ -29,7 +29,14 @@ import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.ts';
 
-interface OrderItemInput { product_id: string; quantity: number }
+interface OrderItemInput {
+  product_id: string;
+  quantity: number;
+    // La combinaison choisie. ABSENTE sur une annonce simple, et EXIGEE par la
+    // base des que l'annonce en a (VARIANT_REQUIRED) : c'est la seule facon de
+    // savoir quelle paire preparer, et de decrementer le bon stock.
+  variant_id?: string;
+}
 
 interface Body {
   /** Multi-article order, ALL from the same shop (client 2026-08-05). When
@@ -77,6 +84,9 @@ function valid(b: unknown): b is Body {
     if (typeof v !== 'object' || v === null) return false;
     const i = v as Record<string, unknown>;
     if (typeof i.product_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(i.product_id)) return false;
+    if (i.variant_id !== undefined && i.variant_id !== null) {
+      if (typeof i.variant_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(i.variant_id)) return false;
+    }
     return typeof i.quantity === 'number' && Number.isInteger(i.quantity) && i.quantity >= 1 && i.quantity <= 100;
   };
   if (Array.isArray(x.items)) {
@@ -267,6 +277,9 @@ Deno.serve(makePost<Body>('/v1/orders/place', valid, async ({ sb, body, req }) =
     if (msg.includes('PRODUCT_NOT_FOUND'))            throwApi('PRODUCT_NOT_FOUND', 404, 'Produit introuvable.');
     if (msg.includes('PRODUCT_NOT_AVAILABLE'))        throwApi('PRODUCT_NOT_AVAILABLE', 400, 'Produit indisponible.');
     if (msg.includes('BUYER_IS_SELLER'))              throwApi('BUYER_IS_SELLER', 400, "Tu ne peux pas acheter ton propre produit.");
+    if (msg.includes('VARIANT_REQUIRED'))             throwApi('VARIANT_REQUIRED', 400, 'Choisis une taille et une couleur avant de commander.');
+    if (msg.includes('VARIANT_NOT_FOUND'))            throwApi('VARIANT_NOT_FOUND', 400, "Cette taille ou cette couleur n'est plus proposée.");
+    if (msg.includes('VARIANT_UNEXPECTED'))           throwApi('INVALID_BODY', 400, "Cet article ne se vend pas par taille ni par couleur.");
     if (msg.includes('INVALID_QUANTITY'))             throwApi('INVALID_BODY', 400, 'Quantité invalide.');
     if (msg.includes('OUT_OF_STOCK'))                 throwApi('OUT_OF_STOCK', 400, 'Cet article est en rupture de stock.');
     if (msg.includes('INSUFFICIENT_STOCK'))           throwApi('INSUFFICIENT_STOCK', 400, 'Il ne reste plus assez d\'exemplaires de cet article.');

@@ -18,6 +18,7 @@ import { formatGNF, formatEUR } from '../src/lib/format';
 import { platformFeeGnf, priceWithFeeGnf } from '../src/lib/fees';
 import { gnfToEur } from '../src/lib/currency';
 import { useCart } from '../src/stores/cart';
+import { variantLabel } from '../src/lib/variantsDraft';
 import { useBuyerGate } from '../src/components/feedback/BuyerGate';
 import { useFilters } from '../src/stores/filters';
 import { apiPost } from '../src/lib/api';
@@ -55,11 +56,25 @@ export default function CartRoute() {
       const status = (q.error as { status?: number })?.status;
       const code = (q.error as { code?: string })?.code;
       if (status === 404 || code === 'PRODUCT_NOT_FOUND') {
-        remove(lines[i].productId);
+        remove(lines[i].productId, lines[i].variantId);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queries.map((q) => q.status).join(',')]);
+
+  // ┌─ LA LIGNE DESIGNE-T-ELLE ENCORE UNE COMBINAISON VALABLE ? ─────────────┐
+  // Deux cas la cassent, et aucun n'est la faute de l'acheteur :
+  //   — la ligne a ete enregistree AVANT ce lot (pas de variantId), et l'annonce
+  //     a depuis gagne des tailles ;
+  //   — le vendeur a retire la combinaison choisie.
+  // Dans les deux cas place_order refuserait (VARIANT_REQUIRED / VARIANT_GONE)
+  // apres le choix du moyen de paiement. On le dit donc ICI, ou le choix se
+  // refait en deux touchers, et on bloque le bouton plutot que le paiement.
+  // └───────────────────────────────────────────────────────────────────────┘
+  const lineVariant = (line: (typeof lines)[number], product: Product) =>
+    line.variantId ? (product.variants ?? []).find((v) => v.id === line.variantId) : undefined;
+  const needsChoice = (line: (typeof lines)[number], product: Product) =>
+    product.hasVariants === true && !lineVariant(line, product);
 
   const allLoaded = queries.every((q) => !q.isLoading);
   const items = lines
@@ -179,7 +194,7 @@ export default function CartRoute() {
             </Pressable>
           )}
         {group.items.map(({ line, product }) => (
-          <Card key={product.id} padding={10}>
+          <Card key={`${product.id}:${line.variantId ?? ''}`} padding={10}>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Image
                 source={product.photos[0]}
@@ -190,6 +205,39 @@ export default function CartRoute() {
                 <Text style={{ fontSize: 13, fontWeight: '500', lineHeight: 17 }} numberOfLines={2}>
                   {product.title}
                 </Text>
+                {/* La combinaison choisie. On prefere le libelle VIVANT a celui
+                    fige a l'ajout : si le vendeur a renomme sa couleur, c'est
+                    son nom actuel qui compte. */}
+                {(() => {
+                  const v = lineVariant(line, product);
+                  if (needsChoice(line, product)) {
+                    return (
+                      <Pressable
+                        onPress={() => {
+                          haptic.light();
+                          router.push(`/product/${product.id}`);
+                        }}
+                        hitSlop={6}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}
+                        accessibilityRole="button"
+                      >
+                        <Text variant="micro" tone="danger" style={{ letterSpacing: 0, textTransform: 'none' }}>
+                          {t('create.variantsChoiceRequired')}
+                        </Text>
+                        <Text variant="micro" tone="primary" style={{ letterSpacing: 0, textTransform: 'none', fontWeight: '700' }}>
+                          {t('create.variantsPickShort')}
+                        </Text>
+                        <I.chevronR size={11} color={colors.primary} />
+                      </Pressable>
+                    );
+                  }
+                  const label = v ? variantLabel(v) : line.variantLabel;
+                  return label ? (
+                    <Text variant="micro" tone="muted" style={{ marginTop: 3, letterSpacing: 0, textTransform: 'none' }}>
+                      {label}
+                    </Text>
+                  ) : null;
+                })()}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                   <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>
                     {/* Prix ACHETEUR (client 2026-09-08). */}
@@ -211,8 +259,8 @@ export default function CartRoute() {
                     <Pressable
                       onPress={() => {
                         haptic.light();
-                        if (line.quantity === 1) remove(product.id);
-                        else setQuantity(product.id, line.quantity - 1);
+                        if (line.quantity === 1) remove(product.id, line.variantId);
+                        else setQuantity(product.id, line.quantity - 1, line.variantId);
                       }}
                       hitSlop={6}
                       style={{
@@ -241,16 +289,18 @@ export default function CartRoute() {
                         a été trafiqué. */}
                     <Pressable
                       onPress={() => {
-                        if (product.stock != null && line.quantity >= product.stock) {
+                        // Le plafond d'une ligne a declinaison est la quantite de
+                        // SA combinaison : il reste peut-etre huit paires, mais
+                        // une seule en 44 noire. Le total de l'annonce ne dit rien
+                        // de ce que l'acheteur peut encore prendre.
+                        const cap = lineVariant(line, product)?.stock ?? product.stock;
+                        if (cap != null && line.quantity >= cap) {
                           haptic.light();
-                          toast.show(
-                            t('cart.stockMax', { count: product.stock }),
-                            'info',
-                          );
+                          toast.show(t('cart.stockMax', { count: cap }), 'info');
                           return;
                         }
                         haptic.light();
-                        setQuantity(product.id, line.quantity + 1);
+                        setQuantity(product.id, line.quantity + 1, line.variantId);
                       }}
                       hitSlop={6}
                       style={{
@@ -258,10 +308,10 @@ export default function CartRoute() {
                         height: 30,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor:
-                          product.stock != null && line.quantity >= product.stock
-                            ? colors.borderStrong
-                            : colors.primary,
+                        backgroundColor: (() => {
+                          const cap = lineVariant(line, product)?.stock ?? product.stock;
+                          return cap != null && line.quantity >= cap ? colors.borderStrong : colors.primary;
+                        })(),
                         borderRadius: 999,
                       }}
                     >
@@ -323,6 +373,18 @@ export default function CartRoute() {
             // role acheteur : ses articles restent, mais le paiement s'arrete
             // ici plutot qu'a l'ecran suivant.
             if (!requireBuyer()) return;
+            // Une ligne sans combinaison valable ferait echouer TOUT le lot
+            // (place_orders_batch est transactionnel) : l'acheteur perdrait son
+            // paiement en cours pour un article qu'il n'a meme pas vu signale.
+            const broken = items.find(({ line, product }) => needsChoice(line, product));
+            if (broken) {
+              haptic.light();
+              toast.show(
+                `${broken.product.title} : ${t('create.variantsPick')}`,
+                'info',
+              );
+              return;
+            }
             haptic.light();
             router.push('/checkout');
           }}

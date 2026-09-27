@@ -193,6 +193,15 @@ export default function SellerOrderDetailRoute() {
         )}
 
         {/* Product */}
+        {/* ┌─ CE QU'IL Y A A PREPARER, EN ENTIER ──────────────────────────────┐
+            Cet ecran ne montrait que l'article PRINCIPAL (order.productSnapshot)
+            alors qu'une commande peut en porter plusieurs de la meme boutique
+            depuis le 2026-08-05 : le vendeur en preparait un et ignorait les
+            autres. Les declinaisons rendaient le defaut couteux — il aurait
+            envoye la mauvaise taille sans jamais voir laquelle etait commandee.
+            On liste donc `items`, en retombant sur l'instantane pour les
+            commandes anterieures, qui n'en ont pas.
+            └──────────────────────────────────────────────────────────────────┘ */}
         <View style={{ paddingHorizontal: 24 }}>
           <View
             style={{
@@ -201,42 +210,80 @@ export default function SellerOrderDetailRoute() {
               backgroundColor: colors.card,
               borderWidth: 1,
               borderColor: colors.border,
-              flexDirection: 'row',
               gap: 12,
-              alignItems: 'center',
             }}
           >
-            <Image
-              source={order.productSnapshot.photo}
-              style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: colors.bgSunken }}
-              contentFit="cover"
-            />
-            <View style={{ flex: 1 }}>
-              <Text
+            {(order.items && order.items.length > 0
+              ? order.items
+              : [{
+                  productId: order.productId,
+                  title: order.productSnapshot.title,
+                  photo: order.productSnapshot.photo,
+                  quantity: order.quantity,
+                  unitPriceGnf: order.productSnapshot.priceGnf,
+                  variantLabel: undefined as string | undefined,
+                }]
+            ).map((it, idx) => (
+              <View
+                key={`${it.productId}:${it.variantLabel ?? ''}`}
                 style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: colors.text,
-                  letterSpacing: 0,
-                  lineHeight: 18,
-                  includeFontPadding: false,
-                }}
-                numberOfLines={2}
-              >
-                {order.productSnapshot.title}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: '700',
-                  color: colors.text,
-                  marginTop: 4,
-                  fontVariant: ['tabular-nums'],
+                  flexDirection: 'row',
+                  gap: 12,
+                  alignItems: 'center',
+                  paddingTop: idx === 0 ? 0 : 12,
+                  borderTopWidth: idx === 0 ? 0 : 1,
+                  borderTopColor: colors.border,
                 }}
               >
-                {formatGNF(order.productSnapshot.priceGnf)} × {order.quantity}
-              </Text>
-            </View>
+                <Image
+                  source={it.photo}
+                  style={{ width: 64, height: 64, borderRadius: 12, backgroundColor: colors.bgSunken }}
+                  contentFit="cover"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: colors.text,
+                      letterSpacing: 0,
+                      lineHeight: 18,
+                      includeFontPadding: false,
+                    }}
+                    numberOfLines={2}
+                  >
+                    {it.title}
+                  </Text>
+                  {/* LA COMBINAISON, EN EVIDENCE ET NON EN GRIS : c'est la seule
+                      ligne de cet ecran qui decide quel exemplaire quitte la
+                      boutique. */}
+                  {it.variantLabel ? (
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '700',
+                        color: colors.primary,
+                        marginTop: 3,
+                        letterSpacing: 0,
+                      }}
+                    >
+                      {it.variantLabel}
+                    </Text>
+                  ) : null}
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: colors.text,
+                      marginTop: 4,
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {formatGNF(it.unitPriceGnf)} × {it.quantity}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
         </View>
 

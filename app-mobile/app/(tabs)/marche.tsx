@@ -170,6 +170,7 @@ export default function MarcheRoute() {
     city: filters.city ?? undefined,
     priceMaxGnf: filters.productPriceMaxGnf,
     condition: filters.productCondition,
+    giftOnly: filters.giftOnly,
     query: debouncedSearch || undefined,
     sort: filters.productSort,
   });
@@ -756,6 +757,24 @@ export default function MarcheRoute() {
                     onPress={() => filters.setProductCondition(c.value)}
                   />
                 ))}
+              </View>
+
+              {/* « A DONNER » — meme rangee-interrupteur que « Meuble uniquement »
+                  cote immobilier : un booleen n'a pas besoin d'une pastille
+                  « Tout » pour se dire. Un don reste un article du Marche, avec sa
+                  boutique et son retrait ; en faire un onglet a part l'aurait rendu
+                  introuvable pour qui ne le cherche pas. */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 18,
+                  paddingVertical: 6,
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '500' }}>{t('marche.filterGiftOnly')}</Text>
+                <Switch value={filters.giftOnly} onChange={filters.setGiftOnly} />
               </View>
 
               <MicroLabel label={t('marche.filterCity')} />

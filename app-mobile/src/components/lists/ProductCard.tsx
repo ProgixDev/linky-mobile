@@ -53,6 +53,15 @@ export function ProductCard({
       toast.show(t('product.outOfStockToast'), 'info');
       return;
     }
+    // DECLINAISONS : l'ajout rapide n'a aucune combinaison a designer, et le
+    // serveur refuserait la commande (VARIANT_REQUIRED). On ouvre donc la fiche,
+    // ou le choix se fait. C'est un geste de plus, mais c'est le seul qui
+    // aboutisse — ajouter « quelque chose » puis faire echouer le paiement
+    // serait pire, l'acheteur ne saurait meme pas quoi corriger.
+    if (product.hasVariants) {
+      router.push(`/product/${product.id}`);
+      return;
+    }
     // Deja au maximum disponible : on le DIT, avec le chiffre. Un bouton qui
     // ne fait rien sans explication se lit comme une panne.
     if (gate.capReached) {

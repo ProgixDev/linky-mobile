@@ -18,6 +18,9 @@ interface Body {
   // Filter-sheet additions: price ceiling (GNF minor) + product condition.
   price_max?: number;
   condition?: 'neuf' | 'occasion' | 'reconditionné';
+  /** Ne garder que les dons. On filtre sur is_gift et JAMAIS sur price_minor :
+   *  le drapeau est la verite, un prix a zero pourrait etre un accident. */
+  gift_only?: boolean;
   limit?: number;
   cursor?: Cursor;
 }
@@ -46,6 +49,7 @@ function valid(b: unknown): b is Body {
   if (x.sort !== undefined && x.sort !== 'recent' && x.sort !== 'popular') return false;
   if (x.price_max !== undefined && (typeof x.price_max !== 'number' || !Number.isInteger(x.price_max) || x.price_max < 0)) return false;
   if (x.condition !== undefined && (typeof x.condition !== 'string' || !CONDITIONS.has(x.condition))) return false;
+  if (x.gift_only !== undefined && typeof x.gift_only !== 'boolean') return false;
   if (x.limit !== undefined && (typeof x.limit !== 'number' || x.limit < 1 || x.limit > 100)) return false;
   if (x.cursor !== undefined && !validCursor(x.cursor)) return false;
   return true;
@@ -59,7 +63,7 @@ Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body, req }) 
   let q = sb
     .from('products')
     .select(
-      'id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, created_at' +
+      'id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, is_gift, has_variants, variant_sizes, variant_colors, created_at' +
         (ownerScoped ? ', shops!inner(owner_id)' : ''),
     );
 
@@ -74,6 +78,9 @@ Deno.serve(makePost<Body>('/v1/products/list', valid, async ({ sb, body, req }) 
   if (body.shop_id) q = q.eq('shop_id', body.shop_id);
   if (body.price_max !== undefined && body.price_max > 0) q = q.lte('price_minor', body.price_max);
   if (body.condition) q = q.eq('condition', body.condition);
+  // L'index partiel products_gift_active_idx (20260927_02) sert exactement
+  // cette requete : les dons sont rares, un balayage complet serait absurde.
+  if (body.gift_only) q = q.eq('is_gift', true);
   if (body.query) {
     // V1 text search: ILIKE on title + description. .or() with comma syntax. Escape % and , to
     // prevent users from broadening their own query by injecting wildcards or breaking the filter.

@@ -34,7 +34,14 @@ import { DELIVERY_FEE_MINOR, resolveDeliveryAddressId } from '@shared/delivery.t
 import { stripeClient, stripeConfigured, stripePublishableKey } from '@shared/stripe.ts';
 import { formatGNF } from '@shared/push.ts';
 
-interface ItemInput { product_id: string; quantity: number }
+interface ItemInput {
+  product_id: string;
+  quantity: number;
+    // La combinaison choisie. ABSENTE sur une annonce simple, et EXIGEE par la
+    // base des que l'annonce en a (VARIANT_REQUIRED) : c'est la seule facon de
+    // savoir quelle paire preparer, et de decrementer le bon stock.
+  variant_id?: string;
+}
 
 interface Body {
   items: ItemInput[];
@@ -74,6 +81,9 @@ function valid(b: unknown): b is Body {
     if (!it || typeof it.product_id !== 'string' || !UUID_RE.test(it.product_id)) return false;
     if (typeof it.quantity !== 'number' || !Number.isInteger(it.quantity)) return false;
     if (it.quantity <= 0 || it.quantity > 100) return false;
+    if (it.variant_id !== undefined && it.variant_id !== null) {
+      if (typeof it.variant_id !== 'string' || !UUID_RE.test(it.variant_id)) return false;
+    }
   }
   if (typeof x.payment_method !== 'string' || !METHODS.includes(x.payment_method)) return false;
   if (x.delivery_mode !== undefined && x.delivery_mode !== 'pickup' && x.delivery_mode !== 'delivery') return false;
@@ -138,6 +148,12 @@ Deno.serve(makePost<Body>('/v1/orders/batch', valid, async ({ sb, body, req }) =
     if (msg.includes('OUT_OF_STOCK'))            throwApi('OUT_OF_STOCK', 400, 'Un article de ton panier est en rupture de stock.');
     if (msg.includes('INSUFFICIENT_STOCK'))      throwApi('INSUFFICIENT_STOCK', 400, "Il ne reste plus assez d'exemplaires d'un article.");
     if (msg.includes('BUYER_IS_SELLER'))         throwApi('BUYER_IS_SELLER', 400, 'Tu ne peux pas acheter tes propres articles.');
+    if (msg.includes('VARIANT_REQUIRED'))        throwApi('VARIANT_REQUIRED', 400, 'Choisis une taille et une couleur avant de commander.');
+    if (msg.includes('VARIANT_NOT_FOUND'))       throwApi('VARIANT_NOT_FOUND', 400, "Une taille ou une couleur de ton panier n'est plus proposée.");
+    if (msg.includes('VARIANT_UNEXPECTED'))      throwApi('INVALID_BODY', 400, "Un article de ton panier ne se vend pas par taille ni par couleur.");
+    // Depuis 20260928_03 la garde compte par COMBINAISON : deux tailles du meme
+    // article passent. N'arrive donc plus que sur un vrai doublon — la meme
+    // annonce et la meme combinaison deux fois — que le panier ne produit pas.
     if (msg.includes('DUPLICATE_ITEM'))          throwApi('INVALID_BODY', 400, 'Article en double dans le panier.');
     if (msg.includes('TOO_MANY_SHOPS'))          throwApi('INVALID_BODY', 400, 'Trop de boutiques dans un même panier.');
     if (msg.includes('TOO_MANY_ITEMS'))          throwApi('INVALID_BODY', 400, "Trop d'articles dans le panier.");

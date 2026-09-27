@@ -103,6 +103,21 @@ export interface Shop {
   pinned?: boolean;
 }
 
+/**
+ * Une combinaison vendable : c'est ELLE qui porte le stock, pas l'article.
+ * L'exemple du client — 41 noire, 41 rouge, 44 noire — décrit six lignes, pas
+ * deux listes.
+ */
+export interface ProductVariant {
+  id: ID;
+  /** Chaîne vide quand l'axe n'est pas utilisé : un vendeur peut n'avoir que
+   *  des couleurs, ou que des tailles. */
+  size: string;
+  color: string;
+  /** null = quantité non déclarée, donc pas de limite. */
+  stock: number | null;
+}
+
 export interface Product {
   id: ID;
   shopId: ID;
@@ -128,6 +143,24 @@ export interface Product {
   stock?: number | null;
   /** « À donner » : cédé gratuitement, priceGnf vaut 0. */
   isGift?: boolean;
+  /**
+   * DÉCLINAISONS (client 2026-09-26). Vrai quand l'annonce se vend par
+   * combinaison taille/couleur : `stock` devient alors la somme des
+   * combinaisons actives, et une commande DOIT en désigner une.
+   */
+  hasVariants?: boolean;
+  /**
+   * Les valeurs distinctes, dénormalisées côté serveur pour que la vignette et
+   * la feuille de filtres n'aient aucune jointure à payer — sur 3G, un agrégat
+   * par page de liste coûterait cent fois son prix.
+   */
+  variantSizes?: string[];
+  variantColors?: string[];
+  /**
+   * La matrice complète. Renvoyée par get-product SEULEMENT : c'est une
+   * jointure, et l'écran d'une fiche n'en ouvre qu'une à la fois.
+   */
+  variants?: ProductVariant[];
   createdAt: string;
 }
 
@@ -231,7 +264,15 @@ export interface CartLine {
    *  boutiques ; c'est ce champ qui permet de les regrouper et de commander
    *  boutique par boutique. Optionnel a la lecture : les paniers enregistres
    *  avant cette version n'en ont pas. */
-  shopId?: ID;
+  shopId?: ID;  /**
+   * La déclinaison choisie (taille / couleur). Absente sur une annonce simple —
+   * et aussi sur une ligne enregistrée AVANT ce lot, y compris si l'annonce a
+   * depuis gagné des déclinaisons : l'écran du panier repère ce cas et redemande
+   * le choix, car le serveur refuserait la commande (VARIANT_REQUIRED).
+   */
+  variantId?: string;
+  /** « 41 · Noire ». Figé à l'ajout, pour l'affichage du panier. */
+  variantLabel?: string;
 }
 
 export interface Order {
@@ -284,6 +325,9 @@ export interface Order {
     quantity: number;
     unitPriceGnf: number;
     amountGnf: number;
+    /** « 41 · Noire ». Absent sur un article sans déclinaisons, et sur toute
+     *  commande passée avant le 2026-09-28. */
+    variantLabel?: string;
   }[];
 }
 

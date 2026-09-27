@@ -28,7 +28,16 @@ import { useRequestPhotoUploadUrl } from '../../../src/data/queries/products';
 import { useToast } from '../../../src/components/feedback/Toast';
 import { toToastMessage } from '../../../src/lib/api';
 import { gnfToEur } from '../../../src/lib/currency';
+import { VariantMatrixFields } from '../../../src/components/product/VariantMatrixFields';
+import {
+  draftFromProduct,
+  draftToBody,
+  EMPTY_VARIANTS,
+  type VariantsDraft,
+} from '../../../src/lib/variantsDraft';
 import { optimizePhoto } from '../../../src/lib/photoOptimize';
+import { Switch } from '../../../src/components/primitives/Switch';
+import { haptic } from '../../../src/lib/haptics';
 
 const CONDITIONS = ['neuf', 'occasion', 'reconditionné'] as const;
 // Phase I.3j — stable backend ids ; the visible label is resolved at render
@@ -94,6 +103,13 @@ export default function ProductEditRoute() {
   const [stock, setStock] = useState<string>('');
   const [videoUploading, setVideoUploading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [variants, setVariants] = useState<VariantsDraft>(EMPTY_VARIANTS);
+  // « A donner » se modifie aussi APRES publication : le geste arrive
+  // surtout la — l'article ne part pas, le vendeur finit par le donner.
+  // Sans ce drapeau ici, une annonce deja en don etait INMODIFIABLE :
+  // canSave exigeait un prix strictement positif, donc le bouton restait
+  // grise quoi que le vendeur corrige.
+  const [isGift, setIsGift] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   if (product && !hydrated) {
@@ -105,6 +121,10 @@ export default function ProductEditRoute() {
     setPhotos(product.photos ?? []);
     setVideoUrl(product.videoUrl);
     setStock(product.stock == null ? '' : String(product.stock));
+    // La matrice vient de get-product, seule requete a la renvoyer : c'est
+    // une jointure, et la payer sur les listes couterait cent fois son prix.
+    setVariants(draftFromProduct(product));
+    setIsGift(product.isGift === true);
     setHydrated(true);
   }
 
@@ -112,7 +132,15 @@ export default function ProductEditRoute() {
     hydrated && !!product && JSON.stringify(photos) !== JSON.stringify(product.photos ?? []);
   const videoDirty =
     hydrated && !!product && (videoUrl ?? null) !== (product.videoUrl ?? null);
+  // La matrice compte dans `dirty` : sans elle, un vendeur qui n'ajoute QUE des
+  // tailles verrait le bouton rester grise et croirait l'ecran casse.
+  const variantsDirty =
+    hydrated && !!product
+    && JSON.stringify(variants) !== JSON.stringify(draftFromProduct(product));
+  const giftDirty = hydrated && !!product && isGift !== (product.isGift === true);
   const dirty =
+    variantsDirty ||
+    giftDirty ||
     hydrated &&
     !!product &&
     (title.trim() !== product.title ||
@@ -123,7 +151,10 @@ export default function ProductEditRoute() {
       stock !== (product.stock == null ? '' : String(product.stock)) ||
       photosDirty ||
       videoDirty);
-  const canSave = dirty && !!title.trim() && price > 0 && !!city.trim() && photos.length >= 1;
+  // Un don n'a pas de prix a valider. Exiger price > 0 pour tout le monde
+  // interdisait d'enregistrer la moindre correction sur une annonce donnee.
+  const canSave =
+    dirty && !!title.trim() && (isGift || price > 0) && !!city.trim() && photos.length >= 1;
 
   // Optimize + upload one asset -> its public URL, or null on failure.
   async function uploadAsset(asset: PickedAsset): Promise<string | null> {
@@ -282,10 +313,18 @@ export default function ProductEditRoute() {
         id: product.id,
         title: title.trim(),
         description: description.trim(),
-        price_minor: price,
+        // Le drapeau part a CHAQUE enregistrement : le serveur force alors
+        // le prix a zero (don) ou exige un prix strictement positif (remise
+        // en vente). La contrainte de base ne peut plus etre prise a revers.
+        is_gift: isGift,
+        price_minor: isGift ? 0 : price,
         condition,
         city: city.trim(),
         stock: stock.trim() === '' ? null : Number(stock),
+        // Tableau vide = l'annonce redevient simple. Le serveur ignore
+        // `stock` ci-dessus des que la matrice est peuplee : la quantite y
+        // est CALCULEE, et l'ecrire ecraserait la remontee.
+        variants: isGift ? [] : draftToBody(variants),
         ...(photosDirty ? { photos } : {}),
         ...(videoDirty ? { video_url: videoUrl ?? null } : {}),
       });
@@ -538,13 +577,55 @@ export default function ProductEditRoute() {
               <Input multiline value={description} onChangeText={(txt) => setDescription(txt.slice(0, 600))} />
             </View>
 
-            <Input
-              label={t('productEdit.priceLabel')}
-              value={new Intl.NumberFormat('fr-FR').format(price)}
-              onChangeText={(txt) => setPrice(Number(txt.replace(/\D/g, '')) || 0)}
-              keyboardType="number-pad"
-              helperText={`≈ ${gnfToEur(price)} €`}
-            />
+            {/* « A DONNER » — la même bascule qu'à la création. */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: isGift ? colors.primary : colors.border,
+                backgroundColor: isGift ? colors.primarySoft : colors.card,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+                  {t('create.giftTitle')}
+                </Text>
+                <Text
+                  variant="micro"
+                  tone="muted"
+                  style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}
+                >
+                  {t('create.giftHint')}
+                </Text>
+              </View>
+              <Switch
+                value={isGift}
+                onChange={(v: boolean) => {
+                  haptic.light();
+                  setIsGift(v);
+                  // Le prix tombe à zéro dès la bascule, pour que l'écran dise ce
+                  // qui sera enregistré. Revenir en arrière laisse le champ à 0 :
+                  // le vendeur doit retaper son prix, et c'est voulu — remettre
+                  // l'ancien en douce le ferait republier sans regarder.
+                  if (v) setPrice(0);
+                }}
+              />
+            </View>
+
+            {!isGift && (
+              <Input
+                label={t('productEdit.priceLabel')}
+                value={new Intl.NumberFormat('fr-FR').format(price)}
+                onChangeText={(txt) => setPrice(Number(txt.replace(/\D/g, '')) || 0)}
+                keyboardType="number-pad"
+                helperText={`≈ ${gnfToEur(price)} €`}
+              />
+            )}
 
             <Input
               label="Quantité disponible"
@@ -564,6 +645,18 @@ export default function ProductEditRoute() {
                     : `L’acheteur ne pourra pas en commander plus de ${Number(stock)}.`
               }
             />
+
+            {/* TAILLES ET COULEURS — sous la quantité, dont elles prennent le
+                relais : dès que l'option est cochée, c'est la matrice qui porte
+                le stock, et le champ ci-dessus n'est plus lu par le serveur. Un
+                don n'en a pas : on ne décline pas ce qu'on donne. */}
+            {!isGift && (
+              <VariantMatrixFields
+                value={variants}
+                onChange={setVariants}
+                fallbackStock={stock.trim() === '' ? undefined : Number(stock)}
+              />
+            )}
 
             <View>
               <Text variant="micro" tone="muted" style={{ textTransform: 'none', letterSpacing: 0, marginBottom: 6 }}>

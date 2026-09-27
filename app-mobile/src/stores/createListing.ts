@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { EMPTY_TERMS, type RentalTermsDraft } from '../lib/rentalTermsDraft';
+import { EMPTY_VARIANTS, type VariantsDraft } from '../lib/variantsDraft';
 
 export type ListingKind = 'product' | 'property';
 
@@ -24,6 +25,8 @@ interface CreateListingState {
   quantity: number;
   /** « À donner » (client 2026-09-26). Met le prix à 0 et le verrouille. */
   isGift: boolean;
+  /** Matrice taille / couleur (client 2026-09-26). */
+  variants: VariantsDraft;
   condition: 'neuf' | 'occasion' | 'reconditionné';
   photos: string[];
   // Property-specific
@@ -67,6 +70,7 @@ const DEFAULTS = {
   priceGnf: 0,
   quantity: 1,
   isGift: false,
+  variants: EMPTY_VARIANTS,
   condition: 'occasion' as const,
   photos: [] as string[],
   propertyType: 'location' as const,

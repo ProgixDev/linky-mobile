@@ -27,6 +27,10 @@ interface FiltersState {
   productSort: 'recent' | 'popular';
   productPriceMaxGnf: number; // 0 = Tout
   productCondition: string | null; // 'neuf' | 'occasion' | 'reconditionné'
+  /** Ne montrer que les articles « À donner » (0 GNF). Un filtre et non un
+   *  onglet : un don est un article comme un autre, il a une boutique, un
+   *  vendeur et un retrait — le sortir du Marché le rendrait introuvable. */
+  giftOnly: boolean;
   propertyType: PropertyTypeFilter;
   rentalPeriod: RentalPeriodFilter; // only meaningful when propertyType==='location'
   city: string | null;
@@ -41,6 +45,7 @@ interface FiltersState {
   setProductSort: (s: 'recent' | 'popular') => void;
   setProductPriceMax: (v: number) => void;
   setProductCondition: (c: string | null) => void;
+  setGiftOnly: (v: boolean) => void;
   setPropertyType: (t: PropertyTypeFilter) => void;
   setRentalPeriod: (p: RentalPeriodFilter) => void;
   setCity: (c: string | null) => void;
@@ -60,6 +65,7 @@ const DEFAULTS = {
   productSort: 'recent' as 'recent' | 'popular',
   productPriceMaxGnf: 0,
   productCondition: null as string | null,
+  giftOnly: false,
   propertyType: 'all' as PropertyTypeFilter,
   rentalPeriod: 'all' as RentalPeriodFilter,
   city: null as string | null,
@@ -92,6 +98,7 @@ export function hasActiveFilters(s: FiltersState, isArticles: boolean): boolean 
       s.productSort !== DEFAULTS.productSort ||
       s.productPriceMaxGnf !== DEFAULTS.productPriceMaxGnf ||
       s.productCondition !== DEFAULTS.productCondition ||
+      s.giftOnly !== DEFAULTS.giftOnly ||
       s.city !== DEFAULTS.city
     );
   }
@@ -114,6 +121,10 @@ export const useFilters = create<FiltersState>((set) => ({
   setProductSort: (productSort) => set({ productSort }),
   setProductPriceMax: (productPriceMaxGnf) => set({ productPriceMaxGnf }),
   setProductCondition: (productCondition) => set({ productCondition }),
+  // Un don vaut zero : garder un plafond de prix par-dessus n'exclurait rien
+  // mais laisserait une pastille active sans effet, et l'acheteur croirait
+  // que le filtre ne marche pas.
+  setGiftOnly: (giftOnly) => set({ giftOnly, ...(giftOnly ? { productPriceMaxGnf: 0 } : {}) }),
   // Type switch clears type-specific sub-filters that would otherwise silently
   // exclude everything (rooms/furnished don't exist on terrain; period is
   // rental-only) — mirrors the create-flow's selectType cleanup.

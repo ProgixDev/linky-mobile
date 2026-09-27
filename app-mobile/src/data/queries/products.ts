@@ -49,6 +49,11 @@ export interface CreateProductInput {
   seller_type?: 'particular' | 'merchant';
   /** « À donner » : le serveur force alors price_minor à 0. */
   is_gift?: boolean;
+  /**
+   * Déclinaisons taille / couleur. Tableau vide = l'annonce redevient simple
+   * (le serveur efface alors les combinaisons qui ne sont plus commandées).
+   */
+  variants?: { size: string; color: string; stock: number | null }[];
 }
 
 export interface UpdateProductInput {
@@ -64,7 +69,10 @@ export interface UpdateProductInput {
   district?: string | null;
   status?: 'active' | 'reserved' | 'sold' | 'paused' | 'pending';
   /** Quantité disponible. `null` = non renseignée, donc aucun plafond au panier. */
-  stock?: number | null;
+  stock?: number | null;  /** Déclinaisons taille / couleur. Tableau vide = l'annonce redevient simple. */
+  variants?: { size: string; color: string; stock: number | null }[];
+  /** « À donner ». Le serveur force price_minor à 0, ou exige un prix au retour. */
+  is_gift?: boolean;
 }
 
 export interface PhotoUploadUrl {
@@ -84,6 +92,10 @@ export interface ProductFilters {
   priceMaxGnf?: number;
   /** Product condition ('neuf' | 'occasion' | 'reconditionné'). */
   condition?: string | null;
+  /** Ne garder que les articles « À donner » (0 GNF). Le serveur lit
+   *  products.is_gift, jamais le prix : un jour un article payant pourrait
+   *  valoir zéro par erreur, et il n'aurait rien à faire dans cette liste. */
+  giftOnly?: boolean;
   /** 'recent' (default) pages with the keyset cursor ; 'popular' is single-page
       by design — list-products returns no cursor for view_count ordering. */
   sort?: 'recent' | 'popular';
@@ -319,6 +331,7 @@ export function useProductsInfinite(filters: ProductFilters = {}) {
           // ramenait des articles affiches 102 900.
           price_max: filters.priceMaxGnf ? sellerPriceCeilingGnf(filters.priceMaxGnf) : undefined,
           condition: filters.condition || undefined,
+          gift_only: filters.giftOnly ? true : undefined,
           sort: filters.sort === 'popular' ? 'popular' : undefined,
           cursor: pageParam,
         },

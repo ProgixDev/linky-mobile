@@ -17,6 +17,8 @@ interface Body {
   price_minor: number;
   /** « A donner » : l'article est cede gratuitement. Force price_minor a 0. */
   is_gift?: boolean;
+  /** Declinaisons taille / couleur. Absentes = annonce simple. */
+  variants?: VariantBody[];
   category: string;
   condition: 'neuf' | 'occasion' | 'reconditionné';
   photos: string[];
@@ -30,6 +32,8 @@ interface Body {
   shop_lat?: number;
   shop_lng?: number;
 }
+
+import { validVariants, variantsPayload, type VariantBody } from '@shared/variants.ts';
 
 const URL_RE = /^https?:\/\/[^\s]{8,500}$/i;
 
@@ -45,6 +49,7 @@ function valid(b: unknown): b is Body {
   if (typeof x.title !== 'string' || x.title.trim().length < 3 || x.title.length > 120) return false;
   if (x.description !== undefined && (typeof x.description !== 'string' || x.description.length > 2000)) return false;
   if (x.is_gift !== undefined && typeof x.is_gift !== 'boolean') return false;
+  if (!validVariants(x.variants)) return false;
   // UN DON A UN PRIX DE ZERO, et c'est le SEUL cas ou zero est accepte. La
   // base pose la meme regle dans les deux sens (products_gift_price_check) :
   // ici on refuse tot, avec un message, plutot que de laisser remonter une
@@ -159,5 +164,51 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     console.error('[product-create] insert error:', error);
     throwApi('INTERNAL_ERROR', 500, 'Erreur création produit');
   }
+
+  // ── LA MATRICE, ECRITE APRES COUP ────────────────────────────────────────
+  // replace_product_variants fait un DIFF : elle pose ce qui arrive, MASQUE ce
+  // qui disparait mais a deja ete commande (sinon order_items.variant_id
+  // pointerait dans le vide), et supprime le reste. Elle REFUSE de convertir
+  // une annonce qui retient encore des unites : products.stock deviendrait un
+  // agregat, et la reservation d'un acheteur qui a deja paye s'evaporerait.
+  if (body.variants !== undefined) {
+    const { error: eVar } = await sb.rpc('replace_product_variants', {
+      p_product_id: (data as { id: string }).id,
+      p_variants: variantsPayload(body.variants),
+    });
+    if (eVar) {
+      const vm = (eVar as { message?: string } | null)?.message ?? '';
+      console.error('[product-create] variants error:', eVar);
+      if (vm.includes('LIVE_ORDERS')) {
+        throwApi('LIVE_ORDERS', 409,
+          "Des commandes sont en cours sur cet article. Tu pourras ajouter des tailles et des couleurs une fois qu'elles seront terminees.");
+      }
+      if (vm.includes('GIFT_HAS_NO_VARIANTS')) {
+        throwApi('GIFT_HAS_NO_VARIANTS', 400,
+          "Un article a donner ne se decline pas en tailles ni en couleurs.");
+      }
+      if (vm.includes('TOO_MANY_VARIANTS')) {
+        throwApi('TOO_MANY_VARIANTS', 400, 'Vingt combinaisons au maximum.');
+      }
+      if (vm.includes('VARIANT_PRICE_PARTIAL')) {
+        throwApi('INVALID_BODY', 400, 'Un prix doit etre indique sur toutes les combinaisons, ou sur aucune.');
+      }
+      throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement des declinaisons');
+    }
+  }
+
+  // RELECTURE : la remontee declenchee par la matrice vient de poser
+  // has_variants et de recalculer le stock. Renvoyer la ligne d'avant ferait
+  // afficher au vendeur une annonce « sans declinaison » qu'il vient pourtant
+  // de creer avec.
+  if (body.variants !== undefined && body.variants.length > 0) {
+    const { data: fresh } = await sb
+      .from('products')
+      .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, is_gift, has_variants, variant_sizes, variant_colors, created_at')
+      .eq('id', (data as { id: string }).id)
+      .maybeSingle();
+    if (fresh) return { body: { product: mapProduct(fresh as ProductRow) } };
+  }
+
   return { body: { product: mapProduct(data as ProductRow) } };
 }));

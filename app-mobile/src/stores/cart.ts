@@ -2,17 +2,43 @@ import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import type { CartLine } from '../data/types';
 
+/**
+ * L'IDENTITE D'UNE LIGNE DE PANIER, DEPUIS LE 2026-09-28 : le couple
+ * (article, declinaison) et non plus l'article seul. « 41 noire » et
+ * « 44 noire » sont deux lignes, avec chacune leur quantite — c'est
+ * exactement ce que le client decrivait avec ses chaussures.
+ *
+ * `undefined` est une valeur A PART ENTIERE ici : c'est la ligne d'une annonce
+ * sans declinaison. La comparer avec `===` suffit, tant qu'on ne la confond pas
+ * avec la chaine vide.
+ */
+const sameLine = (l: CartLine, productId: string, variantId?: string) =>
+  l.productId === productId && (l.variantId ?? undefined) === (variantId ?? undefined);
+
 interface CartState {
   lines: CartLine[];
   promoCode: string | null;
   /** Ajoute un article. Renvoie 'added' ou 'merged' — plus jamais de refus :
    *  depuis 2026-08-13 le panier accepte plusieurs boutiques. */
-  add: (productId: string, shopId: string, quantity?: number) => 'added' | 'merged';
+  add: (
+    productId: string,
+    shopId: string,
+    quantity?: number,
+    variant?: { id: string; label?: string },
+  ) => 'added' | 'merged';
   /** Vide le panier et repart sur cet article. Conserve pour les appelants qui
-   *  proposaient « vider et ajouter » ; plus utilise dans le parcours normal. */
-  replaceWith: (productId: string, shopId: string, quantity?: number) => void;
-  remove: (productId: string) => void;
-  setQuantity: (productId: string, quantity: number) => void;
+   *  proposaient « vider et ajouter » ; plus utilise dans le parcours normal.
+   *  `variant` est OBLIGATOIRE en pratique sur une annonce a declinaisons : sans
+   *  elle la ligne partirait au paiement sans combinaison, et le serveur la
+   *  refuserait (VARIANT_REQUIRED) apres avoir vide le panier. */
+  replaceWith: (
+    productId: string,
+    shopId: string,
+    quantity?: number,
+    variant?: { id: string; label?: string },
+  ) => void;
+  remove: (productId: string, variantId?: string) => void;
+  setQuantity: (productId: string, quantity: number, variantId?: string) => void;
   /** Retire toutes les lignes d'une boutique — appele apres une commande
    *  reussie, pour ne vider QUE le groupe paye et laisser les autres en place. */
   removeShop: (shopId: string) => void;
@@ -83,34 +109,44 @@ export const useCart = create<CartState>((set, get) => {
     lines: initial.lines,
     promoCode: initial.promoCode,
 
-    add: (productId, shopId, quantity = 1) => {
+    add: (productId, shopId, quantity = 1, variant) => {
       const s = get();
-      const existing = s.lines.find((l) => l.productId === productId);
+      const existing = s.lines.find((l) => sameLine(l, productId, variant?.id));
       if (existing) {
         persistSet({
           lines: s.lines.map((l) =>
-            l.productId === productId ? { ...l, quantity: l.quantity + quantity } : l,
+            sameLine(l, productId, variant?.id) ? { ...l, quantity: l.quantity + quantity } : l,
           ),
         });
         return 'merged';
       }
-      persistSet({ lines: [...s.lines, { productId, quantity, shopId }] });
+      persistSet({
+        lines: [
+          ...s.lines,
+          { productId, quantity, shopId, variantId: variant?.id, variantLabel: variant?.label },
+        ],
+      });
       return 'added';
     },
 
-    replaceWith: (productId, shopId, quantity = 1) =>
-      persistSet({ lines: [{ productId, quantity, shopId }], promoCode: null }),
+    replaceWith: (productId, shopId, quantity = 1, variant) =>
+      persistSet({
+        lines: [
+          { productId, quantity, shopId, variantId: variant?.id, variantLabel: variant?.label },
+        ],
+        promoCode: null,
+      }),
 
-    remove: (productId) =>
-      persistSet({ lines: get().lines.filter((l) => l.productId !== productId) }),
+    remove: (productId, variantId) =>
+      persistSet({ lines: get().lines.filter((l) => !sameLine(l, productId, variantId)) }),
 
-    setQuantity: (productId, quantity) => {
+    setQuantity: (productId, quantity, variantId) => {
       const s = get();
       persistSet({
         lines:
           quantity <= 0
-            ? s.lines.filter((l) => l.productId !== productId)
-            : s.lines.map((l) => (l.productId === productId ? { ...l, quantity } : l)),
+            ? s.lines.filter((l) => !sameLine(l, productId, variantId))
+            : s.lines.map((l) => (sameLine(l, productId, variantId) ? { ...l, quantity } : l)),
       });
     },
 

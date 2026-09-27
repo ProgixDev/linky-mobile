@@ -132,6 +132,15 @@ export default function CheckoutRoute() {
   const { shopId } = useLocalSearchParams<{ shopId?: string }>();
   const allLines = useCart((s) => s.lines);
   const lines = shopId ? allLines.filter((l) => l.shopId === shopId) : allLines;
+  // Le corps d'articles, ecrit UNE fois pour les quatre appels de cet ecran
+  // (mono / lot, x bouton principal / reprise carte). Il etait recopie a
+  // l'identique quatre fois : la declinaison aurait manque a l'un des quatre,
+  // et le refus n'aurait frappe qu'un seul moyen de paiement.
+  const orderItems = lines.map((l) => ({
+    productId: l.productId,
+    quantity: l.quantity,
+    variantId: l.variantId,
+  }));
   const placeOrder = usePlaceOrder();
   const { requireBuyer } = useBuyerGate();
   const cancelPending = useCancelPendingPayment();
@@ -208,7 +217,7 @@ export default function CheckoutRoute() {
       let payment: { client_secret: string; publishable_key: string } | undefined;
       if (isBatch) {
         const res = await placeBatch.mutateAsync({
-          items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          items: orderItems,
           paymentMethod: 'card',
           deliveryMode,
         });
@@ -218,7 +227,7 @@ export default function CheckoutRoute() {
         payment = res.payment;
       } else {
         const res = await placeOrder.mutateAsync({
-          items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          items: orderItems,
           paymentMethod: 'card',
           deliveryMode,
         });
@@ -910,7 +919,7 @@ export default function CheckoutRoute() {
             if (isBatch) {
               placeBatch.mutate(
                 {
-                  items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+                  items: orderItems,
                   paymentMethod: selected,
                   deliveryMode,
                   ...(payerPhoneE164 ? { payerPhone: payerPhoneE164 } : {}),
@@ -960,7 +969,7 @@ export default function CheckoutRoute() {
             }
             placeOrder.mutate(
               {
-                items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+                items: orderItems,
                 paymentMethod: selected,
                 deliveryMode,
                 ...(payerPhoneE164 ? { payerPhone: payerPhoneE164 } : {}),

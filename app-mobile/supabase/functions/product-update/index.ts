@@ -7,12 +7,15 @@ import { requireUser } from '@shared/auth.ts';
 import { mapProduct, type ProductRow } from '@shared/catalog.ts';
 import { isValidCategory, isValidCondition } from '@shared/categories.ts';
 
+import { validVariants, variantsPayload, type VariantBody } from '@shared/variants.ts';
+
 interface Body {
   id: string;
   title?: string;
   description?: string;
   price_minor?: number;
   is_gift?: boolean;
+  variants?: VariantBody[];
   category?: string;
   condition?: 'neuf' | 'occasion' | 'reconditionné';
   photos?: string[];
@@ -33,6 +36,7 @@ function valid(b: unknown): b is Body {
   if (x.title !== undefined && (typeof x.title !== 'string' || x.title.trim().length < 3 || x.title.length > 120)) return false;
   if (x.description !== undefined && (typeof x.description !== 'string' || x.description.length > 2000)) return false;
   if (x.is_gift !== undefined && typeof x.is_gift !== 'boolean') return false;
+  if (!validVariants(x.variants)) return false;
   if (x.price_minor !== undefined && (typeof x.price_minor !== 'number' || !Number.isInteger(x.price_minor) || x.price_minor < 0 || x.price_minor > 1e12)) return false;
   if (x.category !== undefined && !isValidCategory(x.category)) return false;
   if (x.condition !== undefined && !isValidCondition(x.condition)) return false;
@@ -54,7 +58,7 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
 
   // Ownership check: product → shop → owner. Single join via the FK.
   const { data: own, error: eOwn } = await sb
-    .from('products').select('id, shop_id, status, shops!inner(owner_id)')
+    .from('products').select('id, shop_id, status, has_variants, shops!inner(owner_id)')
     .eq('id', body.id).maybeSingle();
   if (eOwn) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   if (!own) throwApi('PRODUCT_NOT_FOUND', 404, 'Produit introuvable.');
@@ -103,10 +107,64 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
   if (body.condition !== undefined)   patch.condition = body.condition;
   if (body.photos !== undefined)      patch.photos = body.photos;
   if (body.video_url !== undefined)   patch.video_url = body.video_url;
-  if (body.stock !== undefined)       patch.stock = body.stock;
+  // LE STOCK N'EST PAS ECRIVABLE SUR UNE ANNONCE A DECLINAISONS. Il y est
+  // CALCULE — la somme des combinaisons actives, posee par la remontee. L'ecran
+  // de modification envoie `stock` a CHAQUE enregistrement, y compris quand le
+  // vendeur n'a change que le titre : sans cette garde, un simple changement de
+  // photo ecraserait l'agregat par une valeur perimee, et le stock affiche
+  // mentirait durablement sans que rien ne le signale.
+  const willHaveVariants = body.variants !== undefined
+    ? body.variants.length > 0
+    : ((own as { has_variants?: boolean }).has_variants ?? false);
+  if (body.stock !== undefined && !willHaveVariants) patch.stock = body.stock;
   if (body.city !== undefined)        patch.city = body.city.trim();
   if (body.district !== undefined)    patch.district = body.district === null ? null : body.district.trim() || null;
   if (body.status !== undefined)      patch.status = body.status;
+
+  // ── LA MATRICE, ECRITE AVANT LE PATCH ────────────────────────────────────
+  // ┌─ L'ORDRE COMPTE, ET CE N'EST PAS UNE QUESTION DE STYLE ────────────────┐
+  // La contrainte products_gift_has_no_variants (20260928_02) refuse qu'une
+  // annonce soit A LA FOIS un don et a declinaisons. Le geste legitime « cette
+  // annonce a tailles devient un don » arrive donc ici avec is_gift=true ET
+  // variants=[] : si le patch partait d'abord, il violerait la contrainte AVANT
+  // que la matrice ne soit retiree, et le vendeur lirait un 500 opaque pour une
+  // operation parfaitement valide.
+  //
+  // Consequence assumee dans l'autre sens : si la matrice est posee et que le
+  // patch echoue ensuite, l'annonce garde ses declinaisons et son ancien titre.
+  // Rien d'incoherent — la remontee a fait son travail — et le vendeur n'a qu'a
+  // reenregistrer.
+  // └────────────────────────────────────────────────────────────────────────┘
+  // replace_product_variants fait un DIFF : elle pose ce qui arrive, MASQUE ce
+  // qui disparait mais a deja ete commande (sinon order_items.variant_id
+  // pointerait dans le vide), et supprime le reste. Elle REFUSE de convertir
+  // une annonce qui retient encore des unites : products.stock deviendrait un
+  // agregat, et la reservation d'un acheteur qui a deja paye s'evaporerait.
+  if (body.variants !== undefined) {
+    const { error: eVar } = await sb.rpc('replace_product_variants', {
+      p_product_id: body.id,
+      p_variants: variantsPayload(body.variants),
+    });
+    if (eVar) {
+      const vm = (eVar as { message?: string } | null)?.message ?? '';
+      console.error('[product-update] variants error:', eVar);
+      if (vm.includes('LIVE_ORDERS')) {
+        throwApi('LIVE_ORDERS', 409,
+          "Des commandes sont en cours sur cet article. Tu pourras ajouter des tailles et des couleurs une fois qu'elles seront terminees.");
+      }
+      if (vm.includes('GIFT_HAS_NO_VARIANTS')) {
+        throwApi('GIFT_HAS_NO_VARIANTS', 400,
+          "Un article a donner ne se decline pas en tailles ni en couleurs.");
+      }
+      if (vm.includes('TOO_MANY_VARIANTS')) {
+        throwApi('TOO_MANY_VARIANTS', 400, 'Vingt combinaisons au maximum.');
+      }
+      if (vm.includes('VARIANT_PRICE_PARTIAL')) {
+        throwApi('INVALID_BODY', 400, 'Un prix doit etre indique sur toutes les combinaisons, ou sur aucune.');
+      }
+      throwApi('INTERNAL_ERROR', 500, 'Erreur enregistrement des declinaisons');
+    }
+  }
 
   const { data, error } = await sb
     .from('products').update(patch).eq('id', body.id)
@@ -114,7 +172,15 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
     .single();
   if (error || !data) {
     console.error('[product-update] update error:', error);
+    // Cocher « a donner » sans retirer la matrice : la contrainte de base tranche,
+    // et son message ne veut rien dire pour un vendeur.
+    const um = (error as { message?: string } | null)?.message ?? '';
+    if (um.includes('products_gift_has_no_variants')) {
+      throwApi('GIFT_HAS_NO_VARIANTS', 400,
+        "Retire d'abord les tailles et les couleurs : un article a donner ne se decline pas.");
+    }
     throwApi('INTERNAL_ERROR', 500, 'Erreur mise à jour');
   }
+
   return { body: { product: mapProduct(data as ProductRow) } };
 }));

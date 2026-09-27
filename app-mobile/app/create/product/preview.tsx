@@ -19,6 +19,7 @@ import { useToast } from '../../../src/components/feedback/Toast';
 import { useCreateProduct } from '../../../src/data/queries/products';
 import { ApiError, toToastMessage } from '../../../src/lib/api';
 import { productStep } from '../../../src/lib/createSteps';
+import { draftToBody } from '../../../src/lib/variantsDraft';
 
 export default function CreatePreviewRoute() {
   const step = productStep('preview');
@@ -121,6 +122,16 @@ export default function CreatePreviewRoute() {
                 // mais on l'envoie deja a 0 pour que le recapitulatif de cet
                 // ecran et la ligne enregistree ne puissent pas differer.
                 is_gift: state.isGift,
+                // La matrice. Tableau vide = annonce simple ; le serveur
+                // n'ecrit alors rien et `stock` ci-dessus fait foi.
+                //
+                // UN DON N'A PAS DE DECLINAISONS. Le formulaire cache la matrice
+                // des que « A donner » est coche, mais l'etat SURVIT a la
+                // bascule : un vendeur qui remplit ses tailles puis change d'avis
+                // envoyait les deux, et la base se retrouvait avec un don a
+                // declinaisons — que place_gift_order ne sait pas remettre, et
+                // dont le stock par combinaison ne serait jamais decremente.
+                variants: state.isGift ? [] : draftToBody(state.variants),
                 // Geography simplified per 2026-05-29 client meeting: cities only, no districts.
                 // Only reaches product-create's auto-mint branch (no shop yet) —
                 // undefined for a seller who already has a boutique, and product-create

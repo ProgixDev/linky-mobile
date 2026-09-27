@@ -34,9 +34,30 @@ export interface StockGate {
   canAdd: boolean;
 }
 
-export function useStockGate(product: { id: string; stock?: number | null }): StockGate {
+/**
+ * `variantId` : la combinaison choisie, quand l'annonce se vend par taille /
+ * couleur. Sans elle, la garde comptait la ligne de l'article ENTIER — donc
+ * zero, puisqu'une annonce a declinaisons n'a jamais de ligne sans combinaison.
+ * Un acheteur pouvait alors remplir son panier de « 41 noire » sans aucun
+ * plafond, et `stock` (la somme des combinaisons) ne l'aurait pas arrete non
+ * plus : la verite d'une taille n'est pas le total de l'annonce.
+ *
+ * L'appelant passe donc `stock` = la quantite de la COMBINAISON choisie, et
+ * `variantId` = son identifiant. Tant que rien n'est choisi, il passe le total
+ * de l'annonce : cela suffit a afficher « epuise » quand tout est epuise.
+ */
+export function useStockGate(product: {
+  id: string;
+  stock?: number | null;
+  variantId?: string;
+}): StockGate {
   const inCart = useCart(
-    (s) => s.lines.find((l) => l.productId === product.id)?.quantity ?? 0,
+    (s) =>
+      s.lines.find(
+        (l) =>
+          l.productId === product.id
+          && (l.variantId ?? undefined) === (product.variantId ?? undefined),
+      )?.quantity ?? 0,
   );
   const declared = product.stock ?? null;
 

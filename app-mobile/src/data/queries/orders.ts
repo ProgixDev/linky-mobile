@@ -139,7 +139,7 @@ export function useOrderWithIntent(id: string | undefined) {
 export interface PlaceOrderInput {
   /** Every article of the cart — all from the SAME shop (client 2026-08-05).
    *  The server re-checks that rule and recomputes every amount itself. */
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; quantity: number; variantId?: string }[];
   paymentMethod: PaymentMethod;
   /** Mode de réception (2026-07-30). 'delivery' facture le frais forfaitaire
    *  Linky ; 'pickup' est gratuit. Omis → 'delivery' côté serveur. */
@@ -174,7 +174,14 @@ export function usePlaceOrder() {
       return apiPost<PlaceOrderResult>({
         path: '/place-order',
         body: {
-          items: items.map((i) => ({ product_id: i.productId, quantity: i.quantity })),
+          items: items.map((i) => ({
+            product_id: i.productId,
+            quantity: i.quantity,
+            // Omise plutot que nulle : un bundle ancien n'envoie rien, et la
+            // fonction SQL lit `nullif(... ->> 'variant_id', '')` — les deux
+            // formes se lisent pareil, autant ne pas polluer le corps.
+            ...(i.variantId ? { variant_id: i.variantId } : {}),
+          })),
           payment_method: paymentMethod,
           ...(deliveryMode ? { delivery_mode: deliveryMode } : {}),
           ...(payerPhone ? { payer_phone: payerPhone } : {}),
@@ -205,7 +212,7 @@ export function usePlaceOrder() {
 // encaisse est relu en base cote serveur.
 export interface PlaceOrdersBatchInput {
   /** Le panier ENTIER, toutes boutiques confondues. Le serveur regroupe. */
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; quantity: number; variantId?: string }[];
   /** 'card' ajoute le 2026-08-24 : le bouton Carte, reactive la veille pour les
    *  profils a l'etranger, appelait encore le chemin mono-boutique — un panier
    *  a plusieurs boutiques echouait avec MULTIPLE_SELLERS. */
@@ -244,7 +251,14 @@ export function usePlaceOrdersBatch() {
       return apiPost<PlaceOrdersBatchResult>({
         path: '/place-orders-batch',
         body: {
-          items: items.map((i) => ({ product_id: i.productId, quantity: i.quantity })),
+          items: items.map((i) => ({
+            product_id: i.productId,
+            quantity: i.quantity,
+            // Omise plutot que nulle : un bundle ancien n'envoie rien, et la
+            // fonction SQL lit `nullif(... ->> 'variant_id', '')` — les deux
+            // formes se lisent pareil, autant ne pas polluer le corps.
+            ...(i.variantId ? { variant_id: i.variantId } : {}),
+          })),
           payment_method: paymentMethod,
           ...(deliveryMode ? { delivery_mode: deliveryMode } : {}),
           ...(payerPhone ? { payer_phone: payerPhone } : {}),

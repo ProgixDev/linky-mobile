@@ -58,7 +58,7 @@ Deno.serve(makePost<Body>('/v1/discover/feed', valid, async ({ sb, body, req }) 
 
   let productsQ = sb
     .from('products')
-    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, created_at')
+    .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, is_gift, has_variants, variant_sizes, variant_colors, created_at')
     .eq('status', 'active');
 
   let propertiesQ = sb

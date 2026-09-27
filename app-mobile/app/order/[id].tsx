@@ -135,7 +135,13 @@ export default function OrderRoute() {
                   tone="muted"
                   style={{ letterSpacing: 0, textTransform: 'none' }}
                 >
-                  {t('order.qty', { count: it.quantity })}
+                  {/* LA COMBINAISON AVANT LA QUANTITE. Sur la meme ligne :
+                      « 41 · Noire · 2 articles » tient sur un petit ecran, et
+                      c'est l'information que le vendeur doit lire pour preparer
+                      le bon exemplaire. */}
+                  {[(it as { variantLabel?: string }).variantLabel, t('order.qty', { count: it.quantity })]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </Text>
               </View>
               <Text style={{ fontWeight: '600', fontSize: 14, fontVariant: ['tabular-nums'] }}>

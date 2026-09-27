@@ -19,6 +19,10 @@ export interface ProductRow {
   city: string;
   district: string | null;
   stock?: number | null;
+  is_gift?: boolean;
+  has_variants?: boolean;
+  variant_sizes?: string[];
+  variant_colors?: string[];
   created_at: string;
 }
 
@@ -81,6 +85,12 @@ export function mapProduct(r: ProductRow) {
     // requete qui ne le selectionne pas : on retombe sur false, donc sur le
     // comportement d'avant ce lot.
     isGift: (r as { is_gift?: boolean }).is_gift ?? false,
+    // Les DECLINAISONS : le drapeau et les deux tableaux denormalises
+    // voyagent avec l'article, la matrice complete non — elle demande une
+    // jointure, et seule la fiche d'un article en a besoin (get-product).
+    hasVariants: (r as { has_variants?: boolean }).has_variants ?? false,
+    variantSizes: (r as { variant_sizes?: string[] }).variant_sizes ?? [],
+    variantColors: (r as { variant_colors?: string[] }).variant_colors ?? [],
     createdAt: r.created_at,
   };
 }

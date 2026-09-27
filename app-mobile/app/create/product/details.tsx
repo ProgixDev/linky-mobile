@@ -23,6 +23,7 @@ import { gnfToEur } from '../../../src/lib/currency';
 import { productStep } from '../../../src/lib/createSteps';
 import { Switch } from '../../../src/components/primitives/Switch';
 import { haptic } from '../../../src/lib/haptics';
+import { VariantMatrixFields } from '../../../src/components/product/VariantMatrixFields';
 
 export default function CreateProductDetailsRoute() {
   const step = productStep('details');
@@ -201,6 +202,20 @@ export default function CreateProductDetailsRoute() {
                 />
               </View>
             </View>
+
+            {/* TAILLES ET COULEURS — juste sous la quantité, dont elles
+                prennent le relais : dès que l'option est cochée, c'est la
+                matrice qui porte le stock et le champ « Quantité » ci-dessus
+                n'est plus lu par le serveur. Un don n'en a pas : on ne décline
+                pas ce qu'on donne, et mêler les deux cas doublerait les
+                combinaisons de règles pour un usage que personne n'a demandé. */}
+            {!state.isGift && (
+              <VariantMatrixFields
+                value={state.variants}
+                onChange={(next) => state.set('variants', next)}
+                fallbackStock={state.quantity}
+              />
+            )}
 
             <View>
               <Text
