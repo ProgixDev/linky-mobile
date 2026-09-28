@@ -1,16 +1,26 @@
 #!/usr/bin/env node
-// Phase I.2 — assert the four locale JSONs have identical key sets, so no
-// language ever drifts. fr.json is the source of truth. Optional --mirror
-// flag rewrites pular.json + sousou.json from fr.json (French placeholders)
-// while preserving any value that already differs from the French source —
-// useful after adding a batch of keys.
+// Phase I.2 — assert every locale JSON has the same key set as fr.json, the
+// source of truth, so no language ever drifts. Optional --mirror rewrites the
+// PLACEHOLDER locales from fr.json (French placeholders) while preserving any
+// value that already differs from the French source — useful after adding a
+// batch of keys.
+//
+// ┌─ LES LANGUES SONT LUES SUR LE DISQUE, PLUS CODEES EN DUR ───────────────┐
+// Le script chargeait fr/en/pular/sousou nommement. `pular.json` et
+// `sousou.json` ont disparu du depot depuis, et `es.json` est arrive : il
+// PLANTAIT donc a l'ouverture (ENOENT) et, quand il tournait encore, il ne
+// verifiait pas l'espagnol. Un garde-fou qui plante n'en est plus un, et un
+// garde-fou qui ignore une langue en service est pire — il rassure a tort.
+//
+// Il decouvre maintenant les langues presentes. Ajouter un fichier suffit a le
+// mettre sous controle ; en retirer un ne casse plus rien.
+// └─────────────────────────────────────────────────────────────────────────┘
 //
 // Run modes:
 //   node scripts/i18n-check.mjs            # assert ; non-zero on drift
-//   node scripts/i18n-check.mjs --mirror   # add missing keys to pular+sousou
-//                                          # (drops keys that don't exist in fr)
+//   node scripts/i18n-check.mjs --mirror   # remplit les langues de remplissage
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -75,10 +85,26 @@ const mirror = process.argv.includes('--mirror');
 // EN cells silently leaking French copy.
 const enCoverage = process.argv.includes('--en-coverage');
 
-const fr = loadJson('fr.json');
-const en = loadJson('en.json');
-const pular = loadJson('pular.json');
-const sousou = loadJson('sousou.json');
+// La reference, puis TOUTES les autres langues trouvees a cote d'elle.
+const REFERENCE = 'fr';
+// Langues destinees a etre remplies depuis le francais par --mirror. Celles qui
+// ne sont pas la sont simplement ignorees : la liste decrit une INTENTION, le
+// disque decide de ce qui existe.
+const PLACEHOLDER = ['pular', 'sousou'];
+
+const present = readdirSync(localesDir)
+  .filter((f) => f.endsWith('.json'))
+  .map((f) => f.slice(0, -'.json'.length))
+  .sort();
+if (!present.includes(REFERENCE)) {
+  console.error(`${REFERENCE}.json introuvable dans ${localesDir}`);
+  process.exit(1);
+}
+const bags = new Map(present.map((name) => [name, loadJson(`${name}.json`)]));
+const fr = bags.get(REFERENCE);
+// `en` reste nomme : le controle de couverture EN ci-dessous le compare mot a
+// mot au francais. Absent, ce controle n'a simplement pas lieu.
+const en = bags.get('en');
 
 // Keys whose FR and EN values are EXPECTED to be byte-identical (no
 // translation needed). Add new entries here when they're a real cross-
@@ -147,11 +173,7 @@ function looksLikeProperNoun(value) {
 const frKeys = keyPaths(fr);
 
 let drift = 0;
-for (const [name, bag] of [
-  ['en', en],
-  ['pular', pular],
-  ['sousou', sousou],
-]) {
+for (const [name, bag] of [...bags].filter(([name]) => name !== REFERENCE)) {
   const bagKeys = keyPaths(bag);
   const missing = [...frKeys].filter((k) => !bagKeys.has(k));
   const extra = [...bagKeys].filter((k) => !frKeys.has(k));
@@ -174,10 +196,13 @@ for (const [name, bag] of [
 if (mirror) {
   // Rewrite pular + sousou from fr, preserving any value that differs from
   // the French source (i.e. anything a translator has already filled in).
-  for (const [name, bag] of [
-    ['pular.json', pular],
-    ['sousou.json', sousou],
-  ]) {
+  const targets = PLACEHOLDER.filter((n) => bags.has(n));
+  if (targets.length === 0) {
+    console.log(`Aucune langue de remplissage presente (${PLACEHOLDER.join(', ')}) : rien a remplir.`);
+    process.exit(0);
+  }
+  for (const name of targets) {
+    const bag = bags.get(name);
     const out = {};
     for (const { path, value: frVal } of leaves(fr)) {
       const cur = valueAt(bag, path);
@@ -189,30 +214,30 @@ if (mirror) {
         setAt(out, path, frVal);
       }
     }
-    writeFileSync(join(localesDir, name), JSON.stringify(out, null, 2) + '\n', 'utf8');
-    console.log(`[${name}] mirrored from fr.json (${[...keyPaths(out)].length} keys)`);
+    writeFileSync(join(localesDir, `${name}.json`), JSON.stringify(out, null, 2) + '\n', 'utf8');
+    console.log(`[${name}.json] mirrored from fr.json (${[...keyPaths(out)].length} keys)`);
   }
   console.log('\nMirror complete. Re-run without --mirror to verify.');
   process.exit(0);
 }
 
 if (drift > 0) {
-  console.log(`\nKey drift: ${drift} difference(s). Run with --mirror to sync pular+sousou from fr.`);
+  console.log(`\nKey drift: ${drift} difference(s). Run with --mirror to fill the placeholder locales from fr.`);
   process.exit(1);
 }
 
-const total = frKeys.size;
-console.log(`fr.json: ${total} keys`);
-console.log(`en.json: ${keyPaths(en).size} keys`);
-console.log(`pular.json: ${keyPaths(pular).size} keys`);
-console.log(`sousou.json: ${keyPaths(sousou).size} keys`);
-console.log('All four locale files are key-aligned.');
+for (const [name, bag] of bags) {
+  console.log(`${name}.json: ${keyPaths(bag).size} keys`);
+}
+console.log(`All ${bags.size} locale files are key-aligned.`);
 
 // Phase I.8 — second assertion : every en.json value differs from its
 // fr.json counterpart, unless the key is in EN_FR_IDENTICAL_ALLOWLIST or
 // looks like a proper noun. Without this, an EN cell silently carrying the
 // French source string ships untranslated.
-if (enCoverage) {
+if (enCoverage && !en) {
+  console.log('\n=== EN coverage check === (ignore : en.json absent)');
+} else if (enCoverage) {
   console.log('\n=== EN coverage check ===');
   const suspect = [];
   for (const { path, value: frVal } of leaves(fr)) {

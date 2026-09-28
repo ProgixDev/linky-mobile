@@ -1,17 +1,15 @@
-import { useMemo, useState } from 'react';
-import { Dimensions, ScrollView, View, Pressable } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Dimensions, RefreshControl, ScrollView, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { NoiseOverlay } from '../../src/components/visuals/NoiseOverlay';
 import { WALLET_TOPUP_ENABLED } from '../../src/lib/flags';
 import {
   Bell,
   Plus,
   Store,
-  Wallet,
   ChevronRight,
   Shirt,
   Smartphone,
@@ -39,13 +37,13 @@ import { ShopMiniCard } from '../../src/components/lists/ShopCard';
 import { ProductCard } from '../../src/components/lists/ProductCard';
 import { PropertyCard } from '../../src/components/lists/PropertyCard';
 import { ProductCardSkeleton } from '../../src/components/primitives/Skeleton';
-import { formatGNF, formatEUR } from '../../src/lib/format';
-import { gnfToEur } from '../../src/lib/currency';
 import { haptic } from '../../src/lib/haptics';
 import { photos } from '../../src/data/photos';
 import { listingScope } from '../../src/lib/persona';
 import { useAuth } from '../../src/stores/auth';
 import { HeaderActions } from '../../src/components/nav/HeaderActions';
+import { HomeWalletCard } from '../../src/components/home/HomeWalletCard';
+import { HomeActivity } from '../../src/components/home/HomeActivity';
 import { useCreateListing } from '../../src/stores/createListing';
 import { useFilters } from '../../src/stores/filters';
 import {
@@ -87,11 +85,37 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
   const resetDraft = useCreateListing((s) => s.reset);
   const setKind = useCreateListing((s) => s.setKind);
 
+  // TIRER POUR METTRE A JOUR, ici aussi.
+  //
+  // Contrairement a l'accueil acheteur, on invalide TOUT : le contenu de cet
+  // ecran EST le tableau de bord (ventes, commandes, biens), et ne rafraichir
+  // que le portefeuille laisserait les chiffres qui comptent a leur valeur du
+  // dernier montage. React Query ne refetche que les requetes ACTIVES, donc ce
+  // geste ne recharge que ce qui est reellement a l'ecran.
+  const qc = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await qc.invalidateQueries();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [qc]);
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         <View
           style={{
@@ -190,6 +214,10 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
         )}
 
         {mode === 'shop' ? <ShopDashboard /> : <EstateDashboard />}
+
+        {/* La meme section que sur l'accueil acheteur : la cloche de cet ecran
+            charge deja le meme cache, donc elle ne coute rien ici non plus. */}
+        <HomeActivity />
       </ScrollView>
     </SafeAreaView>
   );
@@ -219,6 +247,25 @@ function BuyerHome() {
   const wallet = walletQuery.data;
   const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!wallet;
 
+  // TIRER POUR METTRE A JOUR. Un tableau de bord qui ne se rafraichit qu'au
+  // remontage de l'ecran n'est pas dynamique : le vendeur qui vient d'encaisser
+  // voyait son ancien solde jusqu'a ce qu'il change d'onglet. On invalide les
+  // deux caches que cette page affiche — le portefeuille et les notifications —
+  // plutot que de tout recharger : les annonces, elles, n'ont pas bouge.
+  const qc = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['wallet'] }),
+        qc.invalidateQueries({ queryKey: ['notifications'] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [qc]);
+
   const firstName = (user?.display_name ?? t('home.fallbackName')).split(' ')[0];
   // Les trois dernieres pastilles (Location / Vente / Terrains) menent a
   // l'onglet Immobilier et les cinq premieres aux articles : une grille non
@@ -238,6 +285,14 @@ function BuyerHome() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         {/* Header */}
         <View
@@ -318,6 +373,14 @@ function BuyerHome() {
             // la caisse vendeur — s'en contenter ici aurait fait disparaitre
             // l'argent immobilier de l'ecran d'accueil.
             balanceGnf={wallet?.totalGnf ?? 0}
+            // ... et les deux caisses separement, que la carte n'affiche que si
+            // l'Immo n'est pas vide. Le total seul effacait sur la premiere page
+            // la distinction que le client avait demandee.
+            sellerGnf={wallet?.balanceGnf ?? 0}
+            immoGnf={wallet?.immoGnf ?? 0}
+            // Deja charges par useWallet() pour cette page : le mois en cours et
+            // le dernier mouvement ne coutent donc aucun appel de plus.
+            movements={wallet?.movements}
             ready={walletReady}
             onRecharger={WALLET_TOPUP_ENABLED ? () => router.push('/wallet/recharger') : undefined}
             onTap={() => router.push('/wallet')}
@@ -327,6 +390,12 @@ function BuyerHome() {
         {/* Quick-action tiles removed (client ask 2026-07-06) : Scanner +
             Retirer live in the Profil shortcuts, the Wallet tile folded into
             the green card above, Vendre moved to the header pill. */}
+
+        {/* « Et les notifications » (client 2026-09-28). Juste sous le solde :
+            c'est la suite naturelle de « ce qui s'est passe sur mon compte ».
+            La section disparait entierement quand il n'y a rien — un encart
+            vide sur la premiere page ferait croire a un ecran casse. */}
+        <HomeActivity />
 
         {/* Categories — 4 col x 2 row grid */}
         <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
@@ -593,174 +662,6 @@ function BuyerHome() {
 
 // ---------- Subcomponents ----------
 
-
-function HomeWalletCard({
-  balanceGnf,
-  ready,
-  onRecharger,
-  onTap,
-}: {
-  balanceGnf: number;
-  ready: boolean;
-  onRecharger?: () => void;
-  onTap: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Pressable onPress={onTap}>
-      <View
-        style={{
-          borderRadius: 24,
-          overflow: 'hidden',
-          backgroundColor: '#0A5240',
-        }}
-      >
-        {/* Base emerald gradient */}
-        <LinearGradient
-          colors={['#118866', '#0A5240', '#063929']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-        {/* Soft saffron blob bleed (top-right) for mesh feel */}
-        <LinearGradient
-          colors={['rgba(232,165,61,0.35)', 'rgba(232,165,61,0)']}
-          start={{ x: 1, y: 0 }}
-          end={{ x: 0.3, y: 0.6 }}
-          style={{
-            position: 'absolute',
-            top: -40,
-            right: -40,
-            width: 200,
-            height: 200,
-            borderRadius: 999,
-          }}
-        />
-        {/* Cool mint blob (bottom-left) */}
-        <LinearGradient
-          colors={['rgba(120,220,180,0.18)', 'rgba(120,220,180,0)']}
-          start={{ x: 0, y: 1 }}
-          end={{ x: 0.6, y: 0.4 }}
-          style={{
-            position: 'absolute',
-            bottom: -50,
-            left: -30,
-            width: 220,
-            height: 220,
-            borderRadius: 999,
-          }}
-        />
-        {/* Grain overlay */}
-        <NoiseOverlay />
-
-        {/* Content */}
-        <View style={{ padding: 20 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: '700',
-                color: 'rgba(255,255,255,0.65)',
-                letterSpacing: 0.6,
-              }}
-            >
-              {t('home.walletBalance')}
-            </Text>
-            <Image
-              source={require('../../assets/images/adaptive-icon-dark.png')}
-              style={{ width: 64, height: 64 }}
-              contentFit="contain"
-            />
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 14 }}>
-            <Text
-              style={{
-                fontSize: 32,
-                fontWeight: '700',
-                color: '#FFFFFF',
-                lineHeight: 38,
-                includeFontPadding: false,
-              }}
-            >
-              {ready ? formatGNF(balanceGnf).replace(' GNF', '') : '—'}
-            </Text>
-            <Text
-              style={{
-                fontSize: 16,
-                color: 'rgba(255,255,255,0.72)',
-                fontWeight: '600',
-              }}
-            >
-              GNF
-            </Text>
-          </View>
-          {/* Phase T.4 — formatEUR already prefixes "≈" ; pre-fix this rendered
-              "≈ ≈" doubled. U.0 — and "—" while loading/error so we don't
-              confidently show ≈ 0 € on a cold 3G start. */}
-          <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
-            {ready ? formatEUR(gnfToEur(balanceGnf)) : '—'}
-          </Text>
-
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
-            {/* Top-up removed (wallet restructure) — pill renders only when the
-                parent passes onRecharger (gated by WALLET_TOPUP_ENABLED). */}
-            {onRecharger && (
-              <Pressable
-                onPress={(e) => {
-                  e.stopPropagation();
-                  haptic.light();
-                  onRecharger();
-                }}
-                style={{
-                  flex: 1,
-                  height: 44,
-                  borderRadius: 999,
-                  backgroundColor: '#FFFFFF',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                }}
-              >
-                <Plus size={14} color="#0A5240" strokeWidth={2.5} />
-                <Text style={{ color: '#0A5240', fontWeight: '700', fontSize: 13.5 }}>
-                  {t('home.walletRecharge')}
-                </Text>
-              </Pressable>
-            )}
-            {/* Retirer moved to the Profil shortcuts (client ask 2026-07-06) —
-                the card is now the wallet entry point itself. */}
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation();
-                haptic.light();
-                onTap();
-              }}
-              style={{
-                flex: 1,
-                height: 44,
-                borderRadius: 999,
-                backgroundColor: 'rgba(255,255,255,0.16)',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.22)',
-              }}
-            >
-              <Wallet size={14} color="#FFFFFF" strokeWidth={2.25} />
-              <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 13.5 }}>
-                {t('home.walletOpen')}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
 
 // QuickAction tile row removed 2026-07-06 — Scanner/Retirer live in the
 // Profil shortcuts, Wallet is the green card, Vendre is a full-width CTA.
