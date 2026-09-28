@@ -20,8 +20,11 @@ import { requireUser } from '@shared/auth.ts';
 import { assertAdmin } from '@shared/admin.ts';
 import {
   mapOrder,
+  mapOrderItem,
   mapAdminAction,
+  ORDER_ITEM_COLUMNS,
   type OrderRow,
+  type OrderItemRow,
   type AdminActionRow,
 } from '@shared/catalog.ts';
 
@@ -48,6 +51,29 @@ Deno.serve(makePost<Body>('/v1/admin/disputes/get', valid, async ({ sb, body, re
   }
   if (!orderRow) throwApi('ORDER_NOT_FOUND', 404, 'Commande introuvable.');
 
+  // ┌─ LES LIGNES DE LA COMMANDE, QUI MANQUAIENT ───────────────────────────┐
+  // L'en-tete de commande ne porte que l'article PRINCIPAL, et son instantane
+  // n'a jamais porte la combinaison : ni `variantId` ni `variantLabel`. La
+  // console montrait donc un titre, une quantite et un prix -- et un
+  // administrateur devait trancher « mauvaise taille » sans pouvoir savoir
+  // laquelle avait ete commandee. Sur le seul ecran ou l'argent bouge.
+  //
+  // Les lignes, elles, portent la combinaison FIGEE a la commande. On les lit
+  // avec le MEME mappeur et les MEMES colonnes que get-order : l'administrateur
+  // et l'acheteur doivent voir la meme chose, sinon l'arbitrage porte sur autre
+  // chose que le litige.
+  //
+  // Une erreur de lecture n'interrompt PAS la reponse : perdre le detail des
+  // lignes est une degradation, perdre l'acces au dossier de litige serait une
+  // panne. Le tableau revient vide et l'ecran retombe sur l'en-tete.
+  // └──────────────────────────────────────────────────────────────────────┘
+  const { data: itemRows, error: itemsErr } = await sb
+    .from('order_items')
+    .select(ORDER_ITEM_COLUMNS)
+    .eq('order_id', body.order_id)
+    .order('created_at', { ascending: true });
+  if (itemsErr) console.error('[get-dispute] order_items select error:', itemsErr);
+
   const { data: actionRows, error: actionsErr } = await sb
     .from('admin_actions')
     .select('id, admin_id, target_type, target_id, action, reason, metadata, before_snapshot, after_snapshot, created_at')
@@ -62,6 +88,7 @@ Deno.serve(makePost<Body>('/v1/admin/disputes/get', valid, async ({ sb, body, re
   return {
     body: {
       order: mapOrder(orderRow as OrderRow, { includeAdminMeta: true }),
+      items: ((itemRows as unknown as OrderItemRow[] | null) ?? []).map(mapOrderItem),
       admin_actions: ((actionRows as AdminActionRow[] | null) ?? []).map(mapAdminAction),
     },
   };

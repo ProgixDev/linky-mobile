@@ -6,7 +6,15 @@
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 import { requireUser } from '@shared/auth.ts';
-import { mapOrder, mapPaymentIntent, type OrderRow, type PaymentIntentRow } from '@shared/catalog.ts';
+import {
+  mapOrder,
+  mapOrderItem,
+  mapPaymentIntent,
+  ORDER_ITEM_COLUMNS,
+  type OrderItemRow,
+  type OrderRow,
+  type PaymentIntentRow,
+} from '@shared/catalog.ts';
 
 interface Body { id: string }
 
@@ -176,28 +184,13 @@ Deno.serve(makePost<Body>('/v1/orders/get', valid, async ({ sb, body, req }) => 
   // this field keeps working; the detail screen uses it to list them all.
   const { data: itemRows, error: itemsErr } = await sb
     .from('order_items')
-    .select('product_id, product_snapshot, quantity, unit_price_minor, amount_minor')
+    .select(ORDER_ITEM_COLUMNS)
     .eq('order_id', body.id)
     .order('created_at', { ascending: true });
   if (itemsErr) console.error('[get-order] order_items error:', itemsErr);
-  const items = ((itemRows as {
-    product_id: string;
-    product_snapshot: { title?: string; photo?: string; priceGnf?: number; variantLabel?: string };
-    quantity: number;
-    unit_price_minor: number;
-    amount_minor: number;
-  }[] | null) ?? []).map((i) => ({
-    productId: i.product_id,
-    title: i.product_snapshot?.title ?? '',
-    photo: i.product_snapshot?.photo ?? '',
-    // « 41 · Noire », FIGE au moment de la commande. On ne rejoint pas
-    // product_variants : le vendeur peut avoir renomme sa couleur depuis, et
-    // c'est ce qui a ete commande qui doit etre prepare et remis.
-    variantLabel: i.product_snapshot?.variantLabel ?? undefined,
-    quantity: i.quantity,
-    unitPriceGnf: Number(i.unit_price_minor),
-    amountGnf: Number(i.amount_minor),
-  }));
+  // La forme vit dans @shared/catalog.ts : get-dispute lit EXACTEMENT la meme,
+  // pour que la console de litige ne montre pas autre chose que l'acheteur.
+  const items = ((itemRows as unknown as OrderItemRow[] | null) ?? []).map(mapOrderItem);
 
   // Montant TOTAL du lot, quand cette commande en fait partie. Relu en base
   // (batch_total_minor — la meme source que celle que le webhook Stripe et le

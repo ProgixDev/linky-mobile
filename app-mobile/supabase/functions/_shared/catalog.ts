@@ -452,3 +452,53 @@ export function mapBoost(r: BoostRow) {
       : undefined,
   };
 }
+
+// ── LES LIGNES D'UNE COMMANDE ───────────────────────────────────────────────
+//
+// ┌─ POURQUOI C'EST ICI ET PLUS DANS get-order ────────────────────────────┐
+// La forme d'une ligne etait ecrite en clair dans get-order, et get-dispute ne
+// lisait PAS order_items du tout : la console de litige montrait le titre de
+// l'article principal et rien d'autre. L'administrateur tranchait « mauvaise
+// taille » sans pouvoir savoir laquelle avait ete commandee -- sur le seul
+// ecran ou l'argent bouge.
+//
+// La reponse n'est pas de recopier le mappeur dans get-dispute. Deux copies
+// d'une meme forme finissent par diverger, et on vient de le payer ailleurs :
+// la restitution de stock existait en deux exemplaires, et l'un a garde six
+// semaines un filtre que l'autre avait recu. Une seule definition, et la liste
+// des colonnes avec, pour que les deux `select` ne puissent pas diverger non
+// plus.
+// └────────────────────────────────────────────────────────────────────────┘
+
+/** Les colonnes a lire. Partagees pour que deux appelants ne selectionnent pas
+ *  des champs differents de la meme forme. */
+export const ORDER_ITEM_COLUMNS =
+  'product_id, product_snapshot, quantity, unit_price_minor, amount_minor';
+
+export interface OrderItemRow {
+  product_id: string;
+  product_snapshot: {
+    title?: string;
+    photo?: string;
+    priceGnf?: number;
+    variantLabel?: string;
+  } | null;
+  quantity: number;
+  unit_price_minor: number | string;
+  amount_minor: number | string;
+}
+
+export function mapOrderItem(i: OrderItemRow) {
+  return {
+    productId: i.product_id,
+    title: i.product_snapshot?.title ?? '',
+    photo: i.product_snapshot?.photo ?? '',
+    // « 41 · Noire », FIGE au moment de la commande. On ne rejoint pas
+    // product_variants : le vendeur peut avoir renomme sa couleur depuis, et
+    // c'est ce qui a ete COMMANDE qui doit etre prepare, remis -- et arbitre.
+    variantLabel: i.product_snapshot?.variantLabel ?? undefined,
+    quantity: i.quantity,
+    unitPriceGnf: Number(i.unit_price_minor),
+    amountGnf: Number(i.amount_minor),
+  };
+}

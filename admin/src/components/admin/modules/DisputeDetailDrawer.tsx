@@ -20,6 +20,7 @@ import {
   type DisputeListItem,
   type DisputeEvent,
   type DisputeOrder,
+  type DisputeOrderItem,
   type AdminAction,
 } from '@/data/queries/disputes';
 
@@ -50,6 +51,7 @@ export function DisputeDetailDrawer({
   // while loading so the header doesn't flash empty.
   const order = data?.order ?? item.order;
   const adminActions = data?.admin_actions ?? [];
+  const items = data?.items ?? [];
 
   return (
     <div className="fixed inset-0 z-40">
@@ -95,7 +97,7 @@ export function DisputeDetailDrawer({
           {error && !data && (
             <div className="text-sm text-danger">Erreur de chargement du détail.</div>
           )}
-          <Body item={item} order={order} adminActions={adminActions} />
+          <Body item={item} order={order} items={items} adminActions={adminActions} />
         </div>
 
         {order.status === 'disputed' && (
@@ -164,10 +166,12 @@ function SkeletonBody() {
 function Body({
   item,
   order,
+  items,
   adminActions,
 }: {
   item: DisputeListItem;
   order: DisputeOrder;
+  items: DisputeOrderItem[];
   adminActions: AdminAction[];
 }) {
   const snap = order.productSnapshot;
@@ -193,26 +197,38 @@ function Body({
         />
       </Section>
 
-      <Section title="Article">
-        <div className="flex items-start gap-3">
-          {snap?.photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={snap.photo}
-              alt=""
-              className="h-16 w-16 flex-none rounded-xl object-cover"
-            />
-          ) : (
-            <div className="h-16 w-16 flex-none rounded-xl bg-sunken" />
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-bold">{snap?.title ?? '—'}</div>
-            <div className="mt-1 text-xs text-muted">
-              Quantité&nbsp;: {order.quantity} ·{' '}
-              {(snap?.priceGnf ?? 0).toLocaleString('fr-FR')} GNF
-            </div>
+      {/* LES ARTICLES, AVEC LEUR COMBINAISON.
+          Une commande peut porter plusieurs articles de la même boutique, et
+          chacun peut porter une taille et une couleur. L'en-tête de commande ne
+          décrit que l'article PRINCIPAL et n'a jamais porté la combinaison :
+          trancher « mauvaise taille » sans savoir laquelle était une décision
+          prise à l'aveugle, sur le seul écran où l'argent bouge.
+
+          Repli sur l'en-tête quand les lignes manquent — un dossier de litige
+          doit rester consultable même si get-dispute n'est pas encore
+          redéployé. */}
+      <Section title={items.length > 1 ? `Articles (${items.length})` : 'Article'}>
+        {items.length === 0 ? (
+          <Line
+            photo={snap?.photo}
+            title={snap?.title ?? '—'}
+            quantity={order.quantity}
+            unitPriceGnf={snap?.priceGnf ?? 0}
+          />
+        ) : (
+          <div className="space-y-3">
+            {items.map((it, i) => (
+              <Line
+                key={`${it.productId}:${it.variantLabel ?? ''}:${i}`}
+                photo={it.photo}
+                title={it.title}
+                variantLabel={it.variantLabel}
+                quantity={it.quantity}
+                unitPriceGnf={it.unitPriceGnf}
+              />
+            ))}
           </div>
-        </div>
+        )}
       </Section>
 
       <Section title="Timeline">
@@ -236,6 +252,44 @@ function Body({
           </div>
         </Section>
       )}
+    </div>
+  );
+}
+
+/** Une ligne d'article. La combinaison est mise en avant, pas glissee en fin de
+ *  titre : c'est l'information sur laquelle porte l'arbitrage. */
+function Line({
+  photo,
+  title,
+  variantLabel,
+  quantity,
+  unitPriceGnf,
+}: {
+  photo?: string;
+  title: string;
+  variantLabel?: string;
+  quantity: number;
+  unitPriceGnf: number;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      {photo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt="" className="h-16 w-16 flex-none rounded-xl object-cover" />
+      ) : (
+        <div className="h-16 w-16 flex-none rounded-xl bg-sunken" />
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-bold">{title}</div>
+        {variantLabel ? (
+          <div className="mt-1 inline-block rounded-md bg-sunken px-2 py-0.5 text-xs font-bold">
+            {variantLabel}
+          </div>
+        ) : null}
+        <div className="mt-1 text-xs text-muted">
+          Quantité&nbsp;: {quantity} · {unitPriceGnf.toLocaleString('fr-FR')} GNF
+        </div>
+      </div>
     </div>
   );
 }

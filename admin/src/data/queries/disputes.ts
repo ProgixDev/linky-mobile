@@ -52,6 +52,29 @@ export interface DisputeOrder {
   releaseAt?: string;
 }
 
+/**
+ * UNE LIGNE de la commande. Elle porte la COMBINAISON commandee, ce que
+ * l'en-tete de commande n'a jamais porte : `orders.product_snapshot` ne contient
+ * que le titre, la photo et le prix de l'article principal.
+ *
+ * Sans elle, un administrateur tranchait « mauvaise taille » sans pouvoir savoir
+ * laquelle avait ete commandee -- sur le seul ecran ou l'argent bouge.
+ *
+ * Meme forme que les lignes servies a l'acheteur par get-order (mapOrderItem
+ * dans functions/_shared/catalog.ts) : l'arbitrage doit porter sur ce que
+ * l'acheteur voit, pas sur une variante de la meme information.
+ */
+export interface DisputeOrderItem {
+  productId: string;
+  title: string;
+  photo: string;
+  /** « 41 · Noire », FIGE a la commande. Absent sur un article sans declinaison. */
+  variantLabel?: string;
+  quantity: number;
+  unitPriceGnf: number;
+  amountGnf: number;
+}
+
 export interface DisputeListItem {
   order: DisputeOrder;
   buyer: ParticipantBrief;
@@ -79,6 +102,10 @@ interface ListDisputesResponse {
 
 interface GetDisputeResponse {
   order: DisputeOrder;
+  /** Optionnel : absent tant que get-dispute n'est pas redeploye, et l'ecran
+   *  retombe alors sur l'en-tete. Une console qui casse sur un champ manquant
+   *  est pire que la console incomplete qu'elle remplace. */
+  items?: DisputeOrderItem[];
   admin_actions: AdminAction[];
 }
 
