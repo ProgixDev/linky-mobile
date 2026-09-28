@@ -172,7 +172,15 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     video_url: body.video_url ?? null,
     city: body.city.trim(),
     district: body.district?.trim() || null,
-    stock: body.stock ?? null,
+  // UN DON DECLARE COMBIEN D'OBJETS SONT DONNES. Sans quantite,
+  // place_gift_order ne decremente rien et n'epuise jamais l'annonce : le meme
+  // objet se reserve indefiniment (mesure : 3 reservations, dont une de 100
+  // unites, sur un objet unique). La base le refuse depuis 20260929_06
+  // (products_gift_has_stock) ; on pose la valeur ICI pour que le vendeur ne
+  // rencontre jamais cette contrainte.
+    // Un objet, sauf si le vendeur en annonce plusieurs : c'est le cas de loin le
+    // plus courant, et il ne peut JAMAIS trop promettre.
+    stock: body.is_gift ? (body.stock ?? 1) : (body.stock ?? null),
     status: stageInactive ? 'pending' : 'active',
   };
   const { data, error } = await sb

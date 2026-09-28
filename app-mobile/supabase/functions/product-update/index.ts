@@ -58,7 +58,7 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
 
   // Ownership check: product → shop → owner. Single join via the FK.
   const { data: own, error: eOwn } = await sb
-    .from('products').select('id, shop_id, status, has_variants, shops!inner(owner_id)')
+    .from('products').select('id, shop_id, status, has_variants, stock, shops!inner(owner_id)')
     .eq('id', body.id).maybeSingle();
   if (eOwn) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   if (!own) throwApi('PRODUCT_NOT_FOUND', 404, 'Produit introuvable.');
@@ -117,6 +117,25 @@ Deno.serve(makePost<Body>('/v1/products/update', valid, async ({ sb, body, req }
     ? body.variants.length > 0
     : ((own as { has_variants?: boolean }).has_variants ?? false);
   if (body.stock !== undefined && !willHaveVariants) patch.stock = body.stock;
+
+  // UN DON DECLARE COMBIEN D'OBJETS SONT DONNES. Sans quantite,
+  // place_gift_order ne decremente rien et n'epuise jamais l'annonce : le meme
+  // objet se reserve indefiniment (mesure : 3 reservations, dont une de 100
+  // unites, sur un objet unique). La base le refuse depuis 20260929_06
+  // (products_gift_has_stock) ; on pose la valeur ICI pour que le vendeur ne
+  // rencontre jamais cette contrainte.
+  //
+  // On ne touche a rien tant que le RESULTAT est deja une quantite : un vendeur
+  // qui ne change que son titre garde ses trois objets. On ne pose 1 que si le
+  // don finirait sans quantite — le cas de la bascule depuis une annonce a
+  // declinaisons, dont l'agregat est nul des qu'une combinaison n'etait pas
+  // chiffree, et que la remontee laisse INCHANGE quand la matrice disparait.
+  if (body.is_gift === true) {
+    const resulting = patch.stock !== undefined
+      ? (patch.stock as number | null)
+      : ((own as { stock?: number | null }).stock ?? null);
+    if (resulting === null) patch.stock = 1;
+  }
   if (body.city !== undefined)        patch.city = body.city.trim();
   if (body.district !== undefined)    patch.district = body.district === null ? null : body.district.trim() || null;
   if (body.status !== undefined)      patch.status = body.status;
