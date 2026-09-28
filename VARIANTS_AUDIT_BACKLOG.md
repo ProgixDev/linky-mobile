@@ -100,10 +100,24 @@ nulle part. Trois conséquences : dépassement d'entier au cast (500 opaque), d�
 `sum(...)::int` dans la remontée, et un contournement du plafond (20 × 50 000 000 →
 `products.stock` à un milliard, conservé quand la matrice est retirée).
 
-### #16 — `product-create` publie l'annonce **avant** d'écrire la matrice
-Tout échec du second temps laisse une annonce **en ligne et achetable**, sans déclinaison,
-alors que le vendeur a lu une erreur. Et `wrap.ts` annule la réservation d'idempotence sur
-exception : chaque réessai en publie une de plus.
+### ✅ #16 — `product-create` publie l'annonce **avant** d'écrire la matrice
+Tout échec du second temps laissait une annonce **en ligne et achetable**, sans déclinaison,
+alors que le vendeur avait lu une erreur. Et `wrap.ts` annule la réservation d'idempotence
+sur exception : chaque réessai en publiait une de plus.
+
+**Corrigé** (déployé v29). L'annonce naît `pending` et ne passe `active` qu'une fois la
+matrice écrite. `pending` n'invente aucun état : `get-product` et `place_order_multi`
+exigent déjà `status = 'active'`, donc la fenêtre est invisible ET incommandable de bout en
+bout. L'échec retire la ligne ; si le retrait échoue à son tour elle reste `pending`,
+c'est-à-dire dans l'état sûr — l'invisibilité vient du status, pas du nettoyage.
+
+Au passage : `replace_product_variants` n'est plus appelée pour rien. Tout le monde envoie
+`variants`, une annonce simple comme un don en envoient un tableau **vide**, et sur une
+annonce qui vient de naître la fonction n'a alors rien à faire. Un aller-retour de moins à
+chaque publication, et la fenêtre d'échec disparaît là où elle n'apportait rien.
+
+*Sonde* : `scripts/probe-publish-after-matrix.sql`. Contrôle négatif : en insérant `active`
+dès le départ, elle échoue sur « une annonce en attente a ete COMMANDEE ».
 
 ---
 
@@ -115,10 +129,17 @@ Une ligne qui **porte** une déclinaison alors que l'annonce n'en a plus passe `
 lot** au paiement (`VARIANT_UNEXPECTED`) — sans nommer l'article. Le panier n'étant pas
 vidé, chaque tentative suivante échoue à l'identique.
 
-### #2 [vérifié] — Le remède proposé ne répare pas
-« Choisir » renvoie à la fiche, où l'ajout crée une ligne **sœur** (`sameLine` compare les
-variantId) : l'ancienne ligne morte reste, le blocage persiste, et refaire le geste ajoute
-une 3ᵉ ligne. La seule sortie est de deviner qu'il faut décrémenter jusqu'à la corbeille.
+### ✅ #2 [vérifié] — Le remède proposé ne répare pas
+« Choisir » renvoyait à la fiche, où l'ajout crée une ligne **sœur** (`sameLine` compare les
+variantId) : l'ancienne ligne morte restait, le blocage persistait, et refaire le geste
+ajoutait une 3ᵉ ligne. La seule sortie était de deviner qu'il fallait décrémenter jusqu'à la
+corbeille.
+
+**Corrigé** (OTA). Le choix se refait **dans le panier**, par une feuille qui réutilise le
+sélecteur de la fiche. `chooseVariant` RÉÉCRIT la ligne en gardant sa quantité et sa place ;
+si une autre ligne porte déjà cette combinaison, on y verse la quantité et on retire la
+cassée — deux lignes du même couple se disputeraient la même identité et le serveur les
+refuserait en bloc (`DUPLICATE_ITEM`). Et « Payer » ouvre le choix au lieu de le réclamer.
 
 ### #3 [réfuté ×2] — Clé React de la fiche commande acheteur
 `key={it.productId}` collisionne quand une commande porte deux déclinaisons du même article.
@@ -130,21 +151,66 @@ fait déjà bien.
 
 ## Ailleurs
 
-### #14 — La console de litige ne montre **jamais** la combinaison commandée
-`get-dispute` ne lit pas `order_items`, et l'en-tête construit par `place_order_multi`
-(chemin mono-boutique, donc le cas normal) ne porte ni `variantId` ni `variantLabel`.
-L'administrateur tranche « mauvaise taille » sans pouvoir savoir laquelle avait été
-commandée — sur le seul écran où l'argent bouge.
+### ✅ #14 — La console de litige ne montre **jamais** la combinaison commandée
+`get-dispute` ne lisait pas `order_items`, et l'en-tête construit par `place_order_multi`
+ne porte ni `variantId` ni `variantLabel`. L'administrateur tranchait « mauvaise taille »
+sans pouvoir savoir laquelle avait été commandée — sur le seul écran où l'argent bouge.
 
-### #10 — Ordre de verrouillage inversé → interblocage possible
-`replace_product_variants` prend produit → ligne fille ; `restore_order_stock` prend ligne
+**Corrigé** (get-dispute v18, get-order v25 déployées ; **la console admin reste à
+déployer**). `mapOrderItem` + `ORDER_ITEM_COLUMNS` vivent dans `@shared/catalog.ts` et les
+deux fonctions s'en servent : ni la forme ni le `select` ne peuvent diverger, et
+l'administrateur voit littéralement ce que voit l'acheteur. La combinaison a sa propre
+pastille, et la section devient « Articles (n) » quand la commande en porte plusieurs.
+Deux replis : une erreur de lecture n'interrompt pas la réponse, et `items` est optionnel
+côté console — un dossier de litige ne doit jamais devenir inconsultable.
+
+### ✅ #10 — Ordre de verrouillage inversé → interblocage possible
+`replace_product_variants` prend produit → ligne fille ; `restore_order_stock` prenait ligne
 fille → produit (via la remontée). Croisement possible entre l'enregistrement d'une matrice
 et une restitution.
 
-### #4 [réfuté] / #5 — L'agrégat `NULL`
+⚠️ **L'ordre du CODE ne le disait pas** : l'écriture sur `products` ne concerne que les
+lignes SANS déclinaison (son sous-select filtre `variant_id is null`), donc sur un article à
+déclinaisons elle ne verrouillait rien. Il fallait lire le sous-select pour le voir.
+
+**Corrigé** (migration `_07`). Le corps partagé prend les lignes produit d'abord et **dans
+l'ordre des identifiants**, si bien que deux restitutions concurrentes se sérialisent aussi
+entre elles. Vérification de FORME assumée : un vrai interblocage demanderait deux sessions
+concurrentes, impossible par un aller-retour SQL.
+
+### ⚠️ ET LA SECONDE PORTE DE #12, TROUVÉE EN CHERCHANT #10
+`20260929_05` a posé le filtre `oi.stock_taken` sur `restore_order_stock` — mais il y a
+**deux** chemins de restitution, et la sonde n'en couvrait qu'un. Tout passage en
+`cancelled`/`refunded` déclenche `trg_restore_stock_on_order_cancel`, qui RÉIMPLÉMENTAIT la
+restitution, **sans le filtre**. Mesuré : la scène de #12 annulée par un changement de
+status rendait la combinaison à 3 au lieu de 2. Le défaut était donc toujours vivant sur le
+chemin réel.
+
+**Corrigé** (migration `_07`) : `restore_order_stock_lines` est désormais le SEUL endroit où
+la restitution est écrite ; les deux appelants ne font que l'encadrer, et le contrôle refuse
+que l'un d'eux contienne encore `product_variants`. La divergence devient impossible, elle
+n'est pas seulement corrigée. *Sonde* : `scripts/probe-restitution-both-doors.sql`.
+
+### #4 [réfuté] / ✅ #5 — L'agrégat `NULL`
 Le sceptique a réfuté #4 (`products.stock` n'est plus une porte sur une annonce à
-déclinaisons). #5 (le `NULL` survit à la bascule « À donner » → don illimité) **n'a pas été
-vérifié** : à confirmer, il dépend de la même prémisse.
+déclinaisons). #5 (le `NULL` survit à la bascule « À donner » → don illimité) était le seul
+point **non vérifié** de l'audit.
+
+**CONFIRMÉ, et plus large que décrit.** `place_gift_order` ne décrémente que si `stock` n'est
+pas nul, et laisse l'annonce `active` dans tous les cas : un don à quantité non déclarée est
+ILLIMITÉ. Mesure : **trois** réservations sur le même objet, dont une de cent unités, toutes
+en `paid`, toutes « à retirer chez le donneur ». Le chemin décrit par l'audit existe bien,
+mais la cause ne s'y limite pas — tout don sans quantité est illimité, quelle que soit la
+façon dont il l'est devenu.
+
+⚠️ **Aucune donnée abîmée** : zéro don en prod, mesuré. Le défaut était latent.
+
+**Corrigé** (migration `_06` + product-create v29 / product-update v25 déployées). Un
+invariant de base plutôt qu'un cas particulier dans le chemin de l'argent : avec une
+quantité, la branche `stock is not null` qui existe déjà décrémente, épuise et pose
+`stock_taken`. La fonction refuse en plus le cas par un NOM (`GIFT_STOCK_UNDECLARED`), au
+cas où la contrainte serait un jour retirée. *Sonde* :
+`scripts/probe-gift-declared-quantity.sql`, dont le contrôle négatif est gratuit.
 
 ---
 
@@ -153,7 +219,12 @@ vérifié** : à confirmer, il dépend de la même prémisse.
 | # | quoi | où |
 |---|---|---|
 | **#15** | argent : panier multi-boutiques + don | corrigé et déployé (`c2ffba7`) |
-| **#12** | `stock_taken` inconditionnel → stock inventé | migration `_05` (vérifiée en prod) |
+| **#12** | `stock_taken` inconditionnel → stock inventé | migrations `_05` **et `_07`** (2 portes) |
+| **#5** | un don sans quantité est illimité | migration `_06` + 2 fns |
+| **#16** | annonce publiée avant sa matrice | `product-create` (v29) |
+| **#2** | le panier créait une ligne sœur | OTA |
+| **#14** | console de litige sans la combinaison | `get-dispute`/`get-order` + console admin |
+| **#10** | ordre de verrouillage inversé | migration `_07` |
 | **#13** | la garde bloquait **à vie** après une seule vente | migration `_03` |
 | **#11** | sens déclinaisons → simple non gardé | migration `_03` |
 | **#8** | ordre de saisie non conservé (colonne `position`) | migration `_03` + `get-product` |
@@ -164,10 +235,17 @@ vérifié** : à confirmer, il dépend de la même prémisse.
 | **#1** | ligne de panier périmée : réparée au lieu de bloquer | OTA |
 | **#3** | clé React de la fiche commande | OTA |
 
-**Reste ouvert :** #2 (le remède du panier crée une ligne sœur — #1 en retire la cause
-la plus fréquente), #16 (`product-create` publie avant d'écrire la matrice — #18 en ferme
-le déclencheur principal), #14 (console de litige sans la combinaison), #10 (ordre de
-verrouillage), #5 (à confirmer).
+**Rien ne reste ouvert.** Les dix-neuf trouvailles sont traitées : corrigées, ou réfutées
+par un sceptique (#3, #4).
 
-Aucun de ces cinq ne touche l'argent ni le stock. Les deux familles qui pouvaient faire
-perdre de l'argent ou vendre ce qui n'existe pas sont closes.
+Deux leçons valent plus que les correctifs eux-mêmes, et sont encodées dans le dépôt :
+
+1. **Deux copies d'une règle d'argent finissent par diverger.** La restitution de stock
+   existait en deux exemplaires ; l'un a gardé six semaines un filtre que l'autre avait
+   reçu, et ma propre sonde de #12 est restée verte en frappant à la bonne porte du mauvais
+   mur. La forme d'une ligne de commande était en train de prendre le même chemin. Les deux
+   sont désormais définies **une seule fois**, et un contrôle refuse la réapparition d'une
+   copie.
+
+2. **Une sonde qui ne peut pas échouer ne prouve rien.** Chacune des sondes de ce lot est
+   accompagnée de son contrôle négatif, écrit dans son en-tête et mesuré.
