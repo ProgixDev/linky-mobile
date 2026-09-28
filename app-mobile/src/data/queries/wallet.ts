@@ -39,6 +39,20 @@ const REF_LABEL: Record<string, string> = {
   booking_refund: 'Remboursement réservation',
   booking_platform_fee: 'Frais de service',
   boost_purchase: 'Mise en avant',
+  // LES TROIS MOUVEMENTS D'UN RETRAIT.
+  //
+  // `withdrawal_payout` existait depuis juin et n'etait PAS dans cette table :
+  // il s'affichait donc dans l'historique sous son nom technique brut, que
+  // personne ne peut lire. Le commentaire ci-dessus affirmait qu'il n'existait
+  // pas — il existait.
+  //
+  // `withdrawal_hold` est la retenue posee des la demande (2026-09-28), et
+  // `withdrawal_release` la restitution quand l'administrateur refuse. Du point
+  // de vue du vendeur les trois racontent la meme chose : son retrait. On ne
+  // l'embarrasse pas d'un vocabulaire comptable.
+  withdrawal_hold: 'Retrait demandé',
+  withdrawal_payout: 'Retrait',
+  withdrawal_release: 'Retrait annulé',
 };
 
 function toMovement(e: HistoryEntry): WalletMovement {

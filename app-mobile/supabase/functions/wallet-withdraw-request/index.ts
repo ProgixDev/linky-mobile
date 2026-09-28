@@ -41,24 +41,75 @@ function valid(b: unknown): b is Body {
     && hasPayableDestination(x.destination);
 }
 
-// Records a PENDING withdrawal request after a read-only balance check. No debit happens here -
-// V1 payout is manual; the ledger debit (post_external_debit) lands with the payments module.
+// LA DEMANDE EST VALIDEE ET LES FONDS SONT RETENUS, EN UN SEUL GESTE.
+//
+// ┌─ POURQUOI CETTE FONCTION NE FAIT PLUS RIEN ELLE-MEME ───────────────────┐
+// Elle lisait le solde, le comparait, puis inserait la ligne — trois gestes
+// separes, sans verrou. Deux demandes simultanees lisaient donc le MEME solde
+// et passaient toutes les deux. Et rien n'etait retenu : le debit n'avait lieu
+// que lorsque l'administrateur cochait " paye ", c'est-a-dire APRES avoir
+// envoye l'argent pour de vrai. Entre les deux, le vendeur pouvait depenser
+// son solde, et la perte etait pour Linky.
+//
+// `request_withdrawal` fait les trois sous un `for update` sur le portefeuille,
+// pose la demande en `approved` et ecrit la retenue dans le meme mouvement.
+// C'est ce qui permet au back-office de n'etre plus qu'un tableau de suivi
+// (demande du client, 2026-09-28) : il n'a plus a decider, seulement a envoyer
+// l'argent et a le confirmer.
+//
+// ⚠️ Le VIREMENT reste manuel, et ce n'est pas un oubli : il faudrait une API
+// de decaissement, et Lengopay n'expose que de l'encaissement (mesure du
+// 2026-09-28, dix-sept routes, toutes entrantes).
+// └─────────────────────────────────────────────────────────────────────────┘
 Deno.serve(makePost<Body>(
   '/v1/wallet/withdraw-request',
   valid,
   async ({ sb, body, req }) => {
     const userId = await requireUser(req);
-    const { data: balances, error: be } = await sb.rpc('get_wallet_balances', { p_user_id: userId });
-    if (be) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
-    const row = ((balances ?? []) as Array<{ currency: string; balance_minor: number }>).find((x) => x.currency === body.currency);
-    const bal = Number(row?.balance_minor ?? 0);
-    if (bal < body.amount_minor) throwApi('INSUFFICIENT_FUNDS', 400, 'Solde insuffisant pour ce retrait.');
-    const { data, error } = await sb
-      .from('withdrawal_requests')
-      .insert({ user_id: userId, currency: body.currency, amount_minor: body.amount_minor, destination: body.destination.trim() })
-      .select('id, currency, amount_minor, status, destination, created_at')
-      .single();
-    if (error || !data) throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
-    return { body: { withdrawal: data } };
+    const { data, error } = await sb.rpc('request_withdrawal', {
+      p_user_id:      userId,
+      p_currency:     body.currency,
+      p_amount_minor: body.amount_minor,
+      p_destination:  body.destination.trim(),
+      // La caisse VENDEUR : c'est celle que l'application affiche et la seule
+      // qu'un retrait vide aujourd'hui. La RPC accepte 'immo' pour le jour ou
+      // l'ecran saura la choisir.
+      p_wallet_kind:  'seller',
+    });
+    if (error) {
+      const msg = (error as { message?: string } | null)?.message ?? '';
+      console.error('[wallet-withdraw-request] rpc error:', error);
+      if (msg.includes('insufficient_funds')) {
+        throwApi('INSUFFICIENT_FUNDS', 400, 'Solde insuffisant pour ce retrait.');
+      }
+      if (msg.includes('destination_required')) {
+        throwApi('DESTINATION_REQUIRED', 400, 'Indique le numéro qui doit recevoir l\'argent.');
+      }
+      if (msg.includes('invalid_amount')) {
+        throwApi('INVALID_AMOUNT', 400, 'Montant invalide.');
+      }
+      if (msg.includes('invalid_currency') || msg.includes('invalid_wallet_kind')) {
+        throwApi('INVALID_BODY', 400, 'Corps invalide');
+      }
+      throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+    }
+    const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined;
+    if (!row) {
+      console.error('[wallet-withdraw-request] rpc returned no row');
+      throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
+    }
+    // On rend les MEMES champs qu'avant : l'ecran n'a rien a reapprendre.
+    return {
+      body: {
+        withdrawal: {
+          id: row.id,
+          currency: row.currency,
+          amount_minor: row.amount_minor,
+          status: row.status,
+          destination: row.destination,
+          created_at: row.created_at,
+        },
+      },
+    };
   },
 ));

@@ -5,7 +5,7 @@ export default function WithdrawalsPage() {
   return (
     <Shell
       title="Retraits"
-      subtitle="Envoie le transfert mobile money, puis marque la demande payée."
+      subtitle="Les demandes se valident seules et les fonds sont retenus. Envoie le transfert, puis confirme."
     >
       <WithdrawalsModule />
     </Shell>

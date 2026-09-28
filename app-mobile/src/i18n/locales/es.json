@@ -254,7 +254,7 @@
     },
     "withdrawalStatusLabel": {
       "pending": "Pendiente",
-      "approved": "Pendiente",
+      "approved": "En envío",
       "paid": "Pagado",
       "rejected": "Rechazado",
       "cancelled": "Cancelado"

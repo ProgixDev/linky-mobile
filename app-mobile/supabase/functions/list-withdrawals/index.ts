@@ -46,7 +46,16 @@ Deno.serve(makePost<Body>('/v1/admin/withdrawals/list', valid, async ({ sb, body
   let query = sb.from('withdrawal_requests').select(SELECT);
 
   if (scope === 'pending') {
-    query = query.eq('status', 'pending').order('created_at', { ascending: true });
+    // LA FILE, C'EST CE QU'IL RESTE A PAYER.
+    //
+    // 'approved' depuis le 2026-09-28 : la demande se valide toute seule et les
+    // fonds sont deja retenus, l'administrateur n'a plus qu'a envoyer l'argent.
+    // 'pending' reste inclus pour les demandes d'AVANT ce changement, qui
+    // attendent encore une decision humaine — les deux regimes coexistent et il
+    // n'y a aucune reprise de donnees a faire.
+    query = query
+      .in('status', ['approved', 'pending'])
+      .order('created_at', { ascending: true });
   } else {
     const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
     query = query

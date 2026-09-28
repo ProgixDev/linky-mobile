@@ -3,11 +3,19 @@
 // Phase S — withdrawals processing queue (mirror of the KYC module layout :
 // pending queue left, detail pane right).
 //
-// V1 payout is MANUAL : the admin sends the mobile-money transfer outside the
-// app, then marks the request paid — which debits the seller's wallet at that
-// moment (funds are NOT held at request time). The detail pane therefore shows
-// the seller's CURRENT balance next to the requested amount, with a red flag
-// when the balance no longer covers the request.
+// LE VIREMENT reste manuel — il faudrait une API de décaissement, et Lengopay
+// n'expose que de l'encaissement (mesuré le 2026-09-28). Mais la DÉCISION ne
+// l'est plus : depuis 20260929_08 la demande se valide seule et les fonds sont
+// RETENUS dès ce moment (`withdrawal_hold`). Cet écran n'est donc plus un poste
+// de traitement mais un tableau de suivi : envoyer l'argent, confirmer.
+//
+// ⚠️ DEUX RÉGIMES COEXISTENT, et ils ne s'affichent pas pareil :
+//   'approved' — fonds retenus. Le solde affiché les EXCLUT déjà, donc le
+//                comparer au montant demandé n'a aucun sens : il serait
+//                presque toujours « insuffisant » et l'alerte crierait au loup.
+//   'pending'  — demande d'AVANT le changement. Rien n'est retenu, le débit a
+//                lieu au moment où l'on coche « payé », et c'est là que la
+//                comparaison solde / montant garde tout son sens.
 
 import { useState } from 'react';
 import { Banknote, X, Calendar, Loader2, AlertTriangle, Check } from 'lucide-react';
@@ -73,7 +81,9 @@ export function WithdrawalsModule() {
           ) : (
             pending.map((w) => {
               const isActive = active?.id === w.id;
-              const short = (w.balance_minor ?? 0) < w.amount_minor;
+              // Cf. l'en-tête : la comparaison ne vaut que pour les demandes
+              // d'avant la retenue.
+              const short = w.status === 'pending' && (w.balance_minor ?? 0) < w.amount_minor;
               return (
                 <button
                   key={w.id}
@@ -136,7 +146,9 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
 
   const name = request.users?.display_name ?? 'Vendeur Linky';
   const balance = request.balance_minor ?? 0;
-  const short = balance < request.amount_minor;
+  /** Les fonds sont déjà sortis du solde du vendeur : il n'y a plus rien à vérifier. */
+  const held = request.status === 'approved';
+  const short = !held && balance < request.amount_minor;
 
   return (
     <div className="flex flex-col gap-5 overflow-y-auto">
@@ -149,8 +161,12 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
           <div className="flex-1">
             <h2 className="font-display text-xl font-bold tracking-tight">{name}</h2>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-              <span className="rounded-full bg-sunken px-2 py-0.5 font-bold uppercase tracking-wider">
-                EN ATTENTE
+              <span
+                className={`rounded-full px-2 py-0.5 font-bold uppercase tracking-wider ${
+                  held ? 'bg-accent-soft text-accent-text' : 'bg-sunken'
+                }`}
+              >
+                {held ? 'FONDS RETENUS' : 'À DÉCIDER'}
               </span>
               <span className="flex items-center gap-1">
                 <Calendar size={11} />
@@ -184,8 +200,13 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
               {request.destination ? maskDestination(request.destination) : '— non précisée —'}
             </span>
           </div>
+          {/* Sur une demande validée, les fonds sont déjà sortis du solde :
+              afficher « solde 4 000 / demandé 60 000 » ferait croire à un
+              problème alors que c'est la preuve que la retenue a fonctionné. */}
           <div className="flex items-center justify-between">
-            <span className="text-muted">Solde actuel du vendeur</span>
+            <span className="text-muted">
+              {held ? 'Solde du vendeur, retenue déduite' : 'Solde actuel du vendeur'}
+            </span>
             <span className={`font-bold tabular-nums ${short ? 'text-danger' : ''}`}>
               {gnf(balance)}
             </span>
@@ -203,9 +224,20 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
           </div>
         )}
         <div className="mt-4 text-xs text-faint">
-          Le paiement est <span className="font-bold">manuel</span> : envoie d&apos;abord le transfert
-          mobile money vers le compte du vendeur, puis marque la demande payée — son portefeuille
-          Linky est débité à ce moment-là.
+          {held ? (
+            <>
+              Cette demande est <span className="font-bold">déjà validée</span> et les fonds sont{' '}
+              <span className="font-bold">retenus</span> sur le portefeuille du vendeur. Envoie le
+              transfert mobile money, puis confirme — aucun débit supplémentaire n&apos;aura lieu.
+              Si tu refuses, les fonds lui sont rendus.
+            </>
+          ) : (
+            <>
+              Demande <span className="font-bold">antérieure</span> à la validation automatique :
+              rien n&apos;est retenu. Envoie d&apos;abord le transfert, puis marque-la payée — son
+              portefeuille est débité à ce moment-là.
+            </>
+          )}
         </div>
       </div>
 
@@ -278,7 +310,7 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
               ) : (
                 <Check size={15} strokeWidth={2.25} />
               )}
-              Marquer payé
+              {held ? "J'ai envoyé l'argent" : 'Marquer payé'}
             </button>
           </>
         )}
