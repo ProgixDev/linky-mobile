@@ -140,6 +140,26 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     }
   }
 
+  // ┌─ PUBLIER EN DEUX TEMPS, ET SEULEMENT SI LA MATRICE SUIT ──────────────┐
+  // Une annonce a declinaisons s'ecrit en DEUX appels : la ligne produit, puis
+  // la matrice. Les inserer tous les deux `active` rendait le premier temps
+  // publiable a lui seul : si le second echouait, le vendeur lisait une erreur
+  // pendant que son annonce etait EN LIGNE et ACHETABLE sans aucune taille — et
+  // chaque reessai en publiait une de plus, la reservation d'idempotence etant
+  // annulee sur exception.
+  //
+  // `pending` est la reponse, et elle ne coute rien a inventer : `get-product`
+  // et `place_order_multi` exigent tous deux `status = 'active'`, donc la
+  // fenetre est invisible ET incommandable de bout en bout. Le vendeur, lui,
+  // voit tous ses status dans son propre stock (`list-products`), donc rien ne
+  // disparait a ses yeux.
+  //
+  // On ne le fait QUE s'il y a vraiment une matrice a ecrire : une annonce
+  // simple n'a pas de second temps, et la mettre en attente ajouterait une
+  // fenetre d'echec la ou il n'y en avait aucune.
+  // └──────────────────────────────────────────────────────────────────────┘
+  const stageInactive = body.variants !== undefined && body.variants.length > 0;
+
   const insert = {
     shop_id: shopId,
     title: body.title.trim(),
@@ -153,7 +173,7 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     city: body.city.trim(),
     district: body.district?.trim() || null,
     stock: body.stock ?? null,
-    status: 'active',
+    status: stageInactive ? 'pending' : 'active',
   };
   const { data, error } = await sb
     .from('products')
@@ -165,13 +185,20 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     throwApi('INTERNAL_ERROR', 500, 'Erreur création produit');
   }
 
-  // ── LA MATRICE, ECRITE APRES COUP ────────────────────────────────────────
+  // ── LE SECOND TEMPS : LA MATRICE ──────────────────────────────────────────
   // replace_product_variants fait un DIFF : elle pose ce qui arrive, MASQUE ce
   // qui disparait mais a deja ete commande (sinon order_items.variant_id
   // pointerait dans le vide), et supprime le reste. Elle REFUSE de convertir
   // une annonce qui retient encore des unites : products.stock deviendrait un
   // agregat, et la reservation d'un acheteur qui a deja paye s'evaporerait.
-  if (body.variants !== undefined) {
+  //
+  // ET ON NE L'APPELLE PAS POUR RIEN. Tout le monde envoie `variants` : une
+  // annonce simple comme un don en envoient un tableau VIDE. Sur une annonce qui
+  // vient de naitre, la fonction n'a alors litteralement rien a faire — pas une
+  // ligne a poser, a masquer ni a supprimer — elle ne prend qu'un verrou.
+  // L'appeler quand meme coutait un aller-retour a chaque publication (3G) et,
+  // surtout, ouvrait une fenetre d'echec la ou il n'y en avait aucune.
+  if (stageInactive) {
     const { error: eVar } = await sb.rpc('replace_product_variants', {
       p_product_id: (data as { id: string }).id,
       p_variants: variantsPayload(body.variants),
@@ -179,6 +206,18 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     if (eVar) {
       const vm = (eVar as { message?: string } | null)?.message ?? '';
       console.error('[product-create] variants error:', eVar);
+      // RIEN NE DOIT SURVIVRE A CET ECHEC. La ligne est encore `pending`, donc
+      // deja invisible et incommandable ; on la retire quand meme, sinon chaque
+      // reessai du vendeur empilerait un brouillon de plus dans son stock. La
+      // cle etrangere des declinaisons est en ON DELETE CASCADE, et la fonction
+      // ayant echoue est atomique : il n'y a de toute facon aucune combinaison a
+      // emporter.
+      //
+      // Au pire, la suppression echoue a son tour : la ligne reste `pending`,
+      // c'est-a-dire exactement l'etat sur : pas de client, pas de commande.
+      // C'est pour cela que l'invisibilite vient du status et non de ce nettoyage.
+      const { error: eDel } = await sb.from('products').delete().eq('id', (data as { id: string }).id);
+      if (eDel) console.error('[product-create] rollback delete error:', eDel);
       if (vm.includes('LIVE_ORDERS')) {
         throwApi('LIVE_ORDERS', 409,
           "Des commandes sont en cours sur cet article. Tu pourras ajouter des tailles et des couleurs une fois qu'elles seront terminees.");
@@ -197,11 +236,25 @@ Deno.serve(makePost<Body>('/v1/products/create', valid, async ({ sb, body, req }
     }
   }
 
+  // MAINTENANT l'annonce existe en entier : on la publie. Un echec ici laisse
+  // une annonce complete mais invisible ; on la retire et on echoue, pour que le
+  // vendeur reessaie une fois plutot que de croire avoir publie.
+  if (stageInactive) {
+    const { error: ePub } = await sb
+      .from('products').update({ status: 'active' }).eq('id', (data as { id: string }).id);
+    if (ePub) {
+      console.error('[product-create] publish error:', ePub);
+      const { error: eDel } = await sb.from('products').delete().eq('id', (data as { id: string }).id);
+      if (eDel) console.error('[product-create] rollback delete error:', eDel);
+      throwApi('INTERNAL_ERROR', 500, "Erreur publication de l'annonce");
+    }
+  }
+
   // RELECTURE : la remontee declenchee par la matrice vient de poser
   // has_variants et de recalculer le stock. Renvoyer la ligne d'avant ferait
   // afficher au vendeur une annonce « sans declinaison » qu'il vient pourtant
   // de creer avec.
-  if (body.variants !== undefined && body.variants.length > 0) {
+  if (stageInactive) {
     const { data: fresh } = await sb
       .from('products')
       .select('id, shop_id, title, description, price_minor, category, condition, status, photos, video_url, boosted, view_count, fav_count, city, district, stock, is_gift, has_variants, variant_sizes, variant_colors, created_at')
