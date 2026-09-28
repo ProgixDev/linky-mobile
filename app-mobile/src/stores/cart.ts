@@ -52,6 +52,30 @@ interface CartState {
    * retrouveraient à se disputer la même identité.
    */
   dropVariant: (productId: string) => void;
+  /**
+   * Pose la combinaison choisie SUR LA LIGNE EXISTANTE.
+   *
+   * ┌─ POURQUOI CE N'EST PAS UN `add` ────────────────────────────────────────┐
+   * Une ligne peut cesser de designer une combinaison valable sans que
+   * l'acheteur y soit pour rien : elle a ete enregistree avant que le vendeur
+   * n'ajoute des tailles, ou la combinaison choisie a ete retiree. Le panier le
+   * signale et propose de choisir.
+   *
+   * Mais `add` cree une ligne par couple (article, declinaison) : choisir
+   * depuis la fiche AJOUTAIT une ligne soeur et laissait la morte en place. Le
+   * blocage persistait, refaire le geste en ajoutait une troisieme, et la seule
+   * sortie etait de deviner qu'il fallait decrementer jusqu'a la corbeille.
+   *
+   * On REECRIT donc la ligne, en gardant sa quantite et sa place. C'est le meme
+   * principe que `dropVariant` : quand l'incoherence ne vient pas de
+   * l'acheteur, on repare, on ne lui demande rien.
+   * └────────────────────────────────────────────────────────────────────────┘
+   */
+  chooseVariant: (
+    productId: string,
+    fromVariantId: string | undefined,
+    variant: { id: string; label?: string },
+  ) => void;
   setQuantity: (productId: string, quantity: number, variantId?: string) => void;
   /** Retire toutes les lignes d'une boutique — appele apres une commande
    *  reussie, pour ne vider QUE le groupe paye et laisser les autres en place. */
@@ -168,6 +192,35 @@ export const useCart = create<CartState>((set, get) => {
               l.productId === productId ? { ...l, quantity: l.quantity + qty } : l,
             )
           : [...kept, { productId, quantity: qty, shopId }],
+      });
+    },
+
+    chooseVariant: (productId, fromVariantId, variant) => {
+      const s = get();
+      const idx = s.lines.findIndex((l) => sameLine(l, productId, fromVariantId));
+      if (idx === -1) return;
+      const target = s.lines[idx];
+      // Deja la bonne : surtout ne pas la fusionner avec elle-meme, ce qui
+      // doublerait la quantite.
+      if ((target.variantId ?? undefined) === variant.id) return;
+
+      const twin = s.lines.findIndex((l, i) => i !== idx && sameLine(l, productId, variant.id));
+      if (twin === -1) {
+        persistSet({
+          lines: s.lines.map((l, i) =>
+            i === idx ? { ...l, variantId: variant.id, variantLabel: variant.label } : l,
+          ),
+        });
+        return;
+      }
+      // Une ligne porte DEJA cette combinaison — l'acheteur avait aussi mis du
+      // 41 dans son panier. On y verse la quantite et on retire la cassee :
+      // deux lignes pour le meme couple se disputeraient la meme identite, et
+      // le serveur les refuserait en bloc (DUPLICATE_ITEM).
+      persistSet({
+        lines: s.lines
+          .map((l, i) => (i === twin ? { ...l, quantity: l.quantity + target.quantity } : l))
+          .filter((_, i) => i !== idx),
       });
     },
 

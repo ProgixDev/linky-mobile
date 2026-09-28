@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -19,6 +19,7 @@ import { platformFeeGnf, priceWithFeeGnf } from '../src/lib/fees';
 import { gnfToEur } from '../src/lib/currency';
 import { useCart } from '../src/stores/cart';
 import { variantLabel } from '../src/lib/variantsDraft';
+import { VariantChoiceSheet } from '../src/components/sheets/VariantChoiceSheet';
 import { useBuyerGate } from '../src/components/feedback/BuyerGate';
 import { useFilters } from '../src/stores/filters';
 import { apiPost } from '../src/lib/api';
@@ -29,7 +30,12 @@ export default function CartRoute() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const toast = useToast();
-  const { lines, setQuantity, remove, dropVariant } = useCart();
+  const { lines, setQuantity, remove, dropVariant, chooseVariant } = useCart();
+
+  // La ligne dont la combinaison est a refaire. On retient le couple COMPLET :
+  // une ligne s'identifie par (article, declinaison), et c'est l'ancienne
+  // declinaison qui permet de retrouver EXACTEMENT la ligne a reecrire.
+  const [fixing, setFixing] = useState<{ productId: string; variantId?: string } | null>(null);
   const { requireBuyer } = useBuyerGate();
 
   // One real-backend fetch per cart line; shared cache with useProduct on the
@@ -237,7 +243,11 @@ export default function CartRoute() {
                       <Pressable
                         onPress={() => {
                           haptic.light();
-                          router.push(`/product/${product.id}`);
+                          // ON NE RENVOIE PLUS SUR LA FICHE : y ajouter la
+                          // bonne taille creait une ligne SOEUR et laissait la
+                          // morte en place. La ligne cassee est ici, on la
+                          // repare ici.
+                          setFixing({ productId: product.id, variantId: line.variantId });
                         }}
                         hitSlop={6}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}
@@ -401,10 +411,11 @@ export default function CartRoute() {
             const broken = items.find(({ line, product }) => needsChoice(line, product));
             if (broken) {
               haptic.light();
-              toast.show(
-                `${broken.product.title} : ${t('create.variantsPick')}`,
-                'info',
-              );
+              // On OUVRE le choix au lieu de se contenter de le reclamer : un
+              // avertissement qui nomme l'article laisse encore l'acheteur
+              // chercher ou reparer. S'il y en a plusieurs, chaque appui sur
+              // « Payer » presente la suivante.
+              setFixing({ productId: broken.product.id, variantId: broken.line.variantId });
               return;
             }
             // ┌─ UN DON SE PREND SEUL ────────────────────────────────────────┐
@@ -432,6 +443,16 @@ export default function CartRoute() {
           }}
         />
       </StickyBottom>
+
+      <VariantChoiceSheet
+        product={fixing ? (items.find(({ product }) => product.id === fixing.productId)?.product ?? null) : null}
+        onClose={() => setFixing(null)}
+        onPick={(variant) => {
+          if (!fixing) return;
+          chooseVariant(fixing.productId, fixing.variantId, variant);
+          setFixing(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
