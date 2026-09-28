@@ -35,12 +35,25 @@ terminées » — elles le sont). La reprise de `20260926_02` a même posé `sto
 sur toutes les anciennes commandes de panier déjà honorées.
 *Piste : tester `o.stock_taken and o.status not in ('released','refunded','cancelled')`.*
 
-### #12 — `stock_taken` vaut vrai même quand la ligne n'a **rien** pris
-Les deux fonctions de commande n'écrivent jamais la colonne : elle prend son défaut `true`,
-y compris quand `v_variant.stock is null` (aucun décrément). Si le vendeur chiffre sa
-matrice ensuite, la restitution **invente** une unité → survente. `place_gift_order`, elle,
-l'écrit correctement (`v_product.stock is not null`) : la même précaution manque dans les
-deux chemins payants.
+### ✅ #12 — `stock_taken` vaut vrai même quand la ligne n'a **rien** pris
+Les deux fonctions de commande n'écrivaient jamais la colonne : elle prenait son défaut
+`true`, y compris quand `v_variant.stock is null` (aucun décrément). Si le vendeur chiffrait
+sa matrice ensuite, la restitution **inventait** une unité → survente. `place_gift_order`,
+elle, l'écrivait correctement (`v_product.stock is not null`) : la même précaution manquait
+dans les deux chemins payants.
+
+**Corrigé** par `20260929_05_stock_taken_per_line.sql`, appliquée et vérifiée en prod le
+2026-09-28. Le marqueur descend au niveau de la LIGNE (`order_items.stock_taken`) parce
+qu'une commande peut mélanger une ligne qui a pris du stock et une qui n'en a pas pris ;
+un marqueur par commande ne sait que tout rendre ou ne rien rendre. Il est posé dans une
+variable (`v_took`) juste après chaque décrément réel, transporté par l'instantané, et
+recopié par `fill_order_item_variant`. `orders.stock_taken` garde son rôle d'idempotence.
+
+*Vérifié fonctionnellement*, pas seulement textuellement : le scénario complet de l'audit
+rejoué dans une transaction annulée — deux combinaisons, l'une non chiffrée, l'autre à 5 ;
+le vendeur chiffre la première à 2 pendant le séquestre ; annulation. La combinaison reste
+à **2**. Contrôle négatif à l'appui : en remettant `stock_taken = true` sur cette ligne, le
+même test rend **3** et échoue. Le test a des dents.
 
 ### #11 — Repasser déclinaisons → **simple** n'est pas gardé
 `LIVE_ORDERS` ne couvre que le sens simple → déclinaisons (`if not v_had and v_count > 0`).
@@ -140,6 +153,7 @@ vérifié** : à confirmer, il dépend de la même prémisse.
 | # | quoi | où |
 |---|---|---|
 | **#15** | argent : panier multi-boutiques + don | corrigé et déployé (`c2ffba7`) |
+| **#12** | `stock_taken` inconditionnel → stock inventé | migration `_05` (vérifiée en prod) |
 | **#13** | la garde bloquait **à vie** après une seule vente | migration `_03` |
 | **#11** | sens déclinaisons → simple non gardé | migration `_03` |
 | **#8** | ordre de saisie non conservé (colonne `position`) | migration `_03` + `get-product` |
@@ -150,8 +164,10 @@ vérifié** : à confirmer, il dépend de la même prémisse.
 | **#1** | ligne de panier périmée : réparée au lieu de bloquer | OTA |
 | **#3** | clé React de la fiche commande | OTA |
 
-**Reste ouvert :** #12 (`stock_taken` inconditionnel — demande une chirurgie sur les
-deux fonctions de commande, délibérément reporté), #2 (le remède du panier crée une
-ligne sœur — #1 en retire la cause la plus fréquente), #16 (`product-create` publie
-avant d'écrire la matrice — #18 en ferme le déclencheur principal), #14 (console de
-litige sans la combinaison), #10 (ordre de verrouillage), #5 (à confirmer).
+**Reste ouvert :** #2 (le remède du panier crée une ligne sœur — #1 en retire la cause
+la plus fréquente), #16 (`product-create` publie avant d'écrire la matrice — #18 en ferme
+le déclencheur principal), #14 (console de litige sans la combinaison), #10 (ordre de
+verrouillage), #5 (à confirmer).
+
+Aucun de ces cinq ne touche l'argent ni le stock. Les deux familles qui pouvaient faire
+perdre de l'argent ou vendre ce qui n'existe pas sont closes.
