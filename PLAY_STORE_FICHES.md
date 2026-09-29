@@ -209,9 +209,36 @@ juridiquement, et il dépend de la qualification exacte des prestataires.
 
 ## 4. Reste à fournir
 
+*État au 2026-09-29.*
+
+### ⚠️ Le binaire déposé est PÉRIMÉ — c'est le point le plus important
+
+Le dernier AAB de production est le **versionCode 16 du 24 septembre**. Les sons
+de notification demandés par le client ont été ajoutés le **28 septembre**, et
+**un son est une ressource native** : il vit dans `android/app/src/main/res/raw`
+et ne part **JAMAIS** par une mise à jour OTA.
+
+Publier vc16 livrerait donc une application **sans aucun son personnalisé**,
+alors que c'est précisément ce qui a été demandé. **Il faut reconstruire un AAB
+avant tout dépôt.** (La version est gouvernée à distance par EAS —
+`appVersionSource: remote`, compteur à 18 — donc le `versionCode 1` du
+`build.gradle` est ignoré et aucun conflit de numéro n'est possible.)
+
+### Fourni
+
+- ✅ **Icône 512×512** et **bannière 1024×500** pour les deux applications :
+  `play-store-assets/`. Générées depuis les icônes de l'application (opaques,
+  sans transparence — Play la refuse), bannières au dégradé de la marque.
+  Remplaçables sans rien casser si le client préfère les siennes.
+- ✅ **Signalement et blocage** : déployés en production le 2026-09-27
+  (migration, 11 fonctions edge, OTA sur les deux canaux) et la console
+  d'administration le 2026-09-28. Ce point ne bloque plus.
+
+### Toujours à fournir
+
 - **Captures d'écran** : 4 à 6 par application, portrait. Le seul livrable que
-  personne n'a encore pris, et il bloque les deux fiches.
-- **Icône** 512×512 et **bannière** 1024×500.
+  personne n'a encore pris, et il bloque les deux fiches. Liste écran par écran
+  en section 4bis.
 - **Classification du contenu** : questionnaire à remplir dans la console.
 - **Public cible** : 18 ans et plus.
 - **Publicités** : l'application n'en contient aucune.
@@ -220,9 +247,38 @@ juridiquement, et il dépend de la qualification exacte des prestataires.
 - **Deux comptes de démonstration** pour le formulaire « Accès à
   l'application » — et celui de Dépose doit être un livreur **déjà approuvé**,
   sinon le relecteur ne voit aucune course (section 6).
-- **Déploiement du signalement et du blocage** : le code existe (section 7),
-  il reste la migration, les fonctions edge, l'OTA et la console admin.
 - **Décision sur le boost** et Google Play Billing (section 8).
+
+## 4bis. Les captures, écran par écran
+
+Portrait, prises sur un vrai téléphone avec un compte qui a des données —
+un catalogue vide se voit et donne une mauvaise première impression. Google en
+accepte 8 ; en fournir 5 ou 6 suffit.
+
+### Linky
+
+1. **Accueil** — le solde, les deux caisses, le mois en cours et la section
+   Activité. C'est l'écran qui montre le plus de vie.
+2. **Marché** — la liste des articles avec la feuille de filtres ouverte, ou
+   juste après un filtre : on doit voir des annonces réelles.
+3. **Fiche d'un article à déclinaisons** — tailles et couleurs affichées. C'est
+   ce qui distingue Linky d'un mur de petites annonces.
+4. **Paiement** — l'écran de choix du moyen : Orange Money, MTN, carte. Il dit
+   « paiement sécurisé » mieux qu'une phrase.
+5. **Suivi de commande** — l'état d'avancement avec le QR de remise.
+6. *(facultatif)* **Immobilier** — la fiche d'un logement avec ses conditions de
+   location.
+
+### Dépose
+
+1. **Liste des courses** du livreur.
+2. **Itinéraire** — la carte avec le trajet.
+3. **Scan du QR** de remise.
+4. **Détail d'une course** — adresse, client, montant.
+5. *(facultatif)* **Historique** des courses terminées.
+
+⚠️ Ne PAS photographier un écran contenant un vrai numéro de téléphone, une
+vraie adresse ou un vrai nom de client : ces images sont publiques.
 
 ## 5. URL communes aux deux fiches
 
