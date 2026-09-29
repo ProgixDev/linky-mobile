@@ -86,6 +86,8 @@ LEGENDES = {
          "Un seul compte. Tu choisis ce que tu fais, et tu peux en changer."),
         ("Garde tes", "coups de cœur.",
          "Retrouve tes annonces préférées, articles comme logements."),
+        ("Ton compte,", "au même endroit.",
+         "Commandes, réservations, portefeuille et boutique : tout part d'ici."),
     ],
     'depose': [
         ("Tes courses", "du jour.",
@@ -129,6 +131,8 @@ LEGENDES_EN = {
          "One account. You choose what you do, and you can switch."),
         ("Keep your", "favourites.",
          "Find the listings you saved, items and homes alike."),
+        ("Your account,", "all in one place.",
+         "Orders, bookings, wallet and shop: everything starts here."),
     ],
     'depose': [
         ("Your runs", "for the day.",
@@ -295,7 +299,11 @@ def main():
     print('%d capture(s) habillee(s) dans %s  (legendes : %s)'
           % (total, SORTIE, LANGUE))
     if total > 8:
-        print("⚠️  Play n'en accepte que 8 par application.")
+        print("⚠️  Play n'accepte que 8 captures telephone par fiche.")
+        print("   Il y en a %d : il faut en retirer %d avant de deposer."
+              % (total, total - 8))
+        print("   La plus dispensable est « Garde tes coups de cœur » (les")
+        print("   favoris se vendent moins bien qu'un ecran de compte).")
 
 
 if __name__ == '__main__':
