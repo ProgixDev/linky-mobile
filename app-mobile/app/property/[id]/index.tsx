@@ -268,7 +268,7 @@ export default function PropertyDetailRoute() {
               }}
             >
               <I.video size={12} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>Visite vidéo</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>{t('property.videoTour')}</Text>
             </Pressable>
           )}
 
@@ -303,7 +303,7 @@ export default function PropertyDetailRoute() {
         <View style={{ padding: 16 }}>
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
             <Chip variant="soft" label={prop.type === 'location' ? 'Location' : prop.type === 'vente' ? 'Vente' : 'Terrain'} />
-            {prop.furnished && <Chip variant="saffron" label="Meublé" />}
+            {prop.furnished && <Chip variant="saffron" label={t('property.furnished')} />}
           </View>
           <Text variant="titleL" style={{ fontSize: 18, marginBottom: 2 }}>
             {prop.title}
@@ -332,7 +332,7 @@ export default function PropertyDetailRoute() {
               // deborde a droite — son texte, pourtant centre a l'interieur,
               // apparait alors decale (client 2026-08-11).
               block
-              label="Négocier le prix"
+              label={t('property.negotiatePrice')}
               leading={<I.msg size={15} color={colors.text} />}
               onPress={onNegotiatePress}
               disabled={findOrCreate.isPending || !prop.ownerId}
@@ -467,14 +467,14 @@ export default function PropertyDetailRoute() {
             {prop.type === 'location' ? (
               <TrustStrip tone="primary">
                 <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-                  <Text style={{ fontWeight: '700' }}>Réservation sécurisée. </Text>
+                  <Text style={{ fontWeight: '700' }}>{t('property.secureBooking')} </Text>
                   Ton paiement reste en séquestre jusqu'à ton emménagement. Contacte le propriétaire pour convenir d'une visite avant de réserver.
                 </Text>
               </TrustStrip>
             ) : (
               <TrustStrip tone="primary">
                 <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-                  <Text style={{ fontWeight: '700' }}>Achat sécurisé. </Text>
+                  <Text style={{ fontWeight: '700' }}>{t('property.securePurchase')} </Text>
                   Contacte le propriétaire pour visiter le bien avant de t'engager. Ton paiement reste ensuite en séquestre jusqu'à la remise du bien.
                 </Text>
               </TrustStrip>
@@ -558,7 +558,7 @@ export default function PropertyDetailRoute() {
             <Button
               size="lg"
               block
-              label="Réserver ce logement"
+              label={t('property.bookThisHome')}
               onPress={() => {
                 if (!requireBuyer()) return;
                 router.push(`/property/${prop.id}/book` as never);

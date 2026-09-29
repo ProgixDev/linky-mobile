@@ -7,6 +7,7 @@ import Animated, {
   runOnJS,
   useAnimatedReaction,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from './Text';
 import { haptic } from '../../lib/haptics';
@@ -15,7 +16,7 @@ import { I } from '../../icons/Icon';
 const HOLD_MS = 5000;
 
 export function HoldToConfirmButton({
-  label = 'Maintenez pour confirmer la réception',
+  label,
   onConfirm,
   disabled,
   holdMs,
@@ -26,6 +27,10 @@ export function HoldToConfirmButton({
   holdMs?: number;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  // La valeur par defaut ne peut plus vivre dans la destructuration : un
+  // crochet React ne s'appelle pas dans une signature. On la resout ici.
+  const texte = label ?? t('common.holdToConfirmReceipt');
   const progress = useSharedValue(0);
 
   useAnimatedReaction(
@@ -64,7 +69,7 @@ export function HoldToConfirmButton({
       onPressOut={cancel}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={texte}
       style={{
         width: '100%',
         height: 56,
@@ -101,7 +106,7 @@ export function HoldToConfirmButton({
           numberOfLines={1}
           style={{ flexShrink: 1, textAlign: 'center', color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}
         >
-          {label}
+          {texte}
         </Text>
       </View>
     </Pressable>

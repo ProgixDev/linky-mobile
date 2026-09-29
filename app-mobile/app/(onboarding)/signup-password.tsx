@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +26,7 @@ import { haptic } from '../../src/lib/haptics';
 // Le mot de passe transite par le magasin d'authentification, en memoire seule,
 // jamais sur le disque.
 export default function SignupPasswordRoute() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const params = useLocalSearchParams<{ channel?: string; target?: string }>();
   const channel = params.channel === 'phone' ? 'phone' : 'email';
@@ -110,7 +112,7 @@ export default function SignupPasswordRoute() {
                 onChangeText={setPassword}
                 onFocus={() => setFocus('pwd')}
                 onBlur={() => setFocus(null)}
-                placeholder="Mot de passe"
+                placeholder={t('auth.passwordPlaceholder')}
                 placeholderTextColor={colors.textFaint}
                 secureTextEntry={!reveal}
                 autoCapitalize="none"
@@ -135,7 +137,7 @@ export default function SignupPasswordRoute() {
                 onChangeText={setConfirm}
                 onFocus={() => setFocus('confirm')}
                 onBlur={() => setFocus(null)}
-                placeholder="Confirme le mot de passe"
+                placeholder={t('auth.passwordConfirmPlaceholder')}
                 placeholderTextColor={colors.textFaint}
                 secureTextEntry={!reveal}
                 autoCapitalize="none"
@@ -150,8 +152,8 @@ export default function SignupPasswordRoute() {
                 plutot que de surgir en rouge apres coup. On ne dit jamais « non »
                 sans avoir dit « voila ce qu'il faut ». */}
             <View style={{ gap: 6, marginTop: 2 }}>
-              <Rule ok={longEnough} label="Au moins 8 caractères" />
-              <Rule ok={matches} label="Les deux saisies sont identiques" />
+              <Rule ok={longEnough} label={t('auth.ruleMinChars')} />
+              <Rule ok={matches} label={t('auth.ruleMatches')} />
             </View>
           </View>
 

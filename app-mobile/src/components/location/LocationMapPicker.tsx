@@ -3,6 +3,7 @@
 // default. Mirrors the property location screen's map setup; reused via props so a
 // form just holds {lat,lng} state. French, Linky green, app theme + Mapbox token.
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, TextInput, View } from 'react-native';
 import Mapbox, { Camera, MapView, PointAnnotation, type ScreenPointPayload } from '@rnmapbox/maps';
 import type { Feature, Point } from 'geojson';
@@ -33,6 +34,7 @@ export function LocationMapPicker({
   testID?: string;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const cameraRef = useRef<Camera>(null);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -111,7 +113,7 @@ export function LocationMapPicker({
           testID={testID ? `${testID}-search` : undefined}
           value={query}
           onChangeText={setQuery}
-          placeholder="Rechercher un lieu…"
+          placeholder={t('common.searchPlace')}
           placeholderTextColor={colors.textFaint}
           onSubmitEditing={handleSearch}
           returnKeyType="search"

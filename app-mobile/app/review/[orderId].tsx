@@ -3,6 +3,7 @@
 // is the caller's and completed. On success, back to the order, where the CTA is gone
 // (get-order now returns hasReviewed: true).
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -16,6 +17,7 @@ import { StarRating } from '../../src/components/reviews/StarRating';
 import { useOrder, useSubmitReview } from '../../src/data/queries';
 
 export default function ReviewRoute() {
+  const { t } = useTranslation();
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const { colors } = useTheme();
   const { data: order, isLoading, isError, refetch } = useOrder(orderId);
@@ -50,7 +52,7 @@ export default function ReviewRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Noter la boutique" back subtitle={`#${order.reference}`} />
+      <TopBar title={t('order.rateShop')} back subtitle={`#${order.reference}`} />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 22 }}
         keyboardShouldPersistTaps="handled"
@@ -73,7 +75,7 @@ export default function ReviewRoute() {
           <TextInput
             value={comment}
             onChangeText={setComment}
-            placeholder="Partagez votre expérience…"
+            placeholder={t('order.reviewPlaceholder')}
             placeholderTextColor={colors.textMuted}
             multiline
             maxLength={1000}

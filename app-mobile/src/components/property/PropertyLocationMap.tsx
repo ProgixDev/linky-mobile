@@ -6,6 +6,7 @@
 // device's maps app — native turn-by-turn beats anything we'd embed, costs
 // zero Mapbox quota, and works offline once the OS app has cached the area.
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Pressable, View } from 'react-native';
 import Mapbox, { MapView, Camera, PointAnnotation } from '@rnmapbox/maps';
 import { Navigation } from 'lucide-react-native';
@@ -41,6 +42,7 @@ export function PropertyLocationMap({
   label: string;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const hasGps = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
   // @rnmapbox on Android under-measures inside an aspectRatio+flex box (renders
   // pinned left with a dead gap on the right → looks off-centre). Fix : measure
@@ -140,7 +142,7 @@ export function PropertyLocationMap({
             }}
           >
             <Navigation size={13} color={colors.bg} strokeWidth={2.5} />
-            <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.bg }}>Itinéraire</Text>
+            <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.bg }}>{t('property.directions')}</Text>
           </Pressable>
         </>
       ) : null}

@@ -11,6 +11,7 @@
 // driver streams its GPS from the Linky Driver app (update-livreur-location); this
 // screen is purely a consumer — no location of the buyer's own is read.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -39,6 +40,7 @@ function freshness(iso: string | null): string | null {
 }
 
 export default function TrackRoute() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const { data: order, isLoading, isError, refetch } = useOrderTracking(id);
@@ -118,7 +120,7 @@ export default function TrackRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Suivi du livreur" back subtitle={`#${order.reference}`} />
+      <TopBar title={t('order.trackTitle')} back subtitle={`#${order.reference}`} />
       <View style={{ flex: 1 }}>
         {points.length > 0 ? (
           <MapView

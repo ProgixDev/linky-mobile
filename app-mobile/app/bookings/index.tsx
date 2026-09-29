@@ -1,5 +1,6 @@
 // Tenant's rental bookings list (location par jour / par mois).
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -22,6 +23,7 @@ import type { Booking } from '../../src/data/types';
 // les deux parties d'une meme location doivent lire le meme etat.
 
 export default function BookingsRoute() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const q = useMyBookings();
   const [filter, setFilter] = useState<BookingFilter>('all');
@@ -93,7 +95,7 @@ export default function BookingsRoute() {
   if (q.isError && bookings.length === 0) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Mes réservations" subtitle="Tes locations en cours." />
+        <ScreenHeader title={t('bookings.myTitle')} subtitle={t('bookings.mySubtitle')} />
         <ErrorStateView onRetry={() => void q.refetch()} />
       </SafeAreaView>
     );
@@ -106,7 +108,7 @@ export default function BookingsRoute() {
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <ScreenHeader title="Mes réservations" subtitle="Tes locations en cours." />
+        <ScreenHeader title={t('bookings.myTitle')} subtitle={t('bookings.mySubtitle')} />
         {/* Les pastilles n'apparaissent qu'une fois qu'il y a quelque chose a
             filtrer : au chargement, et sur un compte sans aucune reservation,
             elles ne feraient que promettre un tri de rien. */}
@@ -128,14 +130,14 @@ export default function BookingsRoute() {
                 ne renvoie rien lui dirait que ses locations ont disparu. */}
             {bookings.length === 0 ? (
               <>
-                <Text style={{ fontSize: 15, fontWeight: '700' }}>Aucune réservation</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('bookings.emptyTitle')}</Text>
                 <Text style={{ fontSize: 12.5, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
                   Trouve un logement en location et réserve-le directement dans l'app.
                 </Text>
               </>
             ) : (
               <>
-                <Text style={{ fontSize: 15, fontWeight: '700' }}>Rien dans ce filtre</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('bookings.nothingInFilter')}</Text>
                 <Text style={{ fontSize: 12.5, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
                   Tes autres réservations sont dans « {FILTERS[0].label} ».
                 </Text>

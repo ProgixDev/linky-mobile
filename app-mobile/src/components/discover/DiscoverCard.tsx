@@ -195,7 +195,7 @@ export function DiscoverCard({
     // The feed filters this listing out (useHiddenListings) so the card leaves
     // the feed ; the toast confirms the action. French literal (client is
     // French-first) — avoids touching the 3 locale files for one menu.
-    show('Masqué de ton feed', 'info');
+    show(t('decouvrir.hiddenFromFeedToast'), 'info');
   };
   const photoListRef = useRef<FlatList<string>>(null);
   // When the reel scrolls off-screen and back, jump the pager to photo 0 so a
@@ -743,7 +743,7 @@ export function DiscoverCard({
               style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 14, borderRadius: 14 }}
             >
               <EyeOff size={20} color={colors.text} strokeWidth={2} />
-              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>Masquer de mon feed</Text>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{t('decouvrir.hideFromFeed')}</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 8 }} />
             <Pressable onPress={() => setMenuOpen(false)} style={{ alignItems: 'center', paddingVertical: 14 }}>

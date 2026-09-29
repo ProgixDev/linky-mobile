@@ -185,7 +185,7 @@ export default function OrderRoute() {
           )}
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 6 }} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: 14, fontWeight: '700' }}>Total payé</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700' }}>{t('order.totalPaid')}</Text>
             <Text style={{ fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
               {formatGNF(order.totalGnf)}
             </Text>
@@ -221,7 +221,7 @@ export default function OrderRoute() {
               <Button
                 variant="primary"
                 block
-                label="Suivre le livreur"
+                label={t('order.trackCourier')}
                 leading={<I.truck size={16} color="#FFFFFF" />}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /track typedRoute regenerates next start
                 onPress={() => router.push(`/track/${order.id}` as any)}
@@ -325,7 +325,7 @@ export default function OrderRoute() {
         {isBuyer && order.status === 'released' && !order.hasReviewed && (
           <View style={{ marginTop: 18 }}>
             <Card padding={16}>
-              <Text variant="bodyMSemibold">Comment s'est passée ta commande ?</Text>
+              <Text variant="bodyMSemibold">{t('order.howWasIt')}</Text>
               <Text
                 variant="micro"
                 tone="muted"
@@ -337,7 +337,7 @@ export default function OrderRoute() {
                 style={{ marginTop: 12 }}
                 variant="primary"
                 block
-                label="Noter la boutique"
+                label={t('order.rateShop')}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /review typedRoute regenerates next start
                 onPress={() => router.push(`/review/${order.id}` as any)}
               />
@@ -457,7 +457,7 @@ export default function OrderRoute() {
               <Button
                 variant="primary"
                 block
-                label={"Scanner le QR de l'acheteur"}
+                label={t('order.scanBuyerQr')}
                 leading={<I.qr size={16} color="#FFFFFF" />}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- /scan typedRoute regenerates next start
                 onPress={() => router.push('/scan' as any)}

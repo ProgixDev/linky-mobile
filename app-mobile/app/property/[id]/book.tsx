@@ -5,6 +5,7 @@
 // ligne a ete retiree le 2026-09-09 : le rendez-vous se prend par le chat.
 import { useBuyerGate } from '../../../src/components/feedback/BuyerGate';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,6 +40,7 @@ function nightsBetween(start: string, end: string): number {
 }
 
 export default function BookPropertyRoute() {
+  const { t } = useTranslation();
   // `extend` = l'identifiant du bail au mois que l'on prolonge (client
   // 2026-09-18 : « un bouton "Prolonger" qui renvoie vers le calendrier de
   // reservation »). Dans ce mode, la date de depart n'est PAS choisie : elle
@@ -149,11 +151,11 @@ export default function BookPropertyRoute() {
   const rentWithFee = quote.rentMinor + fees;
 
   if (isLoading || isError || !prop) {
-    return <DetailStateScreen loading={isLoading} title="Réserver" onRetry={() => void refetch()} />;
+    return <DetailStateScreen loading={isLoading} title={t('property.bookTitle')} onRetry={() => void refetch()} />;
   }
   if (prop.type !== 'location') {
     // Achat/vente : pas de réservation par date — c'est un paiement unique.
-    return <DetailStateScreen loading={false} title="Réserver" onRetry={() => router.back()} />;
+    return <DetailStateScreen loading={false} title={t('property.bookTitle')} onRetry={() => router.back()} />;
   }
 
   const submit = () => {
@@ -176,10 +178,10 @@ export default function BookPropertyRoute() {
         onSuccess: ({ booking_id, instant }) => {
           if (instant) {
             // Daily = instant-book: go straight to the booking to pay + sign.
-            show('Réservation confirmée — règle le paiement pour la valider ✅', 'success');
+            show(t('property.bookingConfirmedPay'), 'success');
             router.replace(`/bookings/${booking_id}` as never);
           } else {
-            show('Demande envoyée au propriétaire ✅', 'success');
+            show(t('property.requestSentToOwner'), 'success');
             router.replace('/bookings' as never);
           }
         },
@@ -215,7 +217,7 @@ export default function BookPropertyRoute() {
               d'ou elle vient. */}
           {isExtension ? (
             <View>
-              <MicroLabel label="Reprise du bail" />
+              <MicroLabel label={t('property.leaseResume')} />
               <View style={{ padding: 14, borderRadius: radii.lg, backgroundColor: colors.bgSunken, borderWidth: 1, borderColor: colors.border, gap: 4 }}>
                 <Text style={{ fontSize: 15, fontWeight: '700' }}>
                   {extendStart ? `À partir du ${formatBookingDate(extendStart)}` : 'À la fin du bail en cours'}
@@ -256,7 +258,7 @@ export default function BookPropertyRoute() {
 
           {period === 'month' && (
             <View>
-              <MicroLabel label="Durée du bail" />
+              <MicroLabel label={t('property.leaseLength')} />
               <View
                 style={{
                   flexDirection: 'row',
@@ -295,11 +297,11 @@ export default function BookPropertyRoute() {
 
           {/* Note */}
           <View>
-            <MicroLabel label="Message au propriétaire (optionnel)" />
+            <MicroLabel label={t('property.messageToOwner')} />
             <TextInput
               value={note}
               onChangeText={(t) => setNote(t.slice(0, 500))}
-              placeholder="Présentez-vous en quelques mots…"
+              placeholder={t('property.introduceYourself')}
               placeholderTextColor={colors.textFaint}
               multiline
               style={{
@@ -344,7 +346,7 @@ export default function BookPropertyRoute() {
                   value={formatGNF(rentWithFee)}
                 />
               ) : (
-                <RecapRow label="Premier mois de loyer (frais inclus)" value={formatGNF(rentWithFee)} />
+                <RecapRow label={t('property.firstMonthWithFees')} value={formatGNF(rentWithFee)} />
               )}
 
               {/* LA REMISE, NOMMEE. Sans cette ligne le locataire verrait un
@@ -384,7 +386,7 @@ export default function BookPropertyRoute() {
                 />
               )}
               <View style={{ height: 1, backgroundColor: colors.border }} />
-              <RecapRow label="Total à payer à la signature" value={formatGNF(total)} bold />
+              <RecapRow label={t('property.totalAtSigning')} value={formatGNF(total)} bold />
             </View>
           )}
 
@@ -396,7 +398,7 @@ export default function BookPropertyRoute() {
           {shortfall !== null && (
             <TrustStrip tone="accent">
               <Text style={{ color: colors.accentText, fontSize: 11.5 }}>
-                <Text style={{ fontWeight: '700' }}>Séjour minimum. </Text>
+                <Text style={{ fontWeight: '700' }}>{t('property.minimumStay')} </Text>
                 {period === 'day'
                   ? `Ce logement se loue à partir de ${shortfall} nuits.`
                   : `Ce logement se loue à partir de ${shortfall} mois.`}
@@ -406,7 +408,7 @@ export default function BookPropertyRoute() {
 
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-              <Text style={{ fontWeight: '700' }}>Paiement sécurisé. </Text>
+              <Text style={{ fontWeight: '700' }}>{t('property.securePayment')} </Text>
               Ton argent reste en séquestre jusqu'à la confirmation de ton emménagement. Contacte le propriétaire pour visiter le bien avant de réserver.
             </Text>
           </TrustStrip>

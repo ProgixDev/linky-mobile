@@ -96,7 +96,7 @@ export default function RegionRoute() {
         } catch {
           // La valeur arrivera a la prochaine ouverture.
         }
-        toast.show('Ta région de paiement était déjà définie.', 'info');
+        toast.show(t('profil.regionAlreadySetToast'), 'info');
         leave();
         return;
       }

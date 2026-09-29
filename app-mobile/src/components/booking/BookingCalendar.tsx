@@ -4,6 +4,7 @@
 // mode 'range'  : daily stays — first tap sets check-in, second sets check-out.
 // mode 'single' : monthly leases — one tap sets the move-in date.
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -41,6 +42,7 @@ export function BookingCalendar({
   blockedRanges?: { start: string; end: string }[];
 }) {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
@@ -235,8 +237,8 @@ export function BookingCalendar({
         }}
       >
         <LegendDot color="transparent" borderColor={colors.borderStrong} label={'Disponible'} />
-        <LegendDot color={colors.primary} label={'Ton séjour'} />
-        <LegendDot color={colors.danger} label={'Déjà réservé'} />
+        <LegendDot color={colors.primary} label={t('property.legendYourStay')} />
+        <LegendDot color={colors.danger} label={t('property.legendBooked')} />
       </View>
     </View>
   );

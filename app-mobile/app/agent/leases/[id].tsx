@@ -1,5 +1,6 @@
 // Landlord booking detail — contract review + accept (signs, hold-to-confirm)
 // or reject a request; then follows the lease through payment and move-in.
+import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -18,6 +19,7 @@ import { toToastMessage } from '../../../src/lib/api';
 import { formatGNF } from '../../../src/lib/format';
 
 export default function LeaseDetailRoute() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const { show } = useToast();
@@ -64,7 +66,7 @@ export default function LeaseDetailRoute() {
         {booking.status === 'requested' && (
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-              <Text style={{ fontWeight: '700' }}>En acceptant, tu signes le contrat ci-dessous. </Text>
+              <Text style={{ fontWeight: '700' }}>{t('property.acceptSignsContract')} </Text>
               {isSale
                 ? `L'acheteur devra ensuite signer et payer ${formatGNF(booking.totalGnf)} — l'argent reste en séquestre jusqu'à la remise du bien, puis ${formatGNF(booking.amountGnf)} te sont versés.`
                 : `Le locataire devra ensuite signer et payer ${formatGNF(booking.totalGnf)} — l'argent reste en séquestre jusqu'à son emménagement, puis ${formatGNF(booking.amountGnf)} te sont versés.`}
@@ -82,13 +84,13 @@ export default function LeaseDetailRoute() {
         {booking.status === 'requested' && (
           <View style={{ gap: 10 }}>
             <HoldToConfirmButton
-              label="Maintenir pour accepter & signer"
+              label={t('property.holdToAcceptSign')}
               onConfirm={() => decide('accept')}
               disabled={respond.isPending}
             />
             <Button
               variant="outline"
-              label="Refuser la demande"
+              label={t('property.refuseRequest')}
               disabled={respond.isPending}
               onPress={() => decide('reject')}
             />

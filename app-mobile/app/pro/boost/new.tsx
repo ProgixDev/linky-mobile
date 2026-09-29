@@ -153,7 +153,7 @@ export default function BoostNewRoute() {
           returnURL: 'linky://stripe-redirect',
         });
         if (initErr) {
-          toast.show('Impossible de préparer le paiement', 'danger');
+          toast.show(t('common.payPrepareError'), 'danger');
           return;
         }
         const { error: payErr } = await presentPaymentSheet();
@@ -161,7 +161,7 @@ export default function BoostNewRoute() {
           // Fermer la feuille ne doit rien declencher d'autre que sa propre
           // fermeture — meme correctif que le panier le 2026-08-25.
           if (payErr.code === PaymentSheetError.Canceled) {
-            toast.show('Paiement annulé.', 'info');
+            toast.show(t('common.payCancelled'), 'info');
             return;
           }
           toast.show(payErr.message || 'Paiement échoué', 'danger');

@@ -61,7 +61,7 @@ export default function ProfileSetupRoute() {
     try {
       setAvatarUrl(await uploadAvatar.mutateAsync({ uri: asset.uri, mime }));
     } catch {
-      toast.show('Téléversement de la photo échoué.', 'danger');
+      toast.show(t('onboarding.photoUploadFailed'), 'danger');
     }
   };
   const [step, setStep] = useState(0);

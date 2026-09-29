@@ -6,6 +6,7 @@
 // rendez-vous physique par le chat, hors machine a etats.
 import { useBuyerGate } from '../../../src/components/feedback/BuyerGate';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +27,7 @@ import { formatGNF } from '../../../src/lib/format';
 import { haptic } from '../../../src/lib/haptics';
 
 export default function BuyPropertyRoute() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, radii } = useTheme();
   const { data: prop, isLoading, isError, refetch } = useProperty(id);
@@ -75,7 +77,7 @@ export default function BuyPropertyRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title="Acheter ce bien" back />
+      <TopBar title={t('property.buyThisTitle')} back />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -93,11 +95,11 @@ export default function BuyPropertyRoute() {
           </View>
 
           <View>
-            <MicroLabel label="Message au propriétaire (optionnel)" />
+            <MicroLabel label={t('property.messageToOwner')} />
             <TextInput
               value={note}
               onChangeText={(t) => setNote(t.slice(0, 500))}
-              placeholder="Présentez-vous en quelques mots…"
+              placeholder={t('property.introduceYourself')}
               placeholderTextColor={colors.textFaint}
               multiline
               style={{
@@ -119,14 +121,14 @@ export default function BuyPropertyRoute() {
                 le prix affiche ici est celui de l'annonce, pas le prix vendeur
                 suivi d'un supplement. Exact par construction — `total` vient du
                 meme calcul que le serveur. */}
-            <RecapRow label="Prix du bien (frais inclus)" value={formatGNF(total)} />
+            <RecapRow label={t('property.priceWithFees')} value={formatGNF(total)} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
-            <RecapRow label="Total à payer à la signature" value={formatGNF(total)} bold />
+            <RecapRow label={t('property.totalAtSigning')} value={formatGNF(total)} bold />
           </View>
 
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-              <Text style={{ fontWeight: '700' }}>Paiement sécurisé. </Text>
+              <Text style={{ fontWeight: '700' }}>{t('property.securePayment')} </Text>
               Ton argent reste en séquestre jusqu'à la confirmation de la remise du bien. Contacte le propriétaire pour visiter le bien avant de t'engager.
             </Text>
           </TrustStrip>

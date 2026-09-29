@@ -898,7 +898,7 @@ export function EstateDashboard() {
               cotes de la transaction. */}
           <QuickAction
             Icon={KeyRound}
-            label="Réservations"
+            label={t('property.leasesTitle')}
             onPress={() => router.push('/agent/leases' as never)}
           />
           {/* Boost occupe la place liberee par « Demandes » (doublon des

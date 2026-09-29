@@ -3,14 +3,16 @@
 // «Envoyer l'offre» was haptic + router.back() — sent nothing. No offers
 // backend exists in V1. Convert to honest ComingSoonScreen and remove the
 // CTAs that route here from property/[id]/index.tsx.
+import { useTranslation } from 'react-i18next';
 import { ComingSoonScreen } from '../../../src/components/feedback/ComingSoon';
 
 export default function OfferRoute() {
+  const { t } = useTranslation();
   return (
     <ComingSoonScreen
       icon="building"
-      title="Faire une offre"
-      blurb="Bientôt tu pourras négocier le prix d'un bien directement dans l'app — proposition, contre-proposition, validation par l'agent. On te préviendra dès que c'est prêt."
+      title={t('property.makeOfferTitle')}
+      blurb={t('property.makeOfferBlurb')}
     />
   );
 }

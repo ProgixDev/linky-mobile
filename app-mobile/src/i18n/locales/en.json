@@ -34,7 +34,11 @@
       "a11yHint": "Required field · opens the city list",
       "a11yValue": "City: {{city}}"
     },
-    "feesIncluded": "Fees included"
+    "feesIncluded": "Fees included",
+    "searchPlace": "Search for a place…",
+    "holdToConfirmReceipt": "Hold to confirm receipt",
+    "payPrepareError": "Could not start the payment",
+    "payCancelled": "Payment cancelled."
   },
   "a11y": {
     "back": "Back",
@@ -136,7 +140,9 @@
     },
     "filterAll": "All",
     "filterProducts": "Products",
-    "filterProperties": "Real estate"
+    "filterProperties": "Real estate",
+    "hideFromFeed": "Hide from my feed",
+    "hiddenFromFeedToast": "Hidden from your feed"
   },
   "boutique": {
     "modeShop": "Shop",
@@ -1110,7 +1116,9 @@
     "photoPermission": "Allow photo access to continue.",
     "uploadError": "Upload failed.",
     "boostCta": "Boost this listing",
-    "boostHint": "Feature this listing for more visibility."
+    "boostHint": "Feature this listing for more visibility.",
+    "stockLabel": "Available quantity",
+    "stockUnlimited": "Unlimited"
   },
   "propertyEdit": {
     "photosLabel": "Photos",
@@ -1173,7 +1181,8 @@
     "outOfStockBadge": "OUT OF STOCK",
     "outOfStockToast": "This item is out of stock.",
     "stockCapToast": "Only {{count}} available — it’s already in your cart.",
-    "stockLeft": "Only {{count}} left"
+    "stockLeft": "Only {{count}} left",
+    "addedToCartToast": "Added to cart"
   },
   "property": {
     "fallbackTitle": "Property",
@@ -1206,7 +1215,38 @@
     "visitDayTomorrow": "Tomorrow",
     "visitDayAfterTomorrow": "Day after",
     "visitDayPlus3": "+3 days",
-    "visitPerMonth": " /mo"
+    "visitPerMonth": " /mo",
+    "bookTitle": "Book",
+    "leaseResume": "Lease start",
+    "leaseLength": "Lease length",
+    "messageToOwner": "Message to the owner (optional)",
+    "introduceYourself": "Introduce yourself in a few words…",
+    "firstMonthWithFees": "First month of rent (fees included)",
+    "totalAtSigning": "Total due at signing",
+    "minimumStay": "Minimum stay.",
+    "securePayment": "Secure payment.",
+    "leasesTitle": "Bookings",
+    "leasesSubtitle": "Your rentals and sales: requests, contracts and rent.",
+    "leasesEmpty": "No booking received",
+    "nothingInFilter": "Nothing in this filter",
+    "videoTour": "Video tour",
+    "furnished": "Furnished",
+    "negotiatePrice": "Negotiate the price",
+    "secureBooking": "Secure booking.",
+    "securePurchase": "Secure purchase.",
+    "bookThisHome": "Book this home",
+    "buyThisTitle": "Buy this property",
+    "priceWithFees": "Property price (fees included)",
+    "acceptSignsContract": "By accepting, you sign the contract below.",
+    "holdToAcceptSign": "Hold to accept & sign",
+    "refuseRequest": "Decline the request",
+    "legendYourStay": "Your stay",
+    "legendBooked": "Already booked",
+    "makeOfferTitle": "Make an offer",
+    "makeOfferBlurb": "Soon you will be able to negotiate a property price right in the app — offer, counter-offer, agent approval. We will let you know as soon as it is ready.",
+    "directions": "Directions",
+    "bookingConfirmedPay": "Booking confirmed — pay to validate it ✅",
+    "requestSentToOwner": "Request sent to the owner ✅"
   },
   "cart": {
     "title": "My cart",
@@ -1350,7 +1390,15 @@
     "paycardHint": "It goes to PayCard to start the payment; Linky does not keep it.",
     "payerPhoneLabelPaycard": "Phone number (to receive the code)",
     "payerPhoneHintPaycard": "The PayCard confirmation code is sent to this number.",
-    "giftCta": "Reserve this giveaway"
+    "giftCta": "Reserve this giveaway",
+    "receiveMode": "Receiving method",
+    "summary": "Summary",
+    "pickupTitle": "Pick up in store",
+    "pickupHint": "You collect it at the shop — Free",
+    "deliveryTitle": "Home delivery",
+    "deliveryHintPrefix": "Linky delivers it —",
+    "parcelsGrouped": "({{n}} parcels, grouped trip)",
+    "parcels": "({{n}} parcels)"
   },
   "orders": {
     "title": "My orders",
@@ -1379,7 +1427,40 @@
     "filterPending": "Pending",
     "filterActive": "Active",
     "filterCompleted": "Completed",
-    "filterCancelled": "Cancelled"
+    "filterCancelled": "Cancelled",
+    "detailTitle": "Booking",
+    "signedEscrowed": "Contract signed, money held in escrow.",
+    "payMethod": "Method",
+    "payNumber": "Number",
+    "payMeans": "Payment method",
+    "paycardAccount": "PayCard account number",
+    "paycardHint": "The number printed on your card",
+    "paycardHelper": "We send it to PayCard to start the payment; Linky does not keep it.",
+    "cancelRequest": "Cancel the request",
+    "cancelBooking": "Cancel the booking",
+    "myTitle": "My bookings",
+    "mySubtitle": "Your current rentals.",
+    "emptyTitle": "No booking",
+    "nothingInFilter": "Nothing in this filter",
+    "statusRequested": "Pending",
+    "statusAccepted": "To pay",
+    "statusRejected": "Declined",
+    "statusCancelled": "Cancelled",
+    "statusPaid": "Paid — in escrow",
+    "statusActive": "Lease active",
+    "statusCompleted": "Completed",
+    "statusDisputed": "Dispute",
+    "statusRefunded": "Refunded",
+    "paySentPending": "Payment sent — confirming…",
+    "payFromWallet": "Paid from your wallet ✅",
+    "stateChangedReload": "Your booking changed state. Reloading it.",
+    "payInProgress": "Payment in progress",
+    "cancelledToast": "Booking cancelled.",
+    "cancelConfirmTitle": "Cancel the booking?",
+    "cancelConfirmBody": "{{montant}} will be refunded to your Linky wallet, fees included. This booking will be released and you will not be able to undo it.",
+    "keepMyBooking": "Keep my booking",
+    "cancelAndRefund": "Cancel and get refunded",
+    "cancelledRefundedToast": "Booking cancelled — amount refunded to your wallet ✅"
   },
   "order": {
     "trackingTitle": "Order tracking",
@@ -1417,7 +1498,14 @@
     "confirmError": "Confirmation error",
     "confirmUnavailableTitle": "Confirmation unavailable",
     "confirmUnavailableBody": "This order isn't waiting for confirmation. Open tracking to see its current status.",
-    "confirmViewTracking": "View tracking"
+    "confirmViewTracking": "View tracking",
+    "totalPaid": "Total paid",
+    "trackCourier": "Track the courier",
+    "howWasIt": "How did your order go?",
+    "rateShop": "Rate the shop",
+    "scanBuyerQr": "Scan the buyer's QR code",
+    "reviewPlaceholder": "Share your experience…",
+    "trackTitle": "Track the courier"
   },
   "profil": {
     "title": "Profile",
@@ -1480,7 +1568,11 @@
       "system": "System",
       "light": "Light",
       "dark": "Dark"
-    }
+    },
+    "fullNamePlaceholder": "Your first and last name",
+    "updatedToast": "Profile updated.",
+    "rolesUpdatedToast": "Roles updated.",
+    "regionAlreadySetToast": "Your payment region was already set."
   },
   "onboarding": {
     "welcome": {
@@ -1579,14 +1671,19 @@
       "forgot": "Forgot password?",
       "subtitleEmail": "Enter your email and password to sign in.",
       "subtitlePhone": "Enter your phone number and password to sign in."
-    }
+    },
+    "photoUploadFailed": "Photo upload failed."
   },
   "auth": {
     "phoneTitle": "Your phone number",
     "phoneHelp": "You'll receive a 6-digit code by SMS.",
     "otpTitle": "Verification",
     "verify": "Verify",
-    "resendIn": "Resend in"
+    "resendIn": "Resend in",
+    "passwordPlaceholder": "Password",
+    "passwordConfirmPlaceholder": "Confirm the password",
+    "ruleMinChars": "At least 8 characters",
+    "ruleMatches": "Both entries match"
   },
   "currency": {
     "gnf": "GNF",

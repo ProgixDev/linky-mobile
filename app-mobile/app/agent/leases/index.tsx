@@ -14,6 +14,7 @@
 // (list-landlord-bookings, created_at desc) : une nouvelle demande a traiter
 // arrive donc en tete, sans section dediee.
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -29,6 +30,7 @@ import { FilterChips } from '../../../src/components/nav/FilterChips';
 import { filterBookings, useBookingFilterChips, type BookingFilter } from '../../../src/lib/bookingFilters';
 
 export default function LeasesRoute() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const q = useLandlordBookings();
   const [filter, setFilter] = useState<BookingFilter>('all');
@@ -45,7 +47,7 @@ export default function LeasesRoute() {
   if (q.isError && bookings.length === 0) {
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScreenHeader title="Réservations" subtitle="Tes locations et ventes : demandes, contrats et loyers." />
+        <ScreenHeader title={t('property.leasesTitle')} subtitle={t('property.leasesSubtitle')} />
         <ErrorStateView onRetry={() => void q.refetch()} />
       </SafeAreaView>
     );
@@ -58,7 +60,7 @@ export default function LeasesRoute() {
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <ScreenHeader title="Réservations" subtitle="Tes locations et ventes : demandes, contrats et loyers." />
+        <ScreenHeader title={t('property.leasesTitle')} subtitle={t('property.leasesSubtitle')} />
         {/* Comme cote locataire : les pastilles n'apparaissent qu'une fois qu'il
             y a quelque chose a filtrer. */}
         {!q.isLoading && bookings.length > 0 && (
@@ -79,14 +81,14 @@ export default function LeasesRoute() {
                 renvoie rien lui ferait croire que ses reservations ont disparu. */}
             {bookings.length === 0 ? (
               <>
-                <Text style={{ fontSize: 15, fontWeight: '700' }}>Aucune réservation reçue</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('property.leasesEmpty')}</Text>
                 <Text style={{ fontSize: 12.5, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
                   Les demandes de location de tes biens apparaîtront ici.
                 </Text>
               </>
             ) : (
               <>
-                <Text style={{ fontSize: 15, fontWeight: '700' }}>Rien dans ce filtre</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('property.nothingInFilter')}</Text>
                 <Text style={{ fontSize: 12.5, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
                   Tes autres réservations sont dans « {FILTERS[0].label} ».
                 </Text>

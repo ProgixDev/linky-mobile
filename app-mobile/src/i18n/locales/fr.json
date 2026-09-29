@@ -34,7 +34,11 @@
       "a11yHint": "Champ requis · ouvre la liste des villes",
       "a11yValue": "Ville : {{city}}"
     },
-    "feesIncluded": "Frais inclus"
+    "feesIncluded": "Frais inclus",
+    "searchPlace": "Rechercher un lieu…",
+    "holdToConfirmReceipt": "Maintenez pour confirmer la réception",
+    "payPrepareError": "Impossible de préparer le paiement",
+    "payCancelled": "Paiement annulé."
   },
   "a11y": {
     "back": "Retour",
@@ -136,7 +140,9 @@
       "endTitle": "Vous avez tout vu pour aujourd'hui.",
       "endBody": "Revenez demain pour de nouveaux articles et logements à découvrir.",
       "endCta": "Actualiser"
-    }
+    },
+    "hideFromFeed": "Masquer de mon feed",
+    "hiddenFromFeedToast": "Masqué de ton feed"
   },
   "boutique": {
     "modeShop": "Boutique",
@@ -1110,7 +1116,9 @@
     "photoPermission": "Autorisez l'accès aux photos pour continuer.",
     "uploadError": "Téléversement échoué.",
     "boostCta": "Booster cette annonce",
-    "boostHint": "Mettez cette annonce en avant pour plus de visibilité."
+    "boostHint": "Mettez cette annonce en avant pour plus de visibilité.",
+    "stockLabel": "Quantité disponible",
+    "stockUnlimited": "Illimitée"
   },
   "propertyEdit": {
     "photosLabel": "Photos",
@@ -1173,7 +1181,8 @@
     "outOfStockBadge": "RUPTURE DE STOCK",
     "outOfStockToast": "Cet article est en rupture de stock.",
     "stockCapToast": "Il n’en reste que {{count}} — tu l’as déjà dans ton panier.",
-    "stockLeft": "Plus que {{count}}"
+    "stockLeft": "Plus que {{count}}",
+    "addedToCartToast": "Ajouté au panier"
   },
   "property": {
     "fallbackTitle": "Bien immobilier",
@@ -1206,7 +1215,38 @@
     "visitDayTomorrow": "Demain",
     "visitDayAfterTomorrow": "Après-demain",
     "visitDayPlus3": "+3 jours",
-    "visitPerMonth": " /mois"
+    "visitPerMonth": " /mois",
+    "bookTitle": "Réserver",
+    "leaseResume": "Reprise du bail",
+    "leaseLength": "Durée du bail",
+    "messageToOwner": "Message au propriétaire (optionnel)",
+    "introduceYourself": "Présentez-vous en quelques mots…",
+    "firstMonthWithFees": "Premier mois de loyer (frais inclus)",
+    "totalAtSigning": "Total à payer à la signature",
+    "minimumStay": "Séjour minimum.",
+    "securePayment": "Paiement sécurisé.",
+    "leasesTitle": "Réservations",
+    "leasesSubtitle": "Tes locations et ventes : demandes, contrats et loyers.",
+    "leasesEmpty": "Aucune réservation reçue",
+    "nothingInFilter": "Rien dans ce filtre",
+    "videoTour": "Visite vidéo",
+    "furnished": "Meublé",
+    "negotiatePrice": "Négocier le prix",
+    "secureBooking": "Réservation sécurisée.",
+    "securePurchase": "Achat sécurisé.",
+    "bookThisHome": "Réserver ce logement",
+    "buyThisTitle": "Acheter ce bien",
+    "priceWithFees": "Prix du bien (frais inclus)",
+    "acceptSignsContract": "En acceptant, tu signes le contrat ci-dessous.",
+    "holdToAcceptSign": "Maintenir pour accepter & signer",
+    "refuseRequest": "Refuser la demande",
+    "legendYourStay": "Ton séjour",
+    "legendBooked": "Déjà réservé",
+    "makeOfferTitle": "Faire une offre",
+    "makeOfferBlurb": "Bientôt tu pourras négocier le prix d'un bien directement dans l'app — proposition, contre-proposition, validation par l'agent. On te préviendra dès que c'est prêt.",
+    "directions": "Itinéraire",
+    "bookingConfirmedPay": "Réservation confirmée — règle le paiement pour la valider ✅",
+    "requestSentToOwner": "Demande envoyée au propriétaire ✅"
   },
   "cart": {
     "title": "Mon panier",
@@ -1350,7 +1390,15 @@
     "paycardHint": "On l’envoie à PayCard pour lancer le paiement ; Linky ne le conserve pas.",
     "payerPhoneLabelPaycard": "Numéro de téléphone (pour recevoir le code)",
     "payerPhoneHintPaycard": "Le code de validation PayCard arrive sur ce numéro.",
-    "giftCta": "Réserver ce don"
+    "giftCta": "Réserver ce don",
+    "receiveMode": "Mode de réception",
+    "summary": "Récapitulatif",
+    "pickupTitle": "Retrait sur place",
+    "pickupHint": "Vous récupérez à la boutique — Gratuit",
+    "deliveryTitle": "Livraison à domicile",
+    "deliveryHintPrefix": "Linky vous livre —",
+    "parcelsGrouped": "({{n}} colis, trajet groupé)",
+    "parcels": "({{n}} colis)"
   },
   "orders": {
     "title": "Mes commandes",
@@ -1379,7 +1427,40 @@
     "filterPending": "En attente",
     "filterActive": "Actives",
     "filterCompleted": "Terminées",
-    "filterCancelled": "Annulées"
+    "filterCancelled": "Annulées",
+    "detailTitle": "Réservation",
+    "signedEscrowed": "Contrat signé, argent en séquestre.",
+    "payMethod": "Méthode",
+    "payNumber": "Numéro",
+    "payMeans": "Moyen de paiement",
+    "paycardAccount": "Numéro de compte PayCard",
+    "paycardHint": "Le numéro inscrit sur ta carte",
+    "paycardHelper": "On l’envoie à PayCard pour lancer le paiement ; Linky ne le conserve pas.",
+    "cancelRequest": "Annuler la demande",
+    "cancelBooking": "Annuler la réservation",
+    "myTitle": "Mes réservations",
+    "mySubtitle": "Tes locations en cours.",
+    "emptyTitle": "Aucune réservation",
+    "nothingInFilter": "Rien dans ce filtre",
+    "statusRequested": "En attente",
+    "statusAccepted": "À payer",
+    "statusRejected": "Refusée",
+    "statusCancelled": "Annulée",
+    "statusPaid": "Payée — séquestre",
+    "statusActive": "Bail actif",
+    "statusCompleted": "Terminée",
+    "statusDisputed": "Litige",
+    "statusRefunded": "Remboursée",
+    "paySentPending": "Paiement envoyé — confirmation en cours…",
+    "payFromWallet": "Paiement effectué depuis ton portefeuille ✅",
+    "stateChangedReload": "Ta réservation a changé d’état. On la recharge.",
+    "payInProgress": "Paiement en cours",
+    "cancelledToast": "Réservation annulée.",
+    "cancelConfirmTitle": "Annuler la réservation ?",
+    "cancelConfirmBody": "{{montant}} te seront remboursés sur ton portefeuille Linky, frais compris. Cette réservation sera libérée et tu ne pourras pas revenir en arrière.",
+    "keepMyBooking": "Garder ma réservation",
+    "cancelAndRefund": "Annuler et être remboursé",
+    "cancelledRefundedToast": "Réservation annulée — montant remboursé sur ton portefeuille ✅"
   },
   "order": {
     "trackingTitle": "Suivi de commande",
@@ -1417,7 +1498,14 @@
     "confirmError": "Erreur de confirmation",
     "confirmUnavailableTitle": "Confirmation indisponible",
     "confirmUnavailableBody": "Cette commande n'est pas en attente de confirmation. Ouvrez le suivi pour voir son statut actuel.",
-    "confirmViewTracking": "Voir le suivi"
+    "confirmViewTracking": "Voir le suivi",
+    "totalPaid": "Total payé",
+    "trackCourier": "Suivre le livreur",
+    "howWasIt": "Comment s'est passée ta commande ?",
+    "rateShop": "Noter la boutique",
+    "scanBuyerQr": "Scanner le QR de l'acheteur",
+    "reviewPlaceholder": "Partagez votre expérience…",
+    "trackTitle": "Suivi du livreur"
   },
   "profil": {
     "title": "Profil",
@@ -1480,7 +1568,11 @@
       "system": "Système",
       "light": "Clair",
       "dark": "Sombre"
-    }
+    },
+    "fullNamePlaceholder": "Ton prénom et nom",
+    "updatedToast": "Profil mis à jour.",
+    "rolesUpdatedToast": "Rôles mis à jour.",
+    "regionAlreadySetToast": "Ta région de paiement était déjà définie."
   },
   "onboarding": {
     "welcome": {
@@ -1579,14 +1671,19 @@
       "forgot": "Mot de passe oublié ?",
       "subtitleEmail": "Saisis ton email et ton mot de passe pour te connecter.",
       "subtitlePhone": "Saisis ton numéro et ton mot de passe pour te connecter."
-    }
+    },
+    "photoUploadFailed": "Téléversement de la photo échoué."
   },
   "auth": {
     "phoneTitle": "Votre numéro",
     "phoneHelp": "Vous recevrez un code à 6 chiffres par SMS.",
     "otpTitle": "Vérification",
     "verify": "Vérifier",
-    "resendIn": "Renvoyer dans"
+    "resendIn": "Renvoyer dans",
+    "passwordPlaceholder": "Mot de passe",
+    "passwordConfirmPlaceholder": "Confirme le mot de passe",
+    "ruleMinChars": "Au moins 8 caractères",
+    "ruleMatches": "Les deux saisies sont identiques"
   },
   "currency": {
     "gnf": "GNF",

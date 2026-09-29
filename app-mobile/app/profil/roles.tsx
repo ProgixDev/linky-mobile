@@ -6,6 +6,7 @@
 // the role allows + the rules to respect) with an explicit confirm button —
 // the switch only flips after the user confirms.
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -85,6 +86,7 @@ const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[
 };
 
 export default function RolesRoute() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const roles = useAuth((s) => s.roles);
@@ -138,7 +140,7 @@ export default function RolesRoute() {
       const res = await updateProfile.mutateAsync({ roles: arr });
       setRoles(arr);
       if (currentUser) signIn({ ...currentUser, ...res.user });
-      toast.show('Rôles mis à jour.', 'success');
+      toast.show(t('profil.rolesUpdatedToast'), 'success');
       if (router.canGoBack()) router.back();
       else router.replace('/(tabs)/profil');
     } catch (e) {

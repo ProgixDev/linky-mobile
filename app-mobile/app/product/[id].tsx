@@ -932,10 +932,11 @@ function CircleButton({
 
 function ConditionChip({ condition }: { condition: 'neuf' | 'occasion' | 'reconditionné' }) {
   const { colors } = useTheme();
-  const map: Record<typeof condition, { bg: string; fg: string; label: string }> = {
-    neuf: { bg: colors.primarySoft, fg: colors.primaryDeep, label: 'Neuf' },
-    occasion: { bg: colors.accentSoft, fg: colors.accentText, label: 'Occasion' },
-    reconditionné: { bg: 'rgba(58,124,168,0.14)', fg: colors.info, label: 'Reconditionné' },
+  const { t } = useTranslation();
+  const map: Record<typeof condition, { bg: string; fg: string; labelKey: string }> = {
+    neuf: { bg: colors.primarySoft, fg: colors.primaryDeep, labelKey: 'product.conditionNeuf' },
+    occasion: { bg: colors.accentSoft, fg: colors.accentText, labelKey: 'product.conditionOccasion' },
+    reconditionné: { bg: 'rgba(58,124,168,0.14)', fg: colors.info, labelKey: 'product.conditionReconditionne' },
   };
   const m = map[condition];
   return (
@@ -959,7 +960,7 @@ function ConditionChip({ condition }: { condition: 'neuf' | 'occasion' | 'recond
           includeFontPadding: false,
         }}
       >
-        {m.label}
+        {t(m.labelKey)}
       </Text>
     </View>
   );

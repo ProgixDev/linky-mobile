@@ -247,7 +247,7 @@ export default function CheckoutRoute() {
         returnURL: 'linky://stripe-redirect',
       });
       if (initErr) {
-        show('Impossible de préparer le paiement', 'danger');
+        show(t('common.payPrepareError'), 'danger');
         router.replace(confirmRoute);
         return;
       }
@@ -453,18 +453,18 @@ export default function CheckoutRoute() {
           hauteur (contenu + paddings + encoche du bas). */}
       <KeyboardAwareScrollView bottomOffset={110} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
         {/* Mode de réception (client 2026-07-30) : livraison Linky ou retrait. */}
-        <MicroLabel label="Mode de réception" />
+        <MicroLabel label={t('checkout.receiveMode')} />
         <Card padding={0} style={{ overflow: 'hidden', marginBottom: needsAddress || deliveryMode === 'delivery' ? 8 : 16 }}>
           {/* Retrait FIRST, livraison second (client 2026-08-07): the address
               card renders right under this list, so putting delivery last
               places it immediately above the address it belongs to. Order is
               presentation only — 'delivery' stays the default selection. */}
           {([
-            { mode: 'pickup' as DeliveryMode, icon: 'store' as IconKey, title: 'Retrait sur place', hint: 'Vous récupérez à la boutique — Gratuit' },
+            { mode: 'pickup' as DeliveryMode, icon: 'store' as IconKey, title: t('checkout.pickupTitle'), hint: t('checkout.pickupHint') },
             // « trajet groupé » : quand les boutiques sont sur le même chemin, le
             // livreur enchaîne les ramassages et le total est déjà réduit (client
             // 2026-09-05). On le dit, sinon la baisse de prix paraît arbitraire.
-            { mode: 'delivery' as DeliveryMode, icon: 'truck' as IconKey, title: 'Livraison à domicile', hint: `Linky vous livre — ${formatGNF(deliveryQuote.data?.total_minor ?? DELIVERY_FEE_GNF * shopCount)}${shopCount > 1 ? (deliveryQuote.data?.grouped ? ` (${shopCount} colis, trajet groupé)` : ` (${shopCount} colis)`) : ''}` },
+            { mode: 'delivery' as DeliveryMode, icon: 'truck' as IconKey, title: t('checkout.deliveryTitle'), hint: `${t('checkout.deliveryHintPrefix')} ${formatGNF(deliveryQuote.data?.total_minor ?? DELIVERY_FEE_GNF * shopCount)}${shopCount > 1 ? ` ${deliveryQuote.data?.grouped ? t('checkout.parcelsGrouped', { n: shopCount }) : t('checkout.parcels', { n: shopCount })}` : ''}` },
           ]).map((opt, i) => {
             const sel = deliveryMode === opt.mode;
             const Ico = I[opt.icon];
@@ -846,7 +846,7 @@ export default function CheckoutRoute() {
 
         {/* Récapitulatif (client 2026-07-30, étape 1 du parcours) — le client
             voit le détail exact avant de payer. */}
-        <MicroLabel label="Récapitulatif" />
+        <MicroLabel label={t('checkout.summary')} />
         <Card padding={14}>
           {/* La commission n'a JAMAIS sa propre ligne (client 2026-08-22) et,
               depuis le 2026-09-08, elle est comprise dans le montant affiche ici

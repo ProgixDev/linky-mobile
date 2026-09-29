@@ -69,7 +69,7 @@ export function ProductCard({
       return;
     }
     addToCart(product.id, product.shopId);
-    toast.show('Ajouté au panier', 'success');
+    toast.show(t('product.addedToCartToast'), 'success');
   };
 
   return (

@@ -9,6 +9,7 @@ import { Alert, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useStripe, PaymentSheetError } from '@stripe/stripe-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Button } from '../../src/components/primitives/Button';
@@ -31,6 +32,7 @@ import { usePayerPhone } from '../../src/lib/payerPhone';
 import type { PaymentMethod } from '../../src/data/types';
 
 export default function BookingDetailRoute() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const { show } = useToast();
@@ -118,7 +120,7 @@ export default function BookingDetailRoute() {
   }, [awaitingPayment, bookingStatus]);
 
   if (q.isLoading || !booking) {
-    return <DetailStateScreen loading={q.isLoading} title="Réservation" onRetry={() => void q.refetch()} />;
+    return <DetailStateScreen loading={q.isLoading} title={t('bookings.detailTitle')} onRetry={() => void q.refetch()} />;
   }
 
   const onSignPay = async () => {
@@ -150,7 +152,7 @@ export default function BookingDetailRoute() {
           returnURL: 'linky://stripe-redirect',
         });
         if (initErr) {
-          show('Impossible de préparer le paiement', 'danger');
+          show(t('common.payPrepareError'), 'danger');
           return;
         }
         const { error: payErr } = await presentPaymentSheet();
@@ -159,7 +161,7 @@ export default function BookingDetailRoute() {
           // fermeture — meme correctif que le panier le 2026-08-25, ou un
           // abandon envoyait vers un faux ecran d'attente.
           if (payErr.code === PaymentSheetError.Canceled) {
-            show('Paiement annulé.', 'info');
+            show(t('common.payCancelled'), 'info');
             return;
           }
           show(payErr.message || 'Paiement échoué', 'danger');
@@ -171,7 +173,7 @@ export default function BookingDetailRoute() {
         // que le serveur l'ait posee, c'est exactement le mensonge d'ecran
         // corrige le 2026-08-25 sur le panier (« ta banque confirme » alors
         // qu'aucun paiement n'avait ete tente).
-        show('Paiement envoyé — confirmation en cours…', 'info');
+        show(t('bookings.paySentPending'), 'info');
         void q.refetch();
         return;
       }
@@ -179,7 +181,7 @@ export default function BookingDetailRoute() {
       // PORTEFEUILLE : le virement est deja fait. Pas d'attente, pas de
       // sondage — on le dit, et on recharge la reservation ET le solde.
       if (res.next_step?.kind === 'paid') {
-        show('Paiement effectué depuis ton portefeuille ✅', 'success');
+        show(t('bookings.payFromWallet'), 'success');
         void q.refetch();
         void wallet.refetch();
         return;
@@ -242,7 +244,7 @@ export default function BookingDetailRoute() {
   const onCancelError = (e: unknown) => {
     if (e instanceof ApiError && e.code === 'STATUS_CHANGED') {
       void q.refetch();
-      show('Ta réservation a changé d’état. On la recharge.', 'info');
+      show(t('bookings.stateChangedReload'), 'info');
       return;
     }
     show(toToastMessage(e, "Impossible d'annuler."), 'danger');
@@ -290,7 +292,7 @@ export default function BookingDetailRoute() {
         {booking.status === 'paid' && (
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
-              <Text style={{ fontWeight: '700' }}>Contrat signé, argent en séquestre. </Text>
+              <Text style={{ fontWeight: '700' }}>{t('bookings.signedEscrowed')} </Text>
               {isSale
                 ? 'Le jour de la remise du bien, confirme la réception pour verser le montant au vendeur.'
                 : 'Le jour de la remise des clés, confirme ton emménagement pour verser le loyer au propriétaire.'}
@@ -358,7 +360,7 @@ export default function BookingDetailRoute() {
             action — elle porte donc son propre nom. */}
         {booking.status === 'accepted' && awaitingPayment && (
           <View style={{ gap: 12 }}>
-            <MicroLabel label="Paiement en cours" />
+            <MicroLabel label={t('bookings.payInProgress')} />
             <View
               style={{
                 borderRadius: 16,
@@ -369,8 +371,8 @@ export default function BookingDetailRoute() {
                 gap: 10,
               }}
             >
-              <AwaitRow label="Méthode" value={method === 'mtn-money' ? 'MTN Mobile Money' : 'Orange Money'} />
-              <AwaitRow label="Numéro" value={formatGnPhone(payerPhone.digits)} />
+              <AwaitRow label={t('bookings.payMethod')} value={method === 'mtn-money' ? 'MTN Mobile Money' : 'Orange Money'} />
+              <AwaitRow label={t('bookings.payNumber')} value={formatGnPhone(payerPhone.digits)} />
               <AwaitRow label="Montant" value={formatGNF(booking.totalGnf)} />
             </View>
 
@@ -396,7 +398,7 @@ export default function BookingDetailRoute() {
 
         {booking.status === 'accepted' && !awaitingPayment && (
           <View>
-            <MicroLabel label="Moyen de paiement" />
+            <MicroLabel label={t('bookings.payMeans')} />
             <PaymentMethodPicker
               value={method}
               onChange={setMethod}
@@ -411,13 +413,13 @@ export default function BookingDetailRoute() {
             CARD_NUMBER_REQUIRED que rien a l'ecran ne permettrait de corriger. */}
         {booking.status === 'accepted' && !awaitingPayment && method === 'paycard' && (
           <Input
-            label="Numéro de compte PayCard"
+            label={t('bookings.paycardAccount')}
             leadingIcon="card"
             keyboardType="number-pad"
-            placeholder="Le numéro inscrit sur ta carte"
+            placeholder={t('bookings.paycardHint')}
             value={payerCard}
             onChangeText={setPayerCard}
-            helperText="On l’envoie à PayCard pour lancer le paiement ; Linky ne le conserve pas."
+            helperText={t('bookings.paycardHelper')}
           />
         )}
 
@@ -505,13 +507,13 @@ export default function BookingDetailRoute() {
         {(booking.status === 'requested' || booking.status === 'accepted') && !awaitingPayment && (
           <Button
             variant="outline"
-            label="Annuler la demande"
+            label={t('bookings.cancelRequest')}
             disabled={cancel.isPending}
             loading={cancel.isPending}
             onPress={() =>
               cancel.mutate({ bookingId: booking.id, expectedStatus: booking.status === 'requested' ? 'requested' : 'accepted' }, {
                 onSuccess: () => {
-                  show('Réservation annulée.', 'info');
+                  show(t('bookings.cancelledToast'), 'info');
                   router.back();
                 },
                 onError: (e) => onCancelError(e),
@@ -527,22 +529,22 @@ export default function BookingDetailRoute() {
         {booking.status === 'paid' && cancelWindow === 'open' && (
           <Button
             variant="outline"
-            label="Annuler la réservation"
+            label={t('bookings.cancelBooking')}
             disabled={cancel.isPending}
             loading={cancel.isPending}
             onPress={() =>
               Alert.alert(
-                'Annuler la réservation ?',
-                `${formatGNF(booking.totalGnf)} te seront remboursés sur ton portefeuille Linky, frais compris. Cette réservation sera libérée et tu ne pourras pas revenir en arrière.`,
+                t('bookings.cancelConfirmTitle'),
+                t('bookings.cancelConfirmBody', { montant: formatGNF(booking.totalGnf) }),
                 [
-                  { text: 'Garder ma réservation', style: 'cancel' },
+                  { text: t('bookings.keepMyBooking'), style: 'cancel' },
                   {
-                    text: 'Annuler et être remboursé',
+                    text: t('bookings.cancelAndRefund'),
                     style: 'destructive',
                     onPress: () =>
                       cancel.mutate({ bookingId: booking.id, expectedStatus: 'paid' }, {
                         onSuccess: () => {
-                          show('Réservation annulée — montant remboursé sur ton portefeuille ✅', 'success');
+                          show(t('bookings.cancelledRefundedToast'), 'success');
                           router.back();
                         },
                         onError: (e) => onCancelError(e),

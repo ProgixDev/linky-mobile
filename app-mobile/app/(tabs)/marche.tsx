@@ -668,11 +668,11 @@ export default function MarcheRoute() {
               </View>
             ) : hasActiveFilters(filters, false) ? (
               <View style={{ paddingVertical: 40, alignItems: 'center', gap: 14 }}>
-                <Text tone="muted">Aucun résultat</Text>
+                <Text tone="muted">{t('marche.noResults')}</Text>
                 <Button
                   variant="outline"
                   size="md"
-                  label="Effacer les filtres"
+                  label={t('marche.clearFilters')}
                   onPress={() => {
                     filters.reset();
                     setSearch('');

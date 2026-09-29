@@ -153,7 +153,7 @@ export default function ProfilEditRoute() {
         ...(avatarUrl !== initialAvatar ? { avatar_url: avatarUrl } : {}),
       });
       if (currentUser) signIn({ ...currentUser, ...res.user });
-      toast.show('Profil mis à jour.', 'success');
+      toast.show(t('profil.updatedToast'), 'success');
       if (router.canGoBack()) router.back();
       else router.replace('/(tabs)/profil');
     } catch (e) {
@@ -296,7 +296,7 @@ export default function ProfilEditRoute() {
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="Ton prénom et nom"
+            placeholder={t('profil.fullNamePlaceholder')}
             placeholderTextColor={colors.textFaint}
             onFocus={() => setFocusName(true)}
             onBlur={() => setFocusName(false)}

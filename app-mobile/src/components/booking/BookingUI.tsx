@@ -3,6 +3,7 @@
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { CalendarDays, CalendarPlus, Check, Clock, FileText, Pencil, X as XIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { formatGNF } from '../../lib/format';
@@ -12,24 +13,27 @@ import type { Booking, BookingStatus } from '../../data/types';
 type Colors = ReturnType<typeof useTheme>['colors'];
 
 export const BOOKING_STATUS_META: Record<string, {
-  label: string;
+  // Une CLE, pas un libelle : cette table est une constante de module,
+  // hors de portee d'un crochet React. La pastille resout au rendu.
+  labelKey: string;
   Icon: typeof Check | null;
   bg: (c: Colors) => string;
   fg: (c: Colors) => string;
 }> = {
-  requested: { label: 'En attente',        Icon: Clock, bg: (c) => c.accentSoft,  fg: (c) => c.accentText },
-  accepted:  { label: 'À payer',  Icon: FileText, bg: (c) => c.primarySoft, fg: (c) => c.primaryDeep },
-  rejected:  { label: 'Refusée',           Icon: XIcon, bg: () => 'rgba(209,79,60,0.12)', fg: (c) => c.danger },
-  cancelled: { label: 'Annulée',           Icon: XIcon, bg: (c) => c.bgSunken, fg: (c) => c.textMuted },
-  paid:      { label: 'Payée — séquestre', Icon: Check, bg: (c) => c.primarySoft, fg: (c) => c.primaryDeep },
-  active:    { label: 'Bail actif',        Icon: Check, bg: (c) => c.primarySoft, fg: (c) => c.primaryDeep },
-  completed: { label: 'Terminée',          Icon: Check, bg: (c) => c.bgSunken, fg: (c) => c.textMuted },
-  disputed:  { label: 'Litige',            Icon: Clock, bg: () => 'rgba(209,79,60,0.12)', fg: (c) => c.danger },
-  refunded:  { label: 'Remboursée',        Icon: Check, bg: (c) => c.bgSunken, fg: (c) => c.textMuted },
+  requested: { labelKey: 'bookings.statusRequested', Icon: Clock, bg: (c) => c.accentSoft,  fg: (c) => c.accentText },
+  accepted:  { labelKey: 'bookings.statusAccepted', Icon: FileText, bg: (c) => c.primarySoft, fg: (c) => c.primaryDeep },
+  rejected:  { labelKey: 'bookings.statusRejected', Icon: XIcon, bg: () => 'rgba(209,79,60,0.12)', fg: (c) => c.danger },
+  cancelled: { labelKey: 'bookings.statusCancelled', Icon: XIcon, bg: (c) => c.bgSunken, fg: (c) => c.textMuted },
+  paid:      { labelKey: 'bookings.statusPaid', Icon: Check, bg: (c) => c.primarySoft, fg: (c) => c.primaryDeep },
+  active:    { labelKey: 'bookings.statusActive', Icon: Check, bg: (c) => c.primarySoft, fg: (c) => c.primaryDeep },
+  completed: { labelKey: 'bookings.statusCompleted', Icon: Check, bg: (c) => c.bgSunken, fg: (c) => c.textMuted },
+  disputed:  { labelKey: 'bookings.statusDisputed', Icon: Clock, bg: () => 'rgba(209,79,60,0.12)', fg: (c) => c.danger },
+  refunded:  { labelKey: 'bookings.statusRefunded', Icon: Check, bg: (c) => c.bgSunken, fg: (c) => c.textMuted },
 };
 
 export function BookingStatusChip({ status }: { status: BookingStatus }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const meta = BOOKING_STATUS_META[status] ?? BOOKING_STATUS_META.requested;
   return (
     <View
@@ -46,7 +50,7 @@ export function BookingStatusChip({ status }: { status: BookingStatus }) {
     >
       {meta.Icon && <meta.Icon size={11} color={meta.fg(colors)} strokeWidth={2.25} />}
       <Text style={{ fontSize: 10.5, fontWeight: '700', color: meta.fg(colors), letterSpacing: 0.3, lineHeight: 12, includeFontPadding: false }}>
-        {meta.label}
+        {t(meta.labelKey)}
       </Text>
     </View>
   );

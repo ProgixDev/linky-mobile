@@ -629,11 +629,11 @@ export default function ProductEditRoute() {
 
             {!variants.enabled && (
             <Input
-              label="Quantité disponible"
+              label={t('productEdit.stockLabel')}
               value={stock}
               onChangeText={(txt) => setStock(txt.replace(/\D/g, ''))}
               keyboardType="number-pad"
-              placeholder="Illimitée"
+              placeholder={t('productEdit.stockUnlimited')}
               // Le texte d'aide dit l'etat COURANT, pas la regle generale. Un
               // champ vide vaut « illimite » et non « zero » : c'est exactement
               // la confusion qui a fait croire a un article en rupture alors
