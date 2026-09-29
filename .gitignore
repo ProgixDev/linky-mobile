@@ -67,3 +67,11 @@ hero-with-bg.png
 *.p12
 *.jks
 *.keystore
+
+# Captures d'ecran du Play Store : les brutes viennent d'un telephone reel et
+# peuvent porter des numeros, des adresses ou des noms de clients ; les habillees
+# en heritent. Elles restent sur le disque, elles ne rentrent pas dans le depot
+# tant que personne ne les a relues. `play-store-assets/captures.py` les
+# regenere en une commande.
+screenshots-source/
+play-store-assets/captures/
