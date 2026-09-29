@@ -8,19 +8,18 @@ ENTRÉE   screenshots-source/linky/*.png     (dans l'ordre d'affichage : 1, 2, 3
          screenshots-source/depose/*.png
 SORTIE   play-store-assets/captures/linky-1.png …  (1080 × 1920, prêtes à déposer)
 
-Chaque image sortante = un fond aux couleurs de la marque, une phrase courte en
-haut, et la capture dans un cadre de téléphone dessiné ici même (aucun visuel
-externe à fournir).
+Mise en page : titre en haut À GAUCHE sur deux lignes — la seconde en couleur
+d'accent —, une phrase descriptive en dessous, et le téléphone en grand qui
+DÉBORDE par le bas. C'est la mise en page validée sur GetDraft.
 
 ┌─ CE QUE LE FORMAT IMPOSE, ET POURQUOI C'EST FAIT AINSI ────────────────────┐
 - Play accepte un rapport entre 16:9 et 9:16 ; 1080×1920 est le format sûr.
 - PAS de canal alpha : on écrit en RGB.
-- La capture n'est JAMAIS déformée. La largeur du cadre est DÉRIVÉE du rapport
-  de la capture, au lieu d'étirer l'image pour la faire entrer dans un cadre
-  fixe. Un écran d'application étiré se voit immédiatement et fait amateur.
-- Les téléphones droits et centrés, pas inclinés : sur une fiche de magasin,
-  l'utilisateur regarde l'interface, pas la mise en scène. L'inclinaison est
-  bonne pour une bannière, mauvaise pour une capture.
+- La capture n'est JAMAIS déformée. On impose la LARGEUR du téléphone et on
+  DÉDUIT sa hauteur du rapport de la capture. Un écran étiré se voit tout de
+  suite et fait amateur.
+- Le téléphone déborde volontairement du bas : ça donne de la présence à
+  l'écran, et ça évite le vide sous l'appareil.
 └────────────────────────────────────────────────────────────────────────────┘
 
 ⚠️ Ces images sont PUBLIQUES. Relire chaque capture avant de la déposer : aucun
@@ -42,40 +41,60 @@ W, H = 1080, 1920
 #
 # Les captures viennent d'un vrai appareil : elles portent l'heure, le niveau de
 # batterie, le debit reseau et les icones de notification de son proprietaire
-# (WhatsApp, Messenger, Slack…). Sur une fiche PUBLIQUE, ca fait negligé et ca
-# expose un peu de sa vie privee. La proportion est celle d'une barre d'etat
-# Android standard ; mettre 0 pour la garder.
+# (WhatsApp, Messenger, Slack…). Sur une fiche PUBLIQUE, ca fait neglige et ca
+# expose un peu de sa vie privee. Mettre 0 pour la garder.
 ROGNER_BARRE_ETAT = 0.038
 
-# La palette de la carte du portefeuille — le seul endroit où la marque est
-# déjà posée en couleurs.
-VERT_CLAIR = (17, 136, 102)
-VERT = (10, 82, 64)
-VERT_SOMBRE = (6, 57, 41)
-SAFRAN = (232, 165, 61)
+# La palette. Le fond est le vert le plus sombre de la marque — celui du bas du
+# degrade de la carte du portefeuille ; l'accent est le safran du logo.
+FOND_HAUT = (9, 66, 49)
+FOND_BAS = (5, 40, 30)
+ACCENT = (240, 178, 78)
+TEXTE = (255, 255, 255)
+TEXTE_DOUX = (188, 214, 203)
 
-# Les phrases, dans l'ordre des fichiers. Courtes : elles se lisent sur une
-# vignette de quelques centimètres, pas en plein écran.
+MARGE = 76
+LARGEUR_TEL = 700
+
+# Trois morceaux par capture : la premiere ligne du titre (blanche), la seconde
+# (en accent), puis la phrase. Court : ca se lit sur une vignette de quelques
+# centimetres, pas en plein ecran.
 LEGENDES = {
     'linky': [
-        "Le marché guinéen, dans ta poche",
-        "Tout le marché, catégorie par catégorie",
-        "Le vendeur n'est payé qu'après ta confirmation",
-        "Loue ou achète un logement",
-        "Découvre les annonces en un coup d'œil",
-        "Tes ventes encaissées, retirables quand tu veux",
-        "Acheteur, vendeur ou agent : à toi de choisir",
-        "Garde tes coups de cœur",
+        ("Le marché guinéen.", "Dans ta poche.",
+         "Acheter, vendre, louer. Partout en Guinée, depuis ton téléphone."),
+        ("Tout le marché,", "catégorie par catégorie.",
+         "Électronique, mode, maison, auto, terrains, logements. Tout est là."),
+        ("Paiement sécurisé.", "À chaque achat.",
+         "Le vendeur n'est payé qu'une fois que tu as confirmé la livraison."),
+        ("Louer ou acheter", "un logement.",
+         "Contrat signé dans l'application, loyer gardé jusqu'à ton entrée."),
+        ("Découvre,", "d'un coup d'œil.",
+         "Un fil d'annonces à faire défiler : articles et immobilier mêlés."),
+        ("Tes ventes,", "encaissées.",
+         "Suis ton solde et retire vers Orange Money ou MTN quand tu veux."),
+        ("Acheteur, vendeur,", "ou agent.",
+         "Un seul compte. Tu choisis ce que tu fais, et tu peux en changer."),
+        ("Garde tes", "coups de cœur.",
+         "Retrouve tes annonces préférées, articles comme logements."),
     ],
     'depose': [
-        "Tes courses du jour",
-        "L'itinéraire, directement dans l'app",
-        "La remise se valide par QR",
-        "Chaque course en détail",
-        "Ton historique, toujours à jour",
-        "Livrer avec Linky",
-        "Simple, rapide, suivi",
-        "Dépose",
+        ("Tes courses", "du jour.",
+         "Toutes les livraisons qui t'attendent, dans l'ordre."),
+        ("L'itinéraire,", "dans l'application.",
+         "La carte t'emmène du vendeur jusqu'au client, sans changer d'app."),
+        ("La remise", "se valide par QR.",
+         "Le client montre son code, tu le scannes, la course est close."),
+        ("Chaque course", "en détail.",
+         "Adresse, contact, montant : tout ce qu'il faut avant de partir."),
+        ("Ton historique,", "toujours à jour.",
+         "Retrouve ce que tu as livré, et quand."),
+        ("Livrer", "avec Linky.",
+         "Rejoins les livreurs de la place de marché guinéenne."),
+        ("Simple,", "rapide, suivi.",
+         "Une application pensée pour la route, pas pour le bureau."),
+        ("Dépose.", "",
+         "L'application des livreurs Linky."),
     ],
 }
 
@@ -85,74 +104,72 @@ def police(nom, taille):
 
 
 def fond():
-    """Le dégradé diagonal + deux halos, comme la carte et les bannières."""
+    """Un aplat sombre, très légèrement dégradé du haut vers le bas."""
     im = Image.new('RGB', (W, H))
-    px = im.load()
+    d = ImageDraw.Draw(im)
     for y in range(H):
-        for x in range(W):
-            t = (x / W + y / H) / 2.0
-            if t < 0.5:
-                u, a, b = t / 0.5, VERT_CLAIR, VERT
-            else:
-                u, a, b = (t - 0.5) / 0.5, VERT, VERT_SOMBRE
-            px[x, y] = (int(a[0] + (b[0] - a[0]) * u),
-                        int(a[1] + (b[1] - a[1]) * u),
-                        int(a[2] + (b[2] - a[2]) * u))
-    halo(im, W - 60, 120, 340, SAFRAN, 0.22)
-    halo(im, 20, H - 260, 380, (120, 220, 180), 0.14)
+        u = y / H
+        d.line([(0, y), (W, y)], fill=(
+            int(FOND_HAUT[0] + (FOND_BAS[0] - FOND_HAUT[0]) * u),
+            int(FOND_HAUT[1] + (FOND_BAS[1] - FOND_HAUT[1]) * u),
+            int(FOND_HAUT[2] + (FOND_BAS[2] - FOND_HAUT[2]) * u)))
     return im
 
 
-def halo(im, cx, cy, r, couleur, force):
-    P = 64
-    m = Image.new('L', (P, P), 0)
-    d = ImageDraw.Draw(m)
-    for i in range(P // 2, 0, -1):
-        d.ellipse([P // 2 - i, P // 2 - i, P // 2 + i, P // 2 + i],
-                  fill=int(force * 255 * (1 - i / (P / 2)) ** 2))
-    m = m.resize((r * 2, r * 2), Image.LANCZOS)
-    im.paste(Image.new('RGB', (r * 2, r * 2), couleur), (cx - r, cy - r), m)
+def coupe(d, texte, f, largeur):
+    """Découpe une phrase en lignes qui tiennent dans `largeur`."""
+    lignes, cour = [], ''
+    for mot in texte.split():
+        essai = (cour + ' ' + mot).strip()
+        if d.textlength(essai, font=f) <= largeur:
+            cour = essai
+        else:
+            if cour:
+                lignes.append(cour)
+            cour = mot
+    if cour:
+        lignes.append(cour)
+    return lignes
 
 
-def cadre_telephone(capture, h_ecran):
+def telephone(capture, largeur):
     """Dessine un téléphone AUTOUR de la capture, sans jamais la déformer.
 
-    La largeur de l'écran est déduite du rapport de la capture : c'est elle qui
-    commande, pas l'inverse. Rend (image RGBA du téléphone, masque d'ombre)."""
+    On impose la LARGEUR ; la hauteur se déduit du rapport de la capture."""
+    BEZEL = 13
+    RAYON = 52
     cw, ch = capture.size
-    w_ecran = max(1, round(h_ecran * cw / ch))
+    w_ecran = largeur - BEZEL * 2
+    h_ecran = max(1, round(w_ecran * ch / cw))
     ecran = capture.resize((w_ecran, h_ecran), Image.LANCZOS).convert('RGB')
 
-    BEZEL = 14          # l'épaisseur de la coque autour de l'écran
-    RAYON = 54          # les coins arrondis du téléphone
-    tw, th = w_ecran + BEZEL * 2, h_ecran + BEZEL * 2
-
+    tw, th = largeur, h_ecran + BEZEL * 2
     tel = Image.new('RGBA', (tw, th), (0, 0, 0, 0))
     d = ImageDraw.Draw(tel)
-    # La coque, presque noire mais pas tout à fait : un noir pur sur un fond
-    # sombre fait un trou, un gris très foncé garde le relief.
-    d.rounded_rectangle([0, 0, tw - 1, th - 1], radius=RAYON, fill=(22, 26, 30, 255))
-    # Un liseré clair sur le bord : c'est lui qui détache le téléphone du fond.
+    # Un gris très foncé plutôt qu'un noir pur : sur un fond sombre, le noir pur
+    # fait un trou et l'appareil perd son relief.
+    d.rounded_rectangle([0, 0, tw - 1, th - 1], radius=RAYON, fill=(20, 24, 28, 255))
     d.rounded_rectangle([0, 0, tw - 1, th - 1], radius=RAYON,
-                        outline=(255, 255, 255, 38), width=2)
+                        outline=(255, 255, 255, 46), width=2)
 
-    # L'écran, avec ses propres coins arrondis.
     masque = Image.new('L', (w_ecran * 4, h_ecran * 4), 0)
     ImageDraw.Draw(masque).rounded_rectangle(
         [0, 0, w_ecran * 4 - 1, h_ecran * 4 - 1], radius=(RAYON - BEZEL) * 4, fill=255)
     masque = masque.resize((w_ecran, h_ecran), Image.LANCZOS)
     tel.paste(ecran, (BEZEL, BEZEL), masque)
 
-    # L'ombre portée : le téléphone en noir, flouté, décalé vers le bas.
-    ombre = Image.new('RGBA', (tw + 120, th + 120), (0, 0, 0, 0))
+    ombre = Image.new('RGBA', (tw + 160, th + 160), (0, 0, 0, 0))
     ImageDraw.Draw(ombre).rounded_rectangle(
-        [60, 60, 60 + tw, 60 + th], radius=RAYON, fill=(0, 0, 0, 120))
-    ombre = ombre.filter(ImageFilter.GaussianBlur(26))
+        [80, 80, 80 + tw, 80 + th], radius=RAYON, fill=(0, 0, 0, 150))
+    ombre = ombre.filter(ImageFilter.GaussianBlur(34))
     return tel, ombre
 
 
 def habille(chemin_capture, legende, destination):
+    titre1, titre2, phrase = legende
     im = fond()
+    d = ImageDraw.Draw(im)
+
     capture = Image.open(chemin_capture)
     if capture.mode != 'RGB':
         capture = capture.convert('RGB')
@@ -160,56 +177,39 @@ def habille(chemin_capture, legende, destination):
         cw, ch = capture.size
         capture = capture.crop((0, int(ch * ROGNER_BARRE_ETAT), cw, ch))
 
-    d = ImageDraw.Draw(im)
-
-    # ── La phrase, en haut ────────────────────────────────────────────────
-    MARGE = 72
     dispo = W - MARGE * 2
-    f = police('segoeuib.ttf', 62)
-    mots, lignes, cour = legende.split(), [], ''
-    for m in mots:
-        essai = (cour + ' ' + m).strip()
-        if d.textlength(essai, font=f) <= dispo:
-            cour = essai
-        else:
-            lignes.append(cour); cour = m
-    if cour:
-        lignes.append(cour)
-    # Au-delà de deux lignes la phrase est trop longue pour une vignette : on
-    # réduit plutôt que de manger la place du téléphone.
-    while len(lignes) > 2 and f.size > 40:
-        f = police('segoeuib.ttf', f.size - 4)
-        lignes, cour = [], ''
-        for m in mots:
-            essai = (cour + ' ' + m).strip()
-            if d.textlength(essai, font=f) <= dispo:
-                cour = essai
-            else:
-                lignes.append(cour); cour = m
-        if cour:
-            lignes.append(cour)
 
-    y = 96
+    # ── LE TITRE, EN HAUT À GAUCHE ────────────────────────────────────────
+    f_titre = police('segoeuib.ttf', 70)
+    while (max(d.textlength(titre1, font=f_titre),
+               d.textlength(titre2, font=f_titre)) > dispo and f_titre.size > 42):
+        f_titre = police('segoeuib.ttf', f_titre.size - 2)
+
+    y = 104
+    d.text((MARGE, y), titre1, font=f_titre, fill=TEXTE)
+    y += int(f_titre.size * 1.16)
+    if titre2:
+        d.text((MARGE, y), titre2, font=f_titre, fill=ACCENT)
+        y += int(f_titre.size * 1.16)
+
+    # ── LA PHRASE ─────────────────────────────────────────────────────────
+    f_phrase = police('segoeui.ttf', 30)
+    lignes = coupe(d, phrase, f_phrase, dispo)
+    # Au-delà de deux lignes on réduit : la place appartient au téléphone.
+    while len(lignes) > 2 and f_phrase.size > 24:
+        f_phrase = police('segoeui.ttf', f_phrase.size - 2)
+        lignes = coupe(d, phrase, f_phrase, dispo)
+    y += 14
     for l in lignes:
-        d.text(((W - d.textlength(l, font=f)) / 2, y), l, font=f, fill=(255, 255, 255))
-        y += f.size + 12
+        d.text((MARGE, y), l, font=f_phrase, fill=TEXTE_DOUX)
+        y += f_phrase.size + 10
 
-    # ── Le téléphone, en dessous ──────────────────────────────────────────
-    HAUT = y + 54            # là où commence le téléphone
-    BAS = H - 70             # et là où il s'arrête
-    h_ecran = BAS - HAUT - 28
-    tel, ombre = cadre_telephone(capture, h_ecran)
-    tw = tel.size[0]
-    # Si la capture est large (une tablette, par exemple), on réduit jusqu'à ce
-    # que le téléphone tienne dans la largeur.
-    if tw > W - MARGE:
-        facteur = (W - MARGE) / tw
-        h_ecran = int(h_ecran * facteur)
-        tel, ombre = cadre_telephone(capture, h_ecran)
-        tw = tel.size[0]
-    x = (W - tw) // 2
-    im.paste(ombre, (x - 60, HAUT - 60 + 18), ombre)
-    im.paste(tel, (x, HAUT), tel)
+    # ── LE TÉLÉPHONE, QUI DÉBORDE PAR LE BAS ──────────────────────────────
+    tel, ombre = telephone(capture, LARGEUR_TEL)
+    x = (W - LARGEUR_TEL) // 2
+    haut = y + 58
+    im.paste(ombre, (x - 80, haut - 80 + 24), ombre)
+    im.paste(tel, (x, haut), tel)   # ce qui dépasse de 1920 est simplement coupé
 
     im.save(destination, 'PNG', optimize=True)
     return im.size
@@ -218,7 +218,6 @@ def habille(chemin_capture, legende, destination):
 def main():
     if not os.path.isdir(SOURCE):
         print("Rien a faire : le dossier %s n'existe pas." % SOURCE)
-        print("Y deposer les captures dans linky/ et depose/, nommees 1.png, 2.png…")
         return
     os.makedirs(SORTIE, exist_ok=True)
     total = 0
@@ -232,16 +231,16 @@ def main():
         print(app)
         for i, f in enumerate(fichiers):
             legendes = LEGENDES.get(app, [])
-            legende = legendes[i] if i < len(legendes) else ''
+            legende = legendes[i] if i < len(legendes) else ('', '', '')
             dst = os.path.join(SORTIE, '%s-%d.png' % (app, i + 1))
-            taille = habille(f, legende, dst)
-            print('   %-28s -> %-16s %dx%d  « %s »'
-                  % (os.path.basename(f), os.path.basename(dst), taille[0], taille[1], legende))
+            habille(f, legende, dst)
+            print('   %-12s -> %-16s « %s %s »'
+                  % (os.path.basename(f), os.path.basename(dst), legende[0], legende[1]))
             total += 1
     print()
     print('%d capture(s) habillee(s) dans %s' % (total, SORTIE))
     if total > 8:
-        print('⚠️  Play n en accepte que 8 par application.')
+        print("⚠️  Play n'en accepte que 8 par application.")
 
 
 if __name__ == '__main__':
