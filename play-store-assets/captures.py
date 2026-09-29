@@ -2,7 +2,11 @@
 """
 Habille les captures d'écran brutes pour le Play Store.
 
-    python play-store-assets/captures.py
+    python play-store-assets/captures.py        legendes en francais
+    python play-store-assets/captures.py en     legendes en anglais
+
+La langue des legendes DOIT suivre celle des captures. Les premieres
+versions portaient un titre francais au-dessus d'un ecran anglais.
 
 ENTRÉE   screenshots-source/linky/*.png     (dans l'ordre d'affichage : 1, 2, 3…)
          screenshots-source/depose/*.png
@@ -36,6 +40,11 @@ SORTIE = os.path.join(ICI, 'captures')
 FONTS = 'C:/Windows/Fonts/'
 
 W, H = 1080, 1920
+
+# La langue des legendes. Elle doit suivre celle des CAPTURES : une fiche Play
+# qui melange un titre francais et un ecran anglais se voit au premier coup
+# d'oeil, et c'est exactement ce que montraient les premieres.
+LANGUE = 'en' if len(sys.argv) > 1 and sys.argv[1].lower() in ('en', 'anglais') else 'fr'
 
 # ON ROGNE LA BARRE D'ETAT DU TELEPHONE.
 #
@@ -97,6 +106,50 @@ LEGENDES = {
          "L'application des livreurs Linky."),
     ],
 }
+
+# Les memes, en anglais. Une fiche Play se lit dans UNE langue : si les captures
+# montrent l'appli en anglais, les legendes doivent l'etre aussi. C'est le
+# defaut qu'on corrige ici — le premier jeu melangeait titre francais et ecran
+# anglais.
+LEGENDES_EN = {
+    'linky': [
+        ("Guinea's marketplace.", "In your pocket.",
+         "Buy, sell, rent. Anywhere in Guinea, straight from your phone."),
+        ("The whole market,", "category by category.",
+         "Electronics, fashion, home, cars, land, homes. It is all here."),
+        ("Secure payment.", "On every purchase.",
+         "The seller is only paid once you have confirmed delivery."),
+        ("Rent or buy", "a home.",
+         "Contract signed in the app, rent held until you move in."),
+        ("Discover,", "at a glance.",
+         "A feed to scroll through: items and property, side by side."),
+        ("Your sales,", "cashed in.",
+         "Track your balance and withdraw to Orange Money or MTN anytime."),
+        ("Buyer, seller,", "or agent.",
+         "One account. You choose what you do, and you can switch."),
+        ("Keep your", "favourites.",
+         "Find the listings you saved, items and homes alike."),
+    ],
+    'depose': [
+        ("Your runs", "for the day.",
+         "Every delivery waiting for you, in order."),
+        ("The route,", "inside the app.",
+         "The map takes you from the seller to the customer, in one place."),
+        ("Handover", "is confirmed by QR.",
+         "The customer shows their code, you scan it, the run is closed."),
+        ("Every run", "in detail.",
+         "Address, contact, amount: everything you need before you set off."),
+        ("Your history,", "always up to date.",
+         "Find what you delivered, and when."),
+        ("Deliver", "with Linky.",
+         "Join the couriers of Guinea's marketplace."),
+        ("Simple,", "fast, tracked.",
+         "An app built for the road, not for the desk."),
+        ("Depose.", "",
+         "The app for Linky couriers."),
+    ],
+}
+
 
 
 def police(nom, taille):
@@ -230,7 +283,8 @@ def main():
             continue
         print(app)
         for i, f in enumerate(fichiers):
-            legendes = LEGENDES.get(app, [])
+            table = LEGENDES_EN if LANGUE == 'en' else LEGENDES
+            legendes = table.get(app, [])
             legende = legendes[i] if i < len(legendes) else ('', '', '')
             dst = os.path.join(SORTIE, '%s-%d.png' % (app, i + 1))
             habille(f, legende, dst)
@@ -238,7 +292,8 @@ def main():
                   % (os.path.basename(f), os.path.basename(dst), legende[0], legende[1]))
             total += 1
     print()
-    print('%d capture(s) habillee(s) dans %s' % (total, SORTIE))
+    print('%d capture(s) habillee(s) dans %s  (legendes : %s)'
+          % (total, SORTIE, LANGUE))
     if total > 8:
         print("⚠️  Play n'en accepte que 8 par application.")
 
