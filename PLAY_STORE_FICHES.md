@@ -441,13 +441,33 @@ Il n'y a donc **aucun revenu à protéger**. L'option 1 — soumettre tel quel e
 voir — fait courir un risque de suspension pour une fonctionnalité qui n'a
 jamais servi. C'est le mauvais pari.
 
-**L'option la moins chère n'est aucune des trois : c'est de désactiver l'achat
-in-app pour la publication, et de décider ensuite, sans pression.** Le dépôt
-part sans le point litigieux, et le boost revient quand le client a tranché
-entre la page web et Play Billing.
+### ✅ DÉCISION DU CLIENT, 2026-09-29 : **on garde le boost dans l'application**
 
-Ce que ça demande, et le dépôt a déjà deux précédents exacts (`P2P_SEND_ENABLED`
-et `WALLET_TOPUP_ENABLED`, tous deux désactivés de cette façon) :
+Le client a tranché en connaissance du risque : le boost reste achetable
+in-app, hors Play Billing. On soumet ainsi. Ce qui suit n'est plus une
+recommandation mais le dossier de défense, et le plan si Google relève le point.
+
+**Ce qui joue en notre faveur, et qui est déjà en place** — vérifié dans le code
+le 2026-09-29, il n'y a rien à modifier :
+
+- Le boost est vendu **à un professionnel, pour sa propre annonce**, depuis
+  l'espace pro (`app/pro/boost/`). Ce n'est pas un achat proposé au grand public.
+- Les libellés le présentent comme une **prestation de visibilité**, jamais comme
+  du contenu déverrouillé : « Booster ses annonces », « mettre vos annonces en
+  avant », « Plus de vues, plus de ventes », « gagner en visibilité ».
+- Google traite les **services publicitaires vendus à une entreprise**
+  différemment du contenu numérique consommé dans l'application. C'est exactement
+  la case dans laquelle le boost tombe, et la formulation actuelle le dit déjà.
+- Les anciens libellés « Très bientôt » sont des chaînes MORTES (vérifié :
+  aucun écran ne les rend). L'application ne promet rien qu'elle ne livre.
+
+**Déclarer « Achats dans l'application : Oui »** dans le questionnaire (déjà
+prévu en section 7). Ne pas chercher à paraître propre en répondant « Non » :
+l'incohérence entre la déclaration et ce que fait l'application est précisément
+ce qui attire l'attention.
+
+**Si Google relève quand même le point**, le repli est prêt et chiffré — et
+c'est ce qui rend cette décision réversible plutôt que risquée :
 
 1. un drapeau `BOOST_PURCHASE_ENABLED` dans `src/lib/flags.ts` ;
 2. masquer les points d'entrée d'achat (`app/pro/boost/new.tsx` et les appels
@@ -456,8 +476,9 @@ et `WALLET_TOPUP_ENABLED`, tous deux désactivés de cette façon) :
    pas en appelant l'API autrement ;
 4. une OTA sur les deux canaux.
 
-Les boosts déjà actifs continuent de s'afficher et d'expirer normalement — on
-ferme la vente, pas le mécanisme.
+Le dépôt a deux précédents exacts de cette manœuvre (`P2P_SEND_ENABLED` et
+`WALLET_TOPUP_ENABLED`). Compter une heure, pas une refonte. Les boosts déjà
+actifs continueraient de s'afficher et d'expirer normalement — on fermerait la
+vente, pas le mécanisme.
 
-**À trancher avant de publier, pas après** — mais la mesure ci-dessus rend la
-décision beaucoup moins lourde qu'elle n'en avait l'air.
+
