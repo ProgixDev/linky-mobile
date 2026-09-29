@@ -736,7 +736,7 @@ export function DiscoverCard({
                 letterSpacing: 0,
               }}
             >
-              Cette annonce ne t&apos;intéresse pas ?
+              {t('decouvrir.notInterested')}
             </Text>
             <Pressable
               onPress={onHideListing}
@@ -747,7 +747,7 @@ export function DiscoverCard({
             </Pressable>
             <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 8 }} />
             <Pressable onPress={() => setMenuOpen(false)} style={{ alignItems: 'center', paddingVertical: 14 }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.textMuted }}>Annuler</Text>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.textMuted }}>{t('common.cancel')}</Text>
             </Pressable>
           </View>
         </View>

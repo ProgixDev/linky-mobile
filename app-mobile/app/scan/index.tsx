@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -30,6 +31,7 @@ function isObsoleteQr(raw: string): boolean {
 }
 
 export default function ScanRoute() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
   const [error, setError] = useState<string | null>(null);
@@ -67,16 +69,16 @@ export default function ScanRoute() {
       >
         <I.camera size={36} color="#FFFFFF" />
         <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600', textAlign: 'center' }}>
-          Autorisez l&apos;appareil photo
+          {t('order.cameraAllowTitle')}
         </Text>
         <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', lineHeight: 19 }}>
-          Linky a besoin d&apos;accéder à la caméra pour scanner le QR affiché par le client.
+          {t('order.cameraNeeded')}
         </Text>
-        <Button variant="primary" block label="Autoriser" onPress={() => requestPermission()} />
+        <Button variant="primary" block label={t('common.allow')} onPress={() => requestPermission()} />
         <Button
           variant="ghost"
           block
-          label="Retour"
+          label={t('common.back')}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/orders'))}
         />
       </SafeAreaView>
@@ -99,7 +101,7 @@ export default function ScanRoute() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/orders'))}
-            accessibilityLabel="Fermer"
+            accessibilityLabel={t('common.close')}
             style={{
               width: 40,
               height: 40,
@@ -120,7 +122,7 @@ export default function ScanRoute() {
             }}
           >
             <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>
-              Scanner un QR
+              {t('order.scanQrTitle')}
             </Text>
           </View>
           <View style={{ width: 40 }} />
@@ -142,7 +144,7 @@ export default function ScanRoute() {
             </View>
           ) : (
             <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, textAlign: 'center' }}>
-              Pointe l&apos;appareil sur le code collé sur le colis.
+              {t('order.aimAtParcelCode')}
             </Text>
           )}
         </View>

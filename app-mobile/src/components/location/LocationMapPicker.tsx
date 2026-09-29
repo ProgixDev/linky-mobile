@@ -133,7 +133,7 @@ export function LocationMapPicker({
         {Platform.OS === 'web' ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
             <Text variant="caption" tone="muted" center style={{ letterSpacing: 0 }}>
-              La carte n'est pas disponible sur le web.
+              {t('common.mapUnavailableWeb')}
             </Text>
           </View>
         ) : (

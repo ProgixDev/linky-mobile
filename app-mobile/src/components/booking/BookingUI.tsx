@@ -100,6 +100,7 @@ export function BookingCard({
   onManage?: () => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const cover = booking.property?.cover_url ?? null;
   return (
     <Pressable
@@ -138,7 +139,7 @@ export function BookingCard({
           <Pressable
             onPress={onExtend ?? onManage}
             accessibilityRole="button"
-            accessibilityLabel={onExtend ? 'Prolonger ce séjour' : 'Modifier ma réservation'}
+            accessibilityLabel={onExtend ? t('property.extendStay') : t('property.editMyBooking')}
             // Le toucher ne doit pas remonter a la carte, qui ouvre le detail.
             hitSlop={6}
             style={{
@@ -168,26 +169,27 @@ export function BookingCard({
 
 export function ContractView({ booking }: { booking: Booking }) {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const c = booking.contract;
   if (!c) return null;
   return (
     <View style={{ padding: 14, borderRadius: radii.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, gap: 10 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <FileText size={16} color={colors.primary} strokeWidth={2} />
-        <Text style={{ fontSize: 14, fontWeight: '700' }}>{c.period === 'sale' ? "Contrat d'achat" : 'Contrat de location'}</Text>
+        <Text style={{ fontSize: 14, fontWeight: '700' }}>{t(c.period === 'sale' ? 'property.contractSale' : 'property.contractRent')}</Text>
       </View>
-      <ContractRow k={c.period === 'sale' ? 'Vendeur' : 'Propriétaire'} v={c.landlord_name} />
-      <ContractRow k={c.period === 'sale' ? 'Acheteur' : 'Locataire'} v={c.tenant_name} />
-      <ContractRow k="Bien" v={c.property_title} />
-      <ContractRow k="Adresse" v={c.property_location} />
+      <ContractRow k={t(c.period === 'sale' ? 'property.partySeller' : 'property.partyOwner')} v={c.landlord_name} />
+      <ContractRow k={t(c.period === 'sale' ? 'property.partyBuyer' : 'property.partyTenant')} v={c.tenant_name} />
+      <ContractRow k={t('property.contractProperty')} v={c.property_title} />
+      <ContractRow k={t('property.contractAddress')} v={c.property_location} />
       {c.period !== 'sale' && (
-        <ContractRow k="Période" v={c.period === 'day' ? `Du ${formatBookingDate(c.start_date)} au ${formatBookingDate(c.end_date ?? c.start_date)}` : `${c.months} mois à partir du ${formatBookingDate(c.start_date)}`} />
+        <ContractRow k={t('property.contractPeriod')} v={c.period === 'day' ? t('property.contractFromTo', { debut: formatBookingDate(c.start_date), fin: formatBookingDate(c.end_date ?? c.start_date) }) : t('property.leasePeriod', { n: c.months, date: formatBookingDate(c.start_date) })} />
       )}
       {c.period === 'sale' ? (
-        <ContractRow k="Prix du bien" v={formatGNF(c.amount_minor)} />
+        <ContractRow k={t('property.contractPrice')} v={formatGNF(c.amount_minor)} />
       ) : (
         <>
-          <ContractRow k={c.period === 'day' ? 'Loyer / jour' : 'Loyer / mois'} v={formatGNF(c.rent_minor)} />
+          <ContractRow k={t(c.period === 'day' ? 'property.rentPerDay' : 'property.rentPerMonth')} v={formatGNF(c.rent_minor)} />
           {/* LE SEJOUR SE LIT HORS DEPOT. `amount_minor` contient la caution
               depuis toujours en mensuel, et desormais aussi en journalier des
               que le bailleur en declare une : l'afficher ici, puis afficher la
@@ -196,15 +198,15 @@ export function ContractView({ booking }: { booking: Booking }) {
               contrats signes AVANT le 2026-09-27 — pour ceux-la, amount_minor
               EST le sejour, puisqu'aucune caution n'existait en journalier. */}
           {c.period === 'day' && (
-            <ContractRow k="Montant du séjour" v={formatGNF(c.stay_minor ?? c.amount_minor)} />
+            <ContractRow k={t('property.stayAmount')} v={formatGNF(c.stay_minor ?? c.amount_minor)} />
           )}
           {/* REMISE LONGUE DUREE : le contrat doit porter le tarif plein et
               l'ecart, sinon la remise n'est opposable nulle part — en mensuel,
               seul le premier mois transite par Linky. */}
           {!!c.discount_minor && c.discount_minor > 0 && (
             <>
-              <ContractRow k="Tarif normal" v={formatGNF(c.full_minor ?? 0)} />
-              <ContractRow k="Remise durée" v={`− ${formatGNF(c.discount_minor)}`} />
+              <ContractRow k={t('property.fullRate')} v={formatGNF(c.full_minor ?? 0)} />
+              <ContractRow k={t('property.durationDiscount')} v={`− ${formatGNF(c.discount_minor)}`} />
             </>
           )}
           {/* LE DEPOT, NOMME POUR CE QU'IL EST. « Caution (1 mois) » etait en
@@ -212,7 +214,7 @@ export function ContractView({ booking }: { booking: Booking }) {
               fixe, ou des frais d'agence — qui, eux, ne se rendent jamais. */}
           {!!c.deposit_minor && c.deposit_minor > 0 && (
             <ContractRow
-              k={c.deposit_kind === 'agency_fee' ? "Frais d'agence (non remboursables)" : 'Caution'}
+              k={t(c.deposit_kind === 'agency_fee' ? 'property.agencyFeeNonRefundable' : 'property.deposit')}
               v={formatGNF(c.deposit_minor)}
             />
           )}
@@ -222,8 +224,8 @@ export function ContractView({ booking }: { booking: Booking }) {
           parties. Il annoncait « 3% » alors que le serveur en prelevait 5 —
           sur un bien a 500 M, 10 000 000 GNF d'ecart entre le taux annonce et
           le montant preleve. Le taux est desormais interpole. */}
-      <ContractRow k={`Frais de service (${PLATFORM_FEE_RATE * 100}%)`} v={formatGNF(c.fees_minor)} />
-      <ContractRow k="Total à payer" v={formatGNF(c.total_minor)} bold />
+      <ContractRow k={t('property.serviceFeeRate', { taux: PLATFORM_FEE_RATE * 100 })} v={formatGNF(c.fees_minor)} />
+      <ContractRow k={t('property.totalToPay')} v={formatGNF(c.total_minor)} bold />
       <View style={{ height: 1, backgroundColor: colors.border }} />
       {c.clauses.map((cl, i) => (
         <Text key={i} style={{ fontSize: 11.5, color: colors.textMuted, lineHeight: 17, letterSpacing: 0 }}>
@@ -236,21 +238,21 @@ export function ContractView({ booking }: { booking: Booking }) {
           signature the owner never gave (client 2026-08-03). Show the honest
           auto-acceptance instead ; monthly keeps the real signature date. */}
       <ContractRow
-        k={c.period === 'sale' ? 'Signature vendeur' : 'Signature propriétaire'}
+        k={t(c.period === 'sale' ? 'property.signatureSeller' : 'property.signatureOwner')}
         v={
           c.period === 'day'
-            ? 'Offre au jour · pré-acceptée'
+            ? t('property.dailyPreAccepted')
             : booking.landlordSignedAt
               ? `✔ ${new Date(booking.landlordSignedAt).toLocaleDateString('fr-FR')}`
-              : 'En attente'
+              : t('property.awaitingSignature')
         }
       />
       {/* Client 2026-08-22 : « la signature APRES le paiement, pas avant ». Le
           libelle dit donc ce qui la declenchera, au lieu d'un « En attente »
           muet qui laissait croire a une action manuelle oubliee. */}
       <ContractRow
-        k={c.period === 'sale' ? 'Signature acheteur' : 'Signature locataire'}
-        v={booking.tenantSignedAt ? `✔ ${new Date(booking.tenantSignedAt).toLocaleDateString('fr-FR')}` : 'Après paiement'}
+        k={t(c.period === 'sale' ? 'property.signatureBuyer' : 'property.signatureTenant')}
+        v={booking.tenantSignedAt ? `✔ ${new Date(booking.tenantSignedAt).toLocaleDateString('fr-FR')}` : t('property.afterPayment')}
       />
     </View>
   );

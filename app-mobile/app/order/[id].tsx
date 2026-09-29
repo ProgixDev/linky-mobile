@@ -176,7 +176,7 @@ export default function OrderRoute() {
           {(order.deliveryFeeGnf ?? 0) > 0 && (
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                Livraison
+                {t('checkout.delivery')}
               </Text>
               <Text style={{ fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
                 {formatGNF(order.deliveryFeeGnf ?? 0)}
@@ -331,7 +331,7 @@ export default function OrderRoute() {
                 tone="muted"
                 style={{ marginTop: 4, letterSpacing: 0, textTransform: 'none' }}
               >
-                Ton avis aide les autres acheteurs.
+                {t('order.reviewHelps')}
               </Text>
               <Button
                 style={{ marginTop: 12 }}
@@ -439,7 +439,7 @@ export default function OrderRoute() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <I.qr size={16} color={colors.text} />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-                  Confirmer la remise
+                  {t('order.confirmHandover')}
                 </Text>
               </View>
               <Text
@@ -450,9 +450,7 @@ export default function OrderRoute() {
                   marginBottom: 14,
                 }}
               >
-                Au moment de remettre la commande, demande à l&apos;acheteur d&apos;ouvrir sa
-                commande dans Linky et scanne le QR affiché sur son écran. Les fonds sont
-                libérés immédiatement.
+                {t('order.handoverQrHelp')}
               </Text>
               <Button
                 variant="primary"

@@ -96,7 +96,7 @@ export default function TrackRoute() {
     return (
       <DetailStateScreen
         loading={isLoading}
-        title="Suivi indisponible"
+        title={t('order.trackUnavailable')}
         onRetry={() => void refetch()}
       />
     );
@@ -109,13 +109,17 @@ export default function TrackRoute() {
 
   let statusLine: string;
   if (isDone) {
-    statusLine = 'Ta commande a été livrée ✅';
+    statusLine = t('order.trackDelivered');
   } else if (!delivery?.livreurId) {
-    statusLine = "Aucun livreur n'est encore assigné à votre commande.";
+    statusLine = t('order.trackNoCourier');
   } else if (!driver) {
-    statusLine = `${delivery.livreurName ?? 'Votre livreur'} prépare votre livraison — sa position s'affichera dès qu'il prend la route.`;
+    statusLine = t('order.trackPreparing', {
+      livreur: delivery.livreurName ?? t('order.yourCourier'),
+    });
   } else {
-    statusLine = `${delivery.livreurName ?? 'Ton livreur'} est en route vers toi.`;
+    statusLine = t('order.trackOnTheWay', {
+      livreur: delivery.livreurName ?? t('order.yourCourier'),
+    });
   }
 
   return (
@@ -208,7 +212,7 @@ export default function TrackRoute() {
               center
               style={{ marginTop: 10, letterSpacing: 0, textTransform: 'none' }}
             >
-              La position du livreur n'est pas encore disponible.
+              {t('order.courierPositionUnavailable')}
             </Text>
           </View>
         )}
@@ -218,7 +222,7 @@ export default function TrackRoute() {
             <Text variant="bodyMSemibold">{statusLine}</Text>
             {!isDone && etaMin ? (
               <Text variant="bodyMSemibold" style={{ marginTop: 4, color: colors.primary }}>
-                Arrivée estimée dans ~{etaMin} min
+                {t('order.etaMinutes', { n: etaMin })}
               </Text>
             ) : null}
             {updated && !isDone ? (
@@ -227,7 +231,7 @@ export default function TrackRoute() {
                 tone="muted"
                 style={{ marginTop: 4, letterSpacing: 0, textTransform: 'none' }}
               >
-                Position mise à jour {updated}
+                {t('order.positionUpdated', { quand: updated })}
               </Text>
             ) : null}
             {delivery?.city && !isDone ? (
@@ -236,7 +240,7 @@ export default function TrackRoute() {
                 tone="muted"
                 style={{ marginTop: 2, letterSpacing: 0, textTransform: 'none' }}
               >
-                Livraison à {delivery.city}
+                {t('order.deliveryTo', { ville: delivery.city })}
               </Text>
             ) : null}
           </Card>

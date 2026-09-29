@@ -664,7 +664,7 @@ export default function MarcheRoute() {
               })
             ) : debouncedSearch ? (
               <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                <Text tone="muted">Aucun résultat pour « {debouncedSearch} »</Text>
+                <Text tone="muted">{t('marche.noResultsFor', { q: debouncedSearch })}</Text>
               </View>
             ) : hasActiveFilters(filters, false) ? (
               <View style={{ paddingVertical: 40, alignItems: 'center', gap: 14 }}>

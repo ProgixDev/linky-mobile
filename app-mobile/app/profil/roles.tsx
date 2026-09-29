@@ -21,67 +21,34 @@ import { useToast } from '../../src/components/feedback/Toast';
 import { toToastMessage } from '../../src/lib/api';
 import { useKycStatus } from '../../src/data/queries';
 
-const ROW_DEFS: { role: UserRole; label: string; desc: string; Icon: typeof Store }[] = [
-  { role: 'buyer', label: 'Acheteur', desc: 'Acheter et louer sur Linky', Icon: ShoppingBag },
-  { role: 'seller', label: 'Vendeur', desc: 'Publier des produits', Icon: Store },
-  { role: 'agent', label: 'Agent immobilier', desc: 'Publier des biens', Icon: Building2 },
+// Les libelles sont des CLES : ces tables vivent au niveau du module, ou un
+// crochet React ne s'appelle pas. Elles sont resolues au rendu par t().
+const ROW_DEFS: { role: UserRole; labelKey: string; descKey: string; Icon: typeof Store }[] = [
+  { role: 'buyer', labelKey: 'profil.roleBuyer', descKey: 'profil.roleBuyerDesc', Icon: ShoppingBag },
+  { role: 'seller', labelKey: 'profil.roleSeller', descKey: 'profil.roleSellerDesc', Icon: Store },
+  { role: 'agent', labelKey: 'profil.roleAgent', descKey: 'profil.roleAgentDesc', Icon: Building2 },
 ];
 
-// Instruction sheet content — screen copy is hardcoded French like the rest
-// of this file.
-const ROLE_GUIDE: Record<UserRole, { title: string; can: string[]; must: string[] }> = {
+const ROLE_GUIDE: Record<UserRole, { titleKey: string; can: string[]; must: string[] }> = {
   buyer: {
-    title: 'Devenir acheteur',
-    can: [
-      'Acheter des produits et réserver des logements (jour / mois)',
-      "Payer en toute sécurité : l'argent reste bloqué (escrow) jusqu'à la réception",
-      'Discuter avec les vendeurs, convenir des visites et laisser des avis',
-    ],
-    must: [
-      'Confirme la réception uniquement quand tu as le produit en main',
-      'Ne partagez jamais votre QR de réception avant la livraison',
-      "Paie toujours via l'application — jamais en dehors",
-    ],
+    titleKey: 'profil.becomeBuyer',
+    can: ['profil.buyerCan1', 'profil.buyerCan2', 'profil.buyerCan3'],
+    must: ['profil.buyerMust1', 'profil.buyerMust2', 'profil.buyerMust3'],
   },
   seller: {
-    title: 'Devenir vendeur',
-    can: [
-      'Créer votre boutique et publier des produits',
-      'Recevoir des commandes payées en escrow et suivre vos ventes',
-      'Retirer vos gains vers Orange Money / MTN',
-    ],
-    must: [
-      "Vérifier votre identité avant de publier votre première annonce",
-      'Publier des photos et descriptions honnêtes de vos produits',
-      "Préparer les commandes rapidement — l'argent n'est libéré qu'à la réception confirmée par l'acheteur",
-      'Respecter les acheteurs dans les échanges et les délais',
-    ],
+    titleKey: 'profil.becomeSeller',
+    can: ['profil.sellerCan1', 'profil.sellerCan2', 'profil.sellerCan3'],
+    must: ['profil.sellerMust1', 'profil.sellerMust2', 'profil.sellerMust3', 'profil.sellerMust4'],
   },
-  // Livreur n'est pas activable ici (rôle accordé par l'admin après
-  // candidature) — entrée présente pour satisfaire Record<UserRole, …>.
   livreur: {
-    title: 'Devenir livreur',
-    can: [
-      'Recevoir des livraisons assignées et suivre vos courses',
-      "Valider les remises par scan du QR de l'acheteur",
-    ],
-    must: [
-      "Candidater et être approuvé par l'équipe Linky avant d'être activé",
-      'Livrer avec soin et dans les délais annoncés',
-    ],
+    titleKey: 'profil.becomeCourier',
+    can: ['profil.courierCan1', 'profil.courierCan2'],
+    must: ['profil.courierMust1', 'profil.courierMust2'],
   },
   agent: {
-    title: 'Devenir agent immobilier',
-    can: [
-      'Publier des biens : location (jour / mois), vente et terrains',
-      'Gérer vos réservations et convenir des visites par la messagerie',
-      "Faire signer les contrats de location dans l'app et encaisser en escrow",
-    ],
-    must: [
-      "Vérifier votre identité avant de publier votre première annonce",
-      'Annoncer des biens réels et disponibles, avec des prix exacts',
-      'Honorer les visites convenues et les réservations acceptées',
-    ],
+    titleKey: 'profil.becomeAgent',
+    can: ['profil.agentCan1', 'profil.agentCan2', 'profil.agentCan3'],
+    must: ['profil.agentMust1', 'profil.agentMust2', 'profil.agentMust3'],
   },
 };
 
@@ -165,7 +132,7 @@ export default function RolesRoute() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           hitSlop={12}
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('common.back')}
           style={{
             width: 40,
             height: 40,
@@ -180,14 +147,13 @@ export default function RolesRoute() {
           <ChevronLeft size={18} color={colors.text} strokeWidth={2} />
         </Pressable>
         <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, flex: 1 }}>
-          Mes rôles
+          {t('profil.myRoles')}
         </Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}>
         <Text variant="bodyM" tone="muted" style={{ lineHeight: 21, marginBottom: 18 }}>
-          Active tout ce qui s'applique. Tu peux changer à tout moment — au moins un rôle
-          doit rester actif.
+          {t('profil.rolesIntro')}
         </Text>
 
         <View
@@ -227,14 +193,14 @@ export default function RolesRoute() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text variant="titleM" style={{ fontSize: 14.5 }}>
-                  {row.label}
+                  {t(row.labelKey)}
                 </Text>
                 <Text
                   variant="micro"
                   tone="muted"
                   style={{ letterSpacing: 0, textTransform: 'none', marginTop: 2 }}
                 >
-                  {row.desc}
+                  {t(row.descKey)}
                 </Text>
               </View>
               <Switch value={selected.has(row.role)} onChange={() => toggle(row.role)} />
@@ -259,19 +225,18 @@ export default function RolesRoute() {
             <ShieldCheck size={16} color={colors.textMuted} strokeWidth={2} style={{ marginTop: 2 }} />
             <View style={{ flex: 1 }}>
               <Text variant="titleM" style={{ fontSize: 13.5 }}>
-                Vérification requise pour publier
+                {t('profil.kycRequiredTitle')}
               </Text>
               <Text
                 variant="micro"
                 tone="muted"
                 style={{ letterSpacing: 0, textTransform: 'none', marginTop: 4, lineHeight: 17 }}
               >
-                Tu peux activer le rôle maintenant, mais il faudra vérifier ton identité avant
-                de publier ta première annonce.
+                {t('profil.kycRequiredBody')}
               </Text>
               <Pressable onPress={() => router.push('/kyc/intro')} style={{ marginTop: 8 }}>
                 <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.primary }}>
-                  Vérifier maintenant →
+                  {t('profil.verifyNow')}
                 </Text>
               </Pressable>
             </View>
@@ -292,7 +257,7 @@ export default function RolesRoute() {
           variant="dark"
           size="lg"
           block
-          label="Enregistrer"
+          label={t('common.save')}
           onPress={onSave}
           loading={submitting}
           disabled={!dirty || selected.size === 0}
@@ -308,7 +273,7 @@ export default function RolesRoute() {
         onRequestClose={() => setPendingRole(null)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
-          <Pressable style={{ flex: 1 }} onPress={() => setPendingRole(null)} accessibilityLabel="Fermer" />
+          <Pressable style={{ flex: 1 }} onPress={() => setPendingRole(null)} accessibilityLabel={t('common.close')} />
           {pendingRole && (
             <View
               style={{
@@ -333,10 +298,10 @@ export default function RolesRoute() {
               />
               <ScrollView showsVerticalScrollIndicator={false}>
                 <Text variant="dispL" style={{ fontSize: 20 }}>
-                  {ROLE_GUIDE[pendingRole].title}
+                  {t(ROLE_GUIDE[pendingRole].titleKey)}
                 </Text>
                 <Text variant="bodyM" tone="muted" style={{ marginTop: 4, lineHeight: 20 }}>
-                  Lis ces quelques règles avant d'activer le rôle.
+                  {t('profil.readRules')}
                 </Text>
 
                 <Text
@@ -349,14 +314,14 @@ export default function RolesRoute() {
                     marginBottom: 8,
                   }}
                 >
-                  CE QUE TU PEUX FAIRE
+                  {t('profil.whatYouCanDo')}
                 </Text>
                 <View style={{ gap: 8 }}>
-                  {ROLE_GUIDE[pendingRole].can.map((line, i) => (
+                  {ROLE_GUIDE[pendingRole].can.map((cle, i) => (
                     <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
                       <Check size={14} color={colors.primary} strokeWidth={2.5} style={{ marginTop: 2 }} />
                       <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: colors.text }}>
-                        {line}
+                        {t(cle)}
                       </Text>
                     </View>
                   ))}
@@ -372,14 +337,14 @@ export default function RolesRoute() {
                     marginBottom: 8,
                   }}
                 >
-                  À RESPECTER
+                  {t('profil.rulesToFollow')}
                 </Text>
                 <View style={{ gap: 8 }}>
-                  {ROLE_GUIDE[pendingRole].must.map((line, i) => (
+                  {ROLE_GUIDE[pendingRole].must.map((cle, i) => (
                     <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
                       <ShieldCheck size={14} color={colors.accentText} strokeWidth={2.25} style={{ marginTop: 2 }} />
                       <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: colors.text }}>
-                        {line}
+                        {t(cle)}
                       </Text>
                     </View>
                   ))}
@@ -391,14 +356,14 @@ export default function RolesRoute() {
                   variant="primary"
                   size="lg"
                   block
-                  label="J'accepte et j'active"
+                  label={t('profil.acceptAndEnable')}
                   onPress={confirmPending}
                 />
                 <Button
                   variant="ghost"
                   size="md"
                   block
-                  label="Annuler"
+                  label={t('common.cancel')}
                   onPress={() => setPendingRole(null)}
                 />
               </View>

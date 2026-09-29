@@ -236,7 +236,7 @@ export function BookingCalendar({
           borderTopColor: colors.border,
         }}
       >
-        <LegendDot color="transparent" borderColor={colors.borderStrong} label={'Disponible'} />
+        <LegendDot color="transparent" borderColor={colors.borderStrong} label={t('common.available')} />
         <LegendDot color={colors.primary} label={t('property.legendYourStay')} />
         <LegendDot color={colors.danger} label={t('property.legendBooked')} />
       </View>

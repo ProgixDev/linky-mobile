@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -19,13 +20,14 @@ export function LegalDoc({
   sections: LegalSection[];
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        <ScreenHeader title={title} subtitle={`Dernière mise à jour : ${updated}`} />
+        <ScreenHeader title={title} subtitle={t('legal.lastUpdated', { date: updated })} />
 
         <View style={{ paddingHorizontal: 24, gap: 22 }}>
           {sections.map((s, i) => (

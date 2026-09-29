@@ -132,14 +132,14 @@ export default function BookingsRoute() {
               <>
                 <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('bookings.emptyTitle')}</Text>
                 <Text style={{ fontSize: 12.5, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
-                  Trouve un logement en location et réserve-le directement dans l'app.
+                  {t('bookings.emptyBody')}
                 </Text>
               </>
             ) : (
               <>
                 <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('bookings.nothingInFilter')}</Text>
                 <Text style={{ fontSize: 12.5, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
-                  Tes autres réservations sont dans « {FILTERS[0].label} ».
+                  {t('bookings.othersInFilter', { filtre: FILTERS[0].label })}
                 </Text>
               </>
             )}

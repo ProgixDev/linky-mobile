@@ -164,7 +164,7 @@ export default function BookingDetailRoute() {
             show(t('common.payCancelled'), 'info');
             return;
           }
-          show(payErr.message || 'Paiement échoué', 'danger');
+          show(payErr.message || t('common.payFailed'), 'danger');
           return;
         }
         // NE PAS annoncer « contrat signe » ici : a cet instant la reservation
@@ -256,7 +256,7 @@ export default function BookingDetailRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title={isSale ? 'Achat' : 'Réservation'} back />
+      <TopBar title={t(isSale ? 'property.purchaseTitle' : 'bookings.detailTitle')} back />
       {/* CLAVIER : le champ « numero pour le paiement » se retrouvait CACHE
           DERRIERE le clavier (client 2026-09-09, capture a l'appui). Un
           ScrollView ordinaire ne fait rien de particulier quand un champ prend
@@ -320,7 +320,7 @@ export default function BookingDetailRoute() {
             variant="outline"
             size="lg"
             block
-            label={pdfBusy ? 'Préparation…' : 'Télécharger le contrat'}
+            label={pdfBusy ? t('bookings.preparing') : t('bookings.downloadContract')}
             disabled={pdfBusy}
             onPress={async () => {
               setPdfBusy(true);
@@ -335,7 +335,7 @@ export default function BookingDetailRoute() {
         )}
 
         <View>
-          <MicroLabel label="Historique" />
+          <MicroLabel label={t('property.history')} />
           <BookingTimeline booking={booking} />
         </View>
 
@@ -373,7 +373,7 @@ export default function BookingDetailRoute() {
             >
               <AwaitRow label={t('bookings.payMethod')} value={method === 'mtn-money' ? 'MTN Mobile Money' : 'Orange Money'} />
               <AwaitRow label={t('bookings.payNumber')} value={formatGnPhone(payerPhone.digits)} />
-              <AwaitRow label="Montant" value={formatGNF(booking.totalGnf)} />
+              <AwaitRow label={t('common.amount')} value={formatGNF(booking.totalGnf)} />
             </View>
 
             <View
@@ -387,7 +387,7 @@ export default function BookingDetailRoute() {
               }}
             >
               <Text style={{ fontSize: 14, fontWeight: '700' }}>
-                ⏳  Confirme sur ton téléphone
+                {t('bookings.confirmOnPhone')}
               </Text>
               <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none', lineHeight: 17 }}>
                 {`Une demande de ${formatGNF(booking.totalGnf)} vient de partir sur ton téléphone. Valide-la avec ton code — cet écran se met à jour tout seul.`}
@@ -431,8 +431,8 @@ export default function BookingDetailRoute() {
             // PayCard pose DEUX champs de chiffres : sans libellé distinct,
             // le locataire retape son numéro de carte ici.
             label={method === 'paycard'
-              ? "Numéro de téléphone (pour recevoir le code)"
-              : "Numéro pour le paiement"}
+              ? t('bookings.phoneForCode')
+              : t('bookings.phoneForPayment')}
             leadingIcon="phone"
             keyboardType="phone-pad"
             placeholder="6XX XX XX XX"
@@ -440,7 +440,7 @@ export default function BookingDetailRoute() {
             onChangeText={payerPhone.onChange}
             errorText={
               payerPhone.digits.length > 0 && !payerPhone.valid
-                ? 'Numéro invalide (9 chiffres, commence par 6).'
+                ? t('bookings.phoneInvalid')
                 : (operatorWarning ?? undefined)
             }
             helperText={
@@ -450,7 +450,7 @@ export default function BookingDetailRoute() {
               // locataire n'avait pas choisis, et un mécanisme qui n'est pas
               // celui de Kulu, où c'est un code qui arrive par SMS.
               payerPhone.digits.length === 0
-                ? 'Indique le numéro du compte qui paie.'
+                ? t('bookings.phoneRequired')
                 : undefined
             }
           />
@@ -459,15 +459,17 @@ export default function BookingDetailRoute() {
         {/* Stage actions */}
         {booking.status === 'accepted' && !awaitingPayment && walletShort && (
           <Text variant="micro" tone="muted" style={{ textAlign: 'center', letterSpacing: 0, textTransform: 'none' }}>
-            Ton portefeuille contient {formatGNF(wallet.data?.balanceGnf ?? 0)} — il manque{' '}
-            {formatGNF(booking.totalGnf - (wallet.data?.balanceGnf ?? 0))}. Choisis un autre moyen de paiement.
+            {t('bookings.walletShort', {
+              solde: formatGNF(wallet.data?.balanceGnf ?? 0),
+              manque: formatGNF(booking.totalGnf - (wallet.data?.balanceGnf ?? 0)),
+            })}
           </Text>
         )}
         {booking.status === 'accepted' && !awaitingPayment && (
           <HoldToConfirmButton
             // Amount lives in the trust strip above — keeping it out of the
             // label stops the text from crowding the 56px pill.
-            label={payBusy ? 'Paiement en cours…' : 'Maintenir pour payer'}
+            label={payBusy ? t('bookings.paying') : t('bookings.holdToPay')}
             onConfirm={onSignPay}
             disabled={payBusy || !payerPhoneValid || !payerCardValid || walletShort}
           />
@@ -480,20 +482,20 @@ export default function BookingDetailRoute() {
             // l'aurait fait hesiter devant un bouton qui libere de l'argent.
             label={
               isExtension
-                ? 'Maintenir pour confirmer la prolongation'
+                ? t('bookings.holdToConfirmExtension')
                 : isSale
-                  ? 'Maintenir pour confirmer la remise du bien'
-                  : "Maintenir pour confirmer l'emménagement"
+                  ? t('bookings.holdToConfirmHandover')
+                  : t('bookings.holdToConfirmMoveIn')
             }
             onConfirm={() =>
               checkin.mutate(booking.id, {
                 onSuccess: () =>
                   show(
                     isSale
-                      ? 'Remise confirmée — montant versé au vendeur ✅'
+                      ? t('bookings.handoverConfirmed')
                       : isExtension
-                        ? 'Prolongation confirmée — loyer versé au propriétaire ✅'
-                        : 'Emménagement confirmé — loyer versé au propriétaire ✅',
+                        ? t('bookings.extensionConfirmed')
+                        : t('bookings.moveInConfirmed'),
                     'success',
                   ),
                 onError: (e) => show(toToastMessage(e, 'Impossible de confirmer.'), 'danger'),
@@ -560,7 +562,7 @@ export default function BookingDetailRoute() {
             elle joue. */}
         {booking.status === 'paid' && cancelWindow === 'open' && cancelDeadlineText && (
           <Text variant="micro" tone="muted" style={{ textAlign: 'center', letterSpacing: 0, textTransform: 'none' }}>
-            Remboursement intégral jusqu’au {cancelDeadlineText}.
+            {t('bookings.fullRefundUntil', { date: cancelDeadlineText })}
           </Text>
         )}
         {/* Fenêtre passée : on l'explique, plutôt que de laisser un bouton qui
@@ -570,7 +572,7 @@ export default function BookingDetailRoute() {
             aurait laissé filer alors qu'il n'a jamais été ouvert. */}
         {booking.status === 'paid' && cancelWindow === 'closed' && (
           <Text variant="micro" tone="muted" style={{ textAlign: 'center', letterSpacing: 0, textTransform: 'none' }}>
-            L’annulation en ligne s’arrête 48 h avant l’emménagement. Contacte {isSale ? 'le vendeur' : 'le propriétaire'} ou l’équipe Linky.
+            {t(isSale ? 'bookings.cancelClosedSale' : 'bookings.cancelClosedRent')}
           </Text>
         )}
       </KeyboardAwareScrollView>

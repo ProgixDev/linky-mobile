@@ -38,14 +38,34 @@
     "searchPlace": "Rechercher un lieu…",
     "holdToConfirmReceipt": "Maintenez pour confirmer la réception",
     "payPrepareError": "Impossible de préparer le paiement",
-    "payCancelled": "Paiement annulé."
+    "payCancelled": "Paiement annulé.",
+    "payFailed": "Paiement échoué",
+    "mapUnavailableWeb": "La carte n'est pas disponible sur le web.",
+    "remove": "Retirer",
+    "allow": "Autoriser",
+    "total": "Total",
+    "amount": "Montant",
+    "free": "Gratuit",
+    "available": "Disponible"
   },
   "a11y": {
     "back": "Retour",
     "share": "Partager",
     "close": "Fermer",
     "searchVisual": "Recherche visuelle",
-    "otpCode": "Code à 6 chiffres"
+    "otpCode": "Code à 6 chiffres",
+    "addToCartNamed": "Ajouter {{titre}} au panier",
+    "starsCount_one": "{{count}} étoile",
+    "starsCount_other": "{{count}} étoiles",
+    "shopNamed": "Boutique {{nom}}",
+    "shop": "Boutique",
+    "unlike": "Retirer le like",
+    "removeFromFavorites": "Retirer des favoris",
+    "addToFavorites": "Ajouter aux favoris",
+    "openDirections": "Ouvrir l'itinéraire vers le logement",
+    "notifications": "Notifications",
+    "like": "Aimer",
+    "buyNow": "Acheter maintenant"
   },
   "tabs": {
     "home": "Accueil",
@@ -142,7 +162,8 @@
       "endCta": "Actualiser"
     },
     "hideFromFeed": "Masquer de mon feed",
-    "hiddenFromFeedToast": "Masqué de ton feed"
+    "hiddenFromFeedToast": "Masqué de ton feed",
+    "notInterested": "Cette annonce ne t'intéresse pas ?"
   },
   "boutique": {
     "modeShop": "Boutique",
@@ -241,7 +262,9 @@
     "decouvrirBadge": "NOUVEAU",
     "decouvrirTitle": "Découvrez des annonces",
     "decouvrirSub": "Comme dans les réseaux sociaux.",
-    "walletOpen": "Voir le portefeuille"
+    "walletOpen": "Voir le portefeuille",
+    "newListing": "Nouvelle annonce",
+    "newProperty": "Nouveau bien"
   },
   "wallet": {
     "title": "Mon portefeuille",
@@ -355,7 +378,8 @@
       "payError": "Paiement échoué",
       "successToast": "Recharge réussie — votre solde se met à jour dans un instant",
       "errorToast": "Recharge impossible"
-    }
+    },
+    "topUp": "Recharger"
   },
   "notifications": {
     "title": "Notifications",
@@ -406,7 +430,15 @@
     "chatEmpty": "Aucun message pour l'instant. Écrivez le premier.",
     "chatSeen": "Vu",
     "chatSendA11y": "Envoyer",
-    "chatInputPlaceholder": "Écrivez un message"
+    "chatInputPlaceholder": "Écrivez un message",
+    "replyingTo": "En réponse à {{nom}}",
+    "linkyUser": "Utilisateur Linky",
+    "noComments": "Aucun commentaire pour le moment. Sois le premier à commenter !",
+    "cancelReply": "Annuler la réponse",
+    "writeReply": "Écrivez votre réponse…",
+    "writeComment": "Ajoutez un commentaire…",
+    "signInToComment": "Connecte-toi pour commenter.",
+    "reply": "Répondre"
   },
   "dispute": {
     "topbar": "Signaler un problème",
@@ -842,7 +874,10 @@
       "paid": "Versée",
       "failed": "Échec",
       "cancelled": "Annulée"
-    }
+    },
+    "youReceive": "· tu reçois",
+    "handOverOrder": "Remettre la commande",
+    "handoverQrHelp": "Demande à l'acheteur d'ouvrir sa commande dans Linky et scanne le QR affiché sur son écran. Tes fonds sont libérés immédiatement."
   },
   "pro": {
     "visitsTitle": "Visites",
@@ -992,7 +1027,8 @@
     "boostMethodOrange": "Orange Money",
     "boostMethodMtn": "MTN MoMo",
     "boostMethodMomoHint": "Paiement depuis ton téléphone",
-    "boostPendingBanner": "Paiement en cours de vérification. Ton boost apparaîtra ici dès la confirmation."
+    "boostPendingBanner": "Paiement en cours de vérification. Ton boost apparaîtra ici dès la confirmation.",
+    "tabEstate": "Immobilier"
   },
   "buyer": {
     "requestsTitle": "Mes demandes",
@@ -1062,7 +1098,8 @@
     "infoVerifiedValue": "Vendeur identifié par Linky",
     "listing_one": "Bien",
     "listing_other": "Biens",
-    "manageMyAgency": "Gérer mon agence"
+    "manageMyAgency": "Gérer mon agence",
+    "open24_7": "Ouvert 24h/24, 7j/7"
   },
   "shopEdit": {
     "topbar": "Ma boutique",
@@ -1118,7 +1155,10 @@
     "boostCta": "Booster cette annonce",
     "boostHint": "Mettez cette annonce en avant pour plus de visibilité.",
     "stockLabel": "Quantité disponible",
-    "stockUnlimited": "Illimitée"
+    "stockUnlimited": "Illimitée",
+    "stockCap": "L’acheteur ne pourra pas en commander plus de {{n}}.",
+    "stockEmptyHint": "Vide = quantité illimitée. L’acheteur pourra en commander autant qu’il veut.",
+    "stockZeroHint": "0 = rupture de stock. L’article reste visible mais ne peut plus être commandé."
   },
   "propertyEdit": {
     "photosLabel": "Photos",
@@ -1182,7 +1222,15 @@
     "outOfStockToast": "Cet article est en rupture de stock.",
     "stockCapToast": "Il n’en reste que {{count}} — tu l’as déjà dans ton panier.",
     "stockLeft": "Plus que {{count}}",
-    "addedToCartToast": "Ajouté au panier"
+    "addedToCartToast": "Ajouté au panier",
+    "viewsCount": "{{n}} vues",
+    "reviewsCount": "({{n}} avis)",
+    "boostedBadge": "BOOSTÉE",
+    "securePaymentTitle": "Paiement sécurisé",
+    "newBadge": "Nouveau",
+    "alsoViewed": "Aussi consultés",
+    "contactSeller": "Contacter le vendeur",
+    "soldBadge": "VENDU"
   },
   "property": {
     "fallbackTitle": "Bien immobilier",
@@ -1246,7 +1294,71 @@
     "makeOfferBlurb": "Bientôt tu pourras négocier le prix d'un bien directement dans l'app — proposition, contre-proposition, validation par l'agent. On te préviendra dès que c'est prêt.",
     "directions": "Itinéraire",
     "bookingConfirmedPay": "Réservation confirmée — règle le paiement pour la valider ✅",
-    "requestSentToOwner": "Demande envoyée au propriétaire ✅"
+    "requestSentToOwner": "Demande envoyée au propriétaire ✅",
+    "stayNights_one": "Séjour · {{count}} nuit (frais inclus)",
+    "stayNights_other": "Séjour · {{count}} nuits (frais inclus)",
+    "sendRequestWithAmount": "Envoyer la demande · {{montant}}",
+    "sendBuyRequestWithAmount": "Envoyer la demande d'achat · {{montant}}",
+    "leasePeriod": "{{n}} mois à partir du {{date}}",
+    "serviceFeeRate": "Frais de service ({{taux}}%)",
+    "contractSale": "Contrat d'achat",
+    "contractRent": "Contrat de location",
+    "partySeller": "Vendeur",
+    "partyOwner": "Propriétaire",
+    "partyBuyer": "Acheteur",
+    "partyTenant": "Locataire",
+    "contractProperty": "Bien",
+    "contractAddress": "Adresse",
+    "contractPeriod": "Période",
+    "contractFromTo": "Du {{debut}} au {{fin}}",
+    "contractPrice": "Prix du bien",
+    "rentPerDay": "Loyer / jour",
+    "rentPerMonth": "Loyer / mois",
+    "stayAmount": "Montant du séjour",
+    "fullRate": "Tarif normal",
+    "durationDiscount": "Remise durée",
+    "agencyFeeNonRefundable": "Frais d'agence (non remboursables)",
+    "deposit": "Caution",
+    "totalToPay": "Total à payer",
+    "signatureSeller": "Signature vendeur",
+    "signatureOwner": "Signature propriétaire",
+    "signatureBuyer": "Signature acheteur",
+    "signatureTenant": "Signature locataire",
+    "dailyPreAccepted": "Offre au jour · pré-acceptée",
+    "awaitingSignature": "En attente",
+    "afterPayment": "Après paiement",
+    "leasesEmptyBody": "Les demandes de location de tes biens apparaîtront ici.",
+    "contractSignedWaitingTenant": "Contrat signé — en attente du locataire ✅",
+    "requestDeclined": "Demande refusée.",
+    "buyerMessage": "Message de l'acheteur",
+    "tenantMessage": "Message du locataire",
+    "reservedBadge": "Réservé",
+    "extendLease": "Prolonger le bail",
+    "extendStay": "Prolonger ce séjour",
+    "editMyBooking": "Modifier ma réservation",
+    "extensionStartsNote": "La prolongation démarre le jour où ton bail actuel se termine. Aucune nouvelle caution ne t’est demandée.",
+    "stayDates": "Dates du séjour",
+    "moveInDate": "Date d'emménagement",
+    "currentlyMonthly": "Ce logement est actuellement loué au mois.",
+    "escrowUntilMoveIn": "Ton argent reste en séquestre jusqu'à la confirmation de ton emménagement. Contacte le propriétaire pour visiter le bien avant de réserver.",
+    "escrowUntilHandover": "Ton argent reste en séquestre jusqu'à la confirmation de la remise du bien. Contacte le propriétaire pour visiter le bien avant de t'engager.",
+    "sendRequest": "Envoyer la demande",
+    "buyRequestSent": "Demande d'achat envoyée au propriétaire ✅",
+    "watchVideoTour": "Voir la visite vidéo",
+    "easyAccess": "Accès facile en taxi ou moto",
+    "escrowNoteRent": "Ton paiement reste en séquestre jusqu'à ton emménagement. Contacte le propriétaire pour convenir d'une visite avant de réserver.",
+    "escrowNoteSale": "Contacte le propriétaire pour visiter le bien avant de t'engager. Ton paiement reste ensuite en séquestre jusqu'à la remise du bien.",
+    "leaseTitle": "Bail",
+    "saleTitle": "Vente",
+    "purchaseTitle": "Achat",
+    "history": "Historique",
+    "typeRent": "Location",
+    "typeSale": "Vente",
+    "typeLand": "Terrain",
+    "location": "Localisation",
+    "contact": "Contacter",
+    "buyInApp": "Acheter via l'application",
+    "agencyFee": "Frais d'agence"
   },
   "cart": {
     "title": "Mon panier",
@@ -1265,7 +1377,9 @@
     "pay": "Passer au paiement",
     "singleShopNotice": "Une commande par boutique : tu peux ajouter plusieurs articles d'une même boutique, mais pas de deux boutiques différentes.",
     "browseShop": "Voir tous les articles de cette boutique",
-    "stockMax": "Il ne reste que {{count}} exemplaire(s) de cet article."
+    "stockMax": "Il ne reste que {{count}} exemplaire(s) de cet article.",
+    "singlePaymentNote": "Un seul paiement pour {{n}} boutiques. Chacune prépare et livre sa commande de son côté, avec son propre code de retrait.",
+    "giftAlone": "« {{titre}} » est un don : il se commande seul, sans autre article."
   },
   "checkout": {
     "pay": {
@@ -1398,7 +1512,15 @@
     "deliveryTitle": "Livraison à domicile",
     "deliveryHintPrefix": "Linky vous livre —",
     "parcelsGrouped": "({{n}} colis, trajet groupé)",
-    "parcels": "({{n}} colis)"
+    "parcels": "({{n}} colis)",
+    "subtotalWithFees": "Sous-total ({{mention}})",
+    "deliveryParcels": "Livraison ({{n}} colis)",
+    "delivery": "Livraison",
+    "addressLoading": "Chargement de l'adresse…",
+    "noAddress": "Aucune adresse de livraison",
+    "addAddressHint": "Ajoute une adresse pour être livré",
+    "addAddress": "Ajouter une adresse de livraison",
+    "backToCart": "Revenir au panier"
   },
   "orders": {
     "title": "Mes commandes",
@@ -1460,7 +1582,28 @@
     "cancelConfirmBody": "{{montant}} te seront remboursés sur ton portefeuille Linky, frais compris. Cette réservation sera libérée et tu ne pourras pas revenir en arrière.",
     "keepMyBooking": "Garder ma réservation",
     "cancelAndRefund": "Annuler et être remboursé",
-    "cancelledRefundedToast": "Réservation annulée — montant remboursé sur ton portefeuille ✅"
+    "cancelledRefundedToast": "Réservation annulée — montant remboursé sur ton portefeuille ✅",
+    "othersInFilter": "Tes autres réservations sont dans « {{filtre}} ».",
+    "walletShort": "Ton portefeuille contient {{solde}} — il manque {{manque}}. Choisis un autre moyen de paiement.",
+    "fullRefundUntil": "Remboursement intégral jusqu’au {{date}}.",
+    "cancelClosedSale": "L’annulation en ligne s’arrête 48 h avant l’emménagement. Contacte le vendeur ou l’équipe Linky.",
+    "cancelClosedRent": "L’annulation en ligne s’arrête 48 h avant l’emménagement. Contacte le propriétaire ou l’équipe Linky.",
+    "emptyBody": "Trouve un logement en location et réserve-le directement dans l'app.",
+    "preparing": "Préparation…",
+    "downloadContract": "Télécharger le contrat",
+    "confirmOnPhone": "⏳  Confirme sur ton téléphone",
+    "phoneForCode": "Numéro de téléphone (pour recevoir le code)",
+    "phoneForPayment": "Numéro pour le paiement",
+    "phoneInvalid": "Numéro invalide (9 chiffres, commence par 6).",
+    "phoneRequired": "Indique le numéro du compte qui paie.",
+    "paying": "Paiement en cours…",
+    "holdToPay": "Maintenir pour payer",
+    "holdToConfirmExtension": "Maintenir pour confirmer la prolongation",
+    "holdToConfirmHandover": "Maintenir pour confirmer la remise du bien",
+    "holdToConfirmMoveIn": "Maintenir pour confirmer l'emménagement",
+    "handoverConfirmed": "Remise confirmée — montant versé au vendeur ✅",
+    "extensionConfirmed": "Prolongation confirmée — loyer versé au propriétaire ✅",
+    "moveInConfirmed": "Emménagement confirmé — loyer versé au propriétaire ✅"
   },
   "order": {
     "trackingTitle": "Suivi de commande",
@@ -1505,7 +1648,29 @@
     "rateShop": "Noter la boutique",
     "scanBuyerQr": "Scanner le QR de l'acheteur",
     "reviewPlaceholder": "Partagez votre expérience…",
-    "trackTitle": "Suivi du livreur"
+    "trackTitle": "Suivi du livreur",
+    "etaMinutes": "Arrivée estimée dans ~{{n}} min",
+    "positionUpdated": "Position mise à jour {{quand}}",
+    "deliveryTo": "Livraison à {{ville}}",
+    "trackDelivered": "Ta commande a été livrée ✅",
+    "trackNoCourier": "Aucun livreur n'est encore assigné à votre commande.",
+    "trackPreparing": "{{livreur}} prépare votre livraison — sa position s’affichera dès qu’il prend la route.",
+    "trackOnTheWay": "{{livreur}} est en route vers toi.",
+    "yourCourier": "Ton livreur",
+    "reviewHelps": "Ton avis aide les autres acheteurs.",
+    "confirmHandover": "Confirmer la remise",
+    "handoverQrHelp": "Au moment de remettre la commande, demande à l'acheteur d'ouvrir sa commande dans Linky et scanne le QR affiché sur son écran. Les fonds sont libérés immédiatement.",
+    "unavailableTitle": "Commande indisponible",
+    "reviewIntro": "Comment s'est passée ta commande ? Ton avis aide les autres acheteurs.",
+    "reviewOptional": "Ton avis (optionnel)",
+    "reviewSendError": "Impossible d'envoyer ton avis pour le moment. Réessaie.",
+    "sendReview": "Envoyer mon avis",
+    "cameraNeeded": "Linky a besoin d'accéder à la caméra pour scanner le QR affiché par le client.",
+    "scanQrTitle": "Scanner un QR",
+    "aimAtParcelCode": "Pointe l'appareil sur le code collé sur le colis.",
+    "courierPositionUnavailable": "La position du livreur n'est pas encore disponible.",
+    "cameraAllowTitle": "Autorisez l'appareil photo",
+    "trackUnavailable": "Suivi indisponible"
   },
   "profil": {
     "title": "Profil",
@@ -1572,7 +1737,57 @@
     "fullNamePlaceholder": "Ton prénom et nom",
     "updatedToast": "Profil mis à jour.",
     "rolesUpdatedToast": "Rôles mis à jour.",
-    "regionAlreadySetToast": "Ta région de paiement était déjà définie."
+    "regionAlreadySetToast": "Ta région de paiement était déjà définie.",
+    "allowPhotosChange": "Autorisez l'accès aux photos pour changer votre photo.",
+    "changePhoto": "Changer la photo de profil",
+    "addPhoto": "Ajouter une photo de profil",
+    "removePhoto": "Retirer la photo de profil",
+    "editTitle": "Modifier mon profil",
+    "displayName": "NOM AFFICHÉ",
+    "accountSection": "COMPTE",
+    "roleBuyer": "Acheteur",
+    "roleSeller": "Vendeur",
+    "becomeBuyer": "Devenir acheteur",
+    "becomeSeller": "Devenir vendeur",
+    "becomeCourier": "Devenir livreur",
+    "myRoles": "Mes rôles",
+    "rolesIntro": "Active tout ce qui s'applique. Tu peux changer à tout moment — au moins un rôle doit rester actif.",
+    "kycRequiredTitle": "Vérification requise pour publier",
+    "kycRequiredBody": "Tu peux activer le rôle maintenant, mais il faudra vérifier ton identité avant de publier ta première annonce.",
+    "verifyNow": "Vérifier maintenant →",
+    "readRules": "Lis ces quelques règles avant d'activer le rôle.",
+    "whatYouCanDo": "CE QUE TU PEUX FAIRE",
+    "rulesToFollow": "À RESPECTER",
+    "acceptAndEnable": "J'accepte et j'active",
+    "regionFinal": "Ce choix est définitif. Si tu changes de pays, contacte l’équipe Linky.",
+    "roleAgent": "Agent immobilier",
+    "roleBuyerDesc": "Acheter et louer sur Linky",
+    "roleSellerDesc": "Publier des produits",
+    "roleAgentDesc": "Publier des biens",
+    "becomeAgent": "Devenir agent immobilier",
+    "buyerCan1": "Acheter des produits et réserver des logements (jour / mois)",
+    "buyerCan2": "Payer en toute sécurité : l'argent reste bloqué (escrow) jusqu'à la réception",
+    "buyerCan3": "Discuter avec les vendeurs, convenir des visites et laisser des avis",
+    "buyerMust1": "Confirme la réception uniquement quand tu as le produit en main",
+    "buyerMust2": "Ne partagez jamais votre QR de réception avant la livraison",
+    "buyerMust3": "Paie toujours via l'application — jamais en dehors",
+    "sellerCan1": "Créer votre boutique et publier des produits",
+    "sellerCan2": "Recevoir des commandes payées en escrow et suivre vos ventes",
+    "sellerCan3": "Retirer vos gains vers Orange Money / MTN",
+    "sellerMust1": "Vérifier votre identité avant de publier votre première annonce",
+    "sellerMust2": "Publier des photos et descriptions honnêtes de vos produits",
+    "sellerMust3": "Préparer les commandes rapidement — l'argent n'est libéré qu'à la réception confirmée par l'acheteur",
+    "sellerMust4": "Respecter les acheteurs dans les échanges et les délais",
+    "courierCan1": "Recevoir des livraisons assignées et suivre vos courses",
+    "courierCan2": "Valider les remises par scan du QR de l'acheteur",
+    "courierMust1": "Candidater et être approuvé par l'équipe Linky avant d'être activé",
+    "courierMust2": "Livrer avec soin et dans les délais annoncés",
+    "agentCan1": "Publier des biens : location (jour / mois), vente et terrains",
+    "agentCan2": "Gérer vos réservations et convenir des visites par la messagerie",
+    "agentCan3": "Faire signer les contrats de location dans l'app et encaisser en escrow",
+    "agentMust1": "Vérifier votre identité avant de publier votre première annonce",
+    "agentMust2": "Annoncer des biens réels et disponibles, avec des prix exacts",
+    "agentMust3": "Honorer les visites convenues et les réservations acceptées"
   },
   "onboarding": {
     "welcome": {
@@ -1672,7 +1887,10 @@
       "subtitleEmail": "Saisis ton email et ton mot de passe pour te connecter.",
       "subtitlePhone": "Saisis ton numéro et ton mot de passe pour te connecter."
     },
-    "photoUploadFailed": "Téléversement de la photo échoué."
+    "photoUploadFailed": "Téléversement de la photo échoué.",
+    "allowPhotosAdd": "Autorise l'accès aux photos pour ajouter ta photo.",
+    "useMyPosition": "Utiliser ma position",
+    "pickCityHelp": "Touchez un point sur la carte ou un marqueur pour choisir votre ville."
   },
   "auth": {
     "phoneTitle": "Votre numéro",
@@ -1683,7 +1901,12 @@
     "passwordPlaceholder": "Mot de passe",
     "passwordConfirmPlaceholder": "Confirme le mot de passe",
     "ruleMinChars": "Au moins 8 caractères",
-    "ruleMatches": "Les deux saisies sont identiques"
+    "ruleMatches": "Les deux saisies sont identiques",
+    "passwordWhy": "Il te servira à te reconnecter sans attendre de code. On t'enverra un code une seule fois, pour vérifier que {{contact}} t'appartient.",
+    "enterPhoneForCode": "Saisis ton numéro pour recevoir un code.",
+    "enterEmailForCode": "Saisis ton email pour recevoir un code.",
+    "noAccountMatch": "Aucun compte ne correspond à ces identifiants. Vérifie ton mot de passe, ou crée un compte si tu n'en as pas encore.",
+    "choosePassword": "Choisis ton mot de passe"
   },
   "currency": {
     "gnf": "GNF",
@@ -1952,7 +2175,8 @@
     "priv8H": "Mineurs",
     "priv8B": "Linky est réservée aux personnes de 18 ans et plus. Si vous découvrez qu'un compte appartient à un mineur, signalez-le immédiatement à privacy@linkygroup.com.",
     "priv9H": "Contact",
-    "priv9B": "Toute question sur vos données : privacy@linkygroup.com. Notre Délégué à la Protection des Données vous répond sous 30 jours."
+    "priv9B": "Toute question sur vos données : privacy@linkygroup.com. Notre Délégué à la Protection des Données vous répond sous 30 jours.",
+    "lastUpdated": "Dernière mise à jour : {{date}}"
   },
   "languages": {
     "fr": "Français",
@@ -1973,7 +2197,10 @@
     "bodyBoth": "Pour accéder à {{surface}}, activez le rôle {{seller}} ou {{agent}} dans votre profil. C'est gratuit et vous pouvez désactiver à tout moment.",
     "becomeSeller": "Devenir {{role}}",
     "becomeAgent": "Devenir {{role}}",
-    "backHome": "Retour à l'accueil"
+    "backHome": "Retour à l'accueil",
+    "surfaceAgent": "cet espace agent",
+    "surfaceSeller": "cet espace vendeur",
+    "surfaceProDashboard": "ce tableau de bord"
   },
   "buyerGate": {
     "title": "Active le mode Acheteur",
@@ -2077,6 +2304,10 @@
     "blockedEmpty": "Tu n'as bloqué personne.",
     "blockedEmptySub": "Tu peux bloquer quelqu'un depuis une annonce, un avis ou un commentaire.",
     "blockedSince": "Bloquée le {{date}}",
-    "unknownUser": "Utilisateur"
+    "unknownUser": "Utilisateur",
+    "reportOrBlock": "Signaler ou bloquer"
+  },
+  "comments": {
+    "title": "Commentaires"
   }
 }

@@ -2,6 +2,7 @@
 // following the existing shop-page star pattern (lucide Star, accent fill).
 import { Pressable, View } from 'react-native';
 import { Star } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../theme/ThemeProvider';
 
 export function StarRating({
@@ -14,6 +15,7 @@ export function StarRating({
   size?: number;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
       {[1, 2, 3, 4, 5].map((n) => (
@@ -22,7 +24,7 @@ export function StarRating({
           onPress={() => onChange(n)}
           hitSlop={6}
           accessibilityRole="button"
-          accessibilityLabel={`${n} étoile${n > 1 ? 's' : ''}`}
+          accessibilityLabel={t('a11y.starsCount', { count: n })}
           accessibilityState={{ selected: n <= value }}
         >
           <Star

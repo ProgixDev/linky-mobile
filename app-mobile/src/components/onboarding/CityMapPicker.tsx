@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import Mapbox, { MapView, Camera, PointAnnotation, type ScreenPointPayload } from '@rnmapbox/maps';
 import * as Location from 'expo-location';
@@ -125,6 +126,7 @@ export function CityMapPicker({
   onMapInteraction?: (active: boolean) => void;
 }) {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   // HARD CAP on the map height (client 2026-08-06). The map container is
   // flex:1, which should have let it shrink — but the NATIVE Mapbox view
   // reports a large intrinsic size that flex-shrink doesn't get under, so the
@@ -399,7 +401,7 @@ export function CityMapPicker({
           <Pressable
             onPress={() => void detectMyLocation(true)}
             disabled={locating}
-            accessibilityLabel="Utiliser ma position"
+            accessibilityLabel={t('onboarding.useMyPosition')}
             style={{
               position: 'absolute',
               bottom: 12,
@@ -421,7 +423,7 @@ export function CityMapPicker({
       </View>
 
       <Text variant="caption" tone="muted" center style={{ letterSpacing: 0 }}>
-        Touchez un point sur la carte ou un marqueur pour choisir votre ville.
+        {t('onboarding.pickCityHelp')}
       </Text>
     </View>
   );

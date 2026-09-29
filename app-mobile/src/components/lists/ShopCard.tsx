@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -8,6 +9,7 @@ import type { Shop } from '../../data/types';
 
 export function ShopMiniCard({ shop, width = 140 }: { shop: Shop; width?: number }) {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   return (
     <Pressable
       onPress={() => router.push(`/shop/${shop.id}`)}
@@ -22,7 +24,7 @@ export function ShopMiniCard({ shop, width = 140 }: { shop: Shop; width?: number
         gap: 6,
       }}
       accessibilityRole="button"
-      accessibilityLabel={`Boutique ${shop.name}`}
+      accessibilityLabel={t('a11y.shopNamed', { nom: shop.name })}
     >
       <Avatar source={shop.avatar} size="lg" />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

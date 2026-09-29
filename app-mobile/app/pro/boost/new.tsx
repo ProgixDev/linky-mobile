@@ -164,7 +164,7 @@ export default function BoostNewRoute() {
             toast.show(t('common.payCancelled'), 'info');
             return;
           }
-          toast.show(payErr.message || 'Paiement échoué', 'danger');
+          toast.show(payErr.message || t('common.payFailed'), 'danger');
           return;
         }
         // NE PAS annoncer « boost actif » ici : a cet instant le boost est

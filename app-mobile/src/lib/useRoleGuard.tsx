@@ -89,7 +89,7 @@ export function RoleGateView({
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           hitSlop={12}
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('common.back')}
           style={{
             width: 40,
             height: 40,

@@ -109,7 +109,7 @@ export function ProductCard({
             alignItems: 'center',
             justifyContent: 'center',
           }}
-          accessibilityLabel={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          accessibilityLabel={isFav ? t('a11y.removeFromFavorites') : t('a11y.addToFavorites')}
         >
           {isFav ? (
             <I.heartFill size={15} color={colors.danger} />
@@ -150,7 +150,7 @@ export function ProductCard({
           <View style={{ position: 'absolute', bottom: 8, left: 8 }}>
             <Badge
               tone="condition"
-              label={product.condition === 'neuf' ? 'Neuf' : product.condition === 'occasion' ? 'Occasion' : 'Reconditionné'}
+              label={t(product.condition === 'neuf' ? 'product.conditionNeuf' : product.condition === 'occasion' ? 'product.conditionOccasion' : 'product.conditionReconditionne')}
             />
           </View>
         )}
@@ -186,7 +186,7 @@ export function ProductCard({
             }}
           >
             <Text style={{ color: '#FFFFFF', fontWeight: '700', letterSpacing: 1, fontSize: 18 }}>
-              VENDU
+              {t('product.soldBadge')}
             </Text>
           </View>
         )}
@@ -271,7 +271,7 @@ export function ProductCard({
             onPress={onQuickAdd}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={`Ajouter ${product.title} au panier`}
+            accessibilityLabel={t('a11y.addToCartNamed', { titre: product.title })}
             style={{
               width: 34,
               height: 34,

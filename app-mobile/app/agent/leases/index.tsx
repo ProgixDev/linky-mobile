@@ -83,14 +83,14 @@ export default function LeasesRoute() {
               <>
                 <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('property.leasesEmpty')}</Text>
                 <Text style={{ fontSize: 12.5, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
-                  Les demandes de location de tes biens apparaîtront ici.
+                  {t('property.leasesEmptyBody')}
                 </Text>
               </>
             ) : (
               <>
                 <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('property.nothingInFilter')}</Text>
                 <Text style={{ fontSize: 12.5, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
-                  Tes autres réservations sont dans « {FILTERS[0].label} ».
+                  {t('bookings.othersInFilter', { filtre: FILTERS[0].label })}
                 </Text>
               </>
             )}

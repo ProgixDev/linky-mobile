@@ -192,7 +192,7 @@ export default function BookPropertyRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title={isExtension ? "Prolonger le bail" : "Réserver ce logement"} back />
+      <TopBar title={isExtension ? t('property.extendLease') : t('property.bookThisHome')} back />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -223,13 +223,13 @@ export default function BookPropertyRoute() {
                   {extendStart ? `À partir du ${formatBookingDate(extendStart)}` : 'À la fin du bail en cours'}
                 </Text>
                 <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                  La prolongation démarre le jour où ton bail actuel se termine. Aucune nouvelle caution ne t’est demandée.
+                  {t('property.extensionStartsNote')}
                 </Text>
               </View>
             </View>
           ) : (
           <View>
-            <MicroLabel label={period === 'day' ? 'Dates du séjour' : "Date d'emménagement"} />
+            <MicroLabel label={period === 'day' ? t('property.stayDates') : t('property.moveInDate')} />
             <BookingCalendar
               mode={period === 'day' ? 'range' : 'single'}
               startDate={startDate}
@@ -241,7 +241,7 @@ export default function BookPropertyRoute() {
               // Un bail au mois immobilise le logement sans date de fin connue :
               // aucune plage a griser, il faut le dire en clair.
               <Text variant="micro" tone="muted" style={{ marginTop: 6, letterSpacing: 0, textTransform: 'none' }}>
-                Ce logement est actuellement loué au mois.
+                {t('property.currentlyMonthly')}
               </Text>
             )}
             {period === 'day' && (
@@ -342,7 +342,7 @@ export default function BookPropertyRoute() {
                   entier a part, celui que le bailleur a declare. */}
               {period === 'day' ? (
                 <RecapRow
-                  label={`Séjour · ${nights} nuit${nights > 1 ? 's' : ''} (frais inclus)`}
+                  label={t('property.stayNights', { count: nights })}
                   value={formatGNF(rentWithFee)}
                 />
               ) : (
@@ -381,7 +381,7 @@ export default function BookPropertyRoute() {
                   annonce sans depot, elle n'aurait rien a dire. */}
               {deposit > 0 && (
                 <RecapRow
-                  label={prop.depositKind === 'agency_fee' ? "Frais d'agence" : 'Caution'}
+                  label={t(prop.depositKind === 'agency_fee' ? 'property.agencyFee' : 'property.deposit')}
                   value={formatGNF(deposit)}
                 />
               )}
@@ -409,7 +409,7 @@ export default function BookPropertyRoute() {
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
               <Text style={{ fontWeight: '700' }}>{t('property.securePayment')} </Text>
-              Ton argent reste en séquestre jusqu'à la confirmation de ton emménagement. Contacte le propriétaire pour visiter le bien avant de réserver.
+              {t('property.escrowUntilMoveIn')}
             </Text>
           </TrustStrip>
         </ScrollView>
@@ -418,7 +418,7 @@ export default function BookPropertyRoute() {
           <Button
             size="lg"
             block
-            label={ready ? `Envoyer la demande · ${formatGNF(total)}` : 'Envoyer la demande'}
+            label={ready ? t('property.sendRequestWithAmount', { montant: formatGNF(total) }) : t('property.sendRequest')}
             disabled={!ready || request.isPending}
             loading={request.isPending}
             onPress={submit}

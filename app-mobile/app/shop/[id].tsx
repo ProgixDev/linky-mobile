@@ -159,7 +159,7 @@ export default function ShopRoute() {
               justifyContent: 'space-between',
             }}
           >
-            <CircleButton onPress={() => router.back()} accessibilityLabel="Retour">
+            <CircleButton onPress={() => router.back()} accessibilityLabel={t('common.back')}>
               <ArrowLeft size={18} color="#1F2421" strokeWidth={2} />
             </CircleButton>
             {/* Phase X.7 — Share wired to native Share API (message-only ;
@@ -172,7 +172,7 @@ export default function ShopRoute() {
                   message: shareMessage(`${shop.name} sur Linky`, 'shop', shop.id),
                 }).catch(() => {});
               }}
-              accessibilityLabel="Partager"
+              accessibilityLabel={t('common.share')}
             >
               <Share2 size={16} color="#1F2421" strokeWidth={2} />
             </CircleButton>
@@ -658,7 +658,7 @@ export default function ShopRoute() {
                 <InfoRow
                   Icon={Clock}
                   label={t('shop.infoHours')}
-                  value={status.is24h ? 'Ouvert 24h/24, 7j/7' : status.scheduleText}
+                  value={status.is24h ? t('shop.open24_7') : status.scheduleText}
                   accent={status.is24h}
                 />
               )}

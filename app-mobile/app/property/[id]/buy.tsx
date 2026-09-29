@@ -38,12 +38,12 @@ export default function BuyPropertyRoute() {
   const [note, setNote] = useState('');
 
   if (isLoading || isError || !prop) {
-    return <DetailStateScreen loading={isLoading} title="Acheter" onRetry={() => void refetch()} />;
+    return <DetailStateScreen loading={isLoading} title={t('product.buyNow')} onRetry={() => void refetch()} />;
   }
   if (prop.type === 'location') {
     // Garde miroir de la garde serveur (NOT_A_RENTAL) — pas cense arriver
     // depuis l'UI, qui ne propose ce bouton que pour vente/terrain.
-    return <DetailStateScreen loading={false} title="Acheter" onRetry={() => router.back()} />;
+    return <DetailStateScreen loading={false} title={t('product.buyNow')} onRetry={() => router.back()} />;
   }
 
   const price = prop.priceGnf;
@@ -65,7 +65,7 @@ export default function BuyPropertyRoute() {
       },
       {
         onSuccess: () => {
-          show('Demande d\'achat envoyée au propriétaire ✅', 'success');
+          show(t('property.buyRequestSent'), 'success');
           router.replace('/bookings' as never);
         },
         onError: (e) => {
@@ -129,7 +129,7 @@ export default function BuyPropertyRoute() {
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
               <Text style={{ fontWeight: '700' }}>{t('property.securePayment')} </Text>
-              Ton argent reste en séquestre jusqu'à la confirmation de la remise du bien. Contacte le propriétaire pour visiter le bien avant de t'engager.
+              {t('property.escrowUntilHandover')}
             </Text>
           </TrustStrip>
         </ScrollView>
@@ -138,7 +138,7 @@ export default function BuyPropertyRoute() {
           <Button
             size="lg"
             block
-            label={`Envoyer la demande d'achat · ${formatGNF(total)}`}
+            label={t('property.sendBuyRequestWithAmount', { montant: formatGNF(total) })}
             disabled={request.isPending}
             loading={request.isPending}
             onPress={submit}

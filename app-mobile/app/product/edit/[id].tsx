@@ -640,10 +640,10 @@ export default function ProductEditRoute() {
               // qu'il restait commandable (client 2026-08-24).
               helperText={
                 stock.trim() === ''
-                  ? 'Vide = quantité illimitée. L’acheteur pourra en commander autant qu’il veut.'
+                  ? t('productEdit.stockEmptyHint')
                   : Number(stock) === 0
-                    ? '0 = rupture de stock. L’article reste visible mais ne peut plus être commandé.'
-                    : `L’acheteur ne pourra pas en commander plus de ${Number(stock)}.`
+                    ? t('productEdit.stockZeroHint')
+                    : t('productEdit.stockCap', { n: Number(stock) })
               }
             />
             )}

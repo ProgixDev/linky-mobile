@@ -116,7 +116,7 @@ export default function RegionRoute() {
             {t('onboarding.authChoice.subtitle')}
           </Text>
           <Text style={{ marginTop: 8, fontSize: 13, lineHeight: 19, color: colors.textFaint }}>
-            Ce choix est définitif. Si tu changes de pays, contacte l’équipe Linky.
+            {t('profil.regionFinal')}
           </Text>
         </View>
 

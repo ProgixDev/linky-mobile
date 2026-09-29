@@ -83,7 +83,7 @@ export default function CommentsRoute() {
         <IconButton variant="ghost" size={32} onPress={() => router.back()}>
           <I.arrowLeft size={18} color={colors.text} />
         </IconButton>
-        <Text style={{ fontSize: 15, fontWeight: '700' }}>Commentaires</Text>
+        <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('comments.title')}</Text>
       </View>
 
       {/* keyboard-controller's KAV handles Expo edge-to-edge correctly (the
@@ -100,7 +100,7 @@ export default function CommentsRoute() {
         ) : comments.length === 0 ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
             <Text tone="muted" style={{ textAlign: 'center', letterSpacing: 0 }}>
-              Aucun commentaire pour le moment. Sois le premier à commenter !
+              {t('messages.noComments')}
             </Text>
           </View>
         ) : (
@@ -150,13 +150,15 @@ export default function CommentsRoute() {
                 <View style={{ width: 3, height: 28, borderRadius: 2, backgroundColor: colors.primary }} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary }}>
-                    En réponse à {replyingTo.authorName ?? 'Utilisateur Linky'}
+                    {t('messages.replyingTo', {
+                      nom: replyingTo.authorName ?? t('messages.linkyUser'),
+                    })}
                   </Text>
                   <Text numberOfLines={1} style={{ fontSize: 11.5, color: colors.textMuted, letterSpacing: 0 }}>
                     {replyingTo.body}
                   </Text>
                 </View>
-                <Pressable onPress={() => setReplyingTo(null)} hitSlop={8} accessibilityLabel="Annuler la réponse">
+                <Pressable onPress={() => setReplyingTo(null)} hitSlop={8} accessibilityLabel={t('messages.cancelReply')}>
                   <X size={16} color={colors.textMuted} strokeWidth={2} />
                 </Pressable>
               </View>
@@ -174,7 +176,7 @@ export default function CommentsRoute() {
               <TextInput
                 value={text}
                 onChangeText={setText}
-                placeholder={replyingTo ? 'Écrivez votre réponse…' : 'Ajoutez un commentaire…'}
+                placeholder={replyingTo ? t('messages.writeReply') : t('messages.writeComment')}
                 placeholderTextColor={colors.textFaint}
                 multiline
                 maxLength={MAX_LENGTH}
@@ -205,7 +207,7 @@ export default function CommentsRoute() {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
-                accessibilityLabel="Envoyer"
+                accessibilityLabel={t('common.send')}
               >
                 {add.isPending ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
@@ -225,7 +227,7 @@ export default function CommentsRoute() {
         ) : (
           <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.border }}>
             <Text tone="muted" center style={{ letterSpacing: 0 }}>
-              Connecte-toi pour commenter.
+              {t('messages.signInToComment')}
             </Text>
           </View>
         )}

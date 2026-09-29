@@ -145,7 +145,7 @@ export default function SellerOrderDetailRoute() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                 <QrCode size={16} color={colors.text} strokeWidth={2} />
                 <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>
-                  Remettre la commande
+                  {t('seller.handOverOrder')}
                 </Text>
               </View>
               <Text
@@ -156,8 +156,7 @@ export default function SellerOrderDetailRoute() {
                   marginBottom: 14,
                 }}
               >
-                Demande à l&apos;acheteur d&apos;ouvrir sa commande dans Linky et scanne le QR
-                affiché sur son écran. Tes fonds sont libérés immédiatement.
+                {t('seller.handoverQrHelp')}
               </Text>
               <Pressable
                 onPress={() => {
@@ -185,7 +184,7 @@ export default function SellerOrderDetailRoute() {
                     includeFontPadding: false,
                   }}
                 >
-                  Scanner le QR de l&apos;acheteur
+                  {t('order.scanBuyerQr')}
                 </Text>
               </Pressable>
             </View>

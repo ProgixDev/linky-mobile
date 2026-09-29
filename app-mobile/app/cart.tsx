@@ -387,8 +387,7 @@ export default function CartRoute() {
           </View>
           {groups.length > 1 && (
             <Text variant="caption" tone="muted" style={{ marginTop: 10, letterSpacing: 0, lineHeight: 16 }}>
-              Un seul paiement pour {groups.length} boutiques. Chacune prépare et livre sa
-              commande de son côté, avec son propre code de retrait.
+              {t('cart.singlePaymentNote', { n: groups.length })}
             </Text>
           )}
         </Card>
@@ -433,7 +432,7 @@ export default function CartRoute() {
             if (gift && items.length > 1) {
               haptic.light();
               toast.show(
-                `« ${gift.product.title} » est un don : il se commande seul, sans autre article.`,
+                t('cart.giftAlone', { titre: gift.product.title }),
                 'info',
               );
               return;

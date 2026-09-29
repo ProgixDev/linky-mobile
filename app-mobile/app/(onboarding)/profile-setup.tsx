@@ -47,7 +47,7 @@ export default function ProfileSetupRoute() {
     if (uploadAvatar.isPending) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      toast.show("Autorise l'accès aux photos pour ajouter ta photo.", 'danger');
+      toast.show(t('onboarding.allowPhotosAdd'), 'danger');
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
@@ -288,7 +288,7 @@ function IdentityStep({
           onPress={onPickAvatar}
           disabled={uploading}
           accessibilityRole="button"
-          accessibilityLabel={avatarUrl ? 'Changer la photo de profil' : 'Ajouter une photo de profil'}
+          accessibilityLabel={avatarUrl ? t('profil.changePhoto') : t('profil.addPhoto')}
         >
           {/* Le rognage doit rester SUR le cercle, pas sur le conteneur : la
               pastille debordant vers le bas-droit serait sinon coupee. */}

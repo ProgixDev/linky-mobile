@@ -126,7 +126,7 @@ export default function ProfilEditRoute() {
     if (uploadAvatar.isPending) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      toast.show("Autorisez l'accès aux photos pour changer votre photo.", 'danger');
+      toast.show(t('profil.allowPhotosChange'), 'danger');
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
@@ -180,7 +180,7 @@ export default function ProfilEditRoute() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/profil'))}
           hitSlop={12}
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('common.back')}
           style={{
             width: 40,
             height: 40,
@@ -195,7 +195,7 @@ export default function ProfilEditRoute() {
           <ChevronLeft size={18} color={colors.text} strokeWidth={2} />
         </Pressable>
         <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, flex: 1 }}>
-          Modifier mon profil
+          {t('profil.editTitle')}
         </Text>
       </View>
 
@@ -206,7 +206,7 @@ export default function ProfilEditRoute() {
             onPress={onPickAvatar}
             disabled={uploadAvatar.isPending}
             accessibilityRole="button"
-            accessibilityLabel="Changer la photo de profil"
+            accessibilityLabel={t('profil.changePhoto')}
             style={{ width: 100, height: 100 }}
           >
             {avatarUrl ? (
@@ -259,8 +259,8 @@ export default function ProfilEditRoute() {
               </Text>
             </Pressable>
             {!!avatarUrl && !uploadAvatar.isPending && (
-              <Pressable onPress={() => setAvatarUrl('')} hitSlop={8} accessibilityLabel="Retirer la photo de profil">
-                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.danger }}>Retirer</Text>
+              <Pressable onPress={() => setAvatarUrl('')} hitSlop={8} accessibilityLabel={t('profil.removePhoto')}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.danger }}>{t('common.remove')}</Text>
               </Pressable>
             )}
           </View>
@@ -277,7 +277,7 @@ export default function ProfilEditRoute() {
             marginBottom: 8,
           }}
         >
-          NOM AFFICHÉ
+          {t('profil.displayName')}
         </Text>
         <View
           style={{
@@ -381,7 +381,7 @@ export default function ProfilEditRoute() {
             marginBottom: 8,
           }}
         >
-          COMPTE
+          {t('profil.accountSection')}
         </Text>
         <View style={{ gap: 10 }}>
           <AccountRow
@@ -430,7 +430,7 @@ export default function ProfilEditRoute() {
           variant="dark"
           size="lg"
           block
-          label="Enregistrer"
+          label={t('common.save')}
           onPress={onSave}
           loading={updateProfile.isPending}
           disabled={!canSave}

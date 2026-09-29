@@ -175,7 +175,7 @@ export default function ProductDetailRoute() {
                 paddingTop: 8,
               }}
             >
-              <CircleButton onPress={() => router.back()} ariaLabel="Retour">
+              <CircleButton onPress={() => router.back()} ariaLabel={t('common.back')}>
                 <ArrowLeft size={18} color="#0E1311" strokeWidth={2} />
               </CircleButton>
               <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -198,7 +198,7 @@ export default function ProductDetailRoute() {
                       ),
                     }).catch(() => {});
                   }}
-                  ariaLabel="Partager"
+                  ariaLabel={t('common.share')}
                 >
                   <Share2 size={16} color="#0E1311" strokeWidth={2} />
                 </CircleButton>
@@ -216,7 +216,7 @@ export default function ProductDetailRoute() {
                         blockeeId: shop?.ownerId,
                       });
                     }}
-                    ariaLabel="Signaler ou bloquer"
+                    ariaLabel={t('moderation.reportOrBlock')}
                   >
                     <MoreVertical size={16} color="#0E1311" strokeWidth={2} />
                   </CircleButton>
@@ -227,7 +227,7 @@ export default function ProductDetailRoute() {
                     toggleFav(product.id);
                     toggleFavorite.mutate(product.id);
                   }}
-                  ariaLabel={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  ariaLabel={isFav ? t('a11y.removeFromFavorites') : t('a11y.addToFavorites')}
                 >
                   <Heart
                     size={16}
@@ -275,7 +275,7 @@ export default function ProductDetailRoute() {
                       letterSpacing: 0.3,
                     }}
                   >
-                    BOOSTÉE
+                    {t('product.boostedBadge')}
                   </Text>
                 </View>
               )}
@@ -342,7 +342,7 @@ export default function ProductDetailRoute() {
                   fontVariant: ['tabular-nums'],
                 }}
               >
-                {product.viewCount} vues
+                {t('product.viewsCount', { n: product.viewCount })}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -483,7 +483,7 @@ export default function ProductDetailRoute() {
                   includeFontPadding: false,
                 }}
               >
-                Paiement sécurisé
+                {t('product.securePaymentTitle')}
               </Text>
               <Text
                 style={{
@@ -595,7 +595,7 @@ export default function ProductDetailRoute() {
                           letterSpacing: 0,
                         }}
                       >
-                        ({shop.reviewCount} avis)
+                        {t('product.reviewsCount', { n: shop.reviewCount })}
                         {shop.responseTime.trim().length > 0
                           ? ` · répond en ${shop.responseTime}`
                           : ''}
@@ -609,7 +609,7 @@ export default function ProductDetailRoute() {
                         letterSpacing: 0,
                       }}
                     >
-                      Nouveau
+                      {t('product.newBadge')}
                       {shop.responseTime.trim().length > 0
                         ? ` · répond en ${shop.responseTime}`
                         : ''}
@@ -649,7 +649,7 @@ export default function ProductDetailRoute() {
         </Section>
 
         {/* ===== Commentaires ===== */}
-        <Section title="Commentaires">
+        <Section title={t('comments.title')}>
           <ListingComments kind="product" id={product.id} />
         </Section>
 
@@ -666,7 +666,7 @@ export default function ProductDetailRoute() {
                 marginBottom: 12,
               }}
             >
-              Aussi consultés
+              {t('product.alsoViewed')}
             </Text>
             <ScrollView
               horizontal
@@ -760,7 +760,7 @@ export default function ProductDetailRoute() {
                   justifyContent: 'center',
                   opacity: findOrCreate.isPending || !shop?.ownerId ? 0.5 : 1,
                 }}
-                accessibilityLabel="Contacter le vendeur"
+                accessibilityLabel={t('product.contactSeller')}
               >
                 <MessageCircle size={18} color={colors.text} strokeWidth={2} />
               </Pressable>
@@ -827,7 +827,7 @@ export default function ProductDetailRoute() {
                   }}
                   numberOfLines={1}
                 >
-                  Ajouter au panier
+                  {t('product.addToCart')}
                 </Text>
               </Pressable>
 
@@ -872,7 +872,7 @@ export default function ProductDetailRoute() {
                   justifyContent: 'center',
                   gap: 6,
                 }}
-                accessibilityLabel="Acheter maintenant"
+                accessibilityLabel={t('a11y.buyNow')}
               >
                 <Zap size={15} color="#2A1A05" strokeWidth={2.5} fill="#2A1A05" />
                 <Text
@@ -885,7 +885,7 @@ export default function ProductDetailRoute() {
                     includeFontPadding: false,
                   }}
                 >
-                  Acheter
+                  {t('product.buyNow')}
                 </Text>
               </Pressable>
             </>

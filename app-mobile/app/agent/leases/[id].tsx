@@ -29,7 +29,7 @@ export default function LeaseDetailRoute() {
   const booking = (q.data ?? []).find((b) => b.id === id);
 
   if (q.isLoading || !booking) {
-    return <DetailStateScreen loading={q.isLoading} title="Bail" onRetry={() => void q.refetch()} />;
+    return <DetailStateScreen loading={q.isLoading} title={t('property.leaseTitle')} onRetry={() => void q.refetch()} />;
   }
 
   const decide = (decision: 'accept' | 'reject') =>
@@ -37,7 +37,7 @@ export default function LeaseDetailRoute() {
       { bookingId: booking.id, decision },
       {
         onSuccess: () =>
-          show(decision === 'accept' ? 'Contrat signé — en attente du locataire ✅' : 'Demande refusée.', decision === 'accept' ? 'success' : 'info'),
+          show(decision === 'accept' ? t('property.contractSignedWaitingTenant') : t('property.requestDeclined'), decision === 'accept' ? 'success' : 'info'),
         onError: (e) => show(toToastMessage(e, 'Action impossible.'), 'danger'),
       },
     );
@@ -46,7 +46,7 @@ export default function LeaseDetailRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title={isSale ? 'Vente' : 'Bail'} back />
+      <TopBar title={t(isSale ? 'property.saleTitle' : 'property.leaseTitle')} back />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 16 }}>
         <View style={{ gap: 8 }}>
           <Text style={{ fontSize: 18, fontWeight: '700' }}>{booking.property?.title}</Text>
@@ -58,7 +58,7 @@ export default function LeaseDetailRoute() {
 
         {booking.note.trim().length > 0 && (
           <View>
-            <MicroLabel label={isSale ? "Message de l'acheteur" : 'Message du locataire'} />
+            <MicroLabel label={isSale ? t('property.buyerMessage') : t('property.tenantMessage')} />
             <Text style={{ fontSize: 13.5, color: colors.text, lineHeight: 20, letterSpacing: 0 }}>{booking.note}</Text>
           </View>
         )}
@@ -77,7 +77,7 @@ export default function LeaseDetailRoute() {
         <ContractView booking={booking} />
 
         <View>
-          <MicroLabel label="Historique" />
+          <MicroLabel label={t('property.history')} />
           <BookingTimeline booking={booking} />
         </View>
 

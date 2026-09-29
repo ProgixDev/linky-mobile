@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -27,6 +28,7 @@ export function PropertyCard({
   compact?: boolean;
 }) {
   const { colors, radii } = useTheme();
+  const { t } = useTranslation();
   const imgProps = useDataSaverImageProps();
   return (
     <Pressable
@@ -55,7 +57,7 @@ export function PropertyCard({
             data. Property has no verified field — reinstate when one exists. */}
         {property.badge && (
           <View style={{ position: 'absolute', top: 10, right: 10 }}>
-            <Badge tone={property.badge === 'Réservé' ? 'reserved' : 'new'} label={property.badge} />
+            <Badge tone={property.badge === t('property.reservedBadge') ? 'reserved' : 'new'} label={property.badge} />
           </View>
         )}
         <View

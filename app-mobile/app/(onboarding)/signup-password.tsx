@@ -96,11 +96,10 @@ export default function SignupPasswordRoute() {
 
           <View style={{ marginTop: 12, gap: 6 }}>
             <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text }}>
-              Choisis ton mot de passe
+              {t('auth.choosePassword')}
             </Text>
             <Text variant="bodyM" tone="muted" style={{ letterSpacing: 0 }}>
-              Il te servira à te reconnecter sans attendre de code. On t'enverra un
-              code une seule fois, pour vérifier que {target} t'appartient.
+              {t('auth.passwordWhy', { contact: target })}
             </Text>
           </View>
 
@@ -164,7 +163,7 @@ export default function SignupPasswordRoute() {
               variant="dark"
               size="lg"
               block
-              label="Continuer"
+              label={t('common.continue')}
               disabled={!valid || busy}
               loading={busy}
               onPress={() => void onContinue()}

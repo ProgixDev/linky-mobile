@@ -29,7 +29,7 @@ export default function ReviewRoute() {
     return (
       <DetailStateScreen
         loading={isLoading}
-        title="Commande indisponible"
+        title={t('order.unavailableTitle')}
         onRetry={() => void refetch()}
       />
     );
@@ -63,14 +63,14 @@ export default function ReviewRoute() {
           center
           style={{ letterSpacing: 0, textTransform: 'none' }}
         >
-          Comment s'est passée ta commande ? Ton avis aide les autres acheteurs.
+          {t('order.reviewIntro')}
         </Text>
 
         <StarRating value={rating} onChange={setRating} />
 
         <View style={{ gap: 8 }}>
           <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-            Ton avis (optionnel)
+            {t('order.reviewOptional')}
           </Text>
           <TextInput
             value={comment}
@@ -94,12 +94,12 @@ export default function ReviewRoute() {
 
         {submit.isError ? (
           <Text tone="danger" variant="micro" style={{ letterSpacing: 0, textTransform: 'none' }}>
-            Impossible d'envoyer ton avis pour le moment. Réessaie.
+            {t('order.reviewSendError')}
           </Text>
         ) : null}
 
         <Button
-          label="Envoyer mon avis"
+          label={t('order.sendReview')}
           block
           variant="primary"
           disabled={rating < 1 || submit.isPending}

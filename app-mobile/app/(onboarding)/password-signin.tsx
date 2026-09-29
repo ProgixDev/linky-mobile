@@ -72,7 +72,7 @@ export default function PasswordSigninRoute() {
     const target = isPhone ? e164 : trimmedId;
     if (isPhone ? digits.length < 8 : !validEmail) {
       toast.show(
-        isPhone ? 'Saisis ton numéro pour recevoir un code.' : 'Saisis ton email pour recevoir un code.',
+        isPhone ? t('auth.enterPhoneForCode') : t('auth.enterEmailForCode'),
         'info',
       );
       return;
@@ -125,7 +125,7 @@ export default function PasswordSigninRoute() {
       const code = (e as { code?: string })?.code;
       if (code === 'AUTH_INVALID_CREDENTIALS') {
         toast.show(
-          "Aucun compte ne correspond à ces identifiants. Vérifie ton mot de passe, ou crée un compte si tu n'en as pas encore.",
+          t('auth.noAccountMatch'),
           'danger',
         );
         return;

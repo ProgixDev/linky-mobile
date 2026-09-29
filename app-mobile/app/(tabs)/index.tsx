@@ -78,6 +78,7 @@ export default function HomeRoute() {
 // ====================================================================
 
 function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const hasBoth = isSeller && isAgent;
   const [mode, setMode] = useState<ProMode>(isSeller ? 'shop' : 'estate');
@@ -144,7 +145,7 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            accessibilityLabel="Notifications"
+            accessibilityLabel={t('a11y.notifications')}
           >
             <Bell size={18} color={colors.text} strokeWidth={1.75} />
             {unreadCount > 0 && (
@@ -180,7 +181,7 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            accessibilityLabel={mode === 'shop' ? 'Nouvelle annonce' : 'Nouveau bien'}
+            accessibilityLabel={mode === 'shop' ? t('home.newListing') : t('home.newProperty')}
           >
             <Plus size={20} color={colors.bg} strokeWidth={2.25} />
           </Pressable>
@@ -199,13 +200,13 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
             >
               <ModeTab
                 Icon={HomeIcon}
-                label="Boutique"
+                label={t('a11y.shop')}
                 active={mode === 'shop'}
                 onPress={() => setMode('shop')}
               />
               <ModeTab
                 Icon={Building2}
-                label="Immobilier"
+                label={t('pro.tabEstate')}
                 active={mode === 'estate'}
                 onPress={() => setMode('estate')}
               />

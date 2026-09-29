@@ -292,7 +292,7 @@ function SellerOrderRow({ order, onPress }: { order: Order; onPress: () => void 
               {formatGNF(order.amountGnf)}
             </Text>
             <Text style={{ fontSize: 11, color: colors.textMuted }}>
-              · tu reçois
+              {t('seller.youReceive')}
             </Text>
           </View>
         </View>

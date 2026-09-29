@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { Avatar } from '../primitives/Avatar';
 import { Text } from '../primitives/Text';
@@ -32,6 +33,7 @@ export function CommentRow({
   isReply?: boolean;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const toggleLike = useToggleCommentLike();
 
   const onLike = () => {
@@ -63,7 +65,7 @@ export function CommentRow({
             disabled={!canInteract}
             hitSlop={8}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
-            accessibilityLabel={comment.likedByMe ? 'Retirer le like' : 'Aimer'}
+            accessibilityLabel={comment.likedByMe ? t('a11y.unlike') : t('a11y.like')}
           >
             {comment.likedByMe ? (
               <I.heartFill size={14} color={colors.danger} />
@@ -88,10 +90,10 @@ export function CommentRow({
             <Pressable
               onPress={() => { haptic.light(); onReply(comment); }}
               hitSlop={8}
-              accessibilityLabel="Répondre"
+              accessibilityLabel={t('messages.reply')}
             >
               <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textMuted }}>
-                Répondre
+                {t('messages.reply')}
               </Text>
             </Pressable>
           )}
@@ -108,7 +110,7 @@ export function CommentRow({
               onPress={() => { haptic.light(); onModerate(comment); }}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Signaler ou bloquer"
+              accessibilityLabel={t('moderation.reportOrBlock')}
               style={{ marginLeft: 'auto' }}
             >
               <I.more size={16} color={colors.textFaint} />

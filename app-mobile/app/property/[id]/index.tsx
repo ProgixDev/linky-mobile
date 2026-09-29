@@ -252,7 +252,7 @@ export default function PropertyDetailRoute() {
                 router.push(`/(tabs)/decouvrir?focusKind=property&focusId=${prop.id}` as never)
               }
               accessibilityRole="button"
-              accessibilityLabel="Voir la visite vidéo"
+              accessibilityLabel={t('property.watchVideoTour')}
               hitSlop={8}
               style={{
                 position: 'absolute',
@@ -302,7 +302,7 @@ export default function PropertyDetailRoute() {
 
         <View style={{ padding: 16 }}>
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-            <Chip variant="soft" label={prop.type === 'location' ? 'Location' : prop.type === 'vente' ? 'Vente' : 'Terrain'} />
+            <Chip variant="soft" label={t(prop.type === 'location' ? 'property.typeRent' : prop.type === 'vente' ? 'property.typeSale' : 'property.typeLand')} />
             {prop.furnished && <Chip variant="saffron" label={t('property.furnished')} />}
           </View>
           <Text variant="titleL" style={{ fontSize: 18, marginBottom: 2 }}>
@@ -425,7 +425,7 @@ export default function PropertyDetailRoute() {
               location IS the product — had no map at all). Itinéraire hands
               off to the device maps app. */}
           <View style={{ marginTop: 14 }}>
-            <MicroLabel label="Localisation" />
+            <MicroLabel label={t('property.location')} />
             <Card padding={12}>
               <PropertyLocationMap lat={prop.gps.lat} lng={prop.gps.lng} label={prop.title} />
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -456,7 +456,7 @@ export default function PropertyDetailRoute() {
                     {formatDistance(prop.distanceToRoadMeters)}
                   </Text>
                   <Text style={{ fontSize: 10, color: colors.accentText, opacity: 0.85 }}>
-                    Accès facile en taxi ou moto
+                    {t('property.easyAccess')}
                   </Text>
                 </View>
               </View>
@@ -468,14 +468,14 @@ export default function PropertyDetailRoute() {
               <TrustStrip tone="primary">
                 <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
                   <Text style={{ fontWeight: '700' }}>{t('property.secureBooking')} </Text>
-                  Ton paiement reste en séquestre jusqu'à ton emménagement. Contacte le propriétaire pour convenir d'une visite avant de réserver.
+                  {t('property.escrowNoteRent')}
                 </Text>
               </TrustStrip>
             ) : (
               <TrustStrip tone="primary">
                 <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
                   <Text style={{ fontWeight: '700' }}>{t('property.securePurchase')} </Text>
-                  Contacte le propriétaire pour visiter le bien avant de t'engager. Ton paiement reste ensuite en séquestre jusqu'à la remise du bien.
+                  {t('property.escrowNoteSale')}
                 </Text>
               </TrustStrip>
             )}
@@ -518,7 +518,7 @@ export default function PropertyDetailRoute() {
 
           {/* Commentaires */}
           <View style={{ marginTop: 18 }}>
-            <MicroLabel label="Commentaires" />
+            <MicroLabel label={t('comments.title')} />
             <ListingComments kind="property" id={prop.id} />
           </View>
         </View>
@@ -567,7 +567,7 @@ export default function PropertyDetailRoute() {
             <Button
               variant="outline"
               block
-              label="Contacter"
+              label={t('property.contact')}
               leading={<I.msg size={16} color={colors.text} />}
               onPress={onChatPress}
               disabled={findOrCreate.isPending || !prop.ownerId}
@@ -582,7 +582,7 @@ export default function PropertyDetailRoute() {
             <Button
               size="lg"
               block
-              label="Acheter via l'application"
+              label={t('property.buyInApp')}
               onPress={() => {
                 if (!requireBuyer()) return;
                 router.push(`/property/${prop.id}/buy` as never);
@@ -591,7 +591,7 @@ export default function PropertyDetailRoute() {
             <Button
               variant="outline"
               block
-              label="Contacter"
+              label={t('property.contact')}
               leading={<I.msg size={16} color={colors.text} />}
               onPress={onChatPress}
               disabled={findOrCreate.isPending || !prop.ownerId}

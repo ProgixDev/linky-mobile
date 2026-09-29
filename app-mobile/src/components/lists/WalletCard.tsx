@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -21,6 +22,7 @@ export function WalletGlanceCard({
   large?: boolean;
 }) {
   const { radii } = useTheme();
+  const { t } = useTranslation();
   return (
     <LinearGradient
       colors={['#0E6E55', '#0A5240', '#0A5240']}
@@ -95,7 +97,7 @@ export function WalletGlanceCard({
             }}
           >
             <I.plus size={14} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Recharger</Text>
+            <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>{t('wallet.topUp')}</Text>
           </Pressable>
         )}
         {onEnvoyer && (
@@ -116,7 +118,7 @@ export function WalletGlanceCard({
             }}
           >
             <I.upload size={14} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Envoyer</Text>
+            <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>{t('common.send')}</Text>
           </Pressable>
         )}
         <Pressable
@@ -137,7 +139,7 @@ export function WalletGlanceCard({
         >
           <I.download size={14} color={large ? '#0A5240' : '#FFFFFF'} />
           <Text style={{ color: large ? '#0A5240' : '#FFFFFF', fontWeight: '600', fontSize: 12 }}>
-            Retirer
+            {t('common.remove')}
           </Text>
         </Pressable>
       </View>

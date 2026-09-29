@@ -276,7 +276,7 @@ export default function CheckoutRoute() {
         return;
       }
       if (payErr) {
-        show(payErr.message || 'Paiement échoué', 'danger');
+        show(payErr.message || t('common.payFailed'), 'danger');
       }
       // Success : webhook flips the order to paid in ~1-3s, the confirmation
       // screen polls until then.
@@ -530,7 +530,7 @@ export default function CheckoutRoute() {
                 <View style={{ flex: 1 }}>
                   {addressesQuery.isLoading ? (
                     <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                      Chargement de l'adresse…
+                      {t('checkout.addressLoading')}
                     </Text>
                   ) : defaultAddress ? (
                     <>
@@ -542,10 +542,10 @@ export default function CheckoutRoute() {
                   ) : (
                     <>
                       <Text style={{ fontSize: 13, fontWeight: '600', color: colors.danger }}>
-                        Aucune adresse de livraison
+                        {t('checkout.noAddress')}
                       </Text>
                       <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
-                        Ajoute une adresse pour être livré
+                        {t('checkout.addAddressHint')}
                       </Text>
                     </>
                   )}
@@ -853,14 +853,14 @@ export default function CheckoutRoute() {
               comme elle l'est sur les annonces et dans le panier. Les trois
               ecrans montrent donc le meme chiffre pour les memes articles, et
               « Sous-total + Livraison » tombe exactement sur « Total ». */}
-          <RecapRow label={`Sous-total (${t('common.feesIncluded').toLowerCase()})`} value={formatGNF(articlesWithFee)} />
+          <RecapRow label={t('checkout.subtotalWithFees', { mention: t('common.feesIncluded').toLowerCase() })} value={formatGNF(articlesWithFee)} />
           <RecapRow
-            label={deliveryMode === 'delivery' ? (shopCount > 1 ? `Livraison (${shopCount} colis)` : 'Livraison') : 'Retrait sur place'}
-            value={deliveryMode === 'delivery' ? formatGNF(deliveryFee) : 'Gratuit'}
+            label={deliveryMode === 'delivery' ? (shopCount > 1 ? t('checkout.deliveryParcels', { n: shopCount }) : t('checkout.delivery')) : t('checkout.pickupTitle')}
+            value={deliveryMode === 'delivery' ? formatGNF(deliveryFee) : t('common.free')}
           />
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 14, fontWeight: '700' }}>Total</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700' }}>{t('common.total')}</Text>
             <Text style={{ fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{formatGNF(total)}</Text>
           </View>
         </Card>
@@ -876,9 +876,9 @@ export default function CheckoutRoute() {
             placeOrder.isPending || placeBatch.isPending || cardFlowBusy
               ? t('checkout.payingCta')
               : loadFailed
-                ? 'Revenir au panier'
+                ? t('checkout.backToCart')
                 : needsAddress
-                  ? 'Ajouter une adresse de livraison'
+                  ? t('checkout.addAddress')
                   : isGiftCart
                     ? t('checkout.giftCta')
                     : t('checkout.payCta', { amount: formatGNF(total) })
