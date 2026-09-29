@@ -38,6 +38,15 @@ FONTS = 'C:/Windows/Fonts/'
 
 W, H = 1080, 1920
 
+# ON ROGNE LA BARRE D'ETAT DU TELEPHONE.
+#
+# Les captures viennent d'un vrai appareil : elles portent l'heure, le niveau de
+# batterie, le debit reseau et les icones de notification de son proprietaire
+# (WhatsApp, Messenger, Slack…). Sur une fiche PUBLIQUE, ca fait negligé et ca
+# expose un peu de sa vie privee. La proportion est celle d'une barre d'etat
+# Android standard ; mettre 0 pour la garder.
+ROGNER_BARRE_ETAT = 0.038
+
 # La palette de la carte du portefeuille — le seul endroit où la marque est
 # déjà posée en couleurs.
 VERT_CLAIR = (17, 136, 102)
@@ -49,14 +58,14 @@ SAFRAN = (232, 165, 61)
 # vignette de quelques centimètres, pas en plein écran.
 LEGENDES = {
     'linky': [
-        "Ton argent, toujours à l'œil",
-        "Trouve ce que tu cherches",
-        "La bonne taille, la bonne couleur",
-        "Paie comme tu veux",
-        "Suis ta commande jusqu'à la remise",
-        "Loue et achète en toute sécurité",
-        "Vends en quelques minutes",
-        "Une place de marché guinéenne",
+        "Le marché guinéen, dans ta poche",
+        "Tout le marché, catégorie par catégorie",
+        "Le vendeur n'est payé qu'après ta confirmation",
+        "Loue ou achète un logement",
+        "Découvre les annonces en un coup d'œil",
+        "Tes ventes encaissées, retirables quand tu veux",
+        "Acheteur, vendeur ou agent : à toi de choisir",
+        "Garde tes coups de cœur",
     ],
     'depose': [
         "Tes courses du jour",
@@ -147,6 +156,9 @@ def habille(chemin_capture, legende, destination):
     capture = Image.open(chemin_capture)
     if capture.mode != 'RGB':
         capture = capture.convert('RGB')
+    if ROGNER_BARRE_ETAT > 0:
+        cw, ch = capture.size
+        capture = capture.crop((0, int(ch * ROGNER_BARRE_ETAT), cw, ch))
 
     d = ImageDraw.Draw(im)
 
