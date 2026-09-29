@@ -323,9 +323,38 @@ qui s'inscrit **ne verra donc aucune course**, et conclura que l'application ne
 fonctionne pas. Le compte de démonstration doit être **déjà approuvé**, et une
 livraison doit lui être assignée pour qu'il y ait quelque chose à l'écran.
 
-Cela suppose deux écritures en base de production que je ne peux pas faire
-d'ici : je fournirai le SQL, ou l'approbation se fait depuis la console admin,
-qui sait déjà le faire.
+### ✅ Levé — mesuré en production le 2026-09-29
+
+Les deux écritures ont déjà eu lieu. Il existe **deux livreurs approuvés**, et
+l'un d'eux a une course en cours :
+
+| compte | e-mail | ce que le relecteur verrait |
+|---|---|---|
+| **Abdoul** | `support@linkygroup.com` | **1 course `in_transit`** (25/09) — liste, itinéraire, écran de remise |
+| Achraf Progix | `achrafbenamrane@proton.me` | 1 course `delivered` (22/08) — historique seulement, aucune course active |
+
+**Donner `support@linkygroup.com`** : c'est le seul des deux qui montre une
+course vivante. L'autre ouvrirait sur une liste vide, exactement ce que cette
+section cherche à éviter.
+
+⚠️ **À revérifier juste avant de soumettre.** Une course `in_transit` finit par
+être livrée, et le compte retomberait sur une liste vide. Il y a **91 courses
+`unassigned`** en base : en assigner une à ce compte depuis la console
+d'administration (*Livraisons*) suffit à rétablir la démonstration. La requête
+qui répond à la question :
+
+```sql
+select u.display_name, e.address, d.status, count(*)
+  from public.deliveries d
+  left join public.users u on u.id = d.livreur_id
+  left join public.emails e on e.user_id = d.livreur_id
+ group by 1,2,3;
+```
+
+⚠️ **Et un second point, indépendant de Play** : `push_tokens` ne contient
+**aucun** jeton pour `app = 'driver'`. Personne ne s'est jamais connecté à Dépose
+depuis un téléphone. Ça ne bloque pas la soumission — mais la notification de
+nouvelle course n'a jamais été vérifiée en conditions réelles, sons compris.
 
 ---
 
@@ -398,5 +427,37 @@ Les trois issues, à trancher par le client :
    l'autorise explicitement tant que l'app ne renvoie pas vers cette page.
 3. **Intégrer Play Billing** pour le boost seul, et accepter la commission.
 
-Aucune de ces trois n'est un changement de code anodin. À décider avant de
-publier, pas après.
+### Ce que la décision coûte vraiment — mesuré le 2026-09-29
+
+**Le boost n'a jamais rien rapporté.** En production :
+
+| | |
+|---|---|
+| boosts créés | **9** — dont **8 annulés** et 1 expiré |
+| réellement payés | **1** |
+| argent encaissé | **5 000 GNF** (une cinquantaine de centimes), sur un compte d'essai |
+
+Il n'y a donc **aucun revenu à protéger**. L'option 1 — soumettre tel quel et
+voir — fait courir un risque de suspension pour une fonctionnalité qui n'a
+jamais servi. C'est le mauvais pari.
+
+**L'option la moins chère n'est aucune des trois : c'est de désactiver l'achat
+in-app pour la publication, et de décider ensuite, sans pression.** Le dépôt
+part sans le point litigieux, et le boost revient quand le client a tranché
+entre la page web et Play Billing.
+
+Ce que ça demande, et le dépôt a déjà deux précédents exacts (`P2P_SEND_ENABLED`
+et `WALLET_TOPUP_ENABLED`, tous deux désactivés de cette façon) :
+
+1. un drapeau `BOOST_PURCHASE_ENABLED` dans `src/lib/flags.ts` ;
+2. masquer les points d'entrée d'achat (`app/pro/boost/new.tsx` et les appels
+   depuis `app/product/[id].tsx` et `app/product/edit/[id].tsx`) ;
+3. `create-boost` renvoie `FEATURE_DISABLED`, pour que la règle ne se contourne
+   pas en appelant l'API autrement ;
+4. une OTA sur les deux canaux.
+
+Les boosts déjà actifs continuent de s'afficher et d'expirer normalement — on
+ferme la vente, pas le mécanisme.
+
+**À trancher avant de publier, pas après** — mais la mesure ci-dessus rend la
+décision beaucoup moins lourde qu'elle n'en avait l'air.
