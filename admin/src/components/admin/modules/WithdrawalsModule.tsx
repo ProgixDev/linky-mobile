@@ -19,7 +19,12 @@
 
 import { useState } from 'react';
 import { Banknote, X, Calendar, Loader2, AlertTriangle, Check } from 'lucide-react';
-import { useWithdrawals, useProcessWithdrawal, type WithdrawalRow } from '@/data/queries/withdrawals';
+import {
+  useWithdrawals,
+  useProcessWithdrawal,
+  useLengopayBalance,
+  type WithdrawalRow,
+} from '@/data/queries/withdrawals';
 
 function initialsOf(name: string | null | undefined): string {
   return (name ?? 'Vendeur')
@@ -43,9 +48,11 @@ function maskDestination(dest: string): string {
 
 export function WithdrawalsModule() {
   const { data: withdrawals, isLoading, isError } = useWithdrawals('pending');
+  const lengopay = useLengopayBalance();
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const pending = withdrawals ?? [];
+  const queueTotal = pending.reduce((n, w) => n + w.amount_minor, 0);
   const active = pending.find((w) => w.id === activeId) ?? pending[0] ?? null;
 
   if (isLoading) {
@@ -73,6 +80,17 @@ export function WithdrawalsModule() {
             {pending.length}
           </span>
         </div>
+
+        {/* LA TRÉSORERIE, FACE À CE QUE LA FILE RÉCLAME.
+            Le montant seul n'apprend rien : c'est la comparaison qui dit si la
+            file est finançable. Un administrateur pouvait jusqu'ici valider des
+            retraits qu'aucun virement ne pourra honorer. */}
+        <TreasuryStrip
+          balance={lengopay.data}
+          loading={lengopay.isLoading}
+          failed={lengopay.isError}
+          queueTotal={queueTotal}
+        />
         <div className="flex-1 space-y-2 overflow-y-auto pr-1">
           {pending.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted">
@@ -133,6 +151,60 @@ export function WithdrawalsModule() {
       ) : (
         <div className="flex items-center justify-center rounded-2xl border border-line bg-surface text-sm text-muted">
           Sélectionne une demande à gauche.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * « Disponible chez LengoPay » face au total de la file.
+ *
+ * Trois états, et ils ne se confondent pas : on ne sait pas encore, on n'a pas
+ * pu savoir, ou on sait. Le troisième seul autorise une comparaison — afficher
+ * « 0 GNF » quand l'appel a échoué ferait croire à une caisse vide.
+ */
+function TreasuryStrip({
+  balance,
+  loading,
+  failed,
+  queueTotal,
+}: {
+  balance?: { available: boolean; amountGnf: number | null; currency: string | null; reason?: string };
+  loading: boolean;
+  failed: boolean;
+  queueTotal: number;
+}) {
+  const unknown = loading || failed || !balance || !balance.available || balance.amountGnf === null;
+  const amount = balance?.amountGnf ?? 0;
+  const short = !unknown && amount < queueTotal;
+
+  return (
+    <div
+      className={`rounded-xl border px-3 py-2.5 text-xs ${
+        short ? 'border-danger/40 bg-danger/8' : 'border-line bg-sunken/40'
+      }`}
+      title={
+        balance?.reason
+          ? `Solde indisponible (${balance.reason})`
+          : 'Solde du compte LengoPay — l\'argent depuis lequel les retraits sont payés'
+      }
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted">Disponible chez LengoPay</span>
+        <span className={`font-bold tabular-nums ${short ? 'text-danger' : ''}`}>
+          {loading ? '…' : unknown ? 'indisponible' : gnf(amount)}
+        </span>
+      </div>
+      {queueTotal > 0 && (
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <span className="text-faint">Total de la file</span>
+          <span className="tabular-nums text-faint">{gnf(queueTotal)}</span>
+        </div>
+      )}
+      {short && (
+        <div className="mt-2 font-semibold text-danger">
+          Le solde ne couvre pas la file : {gnf(queueTotal - amount)} manquants.
         </div>
       )}
     </div>

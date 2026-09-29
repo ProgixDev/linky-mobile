@@ -69,6 +69,42 @@ export function useWithdrawals(scope: 'pending' | 'recent' = 'pending') {
   });
 }
 
+/**
+ * Le solde que LengoPay detient pour Linky.
+ *
+ * C'est l'argent depuis lequel les retraits sont REELLEMENT payes. Jusqu'ici la
+ * console ne montrait que le solde du VENDEUR — ce qu'on lui doit — sans jamais
+ * dire s'il y avait de quoi l'honorer.
+ *
+ * `available: false` veut dire « je n'ai pas pu savoir », et l'ecran doit le
+ * dire ainsi : zero et l'ignorance se ressemblent a l'oeil et ne veulent pas du
+ * tout dire la meme chose sur un ecran d'argent.
+ *
+ * Rafraichi moins souvent que la file : une tresorerie ne bouge pas toutes les
+ * trente secondes, et chaque appel sort chez un tiers.
+ */
+export interface LengopayBalance {
+  available: boolean;
+  amountGnf: number | null;
+  currency: string | null;
+  reason?: string;
+}
+
+export function useLengopayBalance() {
+  return useQuery({
+    queryKey: ['lengopay-balance'],
+    queryFn: async () => {
+      const r = await apiFetch<{ balance: LengopayBalance }>('admin-lengopay-balance', {});
+      if (!r.ok || !r.data) {
+        throw r.error ?? { code: 'UNKNOWN', message_fr: 'Erreur de chargement' };
+      }
+      return r.data.balance;
+    },
+    refetchInterval: 120_000,
+    retry: 1,
+  });
+}
+
 export function useProcessWithdrawal() {
   const qc = useQueryClient();
   return useMutation({

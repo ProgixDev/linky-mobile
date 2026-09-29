@@ -75,6 +75,67 @@ export function lengopayConfigured(): boolean {
   return !!Deno.env.get('LINKY_LENGOPAY_LICENSE_KEY') && !!websiteId();
 }
 
+// ── LE SOLDE DU COMPTE LENGOPAY ────────────────────────────────────────────
+//
+// ┌─ POURQUOI ON EN A BESOIN ───────────────────────────────────────────────┐
+// Les retraits des vendeurs sont payes DEPUIS ce solde : c'est l'argent que
+// Lengopay detient pour Linky. La console des retraits affichait le solde du
+// VENDEUR (ce qu'on lui doit) sans jamais dire s'il y avait de quoi le payer.
+// Un administrateur pouvait donc valider une file de retraits qu'aucun virement
+// ne pourra honorer, et ne le decouvrir qu'au moment de payer.
+//
+// Endpoint releve dans leur documentation officielle le 2026-09-28 (rubrique
+// « Compte ») : GET /api/getbalance/{websiteid}, reponse
+//   { "status": "Success", "balance": "7792", "currency": "GNF" }
+// `balance` arrive en CHAINE, et dans la meme unite que les montants qu'on leur
+// envoie deja (le GNF n'a pas de subdivision) : aucune conversion.
+// └─────────────────────────────────────────────────────────────────────────┘
+
+export interface LengopayBalance {
+  /** Faux = on n'a PAS pu lire le solde. L'ecran doit alors dire qu'il ne sait
+   *  pas, jamais afficher zero : « 0 GNF » et « je n'ai pas pu demander » se
+   *  ressemblent a l'oeil et ne veulent pas du tout dire la meme chose. */
+  available: boolean;
+  amountGnf: number | null;
+  currency: string | null;
+  /** Renseigne quand `available` est faux : NOT_CONFIGURED, HTTP_4xx/5xx,
+   *  BAD_PAYLOAD, NETWORK. Destine au journal et a l'infobulle admin. */
+  reason?: string;
+}
+
+export async function getAccountBalance(): Promise<LengopayBalance> {
+  if (!lengopayConfigured()) {
+    return { available: false, amountGnf: null, currency: null, reason: 'NOT_CONFIGURED' };
+  }
+  try {
+    const res = await fetchWithTimeout(`${baseUrl()}/api/getbalance/${websiteId()}`, {
+      method: 'GET',
+      headers: { ...authHeaders(), 'Accept': 'application/json' },
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error('[lengopay] getbalance HTTP', res.status, body.slice(0, 300));
+      return { available: false, amountGnf: null, currency: null, reason: `HTTP_${res.status}` };
+    }
+    const json = await res.json().catch(() => null) as
+      { status?: string; balance?: string | number; currency?: string } | null;
+    // Le montant peut arriver en chaine ou en nombre selon les endpoints de
+    // Lengopay (leur historique de transactions rend deja `status` tantot
+    // "SUCCESS" tantot 0). On normalise, et on REFUSE ce qu'on ne comprend pas
+    // plutot que de laisser passer un NaN jusqu'a l'ecran.
+    const raw = json?.balance;
+    const n = typeof raw === 'number' ? raw : Number(String(raw ?? '').trim());
+    if (!json || !Number.isFinite(n)) {
+      console.error('[lengopay] getbalance payload inattendu:', JSON.stringify(json).slice(0, 300));
+      return { available: false, amountGnf: null, currency: null, reason: 'BAD_PAYLOAD' };
+    }
+    return { available: true, amountGnf: n, currency: json.currency ?? 'GNF' };
+  } catch (e) {
+    console.error('[lengopay] getbalance threw:', e);
+    return { available: false, amountGnf: null, currency: null, reason: 'NETWORK' };
+  }
+}
+
 // Plafond par transaction signale par le client (25/08 : reunion Lengopay) :
 // Orange Money / MTN via Lengopay refuse au-dela de 15 000 000 GNF. Le
 // decoupage automatique en plusieurs encaissements est une demande separee,
