@@ -482,3 +482,71 @@ actifs continueraient de s'afficher et d'expirer normalement — on fermerait la
 vente, pas le mécanisme.
 
 
+
+---
+
+## 9. Le dépôt lui-même — état au 2026-09-29, 17 h
+
+Tentative réelle de `eas submit`, pas une estimation :
+
+```
+$ npx eas-cli submit --platform android --latest --non-interactive
+Looking up credentials configuration for com.linkygroup.app...
+Google Service Account Keys cannot be set up in --non-interactive mode.
+    Error: submit command failed.
+```
+
+**Aucune clé de compte de service Google n'existe.** C'est le seul verrou qui
+empêche de déposer le binaire depuis le terminal, et il ne peut se lever que
+dans un navigateur.
+
+### Ce qui est prêt, vérifié
+
+| quoi | état |
+|---|---|
+| AAB Linky | **vc19** sur EAS (`0cf10f20…`), construit le 29/09 à 12 h 26 |
+| Profil `submit` | posé dans `eas.json` : piste `internal`, statut `draft` |
+| Clé ignorée par git | oui — `.gitignore:53`, `google-service-account*.json` |
+| Compte de revue Dépose | **`support@linkygroup.com`** : 1 course `in_transit` toujours vivante (mesuré le 29/09 à 17 h), 91 courses non assignées en réserve |
+| Compte de revue Linky | **le même** : les 4 rôles, 1 article actif, 2 biens actifs, 3 commandes achetées, 5 vendues — un seul compte suffit aux deux fiches |
+
+⚠️ **L'AAB vc19 précède le correctif de langue** (commit `d603e44`, avant les
+trois commits i18n de l'après-midi). L'OTA `production` le rattrape au
+lancement, donc un testeur verra les textes corrigés — mais le tout premier
+écran, avant que la mise à jour ne s'applique, vient encore du bundle embarqué.
+Reconstruire l'AAB lève ce détail ; ce n'est pas un motif de rejet.
+
+### Créer la clé — les cinq étapes exactes
+
+1. Play Console → **Configuration → Accès à l'API** → *Créer un compte de service*
+   (le lien envoie sur Google Cloud Console).
+2. Google Cloud → **Comptes de service → Créer**. Un nom suffit, aucun rôle IAM
+   n'est nécessaire à cette étape.
+3. Sur le compte créé → **Clés → Ajouter une clé → Créer → JSON**. Le fichier se
+   télécharge une seule fois.
+4. Retour dans Play Console → **Utilisateurs et autorisations** → inviter
+   l'adresse du compte de service → autorisation **Administrateur des versions**
+   sur les deux applications (au minimum : *Créer et modifier des versions*).
+5. Déposer le fichier dans `app-mobile/google-service-account.json`.
+
+Puis, en une commande :
+
+```
+cd app-mobile
+npx eas-cli submit --platform android --latest --non-interactive
+```
+
+Il part en **brouillon** sur la piste **interne** : rien n'atteint un testeur
+tant que personne n'a cliqué.
+
+### Ce qui reste hors terminal, et bloque la fiche (pas le binaire)
+
+- **Les captures d'écran.** Celles du dossier `play-store-assets/captures/`
+  habillent encore les anciennes prises de vue, faites avec l'application en
+  anglais alors que des libellés restaient en français. Elles sont à REPRENDRE
+  avec l'application en français, l'OTA étant passée. Liste écran par écran en
+  section 4bis ; la légende du Profil existe désormais aussi.
+- **Classification du contenu (IARC)**, **public cible**, **publicités**,
+  **Sécurité des données** : formulaires de la console. Les réponses sont
+  rédigées en sections 3 et 7, il n'y a qu'à les reporter.
+- **Adresse postale complète** pour la politique de confidentialité.
