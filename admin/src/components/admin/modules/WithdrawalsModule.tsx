@@ -170,7 +170,13 @@ function TreasuryStrip({
   failed,
   queueTotal,
 }: {
-  balance?: { available: boolean; amountGnf: number | null; currency: string | null; reason?: string };
+  balance?: {
+    available: boolean;
+    amountGnf: number | null;
+    payoutGnf?: number | null;
+    currency: string | null;
+    reason?: string;
+  };
   loading: boolean;
   failed: boolean;
   queueTotal: number;
@@ -200,6 +206,17 @@ function TreasuryStrip({
         <div className="mt-1 flex items-center justify-between gap-2">
           <span className="text-faint">Total de la file</span>
           <span className="tabular-nums text-faint">{gnf(queueTotal)}</span>
+        </div>
+      )}
+      {/* LA CAISSE DE VERSEMENT, quand LengoPay la renvoie. Elle est DISTINCTE
+          de l'encaissé — ne pas les additionner. Son existence même dit que le
+          décaissement est un produit de leur plateforme, ce que leur API
+          publique ne laissait pas voir ; à zéro, elle n'a jamais été
+          approvisionnée. */}
+      {!unknown && balance?.payoutGnf !== null && balance?.payoutGnf !== undefined && (
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <span className="text-faint">Caisse de versement (Pay Out)</span>
+          <span className="tabular-nums text-faint">{gnf(balance.payoutGnf)}</span>
         </div>
       )}
       {short && (

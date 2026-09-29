@@ -85,7 +85,11 @@ export function useWithdrawals(scope: 'pending' | 'recent' = 'pending') {
  */
 export interface LengopayBalance {
   available: boolean;
+  /** « Pay In » : l'argent encaissé que LengoPay détient pour Linky. */
   amountGnf: number | null;
+  /** « Pay Out » : leur caisse de DÉCAISSEMENT, distincte de la précédente.
+   *  Absente si leur réponse ne la porte pas. Ne jamais additionner les deux. */
+  payoutGnf?: number | null;
   currency: string | null;
   reason?: string;
 }

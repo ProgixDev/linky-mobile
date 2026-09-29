@@ -85,10 +85,27 @@ export function lengopayConfigured(): boolean {
 // ne pourra honorer, et ne le decouvrir qu'au moment de payer.
 //
 // Endpoint releve dans leur documentation officielle le 2026-09-28 (rubrique
-// « Compte ») : GET /api/getbalance/{websiteid}, reponse
+// « Compte ») : GET /api/getbalance/{websiteid}.
+//
+// ⚠️ LEUR DOC MENT SUR LA FORME. Elle annonce :
 //   { "status": "Success", "balance": "7792", "currency": "GNF" }
-// `balance` arrive en CHAINE, et dans la meme unite que les montants qu'on leur
-// envoie deja (le GNF n'a pas de subdivision) : aucune conversion.
+// La PRODUCTION rend, mesure le 2026-09-29 :
+//   { "status":"Success", "balance":{"Pay In":64057.05,"Pay Out":0}, "currency":"GNF" }
+//
+// `balance` est un OBJET a deux entrees, pas une chaine. On accepte les DEUX
+// formes : la documentee (au cas ou elle existe sur d'autres comptes ou
+// reviendrait) et la reelle. C'est la garde « je refuse ce que je ne comprends
+// pas » qui a revele l'ecart — elle a rendu BAD_PAYLOAD au lieu d'afficher un
+// NaN sur un ecran d'argent.
+//
+// « Pay In » = ce qui a ete encaisse, l'argent que Lengopay detient pour Linky.
+// « Pay Out » = une caisse de DECAISSEMENT distincte, a zero aujourd'hui. Sa
+// simple existence dit que le versement est un produit de leur plateforme, ce
+// que leur API B2B publique ne laissait pas voir.
+//
+// Les montants ont des DECIMALES (64057.05) alors que le GNF n'a pas de
+// subdivision chez nous. On arrondit vers le BAS : sur un solde disponible, ne
+// jamais annoncer plus d'argent qu'il n'y en a.
 // └─────────────────────────────────────────────────────────────────────────┘
 
 export interface LengopayBalance {
@@ -96,11 +113,23 @@ export interface LengopayBalance {
    *  pas, jamais afficher zero : « 0 GNF » et « je n'ai pas pu demander » se
    *  ressemblent a l'oeil et ne veulent pas du tout dire la meme chose. */
   available: boolean;
+  /** « Pay In » : l'argent encaisse que Lengopay detient pour Linky. */
   amountGnf: number | null;
+  /** « Pay Out » : leur caisse de decaissement, quand ils la rendent. Distincte
+   *  de la precedente — ne pas les additionner. */
+  payoutGnf?: number | null;
   currency: string | null;
   /** Renseigne quand `available` est faux : NOT_CONFIGURED, HTTP_4xx/5xx,
    *  BAD_PAYLOAD, NETWORK. Destine au journal et a l'infobulle admin. */
   reason?: string;
+}
+
+/** Chaine ou nombre -> nombre. NaN quand ce n'est ni l'un ni l'autre, ce qui
+ *  est exactement le signal que l'appelant teste. */
+function toAmount(x: unknown): number {
+  if (typeof x === 'number') return x;
+  if (typeof x === 'string') return Number(x.trim());
+  return Number.NaN;
 }
 
 export async function getAccountBalance(): Promise<LengopayBalance> {
@@ -118,18 +147,44 @@ export async function getAccountBalance(): Promise<LengopayBalance> {
       return { available: false, amountGnf: null, currency: null, reason: `HTTP_${res.status}` };
     }
     const json = await res.json().catch(() => null) as
-      { status?: string; balance?: string | number; currency?: string } | null;
-    // Le montant peut arriver en chaine ou en nombre selon les endpoints de
-    // Lengopay (leur historique de transactions rend deja `status` tantot
-    // "SUCCESS" tantot 0). On normalise, et on REFUSE ce qu'on ne comprend pas
-    // plutot que de laisser passer un NaN jusqu'a l'ecran.
+      {
+        status?: string;
+        balance?: string | number | Record<string, unknown>;
+        currency?: string;
+      } | null;
+
     const raw = json?.balance;
-    const n = typeof raw === 'number' ? raw : Number(String(raw ?? '').trim());
-    if (!json || !Number.isFinite(n)) {
+    let payIn: number;
+    let payOut: number | null = null;
+
+    if (raw !== null && typeof raw === 'object') {
+      // La forme REELLE. Les cles sont lues sans tenir compte de la casse ni
+      // des espaces : « Pay In » aujourd'hui, « payin » ou « pay_in » demain ne
+      // doivent pas casser un ecran d'argent pour une question de typographie.
+      const flat = new Map<string, unknown>();
+      for (const [k, v] of Object.entries(raw)) {
+        flat.set(k.toLowerCase().replace(/[^a-z]/g, ''), v);
+      }
+      payIn = toAmount(flat.get('payin'));
+      const out = toAmount(flat.get('payout'));
+      payOut = Number.isFinite(out) ? Math.floor(out) : null;
+    } else {
+      // La forme DOCUMENTEE : une chaine ou un nombre.
+      payIn = toAmount(raw);
+    }
+
+    if (!json || !Number.isFinite(payIn)) {
       console.error('[lengopay] getbalance payload inattendu:', JSON.stringify(json).slice(0, 300));
       return { available: false, amountGnf: null, currency: null, reason: 'BAD_PAYLOAD' };
     }
-    return { available: true, amountGnf: n, currency: json.currency ?? 'GNF' };
+    return {
+      available: true,
+      // VERS LE BAS : sur un solde disponible, ne jamais annoncer plus d'argent
+      // qu'il n'y en a.
+      amountGnf: Math.floor(payIn),
+      payoutGnf: payOut,
+      currency: json.currency ?? 'GNF',
+    };
   } catch (e) {
     console.error('[lengopay] getbalance threw:', e);
     return { available: false, amountGnf: null, currency: null, reason: 'NETWORK' };
