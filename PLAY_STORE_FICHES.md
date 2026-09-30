@@ -640,6 +640,37 @@ du côté « place de marché » ; la déclaration ne fait que le refléter.
 ⚠️ **Déclencheur** : si le P2P est réactivé un jour, cette réponse devient
 fausse et doit être refaite.
 
+#### La preuve, relevée le 2026-09-30
+
+La liste RÉELLE du formulaire est plus riche que celle de la documentation
+publique : elle contient une rubrique **« Paiements et transferts »** avec
+*« Paiements mobiles et portefeuilles numériques »* et *« Services de virements
+et transferts d'argent »*. Linky ayant un portefeuille, la question se pose
+vraiment. Elle se tranche dans `app-mobile/src/lib/flags.ts` :
+
+```
+P2P_SEND_ENABLED = false
+// turning Linky into a money-transmitter / e-money service requires
+// a BCRG licence + AML/KYC compliance
+
+WALLET_TOPUP_ENABLED = false
+// a rechargeable balance spendable with third-party sellers meets
+// Guinea's e-money definition (Loi L/2017/031/AN) and would require
+// a BCRG EME agrément
+```
+
+Le portefeuille ne peut donc **ni être rechargé, ni servir à envoyer de
+l'argent**. Il affiche l'état d'un séquestre et accumule les gains d'un vendeur
+jusqu'à son retrait. Le paiement, lui, passe **par ordre** via des rails sous
+agrément (Stripe, Lengopay) — le commentaire du code le dit : *« Orders are
+paid PER-ORDER through licensed rails »*, et nomme la référence visée :
+**« Jumia posture »**.
+
+**Confirmation par Google** : après la réponse « aucune fonctionnalité
+financière », l'étape 2 « Documents » affiche *« vous n'avez pas besoin de
+fournir de documents supplémentaires »*. Cocher « Paiements mobiles et
+portefeuilles numériques » y aurait déclenché une demande d'agréments.
+
 ### Déclaration de santé → non
 
 Linky ne touche ni à la santé, ni au bien-être, ni aux données médicales, ni à
