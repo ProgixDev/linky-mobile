@@ -138,6 +138,59 @@ export async function verifyOtp({
 }
 
 /**
+ * Connexion par E-MAIL + MOT DE PASSE, via la meme fonction que le marketplace.
+ *
+ * Elle existe pour que l'application soit ATTEIGNABLE sans telephone guineen :
+ * un relecteur Google ne peut pas recevoir un SMS au +224, et le champ numero
+ * ne le laisserait meme pas saisir le sien. Sans ce chemin, la fiche Play se
+ * fait recaler sur « Acces a l'application ».
+ *
+ * Le serveur rend le MEME AuthBundle que `otp-verify` — le store persiste donc
+ * la session exactement pareil, sans branche supplementaire.
+ */
+export async function signInWithPassword({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}): Promise<OtpVerifyResult> {
+  try {
+    const data = await apiPost<unknown>({
+      path: '/email-signin',
+      authed: false,
+      body: { email, password },
+    });
+    const parsed = AuthBundleSchema.safeParse(data);
+    if (!parsed.success) return { ok: false, kind: 'error', message: FALLBACK.error };
+    return { ok: true, bundle: parsed.data };
+  } catch (e) {
+    return { ok: false, ...mapErrorMotDePasse(e) };
+  }
+}
+
+/**
+ * Les codes d'erreur de `email-signin` ne sont pas ceux de l'OTP :
+ * AUTH_INVALID_CREDENTIALS (401) et SIGNIN_RATE_LIMITED (429). Les faire passer
+ * par `mapError` les rangerait tous en 'error' avec un message generique.
+ */
+function mapErrorMotDePasse(e: unknown): { kind: OtpErrorKind; message: string } {
+  if (e instanceof ApiError) {
+    if (e.status === 0 || e.code === 'NETWORK_ERROR') {
+      return { kind: 'offline', message: FALLBACK.offline };
+    }
+    if (e.code === 'SIGNIN_RATE_LIMITED') {
+      return { kind: 'rate_limited', message: e.message_fr || FALLBACK.rate_limited };
+    }
+    if (e.code === 'AUTH_INVALID_CREDENTIALS') {
+      return { kind: 'invalid', message: 'E-mail ou mot de passe incorrect.' };
+    }
+    return { kind: 'error', message: e.message_fr || FALLBACK.error };
+  }
+  return { kind: 'error', message: FALLBACK.error };
+}
+
+/**
  * Rotate the session via `session-refresh`. Throws on transport/invalid token (the
  * caller — the auth store's boot path — treats any throw as "signed out"). The
  * response is Zod-validated so a malformed body can never masquerade as a session.

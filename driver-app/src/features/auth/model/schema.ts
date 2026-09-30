@@ -82,6 +82,19 @@ export type TokenBundle = z.infer<typeof TokenBundleSchema>;
  * the UI branches on a typed union (never a raw transport string). The server's
  * own French `message_fr` is carried alongside for display.
  */
+/** Une adresse e-mail plausible. La validation qui compte est serveur ; celle-ci
+ *  evite juste un aller-retour reseau sur une faute de frappe. */
+export const EmailSchema = z
+  .string()
+  .trim()
+  .min(1, 'Entre ton adresse e-mail')
+  .email('Adresse e-mail invalide');
+
+/** Le mot de passe n'est PAS contraint ici : la politique vit sur le serveur, et
+ *  un compte ancien peut porter un mot de passe qui ne la respecte plus. On
+ *  refuse seulement le vide, pour ne pas appeler l'API pour rien. */
+export const PasswordSchema = z.string().min(1, 'Entre ton mot de passe');
+
 export type OtpErrorKind =
   | 'rate_limited' // OTP_RATE_LIMITED — too many requests (per-minute / per-day)
   | 'too_many_attempts' // OTP_TOO_MANY_ATTEMPTS — too many wrong codes

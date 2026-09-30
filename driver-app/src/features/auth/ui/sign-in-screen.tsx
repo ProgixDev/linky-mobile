@@ -33,13 +33,19 @@ export function SignInScreen() {
   const verifyCode = useAuthStore((s) => s.verifyCode);
   const resendCode = useAuthStore((s) => s.resendCode);
   const resetOtp = useAuthStore((s) => s.resetOtp);
+  const signInWithPassword = useAuthStore((s) => s.signInWithPassword);
 
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  // Le chemin e-mail est un ETAT, pas une deduction : `otpId` ne distingue que
+  // numero/code, il ne peut pas porter un troisieme cas.
+  const [parMotDePasse, setParMotDePasse] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resendIn, setResendIn] = useState(0);
 
-  const step = otpId ? 'code' : 'phone';
+  const step = parMotDePasse ? 'password' : otpId ? 'code' : 'phone';
 
   // Resend cooldown countdown (1s tick) — gates the resend button after a send.
   useEffect(() => {
@@ -82,6 +88,12 @@ export function SignInScreen() {
     }
   };
 
+  const onSignInWithPassword = async () => {
+    setSubmitting(true);
+    await signInWithPassword(email, password);
+    setSubmitting(false);
+  };
+
   const onChangePhone = () => {
     setCode('');
     setResendIn(0);
@@ -105,15 +117,59 @@ export function SignInScreen() {
         {/* Form */}
         <View className="gap-4">
           <View className="gap-1">
-            <AppText variant="title">{step === 'phone' ? 'Connexion' : 'Vérification'}</AppText>
+            <AppText variant="title">{step === 'code' ? 'Vérification' : 'Connexion'}</AppText>
             <AppText variant="caption">
-              {step === 'phone'
-                ? 'On t’envoie un code à 6 chiffres par SMS ou WhatsApp pour te connecter.'
-                : `Code envoyé au ${pendingPhone ?? 'ton numéro'}.`}
+              {step === 'password'
+                ? 'Entre l’adresse e-mail et le mot de passe de ton compte Linky.'
+                : step === 'phone'
+                  ? 'On t’envoie un code à 6 chiffres par SMS ou WhatsApp pour te connecter.'
+                  : `Code envoyé au ${pendingPhone ?? 'ton numéro'}.`}
             </AppText>
           </View>
 
-          {step === 'phone' ? (
+          {step === 'password' ? (
+            <>
+              <TextField
+                testID="auth-email"
+                className="flex-none"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="ton@email.com"
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                editable={!submitting}
+              />
+              <TextField
+                testID="auth-password"
+                className="flex-none"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Mot de passe"
+                autoCapitalize="none"
+                autoComplete="current-password"
+                textContentType="password"
+                secureTextEntry
+                editable={!submitting}
+                onSubmitEditing={() => void onSignInWithPassword()}
+              />
+              <Button
+                testID="auth-password-submit"
+                label="Se connecter"
+                loading={submitting}
+                disabled={email.trim().length === 0 || password.length === 0}
+                onPress={() => void onSignInWithPassword()}
+              />
+              <Button
+                testID="auth-use-phone"
+                variant="ghost"
+                label="Utiliser mon numéro"
+                disabled={submitting}
+                onPress={() => setParMotDePasse(false)}
+              />
+            </>
+          ) : step === 'phone' ? (
             <>
               <TextField
                 testID="auth-phone"
@@ -137,6 +193,15 @@ export function SignInScreen() {
                 loading={submitting}
                 disabled={phone.trim().length === 0}
                 onPress={() => void onSendCode()}
+              />
+              {/* Le chemin sans telephone. Discret — le flux normal d'un livreur
+                  reste le numero — mais toujours atteignable. */}
+              <Button
+                testID="auth-use-password"
+                variant="ghost"
+                label="Se connecter avec un e-mail"
+                disabled={submitting}
+                onPress={() => setParMotDePasse(true)}
               />
             </>
           ) : (

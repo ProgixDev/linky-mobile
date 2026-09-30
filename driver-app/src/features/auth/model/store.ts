@@ -8,11 +8,19 @@ import { appStorage } from '@/shared/lib/storage';
 import {
   refreshSession,
   requestOtp,
+  signInWithPassword as apiSignInWithPassword,
   updateProfile as apiUpdateProfile,
   verifyOtp,
   type ProfilePatch,
 } from '../lib/auth-api';
-import { AuthUserSchema, GnPhoneSchema, OtpCodeSchema, type AuthUser } from './schema';
+import {
+  AuthUserSchema,
+  EmailSchema,
+  GnPhoneSchema,
+  OtpCodeSchema,
+  PasswordSchema,
+  type AuthUser,
+} from './schema';
 
 type Status = 'loading' | 'authenticated' | 'unauthenticated';
 type Result = { ok: true } | { ok: false; error: string };
@@ -57,6 +65,15 @@ type AuthState = {
   verifyCode: (code: string) => Promise<Result>;
   /** Renvoie un code au numero en cours (l'ecran impose le delai d'attente). */
   resendCode: () => Promise<Result>;
+  /**
+   * Connexion par e-mail + mot de passe — le chemin SANS telephone.
+   *
+   * Il existe parce qu'un relecteur Google ne peut pas recevoir un SMS sur un
+   * numero guineen, et que le champ numero ne le laisserait meme pas saisir le
+   * sien. Sans ce chemin, la fiche Play est recalee sur « Acces a
+   * l'application ». Il depanne aussi un livreur qui a perdu son telephone.
+   */
+  signInWithPassword: (email: string, password: string) => Promise<Result>;
   /** Retour a l'etape du numero (annule l'OTP en cours). */
   resetOtp: () => void;
   signOut: () => Promise<void>;
@@ -132,6 +149,39 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ error: result.message });
       return { ok: false, error: result.message };
     }
+    await session.set(result.bundle);
+    await cacheUser(result.bundle.user);
+    set({
+      user: result.bundle.user,
+      status: 'authenticated',
+      error: null,
+      otpId: null,
+      pendingPhone: null,
+      devCode: null,
+    });
+    return { ok: true };
+  },
+
+  signInWithPassword: async (email, password) => {
+    const e = EmailSchema.safeParse(email);
+    if (!e.success) {
+      const error = e.error.issues[0]?.message ?? 'Adresse e-mail invalide';
+      set({ error });
+      return { ok: false, error };
+    }
+    const mdp = PasswordSchema.safeParse(password);
+    if (!mdp.success) {
+      const error = mdp.error.issues[0]?.message ?? 'Entre ton mot de passe';
+      set({ error });
+      return { ok: false, error };
+    }
+    set({ error: null });
+    const result = await apiSignInWithPassword({ email: e.data, password: mdp.data });
+    if (!result.ok) {
+      set({ error: result.message });
+      return { ok: false, error: result.message };
+    }
+    // Meme AuthBundle que l'OTP : on persiste exactement pareil.
     await session.set(result.bundle);
     await cacheUser(result.bundle.user);
     set({

@@ -1,6 +1,6 @@
 import { session } from '@/shared/lib/session';
 
-import { requestOtp, verifyOtp, refreshSession } from '../lib/auth-api';
+import { requestOtp, verifyOtp, refreshSession, signInWithPassword } from '../lib/auth-api';
 import { useAuthStore } from '../model/store';
 
 jest.mock('@/shared/lib/session', () => ({
@@ -16,12 +16,14 @@ jest.mock('../lib/auth-api', () => ({
   requestOtp: jest.fn(),
   verifyOtp: jest.fn(),
   refreshSession: jest.fn(),
+  signInWithPassword: jest.fn(),
 }));
 
 const mockSession = session as jest.Mocked<typeof session>;
 const mockRequestOtp = requestOtp as jest.Mock;
 const mockVerifyOtp = verifyOtp as jest.Mock;
 const mockRefreshSession = refreshSession as jest.Mock;
+const mockSignInWithPassword = signInWithPassword as jest.Mock;
 
 const bundle = {
   access_token: 'a.b.c',
@@ -205,5 +207,57 @@ describe('session lifecycle', () => {
     expect(mockSession.clear).toHaveBeenCalled();
     expect(useAuthStore.getState().status).toBe('unauthenticated');
     expect(useAuthStore.getState().user).toBeNull();
+  });
+});
+
+describe('signInWithPassword — le chemin SANS telephone', () => {
+  // Ce chemin existe pour qu'un relecteur Google puisse entrer : il ne peut pas
+  // recevoir un SMS sur un numero guineen, et le champ numero ne le laisserait
+  // meme pas saisir le sien.
+
+  it('refuse une adresse invalide sans appeler le reseau', async () => {
+    const result = await useAuthStore.getState().signInWithPassword('pas-un-email', 'secret');
+
+    expect(result.ok).toBe(false);
+    expect(mockSignInWithPassword).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().status).not.toBe('authenticated');
+  });
+
+  it('refuse un mot de passe vide sans appeler le reseau', async () => {
+    const result = await useAuthStore.getState().signInWithPassword('a@b.com', '');
+
+    expect(result.ok).toBe(false);
+    expect(mockSignInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('persiste la session exactement comme le code OTP', async () => {
+    mockSignInWithPassword.mockResolvedValue({ ok: true, bundle });
+
+    const result = await useAuthStore.getState().signInWithPassword('  A@B.com  ', 'secret');
+
+    expect(result.ok).toBe(true);
+    // L'adresse est normalisee (trim) avant de partir.
+    expect(mockSignInWithPassword).toHaveBeenCalledWith({
+      email: 'A@B.com',
+      password: 'secret',
+    });
+    expect(mockSession.set).toHaveBeenCalledWith(bundle);
+    expect(useAuthStore.getState().status).toBe('authenticated');
+    expect(useAuthStore.getState().user).toEqual(bundle.user);
+  });
+
+  it('remonte un identifiant refuse sans ouvrir de session', async () => {
+    mockSignInWithPassword.mockResolvedValue({
+      ok: false,
+      kind: 'invalid',
+      message: 'E-mail ou mot de passe incorrect.',
+    });
+
+    const result = await useAuthStore.getState().signInWithPassword('a@b.com', 'faux');
+
+    expect(result.ok).toBe(false);
+    expect(mockSession.set).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().status).not.toBe('authenticated');
+    expect(useAuthStore.getState().error).toBe('E-mail ou mot de passe incorrect.');
   });
 });
