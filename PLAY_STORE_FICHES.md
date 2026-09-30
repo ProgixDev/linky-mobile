@@ -590,3 +590,52 @@ tant que personne n'a cliqué.
   **Sécurité des données** : formulaires de la console. Les réponses sont
   rédigées en sections 3 et 7, il n'y a qu'à les reporter.
 - **Adresse postale complète** pour la politique de confidentialité.
+
+---
+
+## 10. Les déclarations que la piste fermée réclame
+
+Relevées le 2026-09-30 en tentant de créer la release en test fermé. Cinq
+erreurs bloquantes, dont deux qui n'étaient prévues nulle part.
+
+### Pays et régions — le piège du test fermé
+
+**Sélectionner TOUS les pays.** Un testeur situé dans un pays non coché ne peut
+pas installer l'application, et il ne comptera jamais dans les 12. La communauté
+de testeurs peut être n'importe où. Sur une piste fermée ça ne coûte rien :
+seuls les gens de la liste de diffusion y ont accès de toute façon. On
+restreindra à la Guinée au moment de la production, si on le souhaite.
+
+### Fonctionnalités financières → « aucune »
+
+Réponse : **« Mon application ne propose aucune fonctionnalité financière ».**
+
+La liste que Google propose est fermée et ne contient rien qui corresponde :
+prêt personnel, facilitateur de prêt, prêt sur salaire, banque, ligne de crédit,
+avance sur salaire, microfinance, programme de points, paiement fractionné ;
+portefeuille et échange de **cryptomonnaie**, NFT, trading d'actions,
+financement participatif ; surveillance de crédit, conseil financier, assurance.
+
+Le portefeuille Linky ne conserve que le produit des ventes en attente de
+retrait — c'est du paiement de place de marché, et la seule entrée
+« portefeuille » de la liste vise les cryptomonnaies.
+
+Ce qui rend la réponse défendable plutôt qu'optimiste : **l'envoi d'argent entre
+particuliers a été retiré le 2026-07-02 précisément parce qu'il aurait exigé une
+licence de transmetteur de fonds BCRG**. Le périmètre a été choisi pour rester
+du côté « place de marché » ; la déclaration ne fait que le refléter.
+
+⚠️ **Déclencheur** : si le P2P est réactivé un jour, cette réponse devient
+fausse et doit être refaite.
+
+### Déclaration de santé → non
+
+Linky ne touche ni à la santé, ni au bien-être, ni aux données médicales, ni à
+la recherche clinique. Aucune case à cocher.
+
+### Les deux autres
+
+- **« Ajoutez une description complète »** : le texte est en section 1.
+- **« Votre application n'est pas encore prête à être publiée »** : erreur
+  parapluie, elle tombe quand le reste est fait. Le tableau de bord de
+  l'application liste ce qui manque dans l'ordre.
