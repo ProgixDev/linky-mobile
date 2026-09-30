@@ -850,3 +850,78 @@ compte : **Non**, le mecanisme n'existe pas.
 developpeur, decrire clairement la demarche, et preciser quelles donnees sont
 supprimees ou conservees et combien de temps. La page repond, son CONTENU n'a
 pas ete verifie contre ces trois exigences.
+
+---
+
+## 13. Où en est le dossier — 2026-09-30, fin de journée
+
+### ✅ Envoyé à Google pour examen
+
+Les dix déclarations de **Contenu de l'application** sont traitées, la fiche
+Play Store est complète, et la version de **test fermé (Alpha)** est partie en
+revue. La page « Vue d'ensemble de la publication » affiche *« Modifications en
+cours d'examen »*.
+
+| Étape | État |
+|---|---|
+| Règles de confidentialité | ✅ `linkygroup.com/legal/privacy` (vérifiée, 200) |
+| Informations de connexion | ✅ `support.linky@gmail.com` + mot de passe |
+| Annonces | ✅ Non |
+| Classification du contenu | ✅ voir §11 |
+| Cible et contenu | ✅ 18+, sans restriction Google des mineurs |
+| Sécurité des données | ✅ voir §12 |
+| Applis gouvernementales | ✅ Non |
+| Fonctionnalités financières | ✅ aucune, voir §10 |
+| Santé | ✅ aucune |
+| Identifiant publicitaire | ✅ Non |
+| Catégorie et coordonnées | ✅ Shopping |
+| Fiche Play Store | ✅ complète |
+| Test fermé Alpha | ✅ tous pays + groupe Google, envoyé en revue |
+
+### ⚠️ Le compte de revue a changé
+
+Ce n'est **PLUS** `support@linkygroup.com` : sa boîte est chez Hostinger et
+personne ne la relève — trois codes de connexion y dorment. Le compte donné à
+Google est **`support.linky@gmail.com`**, un compte Linky distinct (rôles
+acheteur, vendeur, agent) dont le Gmail est réellement lu. Mot de passe
+redéfini le 2026-09-30 via Réglages → Mot de passe.
+
+⚠️ Ce compte n'a **aucune annonce ni bien à lui** : « Mes annonces » et le
+tableau de bord immobilier sont vides pour le relecteur. Le catalogue public,
+lui, est plein. Publier un article et un bien depuis ce compte comblerait
+l'écart en cinq minutes.
+
+### Les captures déposées sont PROVISOIRES
+
+Ce sont les huit habillages de `play-store-assets/captures/`, construits sur des
+prises de vue **antérieures au correctif de langue** : app en anglais avec des
+libellés restés en français. Déposées volontairement pour ne pas retarder de
+deux semaines le compteur du test fermé. **À remplacer avant la publication en
+production** — une fiche se modifie à tout moment sans rien remettre à zéro.
+
+### Testers Community — 15 testeurs
+
+Compte **PROGIX Inc**, formule Starter, **2 crédits** restants. Leur méthode :
+ajouter le groupe **`testers-community@googlegroups.com`** sous *Groupes* (pas
+*Listes de diffusion*) dans l'onglet Testeurs de la piste fermée — fait — puis
+soumettre l'app sur leur site avec le **lien d'inscription réel**, qui n'existe
+qu'une fois la version de test fermé publiée.
+
+Ils comptent **16 jours** et non 14, et garantissent le remboursement si l'accès
+production est refusé.
+
+⚠️ **Exigence qu'eux seuls signalent** : *« In the 14 days of closed testing,
+publish at least 3 new releases of your app. »* Ce sont de vrais AAB déposés,
+pas des OTA — une mise à jour OTA ne crée aucune version côté Play.
+
+Ça tombe bien : **le vc19 ne contient pas le correctif de langue** (construit à
+12 h 26, les trois commits i18n sont de l'après-midi). Un rebuild est donc la
+version 2 toute trouvée, et les captures refaites la version 3.
+
+### La suite, dans l'ordre
+
+1. Attendre la validation de la version de test fermé
+2. Récupérer le lien d'inscription dans *Tests fermés – Alpha → Testeurs*
+3. Le coller dans *Testing URL* chez Testers Community et soumettre (1 crédit)
+4. Vérifier que le compteur « testeurs inscrits » dépasse 12
+5. Reprendre les captures en français, reconstruire un AAB, le déposer
