@@ -639,3 +639,91 @@ la recherche clinique. Aucune case à cocher.
 - **« Votre application n'est pas encore prête à être publiée »** : erreur
   parapluie, elle tombe quand le reste est fait. Le tableau de bord de
   l'application liste ce qui manque dans l'ordre.
+
+---
+
+## 11. Classification IARC — les 21 réponses, telles que validées
+
+Relevé le 2026-09-30 en remplissant le questionnaire pour Linky. La section 7
+donnait les grandes lignes ; voici les réponses exactes, question par question.
+
+**Catégorie : « Tous les autres types d'applications »** — pas « Social ou
+Communication », dont la définition est *« l'objectif principal est de rencontrer
+des personnes ou de communiquer avec elles »*. Linky a une messagerie, mais au
+service de la transaction. Cocher « Social » déclencherait un questionnaire plus
+strict et une classification plus haute, pour une application qui n'est pas un
+réseau social.
+
+**Adresse e-mail du questionnaire** : `support.linky@gmail.com` — une boîte
+réellement relevée. Le courrier de `linkygroup.com` part chez Hostinger et
+personne ne l'ouvre (constaté le 2026-09-30).
+
+| # | Question | Réponse |
+|---|---|---|
+| 1 | Contenu pertinent aux évaluations dans le paquet | Non |
+| 2 | Les utilisateurs peuvent interagir / échanger du contenu | **Oui** |
+| 3 | Le contenu généré par l'utilisateur est la source PRINCIPALE | Non ⚠ |
+| 4 | Partage public de nudité | Non |
+| 5 | Partage public de violence explicite | Non |
+| 6 | Possibilité de **bloquer** | **Oui** |
+| 7 | Possibilité de **signaler** | **Oui** |
+| 8 | Modération des conversations | Non ⚠ |
+| 9 | Interactions limitées aux amis invités | Non |
+| 10 | Contenu hors paquet accessible depuis l'app | **Oui** ⚠ |
+| 11 | Violence | Non |
+| 12 | Sexualité | Non |
+| 13 | Propos potentiellement choquants | Non |
+| 14 | Drogues illégales ou récréatives | Non |
+| 15 | Axée sur des produits assujettis à l'âge | Non |
+| 16 | Partage la position précise avec d'autres utilisateurs | Non (Dépose : **Oui**) |
+| 17 | Achat d'articles numériques | **Oui** — le boost |
+| 18 | Achats à **éléments aléatoires** (loot boxes) | **Non** 🔴 |
+| 19 | Récompenses en espèces, cartes cadeaux, play-to-earn, crypto, NFT | Non |
+| 20 | Navigateur ou moteur de recherche | Non |
+| 21 | Produit d'actualité ou d'éducation | Non |
+
+### 🔴 Le piège de la question 18
+
+Elle apparaît en sous-question dès qu'on répond « Oui » à la 17, et une réponse
+« Oui » par réflexe coûte cher. Mesuré : elle faisait passer le **Brésil à 18+**,
+l'**Allemagne à USK 12** avec le descripteur « Augmentation des primes
+incitatives à l'achat », et collait « (inclut des éléments aléatoires) » à la
+mention « Achats dans l'application » **dans le monde entier**.
+
+Or le boost n'a rien d'aléatoire — quatre paliers affichés
+(`_shared/boost.ts`) : 3 j / 5 000, 7 j / 10 000, 14 j / 17 500, 30 j / 30 000.
+Aucun `Math.random` nulle part. Réponse **Non**. Après correction : Brésil 14+,
+Allemagne Tous publics, descripteur disparu.
+
+### ⚠ Les trois réponses contre-intuitives
+
+**Q3 — « Non », alors qu'on croirait « Oui ».** Les annonces sont bien écrites
+par des vendeurs. Mais Google tranche lui-même dans ce questionnaire : les
+questions 11 à 14 répètent *« le contenu créé par les vendeurs dans le cadre du
+catalogue doit être pris en compte, cependant cette question ne porte pas sur le
+contenu généré par les utilisateurs (les commentaires et les avis) »*. Dans leur
+vocabulaire : annonces = **catalogue**, contenu généré = **commentaires et
+avis**. Ces derniers ne sont pas la source principale du contenu de Linky.
+
+**Q8 — « Non », et c'est assumé.** Les conversations ne sont ni filtrées ni
+relues : aucun point d'entrée de signalement dans `app/messages/` (vérifié).
+Ce qui existe — signaler, bloquer, console d'administration — est déjà déclaré
+aux questions 6 et 7. Répondre « Oui » affirmerait un dispositif que Google ne
+trouverait pas. Le coût du « Non » est nul, le public étant déclaré 18+.
+*Pour pouvoir répondre « Oui » un jour : brancher la feuille de signalement
+existante sur un fil de messages avec `targetKind: 'user'`. Le mécanisme est
+là, il manque le point d'entrée.*
+
+**Q10 — « Oui ».** Le libellé détaillé donne le cas en exemple : *« listes de
+produits dans l'application Amazon Shopping »*. Le catalogue de Linky n'est pas
+embarqué dans l'APK, et l'app propose en plus des descriptions rédigées par IA.
+
+### Classifications obtenues
+
+Brésil 14+ · Amérique du Nord Tout public · Europe PEGI 3 · Allemagne USK Tous
+publics · Reste du monde 3+ · Russie 3+ · Corée du Sud 3+.
+Partout : « Interactivité des utilisateurs » et « Achats in-app ».
+
+Le 14+ brésilien vient de la combinaison interactivité + achats intégrés ;
+ClassInd est plus sévère sur l'interaction. Sans effet pratique, le public
+déclaré étant 18+.
