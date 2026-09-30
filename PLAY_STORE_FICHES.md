@@ -514,6 +514,17 @@ Account Email:  play-deploy@adept-parsec-489716-f4.iam.gserviceaccount.com
 
 Suivi : https://expo.dev/accounts/linkyorg/projects/linky/submissions/e3044efc-6405-42c7-9322-d7f4744971e8
 
+**Lien d'inscription au test interne** (à ouvrir avec un compte Google figurant
+sur la liste de diffusion, aucun autre ne fonctionne) :
+
+```
+https://play.google.com/apps/internaltest/4700924577001000108
+```
+
+⚠️ Ce lien ne sert PAS aux 12 testeurs. Le test interne ne declenche aucun
+compteur : l'exigence des 12 testeurs inscrits 14 jours en continu porte sur le
+**test fermé**, et il aura son propre lien.
+
 La clé vit dans le projet Cloud **`adept-parsec-489716-f4`** (« My Maps Project »),
 pas dans `linky-757d0` : c'est là que l'API Google Play Android Developer a été
 activée, et le compte de service doit vivre dans le projet où elle l'est. Celui
