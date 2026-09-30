@@ -173,6 +173,18 @@ def fond():
     return im
 
 
+def pastille(im, d, index, total):
+    """« 3/8 » en haut a droite — on fait defiler une fiche Play, savoir ou l'on
+    est dans la serie donne envie de la parcourir en entier."""
+    f = police('segoeui.ttf', 24)
+    texte = '%d/%d' % (index, total)
+    l = d.textlength(texte, font=f)
+    x1, y1 = W - MARGE - l - 30, 104
+    d.rounded_rectangle([x1, y1, x1 + l + 30, y1 + 44], radius=22,
+                        fill=(255, 255, 255, 0), outline=(255, 255, 255, 60), width=2)
+    d.text((x1 + 15, y1 + 7), texte, font=f, fill=TEXTE_DOUX)
+
+
 def coupe(d, texte, f, largeur):
     """Découpe une phrase en lignes qui tiennent dans `largeur`."""
     lignes, cour = [], ''
@@ -222,8 +234,10 @@ def telephone(capture, largeur):
     return tel, ombre
 
 
-def habille(chemin_capture, legende, destination):
-    titre1, titre2, phrase = legende
+def habille(chemin_capture, legende, destination, index=1, total=1):
+    # Une legende porte 3 morceaux, ou 4 si elle impose l'appareil ENTIER.
+    titre1, titre2, phrase = legende[0], legende[1], legende[2]
+    entier = len(legende) > 3 and legende[3] == 'entier'
     im = fond()
     d = ImageDraw.Draw(im)
 
@@ -256,17 +270,32 @@ def habille(chemin_capture, legende, destination):
     while len(lignes) > 2 and f_phrase.size > 24:
         f_phrase = police('segoeui.ttf', f_phrase.size - 2)
         lignes = coupe(d, phrase, f_phrase, dispo)
-    y += 14
+    # Un peu d'air entre le titre et la phrase : colles l'un a l'autre, ils se
+    # lisent comme un seul bloc et le titre perd sa force.
+    y += 26
     for l in lignes:
         d.text((MARGE, y), l, font=f_phrase, fill=TEXTE_DOUX)
         y += f_phrase.size + 10
 
-    # ── LE TÉLÉPHONE, QUI DÉBORDE PAR LE BAS ──────────────────────────────
-    tel, ombre = telephone(capture, LARGEUR_TEL)
-    x = (W - LARGEUR_TEL) // 2
+    # ── L'APPAREIL ────────────────────────────────────────────────────────
     haut = y + 58
+    if entier:
+        # Appareil ENTIER : on deduit la largeur de la hauteur disponible, pour
+        # que rien ne soit coupe. Sert aux ecrans dont l'information vit en bas.
+        dispo_h = H - haut - 56
+        cw, ch = capture.size
+        largeur = min(LARGEUR_TEL, int((dispo_h - 26) * cw / ch))
+    else:
+        largeur = LARGEUR_TEL
+
+    tel, ombre = telephone(capture, largeur)
+    x = (W - largeur) // 2
+
     im.paste(ombre, (x - 80, haut - 80 + 24), ombre)
     im.paste(tel, (x, haut), tel)   # ce qui dépasse de 1920 est simplement coupé
+
+    if total > 1:
+        pastille(im, d, index, total)
 
     im.save(destination, 'PNG', optimize=True)
     return im.size
@@ -291,7 +320,7 @@ def main():
             legendes = table.get(app, [])
             legende = legendes[i] if i < len(legendes) else ('', '', '')
             dst = os.path.join(SORTIE, '%s-%d.png' % (app, i + 1))
-            habille(f, legende, dst)
+            habille(f, legende, dst, index=i + 1, total=len(fichiers))
             print('   %-12s -> %-16s « %s %s »'
                   % (os.path.basename(f), os.path.basename(dst), legende[0], legende[1]))
             total += 1
