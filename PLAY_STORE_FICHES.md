@@ -500,6 +500,35 @@ Google Service Account Keys cannot be set up in --non-interactive mode.
 empêche de déposer le binaire depuis le terminal, et il ne peut se lever que
 dans un navigateur.
 
+### ✅ DÉPOSÉ — 2026-09-30
+
+Le binaire est **sur la piste de test interne**, en brouillon.
+
+```
+Release track:  internal
+Release status: DRAFT
+Version code:   19
+Account Email:  play-deploy@adept-parsec-489716-f4.iam.gserviceaccount.com
+✔ Submitted your app to Google Play Store!
+```
+
+Suivi : https://expo.dev/accounts/linkyorg/projects/linky/submissions/e3044efc-6405-42c7-9322-d7f4744971e8
+
+La clé vit dans le projet Cloud **`adept-parsec-489716-f4`** (« My Maps Project »),
+pas dans `linky-757d0` : c'est là que l'API Google Play Android Developer a été
+activée, et le compte de service doit vivre dans le projet où elle l'est. Celui
+des notifications reste donc séparé — si l'un est révoqué, l'autre survit.
+
+Droits accordés au compte de service, volontairement étroits : *afficher les
+informations*, *versions provisoires*, **déployer sur des canaux de test**,
+*gérer les canaux de test*. Ni **Administrateur** (qui laisserait une clé posée
+sur un disque inviter et supprimer des utilisateurs), ni **mise à disposition de
+tous les utilisateurs** (la publication publique) — cette dernière se coche en
+trente secondes le jour de la vraie sortie.
+
+⚠️ `DRAFT` veut dire que **rien n'atteint un testeur** tant que personne n'a
+cliqué sur « Commencer le déploiement » dans la console.
+
 ### Ce qui est prêt, vérifié
 
 | quoi | état |
