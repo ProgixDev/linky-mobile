@@ -168,6 +168,18 @@ Toutes sont **associées à l'identité** de l'utilisateur (compte nominatif) et
 | Activité dans l'app | Autre contenu généré | Oui | Annonces, avis, commentaires |
 | ID de l'appareil | ID de l'appareil ou autres ID | Oui | Notifications push |
 
+⚠️ **Deux categories MANQUAIENT a ce tableau**, decouvertes en remplissant le
+formulaire le 2026-09-30 — a ne pas oublier pour la fiche Depose :
+
+| Categorie | Type | Obligatoire | Finalite |
+|---|---|---|---|
+| Messages | Autres messages via une appli | Non | Fonctionnalite |
+| Photos et videos | **Videos** | Non | Fonctionnalite |
+
+Les messages sont bien stockes (table `messages`), et un vendeur peut joindre
+une **video** a son article comme un agent une visite video a son bien — les
+deux ont ete verifies dans le code.
+
 **Ne PAS déclarer** : numéro de carte bancaire et codes Mobile Money — ils sont
 saisis chez le prestataire de paiement et ne transitent jamais par l'app.
 Les pièces d'identité du parcours de vérification sont traitées directement par
@@ -727,3 +739,83 @@ Partout : « Interactivité des utilisateurs » et « Achats in-app ».
 Le 14+ brésilien vient de la combinaison interactivité + achats intégrés ;
 ClassInd est plus sévère sur l'interaction. Sans effet pratique, le public
 déclaré étant 18+.
+
+---
+
+## 12. Securite des donnees — les reponses, telles que validees
+
+Formulaire rempli le 2026-09-30. Trois reponses ne changent JAMAIS, sur les
+quatorze fiches :
+
+- **Collectees**, jamais « Partagees ». Supabase, Stripe, Lengopay, Mapbox,
+  Twilio sont des prestataires agissant pour le compte du developpeur — ce
+  n'est pas un transfert a un tiers au sens de Google. Resultat public sur la
+  fiche : **« Aucune donnee partagee avec des tiers »**.
+- **Traitement ephemere : Non** — tout est conserve en base.
+- **Jamais « Publicite ou marketing »** comme finalite : l'app a declare ne
+  contenir aucune publicite, ce serait se contredire.
+
+| Donnee | Requise ? | Finalites |
+|---|---|---|
+| Nom | **Requise** | Fonctionnement + Gestion des comptes |
+| Adresse e-mail | Peut choisir | Fonctionnement + Gestion des comptes |
+| Numero de telephone | Peut choisir | Fonctionnement + Gestion des comptes |
+| Adresse postale | Peut choisir | Fonctionnement + Gestion des comptes |
+| Historique des achats | **Requise** | Fonctionnement |
+| Autres infos financieres | **Requise** | Fonctionnement |
+| Position approximative | Peut choisir | Fonctionnement |
+| Position exacte | Peut choisir | Fonctionnement |
+| Autres messages via une appli | Peut choisir | Fonctionnement |
+| Photos | Peut choisir | Fonctionnement |
+| Videos | Peut choisir | Fonctionnement |
+| Interactions avec l'appli | **Requise** | Fonctionnement |
+| Autre contenu genere par l'utilisateur | Peut choisir | Fonctionnement |
+| ID de l'appareil | Peut choisir | Fonctionnement + **Communications du developpeur** |
+
+### Les arbitrages, pour ne pas les refaire
+
+**E-mail et telephone « peut choisir »** : on s'inscrit avec l'un OU l'autre.
+Qui cree son compte par telephone ne donne jamais d'e-mail. Aucun des deux
+n'est donc obligatoire pris isolement.
+
+**ID de l'appareil, seule fiche avec « Communications du developpeur »** : le
+jeton sert precisement a envoyer les notifications. Ne PAS cocher « Publicite
+ou marketing » : la case vise les notifications qui *promeuvent* un produit,
+celles de Linky sont transactionnelles.
+
+**Interactions avec l'appli « requise », finalite Fonctionnement et pas
+Analyse** : le compteur de vues tourne des qu'une annonce est ouverte, et le
+nombre est *rendu au vendeur* (« 27 vues »). C'est une fonctionnalite affichee,
+pas du pilotage interne.
+
+**Position : AU PREMIER PLAN uniquement.** Aucune permission
+`ACCESS_BACKGROUND_LOCATION`, seul `watchPositionAsync` (reverifie 2026-09-30).
+Declarer l'arriere-plan imposerait une declaration speciale et une video de
+demonstration.
+
+**Informations de paiement : NON collectees.** Numeros de carte et codes Mobile
+Money sont saisis chez le prestataire et ne transitent jamais par l'app.
+Idem pour les pieces d'identite : le prestataire KYC les traite, l'app ne garde
+que le *resultat*.
+
+### ⚠ Le seul point qui engage juridiquement
+
+L'**adresse de livraison** est transmise au livreur assigne. « Partagees » a ete
+laisse vide, au motif que l'exception de Google couvre un transfert que
+l'utilisateur DECLENCHE lui-meme en commandant, et qui est necessaire a la
+prestation demandee. Un livreur n'est pas un tiers destinataire, c'est
+l'executant de la livraison commandee.
+
+C'est defendable, et c'est la seule reponse du formulaire qui merite une
+relecture posee avec le client.
+
+### Suppression des donnees
+
+URL : `https://linkygroup.com/legal/suppression-compte` — **verifiee, repond
+200** (comme `/legal/privacy`). Suppression partielle sans supprimer le
+compte : **Non**, le mecanisme n'existe pas.
+
+⚠️ Google exige de cette page trois choses : nommer l'application ou le
+developpeur, decrire clairement la demarche, et preciser quelles donnees sont
+supprimees ou conservees et combien de temps. La page repond, son CONTENU n'a
+pas ete verifie contre ces trois exigences.
