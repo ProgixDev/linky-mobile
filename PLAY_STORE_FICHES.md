@@ -899,6 +899,20 @@ libellés restés en français. Déposées volontairement pour ne pas retarder d
 deux semaines le compteur du test fermé. **À remplacer avant la publication en
 production** — une fiche se modifie à tout moment sans rien remettre à zéro.
 
+**Reprendre les prises de vue EN FRANÇAIS, pas en anglais** (constat du
+2026-10-06). Le défaut i18n était du français qui fuyait dans l'app *anglaise* :
+une capture prise en français ne l'a jamais montré, et n'a donc jamais été
+périmée. Les huit prises de vue actuelles sont en anglais, sous des légendes
+françaises, pour une fiche déclarée en français. Le numéro 3 affiche même les
+deux langues dans le même écran : « Occasion », « 27 vues », « 3 favoris »,
+« Ajouter au panier » côtoient « The seller is only paid after you confirm
+delivery. »
+
+La langue se change **dans l'app** — *Profil → Langue → Français*
+(`app/settings/index.tsx`) — sans toucher aux réglages du téléphone. Rien à
+modifier dans `captures.py` : il lit `screenshots-source/linky/*.png` et les
+légendes sont déjà françaises par défaut.
+
 ### Testers Community — 15 testeurs
 
 Compte **PROGIX Inc**, formule Starter, **2 crédits** restants. Leur méthode :
