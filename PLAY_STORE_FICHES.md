@@ -925,3 +925,125 @@ version 2 toute trouvée, et les captures refaites la version 3.
 3. Le coller dans *Testing URL* chez Testers Community et soumettre (1 crédit)
 4. Vérifier que le compteur « testeurs inscrits » dépasse 12
 5. Reprendre les captures en français, reconstruire un AAB, le déposer
+
+---
+
+## 14. Dépose — le dossier préparé avant que l'app existe
+
+L'app **n'est pas encore créée** dans la Play Console (le compte affiche
+toujours « 1 application »). Tout ce qui suit est mesuré dans le code au
+**2026-10-06**, pour que les formulaires se remplissent d'un trait le jour où
+elle le sera.
+
+### Le binaire
+
+Le **vc3 du 29 septembre ne contient pas la connexion par e-mail** — le
+correctif est du 30 au matin (`cd02486`). Un relecteur Google ne peut pas se
+connecter avec un numéro guinéen : cet AAB est donc inutilisable pour la revue,
+quoi qu'il contienne par ailleurs. Le **vc4** est lancé le 2026-10-06.
+
+| | |
+|---|---|
+| Projet EAS | `krunchy` / `linky-driver` |
+| Paquet | `com.linky.driver` |
+| Profil | `production` (AAB, `autoIncrement` distant) |
+| Trousseau | `-wLFDRWZ4q` (premier dépôt → c'est lui qui FIXE la clé de dépôt) |
+
+La clé de service Google vaut pour **tout le compte développeur**, pas pour une
+app : `app-mobile/google-service-account.json` servira aussi à Dépose. Il
+faudra juste écrire le bloc `submit` dans `driver-app/eas.json`, aujourd'hui
+vide — mais seulement **après** la création de l'app, sinon le dépôt échoue sur
+un paquet inconnu.
+
+### Ce que Dépose collecte — mesuré, pas déduit de Linky
+
+| Donnée | Requise ? | Finalités | Où ça se mesure |
+|---|---|---|---|
+| Nom | **Requise** | Fonctionnement + Gestion des comptes | `full_name` à la candidature |
+| Adresse e-mail | Peut choisir | Fonctionnement + Gestion des comptes | `/email-signin` |
+| Numéro de téléphone | Peut choisir | Fonctionnement + Gestion des comptes | OTP |
+| Position approximative | Peut choisir | Fonctionnement | `ACCESS_COARSE_LOCATION` |
+| Position exacte | Peut choisir | Fonctionnement | `watchPositionAsync`, envoyée toutes les 15 s |
+| Photos | Peut choisir | Fonctionnement | `kind: 'avatar'` — **uniquement** la photo de profil |
+| ID de l'appareil | Peut choisir | Fonctionnement + **Communications du développeur** | jeton push |
+| Interactions avec l'appli | **Requise** | Fonctionnement | état en ligne / hors ligne |
+
+**Informations de paiement : non collectées.** Dépose n'encaisse rien. **Pièces
+d'identité : non collectées** — aucun parcours KYC côté livreur.
+
+### Les quatre différences avec Linky, et seulement celles-là
+
+1. **Aucun achat intégré.** Pas de boost, pas de paiement. Toute la réserve de
+   la §8 sur Google Play Billing tombe d'elle-même.
+2. **Aucun contenu généré par l'utilisateur publié.** Un livreur ne dépose ni
+   annonce, ni commentaire, ni avis. Donc pas de déclaration UGC, et aucun
+   dispositif de modération à décrire — c'est la section la plus coûteuse du
+   dossier Linky, et elle ne s'applique pas ici.
+3. **Aucune fonctionnalité financière.** Même réponse que Linky, mais sans même
+   avoir à argumenter : il n'y a pas de portefeuille dans Dépose.
+4. **Public visé : adultes uniquement.** C'est une application de travail. Pas
+   de section « familles », pas de questionnaire enfants.
+
+### Position en premier plan — ce que ça économise
+
+Aucune trace de `ACCESS_BACKGROUND_LOCATION` : ni dans `app.config.ts`, ni dans
+le plugin `expo-location`, qui ne déclare que `locationWhenInUsePermission`. La
+position n'est relevée que **pendant que l'écran de carte est ouvert**.
+
+Déclarer l'arrière-plan aurait imposé un formulaire dédié **et une vidéo de
+démonstration** à faire valider séparément. On n'a rien à fournir.
+
+### ⚠ Le point qui n'a aucun équivalent chez Linky
+
+**La position du livreur est affichée à l'acheteur** qui suit sa commande
+(`body: { delivery_id, lat, lng }`, puis le suivi côté marketplace). Ce n'est
+pas un prestataire qui la reçoit : c'est **un autre utilisateur**.
+
+Les deux lectures se défendent :
+
+- *Non partagée* — par symétrie avec l'arbitrage de la §12 sur l'adresse de
+  livraison : le transfert est nécessaire à la prestation et déclenché par
+  l'acceptation de la course.
+- *Partagée* — le livreur n'est pas celui qui déclenche l'affichage, et le
+  destinataire n'exécute aucune prestation pour lui.
+
+**Recommandation : déclarer « Partagées = Oui » sur les deux fiches de
+position.** Le badge « Aucune donnée partagée avec des tiers » disparaît pour
+Dépose, et c'est le prix honnête. Une sous-déclaration de partage est le motif
+de retrait le plus fréquent de la Securité des données ; l'inverse ne coûte
+qu'une ligne sur la fiche. À relire posément avec le client, comme son
+équivalent de la §12.
+
+### Permissions : ne PAS les lire dans `android/`
+
+`driver-app/android/` est **ignoré par git** (`.gitignore:43`) : il n'est jamais
+téléversé, EAS régénère le natif à chaque build. Le manifeste qui s'y trouve
+date du **25 septembre**, cinq jours avant `app.config.ts`, et il déclare
+`RECORD_AUDIO` et `SYSTEM_ALERT_WINDOW` — deux permissions que la config
+actuelle ne demande pas (`expo-camera` y est posé avec
+`recordAudioAndroid: false`).
+
+Ce résidu m'a fait annoncer un faux blocage le 2026-10-06. **La seule source qui
+compte est l'AAB construit** : `unzip -p *.aab base/manifest/AndroidManifest.xml`
+puis chercher les chaînes `permission`.
+
+### Au passage — le blocage push n'est plus celui qu'on croyait
+
+`driver-app/google-services.json` **existe** (racine du projet, suivi par git,
+daté du 27 septembre) et déclare `com.linky.driver` **et**
+`com.linky.driver.preview` dans le projet Firebase `linky-757d0`.
+
+Le motif noté jusqu'ici — « paquet absent de Firebase » — n'est donc plus vrai.
+Ce qui reste à vérifier est l'autre moitié, celle qui a mordu sur l'app
+marketplace : la clé `googleServiceAccountKeyForFcmV1` côté EAS. Et seul
+`getReceipts` prouve une livraison réelle.
+
+### Ce qui reste hors terminal
+
+1. Créer l'app dans la Play Console (nom affiché **Dépose**, français, gratuite)
+2. Installer le vc4 sur un téléphone et prendre les captures — **il n'en existe
+   aucune**, et `play-store-assets/captures.py` ne peut rien habiller sans elles
+3. Les dix déclarations, avec les réponses ci-dessus
+4. IARC : mêmes réponses que la §11, **sauf** « Contenu en ligne » → Non, et
+   « Achats numériques » → Non
+5. Écrire le bloc `submit` dans `driver-app/eas.json`, puis déposer
