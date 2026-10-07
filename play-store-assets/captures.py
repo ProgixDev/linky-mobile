@@ -120,14 +120,17 @@ LEGENDES = {
     'depose': [
         ("Tes courses", "du jour.",
          "Toutes les livraisons qui t'attendent, dans l'ordre."),
-        ("L'itinéraire,", "dans l'application.",
-         "La carte t'emmène du vendeur jusqu'au client, sans changer d'app."),
-        ("La remise", "se valide par QR.",
-         "Le client montre son code, tu le scannes, la course est close."),
         ("Chaque course", "en détail.",
          "Adresse, contact, montant : tout ce qu'il faut avant de partir."),
+        ("La remise", "se valide par QR.",
+         "Le client montre son code, tu le scannes, la course est close."),
         ("Ton historique,", "toujours à jour.",
          "Retrouve ce que tu as livré, et quand."),
+        # Les quatre premieres suivent l'ordre des ecrans rendus par
+        # ecrans-depose.py : liste, detail, scanner, terminees. Celles qui
+        # suivent attendent leur ecran.
+        ("L'itinéraire,", "dans l'application.",
+         "La carte t'emmène du vendeur jusqu'au client, sans changer d'app."),
         ("Livrer", "avec Linky.",
          "Rejoins les livreurs de la place de marché guinéenne."),
         ("Simple,", "rapide, suivi.",
@@ -165,14 +168,17 @@ LEGENDES_EN = {
     'depose': [
         ("Your runs", "for the day.",
          "Every delivery waiting for you, in order."),
-        ("The route,", "inside the app.",
-         "The map takes you from the seller to the customer, in one place."),
-        ("Handover", "is confirmed by QR.",
-         "The customer shows their code, you scan it, the run is closed."),
         ("Every run", "in detail.",
          "Address, contact, amount: everything you need before you set off."),
+        ("Handover", "is confirmed by QR.",
+         "The customer shows their code, you scan it, the run is closed."),
         ("Your history,", "always up to date.",
          "Find what you delivered, and when."),
+        # Meme ordre que la liste francaise — les deux tables sont indexees par
+        # le MEME numero de fichier, les desynchroniser donnerait un titre sur
+        # le mauvais ecran.
+        ("The route,", "inside the app.",
+         "The map takes you from the seller to the customer, in one place."),
         ("Deliver", "with Linky.",
          "Join the couriers of Guinea's marketplace."),
         ("Simple,", "fast, tracked.",
@@ -366,6 +372,7 @@ def main():
         return
     os.makedirs(SORTIE, exist_ok=True)
     total = 0
+    par_app = {}
     for app in ('linky', 'depose'):
         dossier = os.path.join(SOURCE, app)
         fichiers = sorted(glob.glob(os.path.join(dossier, '*.png'))
@@ -384,15 +391,22 @@ def main():
             print('   %-12s -> %-16s « %s %s »'
                   % (os.path.basename(f), os.path.basename(dst), legende[0], legende[1]))
             total += 1
+        par_app[app] = len(fichiers)
     print()
     print('%d capture(s) habillee(s) dans %s  (legendes : %s)'
           % (total, SORTIE, LANGUE))
-    if total > 8:
-        print("⚠️  Play n'accepte que 8 captures telephone par fiche.")
-        print("   Il y en a %d : il faut en retirer %d avant de deposer."
-              % (total, total - 8))
-        print("   La plus dispensable est « Garde tes coups de cœur » (les")
-        print("   favoris se vendent moins bien qu'un ecran de compte).")
+    # La limite des 8 est PAR FICHE, et chaque app a la sienne. Additionner les
+    # deux annoncait « 12, retires-en 4 » alors que 8 + 4 passe tres bien.
+    for app, n in par_app.items():
+        if n > 8:
+            print("⚠️  %s : Play n'accepte que 8 captures telephone par fiche." % app)
+            print("   Il y en a %d : il faut en retirer %d avant de deposer."
+                  % (n, n - 8))
+            if app == 'linky':
+                print("   La plus dispensable est « Garde tes coups de cœur » (les")
+                print("   favoris se vendent moins bien qu'un ecran de compte).")
+        elif n < 2:
+            print("⚠️  %s : Play en exige au moins 2. Il n'y en a que %d." % (app, n))
 
 
 if __name__ == '__main__':
