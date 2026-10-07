@@ -24,7 +24,12 @@ from cryptography.hazmat.primitives.asymmetric import padding
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 CLE = r'C:\Users\Omen\Documents\projects\linky\linky-mobile\app-mobile\google-service-account.json'
+# Le paquet vise. Depose (`com.linky.driver`) existe dans la console depuis le
+# 2026-10-07 et la MEME cle de service l'atteint :
+#     python scripts/play-deployer.py internal 6 --paquet com.linky.driver
 PAQUET = 'com.linkygroup.app'
+if '--paquet' in sys.argv:
+    PAQUET = sys.argv[sys.argv.index('--paquet') + 1]
 BASE = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications'
 
 
@@ -61,6 +66,10 @@ def jeton():
 def main():
     brut = sys.argv[1:]
     appliquer = '--appliquer' in brut
+
+    if '--paquet' in brut:
+        i = brut.index('--paquet')
+        del brut[i:i + 2]
 
     notes_fr = None
     if '--notes' in brut:
