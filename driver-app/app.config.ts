@@ -93,6 +93,30 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // (aapt check), not only inferred from expo-notifications. CAMERA / location come
     // from expo-camera + expo-image-picker + expo-location.
     permissions: ['android.permission.POST_NOTIFICATIONS'],
+    // MESURE DU 2026-10-07, sur l'AAB vc4 LIVRE (pas sur android/, qui est
+    // ignore par git et perime) : ces deux permissions etaient reellement
+    // declarees, alors que rien dans l'app ne les utilise.
+    //
+    //   unzip -p app.aab base/manifest/AndroidManifest.xml | grep -a android.permission
+    //
+    // - RECORD_AUDIO : la camera ne sert qu'au scan de QR (`onBarcodeScanned`),
+    //   jamais a filmer. L'option `recordAudioAndroid: false` posee sur le
+    //   plugin expo-camera plus bas N'A PAS suffi a l'empecher. La demander
+    //   obligerait a declarer le micro dans la Securite des donnees, alors
+    //   qu'aucun son n'est jamais capte : une incoherence que la revue releve.
+    // - SYSTEM_ALERT_WINDOW : elle vient du manifeste DEBUG de React Native
+    //   (node_modules/react-native/ReactAndroid/src/debug/AndroidManifest.xml),
+    //   tire dans le build de production parce que `expo-dev-client` est en
+    //   dependance de production. « Afficher par-dessus les autres applis » est
+    //   l'une des permissions les plus scrutees par Play.
+    //
+    // ⚠ NE JAMAIS ajouter CAMERA ici : le plugin expo-image-picker avait deja
+    // strippe cette permission par ce mecanisme, et la demande systeme ne
+    // s'affichait plus du tout (voir le commentaire du plugin plus bas).
+    blockedPermissions: [
+      'android.permission.RECORD_AUDIO',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+    ],
     // SANS CE FICHIER, AUCUN JETON FCM N'EST OBTENABLE en build autonome — c'est
     // la cause des 0 jetons enregistres cote livreur, et donc du fait qu'aucun
     // livreur n'a jamais pu etre alerte. Le paquet `com.linky.driver` doit
