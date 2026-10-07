@@ -173,14 +173,30 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       // compileSdk 36 is REQUIRED by expo-camera's androidx.camera:*:1.6.0 (+ androidx.core
       // 1.18 / browser 1.9) AAR metadata — a dev build fails `checkDebugAarMetadata` on 35.
-      // targetSdk (runtime behavior opt-in) is kept at 35 — still valid for Google Play
-      // (36 becomes required ~2026-08); bump it with on-device testing before that release.
+      //
+      // targetSdk RELEVE A 36 le 2026-10-07. Le commentaire precedent disait
+      // « 36 devient requis ~2026-08 ; releve-le avant cette version » — c'est
+      // fait avec deux mois de retard, et Google a refuse le vc5 pour cette
+      // raison exacte :
+      //
+      //   « Votre appli cible actuellement le niveau d'API 35. Elle doit
+      //     cibler au minimum le niveau d'API 36. »
+      //
+      // C'etait une erreur BLOQUANTE a la creation de la release, pas un
+      // avertissement. Linky etait passe parce que l'exigence frappe d'abord
+      // les applications NOUVELLES ; Depose est nouvelle.
+      //
+      // Expo 56 / React Native 0.85 sont faits pour Android 16 : le 35 etait un
+      // bridage volontaire, pas une contrainte technique. ⚠ Le passage a 36
+      // impose le bord-a-bord (edge-to-edge) — a REGARDER sur un appareil :
+      // barre d'etat et barre de navigation peuvent recouvrir le contenu si un
+      // ecran ne respecte pas les marges de securite.
       // Store-readiness: STORE-GP-TARGETAPI.
       'expo-build-properties',
       {
         android: {
           compileSdkVersion: 36,
-          targetSdkVersion: 35,
+          targetSdkVersion: 36,
         },
       },
     ],
