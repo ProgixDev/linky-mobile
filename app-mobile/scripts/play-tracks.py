@@ -16,7 +16,10 @@ from cryptography.hazmat.primitives.asymmetric import padding
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 CLE = r'C:\Users\Omen\Documents\projects\linky\linky-mobile\app-mobile\google-service-account.json'
-PAQUET = 'com.linkygroup.app'
+# Le paquet a sonder. Depose (`com.linky.driver`) existe dans la console depuis
+# le 2026-10-07 et la meme cle de service l'atteint :
+#     python scripts/play-tracks.py com.linky.driver
+PAQUET = sys.argv[1] if len(sys.argv) > 1 else 'com.linkygroup.app'
 
 
 def b64(o):
