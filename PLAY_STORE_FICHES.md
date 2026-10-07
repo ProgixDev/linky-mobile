@@ -1062,3 +1062,47 @@ marketplace : la clé `googleServiceAccountKeyForFcmV1` côté EAS. Et seul
 4. IARC : mêmes réponses que la §11, **sauf** « Contenu en ligne » → Non, et
    « Achats numériques » → Non
 5. Écrire le bloc `submit` dans `driver-app/eas.json`, puis déposer
+
+
+---
+
+## 15. Niveau d'API cible — où il se décide vraiment
+
+Google a **refusé** la release de test interne de Dépose le 2026-10-07 :
+
+> Votre appli cible actuellement le niveau d'API 35. Elle doit cibler au minimum
+> le niveau d'API 36.
+
+C'était une **erreur bloquante**, pas un avertissement, et elle frappe d'abord
+les applications **nouvelles** — c'est pourquoi Linky, déjà publié, passait.
+
+### Où la valeur se décide (mesuré, pas supposé)
+
+Pour un projet Expo, la chaîne est à trois étages, et seul le dernier compte :
+
+1. **Repli du greffon**, `ExpoRootProjectPlugin.kt:28-30` :
+   `getVersionOrDefault("compileSdk", "35")` et `("targetSdk", "35")`.
+   ⚠ Ces « 35 » ne s'appliquent QUE si le catalogue est muet. Les lire et
+   conclure « l'app cible 35 » est le piège.
+2. **Catalogue de React Native**, `node_modules/react-native/gradle/libs.versions.toml` :
+   il porte `targetSdk = "36"` et `compileSdk = "36"` sur les DEUX apps. C'est
+   la valeur réelle par défaut.
+3. **Surcharge explicite**, qui gagne sur tout : soit la propriété Gradle
+   `android.targetSdkVersion` (`ExpoAutolinkingSettingsExtension.kt:119` la
+   mappe sur le catalogue), soit `expo-build-properties` côté managed.
+
+### Le verdict pour chaque app
+
+- **Linky** (bare, Expo 55) : aucune surcharge — ni `ext {}` dans
+  `android/build.gradle`, ni `android.*SdkVersion` dans `gradle.properties`, ni
+  `expo-build-properties` dans `app.json`. Il prend le catalogue : **36**.
+  **Rien à faire**, et aucun piège à la demande d'accès en production.
+- **Dépose** (managed, Expo 56) : son `expo-build-properties` forçait
+  `targetSdkVersion: 35`, soit **sous** le catalogue. Un bridage volontaire,
+  pose son propre commentaire à l'appui (« 36 devient requis ~2026-08 ;
+  relève-le avant cette version »), jamais levé. Corrigé le 2026-10-07.
+
+⚠ **Reste à vérifier sur un appareil** : cibler 36 impose le bord-à-bord. Barre
+d'état et barre de navigation peuvent recouvrir le contenu d'un écran qui ne
+respecte pas les marges de sécurité. C'est exactement le test que l'ancien
+commentaire réclamait, et rien hors d'un téléphone ne permet de le faire.
