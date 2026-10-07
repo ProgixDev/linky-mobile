@@ -75,3 +75,7 @@ hero-with-bg.png
 # regenere en une commande.
 screenshots-source/
 play-store-assets/captures/
+
+# Cache Python (genere en important un script de scripts/)
+__pycache__/
+*.pyc
