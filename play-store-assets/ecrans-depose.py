@@ -300,7 +300,15 @@ def detail():
     carte(d, x, y, dispo, hc)
     cy = y + px(16)
     cx = x + px(16)
-    d.text((cx, cy), '📍 Lieu de livraison', font=LABEL(), fill=C['ink'])
+    # L'app ecrit litteralement « 📍 Lieu de livraison » dans un AppText. Segoe
+    # UI n'a pas l'epingle : sans la police emoji, elle sort en carre vide.
+    try:
+        f_emo = ImageFont.truetype(FONTS + 'seguiemj.ttf', px(14))
+        d.text((cx, cy - px(1)), '📍', font=f_emo, embedded_color=True)
+        avance = d.textlength('📍', font=f_emo) + px(6)
+    except Exception:
+        avance = 0
+    d.text((cx + avance, cy), 'Lieu de livraison', font=LABEL(), fill=C['ink'])
     cy += px(28)
     d.text((cx, cy), 'Client', font=CAPTION(), fill=C['inkMuted'])
     cy += px(20)
@@ -395,6 +403,350 @@ def scanner():
     return im
 
 
+def rond(d, cx, cy, r, fill, bord=None, ep=0):
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill,
+              outline=bord, width=ep)
+
+
+def carte_rue(w, h):
+    """Un fond de plan stylise, dans les tons de Mapbox « Street » (clair).
+
+    L'app affiche une VRAIE carte Mapbox. Ici elle est dessinee : on ne peut pas
+    embarquer une tuile Mapbox dans une image de fiche sans son attribution, et
+    reproduire une ville precise n'apporterait rien. Le trace est generique."""
+    im = Image.new('RGB', (w, h), (240, 237, 230))
+    d = ImageDraw.Draw(im)
+
+    # Les ilots : des aplats a peine plus clairs que le fond.
+    import random
+    rng = random.Random(7)          # fige : la meme carte a chaque rendu
+    for _ in range(26):
+        bx = rng.randint(-60, w)
+        by = rng.randint(-60, h)
+        bw = rng.randint(px(60), px(150))
+        bh = rng.randint(px(50), px(130))
+        d.rounded_rectangle([bx, by, bx + bw, by + bh], radius=px(4),
+                            fill=(247, 245, 240))
+
+    # Un plan d'eau et un parc, pour que la carte ne soit pas un damier mort.
+    d.rounded_rectangle([-px(40), int(h * 0.70), int(w * 0.40), h + px(40)],
+                        radius=px(30), fill=(199, 221, 232))
+    d.rounded_rectangle([int(w * 0.62), int(h * 0.12), w + px(40), int(h * 0.30)],
+                        radius=px(26), fill=(214, 231, 211))
+
+    # Les rues : un lisere sombre, puis le blanc par-dessus.
+    axes = [('h', 0.16, px(16)), ('h', 0.40, px(22)), ('h', 0.63, px(14)),
+            ('h', 0.86, px(18)), ('v', 0.20, px(18)), ('v', 0.48, px(22)),
+            ('v', 0.78, px(14))]
+    for sens, u, ep in axes:
+        if sens == 'h':
+            y = int(h * u)
+            d.line([(0, y), (w, y)], fill=(227, 222, 212), width=ep + px(3))
+            d.line([(0, y), (w, y)], fill=(255, 255, 255), width=ep)
+        else:
+            x = int(w * u)
+            d.line([(x, 0), (x, h)], fill=(227, 222, 212), width=ep + px(3))
+            d.line([(x, 0), (x, h)], fill=(255, 255, 255), width=ep)
+    # Une diagonale, pour casser le damier.
+    d.line([(-px(20), int(h * 0.30)), (w + px(20), int(h * 0.74))],
+           fill=(227, 222, 212), width=px(17))
+    d.line([(-px(20), int(h * 0.30)), (w + px(20), int(h * 0.74))],
+           fill=(255, 255, 255), width=px(14))
+    return im
+
+
+def trace_route(d, points, couleur, ep):
+    """Le trace de l'itineraire : un lisere blanc dessous, la ligne dessus."""
+    d.line(points, fill=(255, 255, 255), width=ep + px(5), joint='curve')
+    d.line(points, fill=couleur, width=ep, joint='curve')
+    for p in (points[0], points[-1]):
+        rond(d, p[0], p[1], (ep + px(5)) // 2, couleur)
+
+
+def marqueur_livreur(d, cx, cy):
+    """h-10 w-10, rond, bg-ink, bord blanc de 2, avec le scooter."""
+    r = px(20)
+    rond(d, cx, cy, r, C['ink'], (255, 255, 255), px(2))
+    # Segoe UI n'a PAS le scooter : il sortait en carre vide. L'app affiche un
+    # vrai emoji (<AppText>🛵</AppText>), donc on prend la police emoji.
+    try:
+        f_emo = ImageFont.truetype(FONTS + 'seguiemj.ttf', px(17))
+        l = d.textlength('🛵', font=f_emo)
+        d.text((cx - l / 2, cy - px(11)), '🛵', font=f_emo,
+               embedded_color=True)
+    except Exception:
+        rond(d, cx, cy, px(6), (255, 255, 255))
+
+
+def epingle(d, cx, cy, couleur):
+    """Une epingle de destination : goutte + pastille claire."""
+    r = px(15)
+    d.polygon([(cx - r * 0.72, cy - r * 0.1), (cx + r * 0.72, cy - r * 0.1),
+               (cx, cy + r * 1.5)], fill=couleur)
+    rond(d, cx, cy - r * 0.35, r, couleur, (255, 255, 255), px(2))
+    rond(d, cx, cy - r * 0.35, px(5), (255, 255, 255))
+
+
+def icone_horloge(d, cx, cy, r, couleur, ep):
+    """lucide Clock : un cercle et deux aiguilles."""
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=couleur, width=ep)
+    d.line([(cx, cy), (cx, cy - r * 0.55)], fill=couleur, width=ep)
+    d.line([(cx, cy), (cx + r * 0.42, cy + r * 0.18)], fill=couleur, width=ep)
+
+
+def icone_navigation(d, cx, cy, r, couleur):
+    """lucide Navigation : un cerf-volant pointe vers le haut-droit."""
+    d.polygon([(cx + r, cy - r), (cx - r * 0.85, cy + r * 0.35),
+               (cx + r * 0.05, cy + r * 0.05), (cx + r * 0.35, cy + r * 0.95)],
+              fill=couleur)
+
+
+def itineraire():
+    """L'ecran Itineraire : la carte plein cadre + la feuille du bas."""
+    im = carte_rue(W, H)
+    d = ImageDraw.Draw(im)
+
+    chemin = [(px(70), int(H * 0.60)), (px(150), int(H * 0.50)),
+              (px(150), int(H * 0.38)), (px(250), int(H * 0.33)),
+              (px(300), int(H * 0.22))]
+    trace_route(d, chemin, C['brand600'], px(9))
+    marqueur_livreur(d, *chemin[0])
+    epingle(d, chemin[-1][0], chemin[-1][1], C['accent'])
+
+    # Le bouton de retour : h-10 w-10, rond, blanc, ombre.
+    rond(d, px(20) + px(20), BANDE + px(20) + px(20), px(20), C['surface'])
+    d.text((px(20) + px(14), BANDE + px(20) + px(8)), '‹', font=f('b', 22),
+           fill=C['ink'])
+
+    # La feuille : rounded-t-3xl, px-5 pb-6 pt-3.
+    hf = px(300)
+    fy = H - hf
+    d.rounded_rectangle([0, fy, W, H + px(40)], radius=px(24), fill=C['surface'])
+    # La poignee : h-1 w-10, ink-faint/25
+    d.rounded_rectangle([(W - px(40)) // 2, fy + px(10),
+                         (W + px(40)) // 2, fy + px(14)],
+                        radius=px(2), fill=(221, 226, 232))
+
+    x = px(20)
+    y = fy + px(28)
+    # Ligne 1 : temps estime
+    rond(d, x + px(22), y + px(22), px(22), C['brand600'])
+    icone_horloge(d, x + px(22), y + px(22), px(10), C['surface'], px(2))
+    d.text((x + px(58), y + px(6)), 'Temps estimé', font=CAPTION(), fill=C['inkMuted'])
+    d.text((x + px(58), y + px(26)), '~12 min', font=LABEL(), fill=C['ink'])
+    txt = '3,4 km'
+    fl = CAPTION()
+    lw = d.textlength(txt, font=fl) + px(24)
+    d.rounded_rectangle([W - x - lw, y + px(12), W - x, y + px(12) + px(28)],
+                        radius=px(14), fill=C['brand50'])
+    d.text((W - x - lw + px(12), y + px(16)), txt, font=fl, fill=C['brand700'])
+    y += px(62)
+    d.line([(x, y), (W - x, y)], fill=(234, 237, 241), width=px(1))
+    y += px(16)
+    # Ligne 2 : l'adresse
+    rond(d, x + px(22), y + px(22), px(22), C['brand600'])
+    icone_navigation(d, x + px(22), y + px(22), px(9), C['surface'])
+    d.text((x + px(58), y + px(6)), 'Adresse de livraison', font=CAPTION(),
+           fill=C['inkMuted'])
+    d.text((x + px(58), y + px(26)), 'Immeuble Kania · Conakry · Matam',
+           font=LABEL(), fill=C['ink'])
+    y += px(64)
+    # La carte de l'article
+    hc = px(76)
+    d.rounded_rectangle([x, y, W - x, y + hc], radius=px(14), fill=C['muted'])
+    vignette(d, x + px(12), y + px(12), px(52), TEINTES[0])
+    d.text((x + px(76), y + px(18)), 'Sac de riz 25 kg', font=LABEL(), fill=C['ink'])
+    d.text((x + px(76), y + px(40)), 'LNK-4821 · 450 000 GNF', font=CAPTION(),
+           fill=C['inkMuted'])
+    return im
+
+
+def carte_onglet():
+    """L'onglet Carte : les courses actives posees sur le plan."""
+    im = carte_rue(W, H)
+    d = ImageDraw.Draw(im)
+
+    marqueur_livreur(d, int(W * 0.30), int(H * 0.46))
+    for (u, v, couleur) in ((0.70, 0.26, C['accent']), (0.52, 0.62, C['brand600']),
+                            (0.82, 0.55, C['brand600'])):
+        epingle(d, int(W * u), int(H * v), couleur)
+
+    # Le bandeau de titre, pose sur la carte.
+    d.rounded_rectangle([px(16), BANDE + px(10), W - px(16), BANDE + px(78)],
+                        radius=px(16), fill=C['surface'])
+    d.text((px(32), BANDE + px(22)), 'Carte', font=TITLE(), fill=C['ink'])
+    t = '3 courses actives'
+    fl = CAPTION()
+    d.text((W - px(32) - d.textlength(t, font=fl), BANDE + px(30)), t,
+           font=fl, fill=C['inkMuted'])
+
+    # La feuille du bas : les courses actives.
+    hf = px(250)
+    fy = H - hf
+    d.rounded_rectangle([0, fy, W, H + px(40)], radius=px(24), fill=C['surface'])
+    d.rounded_rectangle([(W - px(40)) // 2, fy + px(10),
+                         (W + px(40)) // 2, fy + px(14)],
+                        radius=px(2), fill=(221, 226, 232))
+    x, y = px(20), fy + px(30)
+    for ref, zone, delai, actif in (('LNK-4821', 'Conakry · Matam', '1 h 12', True),
+                                    ('LNK-4819', 'Conakry · Ratoma', '2 h 40', False),
+                                    ('LNK-4815', 'Conakry · Dixinn', '3 h 05', False)):
+        rond(d, x + px(14), y + px(14), px(7),
+             C['accent'] if actif else C['brand600'])
+        d.text((x + px(34), y + px(1)), ref, font=LABEL(), fill=C['ink'])
+        d.text((x + px(34), y + px(22)), zone, font=CAPTION(), fill=C['inkMuted'])
+        lw = d.textlength(delai, font=CAPTION())
+        d.text((W - x - lw, y + px(10)), delai, font=CAPTION(),
+               fill=C['ink'] if actif else C['inkFaint'])
+        y += px(58)
+    return im
+
+
+def accueil():
+    """L'ecran d'accueil, avec le fond SVG que l'app embarque (MapBackdrop).
+
+    Reproduit trait pour trait depuis src/features/welcome/ui/map-backdrop.tsx :
+    degrade #0A4D3C -> #0E6E55 -> #0C5A47, motif de rues #5FC9A3 a 12 %, route
+    en pointilles #A7F3D0 a 18 % entre deux points, et le double chevron blanc
+    en filigrane a 8 %."""
+    im = Image.new('RGB', (W, H))
+    d = ImageDraw.Draw(im)
+    etapes = [(0.0, (10, 77, 60)), (0.55, (14, 110, 85)), (1.0, (12, 90, 71))]
+    for y in range(H):
+        u = y / H
+        for i in range(len(etapes) - 1):
+            a, ca = etapes[i]
+            b, cb = etapes[i + 1]
+            if a <= u <= b:
+                t = (u - a) / (b - a)
+                d.line([(0, y), (W, y)], fill=tuple(
+                    int(ca[k] + (cb[k] - ca[k]) * t) for k in range(3)))
+                break
+
+    calque = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    cd = ImageDraw.Draw(calque)
+    rue, ep = (95, 201, 163), max(1, px(1.5))
+    a12 = int(255 * 0.12)
+    for p in ((-20, H * 0.22, W + 20, H * 0.22), (-20, H * 0.34, W + 20, H * 0.34),
+              (W * 0.25, -20, W * 0.25, H + 20), (W * 0.7, -20, W * 0.7, H + 20),
+              (-20, H * 0.1, W * 0.9, H * 0.55)):
+        cd.line([(p[0], p[1]), (p[2], p[3])], fill=rue + (a12,), width=ep)
+
+    # La route en pointilles, de (0.12, 0.46) a (0.85, 0.18), courbee.
+    a18 = int(255 * 0.18)
+    pts = []
+    for i in range(61):
+        t = i / 60.0
+        # Bezier cubique, memes points de controle que le SVG.
+        p0 = (W * 0.12, H * 0.46); p1 = (W * 0.3, H * 0.3)
+        p2 = (W * 0.6, H * 0.5); p3 = (W * 0.85, H * 0.18)
+        mt = 1 - t
+        pts.append((mt**3 * p0[0] + 3*mt*mt*t * p1[0] + 3*mt*t*t * p2[0] + t**3 * p3[0],
+                    mt**3 * p0[1] + 3*mt*mt*t * p1[1] + 3*mt*t*t * p2[1] + t**3 * p3[1]))
+    for i in range(0, len(pts) - 1, 3):
+        cd.line([pts[i], pts[i + 1]], fill=(167, 243, 208, a18), width=px(2))
+    cd.ellipse([W*0.12 - px(4), H*0.46 - px(4), W*0.12 + px(4), H*0.46 + px(4)],
+               fill=(167, 243, 208, a18))
+    cd.ellipse([W*0.85 - px(4), H*0.18 - px(4), W*0.85 + px(4), H*0.18 + px(4)],
+               fill=(255, 197, 61, a18))
+
+    a08 = int(255 * 0.08)
+    cd.line([(W*0.2, H*0.34), (W*0.5, H*0.12), (W*0.8, H*0.34)],
+            fill=(255, 255, 255, a08), width=px(18), joint='curve')
+    cd.line([(W*0.32, H*0.36), (W*0.5, H*0.22), (W*0.68, H*0.36)],
+            fill=(255, 255, 255, a08), width=px(12), joint='curve')
+    im = Image.alpha_composite(im.convert('RGBA'), calque).convert('RGB')
+    d = ImageDraw.Draw(im)
+
+    # La signature, en haut a gauche.
+    x = px(24)
+    rond(d, x + px(17), BANDE + px(24), px(17), C['accent'])
+    d.text((x + px(10), BANDE + px(14)), '∞', font=f('b', 14), fill=C['brand700'])
+    d.text((x + px(44), BANDE + px(16)), 'Dépose', font=LABEL(), fill=C['inverse'])
+
+    # Le bloc du bas : titre, sous-titre, points, bouton a glisser.
+    y = H - px(260)
+    d.text((x, y), 'Gagne plus', font=DISPLAY(), fill=C['inverse'])
+    y += px(38)
+    d.text((x, y), 'à chaque course', font=DISPLAY(), fill=C['inverse'])
+    y += px(46)
+    for ligne in ('Reçois des livraisons et fais grimper',
+                  'tes revenus, à ton rythme.'):
+        d.text((x, y), ligne, font=BODY(), fill=(214, 229, 223))
+        y += px(24)
+    y += px(18)
+    cx = x
+    for i in range(3):
+        w = px(20) if i == 0 else px(6)
+        d.rounded_rectangle([cx, y, cx + w, y + px(6)], radius=px(3),
+                            fill=C['accent'] if i == 0 else (120, 160, 148))
+        cx += w + px(6)
+    y += px(28)
+
+    # SwipeToStart : h-16, rounded-full, bg-surface, bouton brand-500 a gauche.
+    hb = px(64)
+    d.rounded_rectangle([x, y, W - x, y + hb], radius=hb // 2, fill=C['surface'])
+    texte = 'Glisser pour commencer'
+    fl = LABEL()
+    l = d.textlength(texte, font=fl)
+    d.text(((W - l) / 2, y + (hb - fl.size) / 2 - px(1)), texte, font=fl,
+           fill=C['inkMuted'])
+    rond(d, x + px(4) + px(28), y + hb / 2, px(28), C['brand500'])
+    d.text((x + px(20), y + hb / 2 - px(10)), '››', font=f('b', 16),
+           fill=C['inverse'])
+    return im
+
+
+def profil():
+    im, d = ecran()
+    x = px(20)
+    dispo = W - x * 2
+    y = BANDE + px(14)
+
+    d.text((x, y), 'Profil', font=DISPLAY(), fill=C['ink'])
+    y += px(54)
+
+    # L'en-tete : avatar + nom + role
+    hc = px(120)
+    carte(d, x, y, dispo, hc)
+    rond(d, x + px(16) + px(34), y + px(26) + px(34), px(34), C['brand50'])
+    f_ini = f('b', 24)
+    ini = 'MS'
+    li = d.textlength(ini, font=f_ini)
+    d.text((x + px(16) + px(34) - li / 2, y + px(26) + px(34) - f_ini.size * 0.66),
+           ini, font=f_ini, fill=C['brand700'])
+    d.text((x + px(100), y + px(34)), 'Mamadou S.', font=TITLE(), fill=C['ink'])
+    lw = d.textlength('Livreur Linky', font=CAPTION()) + px(20)
+    d.rounded_rectangle([x + px(100), y + px(66), x + px(100) + lw, y + px(66) + px(28)],
+                        radius=px(14), fill=C['brand50'])
+    d.text((x + px(110), y + px(70)), 'Livreur Linky', font=CAPTION(),
+           fill=C['brand700'])
+    y += hc + px(16)
+
+    # Les deux champs
+    for libelle, valeur in (('Ville / zone', 'Conakry · Ratoma'),
+                            ('Moyen de transport', 'Moto')):
+        hc = px(78)
+        carte(d, x, y, dispo, hc)
+        d.text((x + px(16), y + px(16)), libelle, font=CAPTION(), fill=C['inkMuted'])
+        d.text((x + px(16), y + px(40)), valeur, font=BODY(), fill=C['ink'])
+        y += hc + px(12)
+
+    y += px(6)
+    y += bouton(d, x, y, dispo, 'Modifier mes infos', 'secondary') + px(20)
+
+    # Les lignes de reglages
+    for libelle in ('Mon compte', 'Aide & support'):
+        hc = px(64)
+        carte(d, x, y, dispo, hc)
+        d.text((x + px(16), y + px(21)), libelle, font=BODY(), fill=C['ink'])
+        d.text((W - x - px(26), y + px(18)), '›', font=f('b', 16), fill=C['inkFaint'])
+        y += hc + px(12)
+
+    bouton(d, x, H - px(20) - px(48), dispo, 'Se déconnecter', 'ghost')
+    return im
+
+
 def main():
     os.makedirs(SORTIE, exist_ok=True)
     ecrans = [
@@ -402,6 +754,10 @@ def main():
         ('2.png', detail),
         ('3.png', scanner),
         ('4.png', lambda: liste('Terminées', TERMINEES, '6 livraisons')),
+        ('5.png', itineraire),
+        ('6.png', carte_onglet),
+        ('7.png', accueil),
+        ('8.png', profil),
     ]
     for nom, rendu in ecrans:
         chemin = os.path.join(SORTIE, nom)
