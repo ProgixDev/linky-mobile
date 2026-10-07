@@ -54,13 +54,41 @@ LANGUE = 'en' if len(sys.argv) > 1 and sys.argv[1].lower() in ('en', 'anglais') 
 # expose un peu de sa vie privee. Mettre 0 pour la garder.
 ROGNER_BARRE_ETAT = 0.038
 
-# La palette. Le fond est le vert le plus sombre de la marque — celui du bas du
-# degrade de la carte du portefeuille ; l'accent est le safran du logo.
-FOND_HAUT = (9, 66, 49)
-FOND_BAS = (5, 40, 30)
-ACCENT = (240, 178, 78)
-TEXTE = (255, 255, 255)
-TEXTE_DOUX = (188, 214, 203)
+# UNE CHARTE PAR APPLICATION.
+#
+# Les deux apps partagent la MEME marque : le theme de Depose declare le meme
+# vert (#0E6E55) et le meme safran (#E8A53D) que Linky. Leur inventer des
+# couleurs differentes casserait la famille — ce qui les separe, c'est le
+# TRAITEMENT.
+#
+#   linky  : le champ est le vert de la marque. Une place de marche, de jour.
+#   depose : le champ vire a l'encre de nuit et le vert passe en structure ;
+#            le safran devient la seule lumiere. « Pensee pour la route, pas
+#            pour le bureau. » Un trace d'itineraire en pointilles traverse le
+#            fond, sous l'appareil.
+CHARTES = {
+    'linky': {
+        'fond_haut': (9, 66, 49),
+        'fond_bas': (5, 40, 30),
+        'accent': (240, 178, 78),
+        'texte': (255, 255, 255),
+        'texte_doux': (188, 214, 203),
+        'trace': None,
+    },
+    'depose': {
+        'fond_haut': (12, 21, 27),
+        'fond_bas': (9, 52, 41),
+        'accent': (232, 165, 61),
+        'texte': (255, 255, 255),
+        'texte_doux': (158, 186, 177),
+        # PAS de motif de fond. Un trace d'itineraire en pointilles a ete
+        # essaye le 2026-10-07 et RETIRE : l'appareil occupe tout le champ, il
+        # n'en restait que les deux extremites dans les coins, et des tirets
+        # isolees se lisent comme des rayures, pas comme une route. Le champ
+        # de nuit suffit largement a separer les deux fiches.
+        'trace': None,
+    },
+}
 
 MARGE = 76
 LARGEUR_TEL = 700
@@ -160,20 +188,50 @@ def police(nom, taille):
     return ImageFont.truetype(FONTS + nom, taille)
 
 
-def fond():
+def fond(charte):
     """Un aplat sombre, très légèrement dégradé du haut vers le bas."""
+    haut, bas = charte['fond_haut'], charte['fond_bas']
     im = Image.new('RGB', (W, H))
     d = ImageDraw.Draw(im)
     for y in range(H):
         u = y / H
         d.line([(0, y), (W, y)], fill=(
-            int(FOND_HAUT[0] + (FOND_BAS[0] - FOND_HAUT[0]) * u),
-            int(FOND_HAUT[1] + (FOND_BAS[1] - FOND_HAUT[1]) * u),
-            int(FOND_HAUT[2] + (FOND_BAS[2] - FOND_HAUT[2]) * u)))
+            int(haut[0] + (bas[0] - haut[0]) * u),
+            int(haut[1] + (bas[1] - haut[1]) * u),
+            int(haut[2] + (bas[2] - haut[2]) * u)))
+    if charte['trace']:
+        trace(im, charte)
     return im
 
 
-def pastille(im, d, index, total):
+def trace(im, charte):
+    """Un itinéraire en pointillés, en diagonale, DERRIÈRE l'appareil.
+
+    Il dit « route » sans rien illustrer. Deux garde-fous appris à nos dépens :
+    il est flouté (un pointillé net sur un aplat fait un motif de papier peint),
+    et il passe sous le téléphone, qui en masque le milieu — ce qui suggère
+    qu'il continue au lieu de s'arrêter."""
+    couleur, alpha = charte['trace']
+    calque = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(calque)
+
+    # Une diagonale montante : le départ en bas à gauche, l'arrivée en haut à
+    # droite. On la découpe en tirets de longueur constante.
+    x0, y0, x1, y1 = -60, H - 150, W + 60, 430
+    n = 44
+    for i in range(n):
+        if i % 2:
+            continue
+        a, b = i / n, (i + 0.62) / n
+        d.line([(x0 + (x1 - x0) * a, y0 + (y1 - y0) * a),
+                (x0 + (x1 - x0) * b, y0 + (y1 - y0) * b)],
+               fill=couleur + (alpha,), width=9)
+
+    calque = calque.filter(ImageFilter.GaussianBlur(1.6))
+    im.paste(Image.alpha_composite(im.convert('RGBA'), calque).convert('RGB'), (0, 0))
+
+
+def pastille(im, d, index, total, charte):
     """« 3/8 » en haut a droite — on fait defiler une fiche Play, savoir ou l'on
     est dans la serie donne envie de la parcourir en entier."""
     f = police('segoeui.ttf', 24)
@@ -182,7 +240,7 @@ def pastille(im, d, index, total):
     x1, y1 = W - MARGE - l - 30, 104
     d.rounded_rectangle([x1, y1, x1 + l + 30, y1 + 44], radius=22,
                         fill=(255, 255, 255, 0), outline=(255, 255, 255, 60), width=2)
-    d.text((x1 + 15, y1 + 7), texte, font=f, fill=TEXTE_DOUX)
+    d.text((x1 + 15, y1 + 7), texte, font=f, fill=charte['texte_doux'])
 
 
 def coupe(d, texte, f, largeur):
@@ -234,11 +292,12 @@ def telephone(capture, largeur):
     return tel, ombre
 
 
-def habille(chemin_capture, legende, destination, index=1, total=1):
+def habille(chemin_capture, legende, destination, index=1, total=1, charte=None):
+    charte = charte or CHARTES['linky']
     # Une legende porte 3 morceaux, ou 4 si elle impose l'appareil ENTIER.
     titre1, titre2, phrase = legende[0], legende[1], legende[2]
     entier = len(legende) > 3 and legende[3] == 'entier'
-    im = fond()
+    im = fond(charte)
     d = ImageDraw.Draw(im)
 
     capture = Image.open(chemin_capture)
@@ -257,10 +316,10 @@ def habille(chemin_capture, legende, destination, index=1, total=1):
         f_titre = police('segoeuib.ttf', f_titre.size - 2)
 
     y = 104
-    d.text((MARGE, y), titre1, font=f_titre, fill=TEXTE)
+    d.text((MARGE, y), titre1, font=f_titre, fill=charte['texte'])
     y += int(f_titre.size * 1.16)
     if titre2:
-        d.text((MARGE, y), titre2, font=f_titre, fill=ACCENT)
+        d.text((MARGE, y), titre2, font=f_titre, fill=charte['accent'])
         y += int(f_titre.size * 1.16)
 
     # ── LA PHRASE ─────────────────────────────────────────────────────────
@@ -274,7 +333,7 @@ def habille(chemin_capture, legende, destination, index=1, total=1):
     # lisent comme un seul bloc et le titre perd sa force.
     y += 26
     for l in lignes:
-        d.text((MARGE, y), l, font=f_phrase, fill=TEXTE_DOUX)
+        d.text((MARGE, y), l, font=f_phrase, fill=charte['texte_doux'])
         y += f_phrase.size + 10
 
     # ── L'APPAREIL ────────────────────────────────────────────────────────
@@ -295,7 +354,7 @@ def habille(chemin_capture, legende, destination, index=1, total=1):
     im.paste(tel, (x, haut), tel)   # ce qui dépasse de 1920 est simplement coupé
 
     if total > 1:
-        pastille(im, d, index, total)
+        pastille(im, d, index, total, charte)
 
     im.save(destination, 'PNG', optimize=True)
     return im.size
@@ -320,7 +379,8 @@ def main():
             legendes = table.get(app, [])
             legende = legendes[i] if i < len(legendes) else ('', '', '')
             dst = os.path.join(SORTIE, '%s-%d.png' % (app, i + 1))
-            habille(f, legende, dst, index=i + 1, total=len(fichiers))
+            habille(f, legende, dst, index=i + 1, total=len(fichiers),
+                    charte=CHARTES[app])
             print('   %-12s -> %-16s « %s %s »'
                   % (os.path.basename(f), os.path.basename(dst), legende[0], legende[1]))
             total += 1

@@ -79,3 +79,6 @@ play-store-assets/captures/
 # Cache Python (genere en important un script de scripts/)
 __pycache__/
 *.pyc
+
+# Apercus jetables des affiches (play-store-assets/apercu-depose.py)
+play-store-assets/apercu/
