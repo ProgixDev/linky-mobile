@@ -114,8 +114,9 @@ scan qui confirme la livraison et déclenche le paiement du vendeur. Pas de
 papier, pas de signature, pas de contestation possible.
 
 DEVENIR LIVREUR LINKY
-Inscrivez-vous avec votre numéro de téléphone, indiquez votre véhicule et votre
-ville. Une fois votre candidature acceptée, vous recevez vos premières courses.
+Inscrivez-vous avec votre numéro de téléphone ou votre adresse e-mail,
+indiquez votre véhicule et votre ville. Une fois votre candidature acceptée,
+vous recevez vos premières courses.
 
 Dépose ne fonctionne qu'avec un compte livreur validé par Linky.
 
@@ -131,7 +132,7 @@ Première version publique de Dépose.
 • Itinéraire sur carte jusqu'au client
 • Partage de votre position pendant la course, pour l'acheteur et le vendeur
 • Confirmation de la remise par scan du QR code du client
-• Inscription par numéro de téléphone
+• Connexion par numéro de téléphone ou par e-mail
 ```
 
 ---
