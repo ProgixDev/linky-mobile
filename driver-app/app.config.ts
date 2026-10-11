@@ -274,7 +274,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // restee un TODO depuis la creation du projet.
     url: 'https://u.expo.dev/8b8fdbe2-6af0-47bb-bc0b-7c5dfa1d6c88',
   },
-  owner: 'krunchy',
+  owner: 'linkyorg',
   extra: {
     // Re-linked under @linkyorg 2026-07-21 — fresh build quota (migration to client Supabase).
     eas: {
