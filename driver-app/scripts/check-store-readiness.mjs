@@ -76,11 +76,20 @@ if (!existsSync(join(ROOT, 'src/app/account.tsx')))
     'STORE-ACCT-DELETE',
     'no /account route (src/app/account.tsx) — Apple 5.1.1(v)/Google require in-app deletion',
   );
-if (!existsSync(join(ROOT, 'supabase/functions/delete-account/index.ts')))
+// Depose n'a PAS de backend a lui : il partage celui de l'app marketplace,
+// dans le dossier voisin. Chercher la fonction sous `driver-app/supabase/`
+// criait au loup a chaque passage — un P1 permanent que plus personne ne lit.
+// Verifie le 2026-10-12 : la fonction existe cote app-mobile et repond en
+// production (jeton bidon -> 400 ; une fonction inexistante -> 404).
+const FONCTIONS = [
+  join(ROOT, 'supabase/functions/delete-account/index.ts'),
+  join(ROOT, '../app-mobile/supabase/functions/delete-account/index.ts'),
+];
+if (!FONCTIONS.some((f) => existsSync(f)))
   add(
     'P1',
     'STORE-ACCT-DELETE',
-    'no delete-account Edge Function — the deletion must remove the account + data',
+    'no delete-account Edge Function (checked this app and the shared backend) — the deletion must remove the account + data',
   );
 
 // 4) iOS privacy manifest present (STORE-APL-PRIVMANIFEST) + encryption answered.
