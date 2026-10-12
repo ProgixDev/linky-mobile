@@ -1053,6 +1053,32 @@ Ce qui reste à vérifier est l'autre moitié, celle qui a mordu sur l'app
 marketplace : la clé `googleServiceAccountKeyForFcmV1` côté EAS. Et seul
 `getReceipts` prouve une livraison réelle.
 
+### ⚠ Le compte de revue de Dépose n'est PAS celui de Linky
+
+| | compte | rôles | ce que le relecteur voit |
+|---|---|---|---|
+| **Dépose** | **`support@linkygroup.com`** | **livreur** | 1 course `in_transit` vivante — liste, itinéraire, écran de remise |
+| Linky | `support.linky@gmail.com` | acheteur, vendeur, agent | **aucun rôle livreur** → Dépose s'ouvrirait sur une liste vide |
+
+Les confondre coûte un rejet : la déclaration « Informations de connexion »
+donnerait à Google un compte incapable de faire quoi que ce soit dans l'app.
+
+Écrire explicitement dans les instructions **« se connecter par l'onglet
+E-mail »** : la connexion par téléphone exige un numéro guinéen (+224) qu'un
+relecteur n'a pas. C'est la raison d'être du correctif `cd02486`.
+
+### ⚠ Dépose n'a AUCUN parcours « mot de passe oublié »
+
+Mesuré le 2026-10-12 : rien dans `driver-app/`. L'app marketplace en a un
+(`app-mobile/app/(onboarding)/password-signin.tsx`, fonction edge
+`password-change-request`).
+
+Les deux partagent le même backend et le même `/email-signin`, donc
+**réinitialiser depuis l'app Linky donne un mot de passe qui ouvre Dépose**.
+C'est un contournement, pas une solution : un livreur qui oublie son mot de
+passe n'a aucune issue dans son application. À combler.
+
+
 ### Ce qui reste hors terminal
 
 1. Créer l'app dans la Play Console (nom affiché **Dépose**, français, gratuite)
