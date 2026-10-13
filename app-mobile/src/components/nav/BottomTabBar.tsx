@@ -6,7 +6,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { I, type IconKey } from '../../icons/Icon';
 import { haptic } from '../../lib/haptics';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from 'expo-router/tabs';
 
 // Custom tab bar with center FAB-style Découvrir tab.
 // Used as the tabBar prop of expo-router's <Tabs> when wrapping with react-navigation bottom tabs.

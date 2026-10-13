@@ -1,4 +1,4 @@
-import { requireOptionalNativeModule } from 'expo-modules-core';
+import { requireOptionalNativeModule } from 'expo';
 import { formatGNF } from './format';
 import { formatBookingDate } from '../components/booking/BookingUI';
 import type { Booking } from '../data/types';

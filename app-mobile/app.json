@@ -144,7 +144,15 @@
           "enableGooglePay": true
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

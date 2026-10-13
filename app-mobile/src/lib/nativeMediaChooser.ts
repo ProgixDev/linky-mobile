@@ -12,7 +12,7 @@
 // retombent sur la feuille. Ce fichier peut donc partir en mise a jour OTA sans
 // attendre le build : il ne changera rien tant que le binaire ne suit pas.
 import { Platform } from 'react-native';
-import { requireOptionalNativeModule } from 'expo-modules-core';
+import { requireOptionalNativeModule } from 'expo';
 
 /** Ce que le natif rend. Volontairement plus pauvre qu'un ImagePickerAsset :
  *  seuls ces champs sont lus par la chaine de televersement. */

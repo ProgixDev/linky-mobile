@@ -44,7 +44,7 @@ export default function SplashRoute() {
         justifyContent: 'center',
       }}
     >
-      <StatusBar style="dark" backgroundColor={SPLASH_BG} />
+      <StatusBar style="dark" />
       <VideoView
         player={player}
         style={{ width: SW, height: VIDEO_HEIGHT, backgroundColor: SPLASH_BG }}
