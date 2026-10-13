@@ -49,11 +49,7 @@ const withAdiRegistration = (config) =>
       // L'extrait, colle tel quel — c'est ce que dit la console (« Copiez
       // l'extrait ci-dessous »). Le saut de ligne final evite qu'un lecteur
       // strict de .properties avale la derniere ligne.
-      fs.writeFileSync(
-        path.join(assetsDir, 'adi-registration.properties'),
-        `${TOKEN}\n`,
-        'utf8',
-      );
+      fs.writeFileSync(path.join(assetsDir, 'adi-registration.properties'), `${TOKEN}\n`, 'utf8');
       return cfg;
     },
   ]);

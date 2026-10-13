@@ -76,7 +76,8 @@ function projectId(): string | undefined {
 export function configureForegroundHandler(): void {
   Notifications.setNotificationHandler({
     handleNotification: async (notification) => {
-      const kind = (notification.request.content.data?.kind as NotifyKind | undefined) ?? 'delivery';
+      const kind =
+        (notification.request.content.data?.kind as NotifyKind | undefined) ?? 'delivery';
       return {
         shouldShowBanner: true,
         shouldShowList: true,
@@ -154,7 +155,11 @@ export async function ensureChannels(): Promise<number> {
 export async function ensureDecisionCategory(): Promise<void> {
   try {
     await Notifications.setNotificationCategoryAsync(DECISION_CATEGORY_ID, [
-      { identifier: DECISION_ACCEPT, buttonTitle: 'Accepter', options: { opensAppToForeground: true } },
+      {
+        identifier: DECISION_ACCEPT,
+        buttonTitle: 'Accepter',
+        options: { opensAppToForeground: true },
+      },
       {
         identifier: DECISION_DECLINE,
         buttonTitle: 'Refuser',
@@ -301,7 +306,11 @@ export async function presentLocalNotification(input: {
         // pour décider de jouer un son. Sans lui, ce repli hors-FCM retomberait
         // sur la valeur par défaut et pourrait devenir muet le jour où celle-ci
         // change — or c'est précisément le seul signal d'un livreur sans FCM.
-        data: { deeplink: input.deeplink ?? null, category: input.category ?? null, kind: 'delivery' },
+        data: {
+          deeplink: input.deeplink ?? null,
+          category: input.category ?? null,
+          kind: 'delivery',
+        },
       },
       trigger: null, // immediate — the foreground handler presents it as a banner
     });
