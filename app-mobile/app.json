@@ -14,6 +14,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.linkygroup.app",
+      "buildNumber": "1",
       "icon": {
         "light": "./assets/images/icon.png",
         "dark": "./assets/images/icon-dark.png",
@@ -65,6 +66,7 @@
     "android": {
       "googleServicesFile": "./android/app/google-services.json",
       "package": "com.linkygroup.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#F7F3EC"
