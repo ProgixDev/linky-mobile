@@ -11,6 +11,10 @@ android/
 # fichier natif l'aurait ete — et ne serait jamais parti au build.
 !modules/**/android/
 !modules/**/android/**
+# ...mais pas leurs caches et sorties de build Gradle, que l'exception ci-dessus
+# rattrapait malgre le **/android/.gradle/ du .gitignore racine.
+modules/**/android/.gradle/
+modules/**/android/build/
 *.log
 .DS_Store
 .env*
