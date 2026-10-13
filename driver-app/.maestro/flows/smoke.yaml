@@ -4,7 +4,7 @@
 #
 # A fresh, unauthenticated launch is routed by the auth guard to the sign-in
 # screen — that is the honest cold-start state for the driver app.
-appId: com.linky.driver.dev
+appId: com.linky.driver
 ---
 - launchApp:
     clearState: true

@@ -23,11 +23,13 @@ const IS_PREVIEW = process.env.APP_VARIANT === 'preview';
 // qu'on lit sur l'ecran d'accueil et l'identite technique n'ont aucune raison
 // d'etre le meme mot.
 const name = IS_DEV ? 'Dépose (Dev)' : IS_PREVIEW ? 'Dépose (Preview)' : 'Dépose';
-const bundleId = IS_DEV
-  ? 'com.linky.driver.dev'
-  : IS_PREVIEW
-    ? 'com.linky.driver.preview'
-    : 'com.linky.driver';
+
+// UN SEUL IDENTIFIANT pour toutes les variantes (2026-10-13). Les suffixes
+// `.dev` et `.preview` faisaient de chaque variante une autre application :
+// autre paquet a declarer dans Firebase, chez Apple et dans la Play Console,
+// autres identifiants EAS. Seul le nom affiche distingue encore les variantes ;
+// en contrepartie, une build dev ou preview remplace l'app installee.
+const bundleId = 'com.linky.driver';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,

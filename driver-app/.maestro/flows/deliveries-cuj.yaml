@@ -6,7 +6,7 @@
 #   - a SEEDED livreur account on the shared Supabase backend (set the env below), and
 #   - otp-request in STUB mode (echoes a dev_code) so the OTP sign-in is deterministic —
 #     the screen auto-fills the dev code. With real email, drive sign-in via Argent.
-appId: com.linky.driver.dev
+appId: com.linky.driver
 env:
   DRIVER_PHONE: '622551288'
 ---

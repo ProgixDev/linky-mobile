@@ -3,7 +3,7 @@
 #
 # The tasks demo now lives at /tasks (home is the driver deliveries list, spec 001).
 # Cold start is auth-gated, so this signs in first with a seeded account.
-appId: com.linky.driver.dev
+appId: com.linky.driver
 env:
   DRIVER_PHONE: '622551288'
   DRIVER_PASSWORD: changeme

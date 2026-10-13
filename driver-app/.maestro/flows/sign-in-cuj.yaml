@@ -7,7 +7,7 @@
 #   - the deployed otp-request in STUB mode (echoes a dev_code) so the code step is
 #     deterministic — the screen auto-fills the dev code. With real delivery the
 #     code is dynamic; drive the verify step via Argent instead.
-appId: com.linky.driver.dev
+appId: com.linky.driver
 env:
   DRIVER_PHONE: '622551288'
 ---

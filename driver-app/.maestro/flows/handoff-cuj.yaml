@@ -10,7 +10,7 @@
 #   - a SEEDED livreur account WITH at least one active delivery on the backend, and
 #   - otp-request in STUB mode (echoes a dev_code) so the OTP sign-in is deterministic —
 #     the screen auto-fills the dev code. With real email, drive sign-in via Argent.
-appId: com.linky.driver.dev
+appId: com.linky.driver
 env:
   DRIVER_PHONE: '622551288'
 ---
