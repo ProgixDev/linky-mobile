@@ -19,8 +19,8 @@ const PROTECTED = [
     why: 'Secrets are never edited by agents. Use .env.example for shape changes and ask a human to set real values.',
   },
   {
-    test: (p) => p === 'package-lock.json',
-    why: 'The lockfile is generated. Run npm/npx expo install instead of editing it.',
+    test: (p) => p === 'pnpm-lock.yaml',
+    why: 'The lockfile is generated. Run pnpm add / pnpm expo install instead of editing it.',
   },
   { test: (p) => p.startsWith('.git/'), why: 'Never write into .git directly.' },
   {

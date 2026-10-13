@@ -27,6 +27,6 @@ Governance: `specs/constitution.md`. Operating model: repo-only (ADR-0008). Flow
 (Notion R2R) skills were removed (ADR-0008, repo-only). `/setup-project` (clone init) and
 `/feature-report` (in-repo evidence report) are kept — they're repo-only and Notion-free.
 
-**Tooling note (Expo):** all skills use `npm` (not pnpm), Maestro + **Argent** for UI verification
+**Tooling note (Expo):** all skills use **pnpm** (read any leftover `npm run X` / `npx` as `pnpm X` / `pnpm exec`), Maestro + **Argent** for UI verification
 (not Playwright), the `model/ui/lib` slice anatomy, and `app.config.ts` for app identity. Reports are
 Markdown, in the repo (no cloud surface).

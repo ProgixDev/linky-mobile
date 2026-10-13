@@ -3,7 +3,8 @@ module.exports = {
   preset: 'jest-expo',
   // Reanimated 4: worklets ship a resolver that swaps native entry points
   // for mockable ones under Jest (official setup for RN 0.85 / Reanimated 4).
-  resolver: 'react-native-worklets/jest/resolver.js',
+  // Enveloppe locale : l'original se trompe de paquet sous pnpm (jest.resolver.js).
+  resolver: '<rootDir>/jest.resolver.js',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   // Test files live in __tests__ folders next to the code they test —
   // never inside src/app (Expo Router treats those as routes).
@@ -15,7 +16,10 @@ module.exports = {
     // expo-router 56.2.11 pulls in `standard-navigation`, which ships untranspiled
     // ESM (`import * as React`) — Metro transforms it, but Jest skips node_modules
     // by default, so it must be allowlisted here or the suite fails to parse.
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?(-[a-z-]+)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-native-css-interop|nativewind|@react-native-async-storage/.*|react-native-.*|standard-navigation|zustand)/)',
+    // `\.pnpm` : sous pnpm, un paquet vit dans node_modules/.pnpm/<id>/node_modules/<nom>.
+    // Le premier `node_modules/` est suivi de `.pnpm`, qu'il faut laisser passer
+    // pour que la liste s'applique au second, celui qui porte le vrai nom.
+    'node_modules/(?!(\\.pnpm|(jest-)?react-native|@react-native(-community)?|expo(nent)?(-[a-z-]+)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-native-css-interop|nativewind|@react-native-async-storage/.*|react-native-.*|standard-navigation|zustand)/)',
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
