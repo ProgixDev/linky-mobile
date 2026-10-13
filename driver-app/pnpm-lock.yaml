@@ -144,6 +144,9 @@ importers:
         specifier: ^5.0.8
         version: 5.0.14(@types/react@19.2.17)(react@19.2.3)
     devDependencies:
+      '@babel/plugin-transform-react-jsx':
+        specifier: ^7.29.7
+        version: 7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1)
       '@commitlint/cli':
         specifier: ^19.8.1
         version: 19.8.1(@types/node@25.9.2)(typescript@6.0.3)
@@ -162,6 +165,9 @@ importers:
       '@types/react':
         specifier: ~19.2.2
         version: 19.2.17
+      babel-preset-expo:
+        specifier: ~57.0.15
+        version: 57.0.15(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.7)(expo@57.0.28)(react-refresh@0.14.2)(supports-color@8.1.1)
       eslint:
         specifier: ^9.36.0
         version: 9.39.4(jiti@1.21.7)(supports-color@8.1.1)
