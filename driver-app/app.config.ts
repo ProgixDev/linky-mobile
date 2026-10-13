@@ -198,6 +198,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           compileSdkVersion: 36,
           targetSdkVersion: 36,
         },
+        // CYCLE DE VIE PAR SCENES, exige par le SDK iOS 27 : une app compilee
+        // avec Xcode 27 qui ne l'adopte pas est TUEE au lancement par iOS 27
+        // (UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption). Le
+        // prebuild ajoute alors le manifeste de scenes a Info.plist et le
+        // demarrage de React Native passe par le scene delegate d'Expo.
+        // Option du SDK 57 (>= 57.0.23) ; a RETIRER au SDK 58, qui l'integre.
+        ios: {
+          enableSceneSupport: true,
+        },
       },
     ],
     [
