@@ -1046,3 +1046,115 @@ export async function requestPayout(
     message: typeof raw.message === 'string' ? raw.message : '',
   };
 }
+
+/** `toAmount` rend NaN quand il ne sait pas lire ; ici on veut `null`, parce
+ *  qu'un montant absent et un montant illisible se traitent pareil : on ne
+ *  s'en sert pas. */
+function montantOuNull(x: unknown): number | null {
+  if (x == null) return null;
+  const n = toAmount(x);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Statut REEL d'un versement, demande a Lengopay.
+ *
+ *  C'est la reponse au rappel non signe : leur `callback_url` n'a aucun
+ *  en-tete de signature, donc qui connait l'URL peut poster un « SUCCESS ».
+ *  On ne croit jamais le contenu du rappel — il sert de SIGNAL pour venir
+ *  verifier ici, et c'est cette reponse-la qui fait foi.
+ *
+ *  POST /api/v2/payout/transactions   { pay_id, websiteid }
+ *  -> { status, pay_id, amount, account, date }
+ */
+export interface LengopayPayoutStatus {
+  status: string;        // SUCCESS | FAILED | INITIATED
+  pay_id: string;
+  amount: number | null;
+  account: string | null;
+  date: string | null;
+}
+
+/** ⚠ LE pay_id N'A PAS LA MEME FORME SELON L'ENDPOINT.
+ *
+ *  Dans leurs propres exemples, le MEME identifiant s'ecrit :
+ *    reponse du versement   « …anUxUG8 »     (sans le = de bourrage base64)
+ *    corps du statut        « …anUxUG8= »    (avec)
+ *  On essaie donc les deux formes avant de conclure a l'absence. Sans ca, un
+ *  versement parfaitement abouti resterait introuvable, et la demande de
+ *  retrait bloquee indefiniment. */
+function variantesPayId(payId: string): string[] {
+  const nu = payId.replace(/=+$/, '');
+  const formes = [payId, nu, nu + '='];
+  return [...new Set(formes)];
+}
+
+export async function getPayoutStatus(payId: string): Promise<LengopayPayoutStatus | null> {
+  if (!lengopayConfigured()) throw new Error('Lengopay non configure');
+
+  for (const forme of variantesPayId(payId)) {
+    const res = await fetchWithTimeout(`${baseUrl()}/api/v2/payout/transactions`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ pay_id: forme, websiteid: websiteId() }),
+    });
+    // 404 = pas trouve SOUS CETTE FORME : on tente la suivante.
+    if (res.status === 404) continue;
+    if (!res.ok) {
+      throw new Error(`Lengopay payout status ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    }
+    const raw = await res.json() as Record<string, unknown>;
+    const statut = typeof raw.status === 'string' ? raw.status : '';
+    if (!statut) continue;
+    return {
+      status: statut,
+      pay_id: typeof raw.pay_id === 'string' ? raw.pay_id : forme,
+      amount: montantOuNull(raw.amount),
+      // `account` arrive en NOMBRE dans leur exemple (620123456), pas en
+      // chaine — un numero guineen tient dans un double, mais on le repasse
+      // en texte tout de suite pour ne jamais perdre un zero de tete.
+      account: raw.account == null ? null : String(raw.account),
+      date: typeof raw.date === 'string' ? raw.date : null,
+    };
+  }
+  return null;
+}
+
+/** L'historique des versements, pour le RATTRAPAGE.
+ *
+ *  Un rappel finit toujours par se perdre. Cette liste permet de comparer ce
+ *  que Lengopay a execute a ce que notre base croit, et de recuperer les
+ *  versements orphelins — un vendeur paye sans que le systeme le sache.
+ *
+ *  ⚠ Celui-ci est en v1, pas v2, alors que le statut est en v2. C'est chez eux
+ *  que c'est incoherent : ne pas « corriger » l'URL en v2, elle n'existe pas.
+ */
+export interface LengopayPayoutRow {
+  pay_id: string;
+  date: string | null;
+  amount: number | null;
+  account: string | null;
+  gateway: string | null;
+  status: string;
+}
+
+export async function listPayoutTransactions(): Promise<LengopayPayoutRow[]> {
+  if (!lengopayConfigured()) throw new Error('Lengopay non configure');
+  const res = await fetchWithTimeout(`${baseUrl()}/api/v1/payout/all-transactions`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ websiteid: websiteId() }),
+  });
+  if (!res.ok) {
+    throw new Error(`Lengopay payout list ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  }
+  const raw = await res.json();
+  const lignes = Array.isArray(raw) ? raw : (Array.isArray((raw as { data?: unknown }).data) ? (raw as { data: unknown[] }).data : []);
+  return (lignes as Record<string, unknown>[]).map((l) => ({
+    pay_id: typeof l.pay_id === 'string' ? l.pay_id : '',
+    date: typeof l.date === 'string' ? l.date : null,
+    amount: montantOuNull(l.amount),
+    account: l.account == null ? null : String(l.account),
+    gateway: l.gateway == null ? null : String(l.gateway),
+    status: typeof l.status === 'string' ? l.status : '',
+  })).filter((l) => l.pay_id);
+}

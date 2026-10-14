@@ -118,3 +118,84 @@ examen.** Dix paiements réussis sur 162 tentatives, ce n'est pas un détail
 d'intégration : soit les acheteurs abandonnent, soit un rail refuse
 silencieusement. La dernière transaction du 26 septembre, 172 500 GNF, est en
 échec.
+
+---
+
+# Les trois autres points Cash Out
+
+Relevés le **2026-10-14**, même source. Ils ferment les trois manques listés
+plus haut.
+
+## Statut d'un versement — la réponse au rappel non signé
+
+```
+POST https://portal.lengopay.com/api/v2/payout/transactions
+{ "pay_id": "…", "websiteid": "…" }
+→ { status, pay_id, amount, account, date }
+```
+
+Erreurs : `400` · `401` · `404` (introuvable) · `500`.
+
+C'est **elle qui fait foi**, jamais le contenu du rappel. Le rappel sert de
+signal pour venir interroger ici.
+
+⚠ `account` arrive en **nombre** (`620123456`), pas en chaîne. Le repasser en
+texte immédiatement, sinon un zéro de tête disparaît.
+
+## Solde — il n'y a PAS d'endpoint distinct pour le versement
+
+```
+GET https://portal.lengopay.com/api/getbalance/{websiteid}
+```
+
+**C'est exactement la même URL que l'encaissement.** Leur page « Get Balance
+(Cash Out) » documente le même point d'entrée.
+
+⚠ **Et leur documentation est fausse.** Elle annonce :
+
+```json
+{ "status": "Success", "balance": "7792", "currency": "GNF" }
+```
+
+La réponse **réelle**, mesurée le 2026-09-29 et confirmée le 2026-10-14, porte
+un **objet** à deux caisses :
+
+```json
+{ "balance": { "Pay In": …, "Pay Out": … } }
+```
+
+`getAccountBalance()` gère déjà ce cas. Ne pas « corriger » le code vers leur
+documentation.
+
+## Historique des versements — le rattrapage
+
+```
+POST https://portal.lengopay.com/api/v1/payout/all-transactions
+{ "websiteid": "…" }
+→ [ { pay_id, date, amount, account, gateway, status }, … ]
+```
+
+⚠ **En v1**, alors que le statut est en v2. L'incohérence est chez eux : ne pas
+« réparer » l'URL vers v2, elle n'existe pas.
+
+Sert à comparer ce que Lengopay a exécuté à ce que notre base croit, et à
+récupérer un versement dont le rappel s'est perdu.
+
+---
+
+## ⚠ Le piège du `pay_id` : trois écritures pour un même identifiant
+
+Dans **leurs propres exemples** :
+
+| Endroit | Forme |
+|---|---|
+| Réponse du versement | `elNZc1FUZzduVzhQcjlYVWtkZ2pmVmRac1Z5anUxUG8` |
+| Corps du statut | `elNZc1FUZzduVzhQcjlYVWtkZ2pmVmRac1Z5anUxUG8=` |
+| Liste des transactions | `zSYsQTg7nW8Pr9XUkdgjfVdZsVyju1Po` |
+
+Les deux premiers sont le même base64, avec et sans le `=` de bourrage. Stocker
+l'un et interroger avec l'autre fait échouer la recherche — et laisse une
+demande de retrait bloquée alors que le versement a abouti.
+
+`getPayoutStatus()` essaie donc **les deux formes** avant de conclure à
+l'absence, et ne traite un `404` que comme « pas sous cette forme-là ».
