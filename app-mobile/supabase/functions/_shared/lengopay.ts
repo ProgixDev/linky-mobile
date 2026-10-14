@@ -968,3 +968,81 @@ export async function getPaymentStatusV2(payId: string): Promise<LengopayStatusR
     message: typeof raw.message === 'string' ? raw.message : '',
   };
 }
+
+// ── VERSEMENT (PayOut) ─────────────────────────────────────────────────────
+//
+// Releve le 2026-10-14 dans le portail marchand, Mode developpeur ->
+// « Make payments (Cash Out) ». Cette documentation n'est PAS publique : voir
+// `_shared/lengopay-payout.md` pour la transcription complete.
+//
+// ⚠ NE PAS confondre avec « Cashout » de leur doc publique, qui est un
+// ENCAISSEMENT. Le versement, c'est /api/v2/payout/request et rien d'autre.
+//
+// ⚠⚠ AUCUNE CLE D'IDEMPOTENCE n'existe chez eux. Rien dans la requete ne dit
+// « c'est le meme versement que tout a l'heure ». Si cet appel part deux fois,
+// RIEN NE LES EMPECHE DE PAYER DEUX FOIS. La protection vit entierement chez
+// nous : un seul appel par demande de retrait, sous verrou, AVANT l'appel.
+// Cette fonction ne protege de rien — c'est a l'appelant de le faire.
+
+/** Les rails de SORTIE documentes. Plus restreint que l'encaissement. */
+export type LengopayPayoutAccount = 'lp-om-gn' | 'lp-momo-gn';
+
+export interface LengopayPayoutRequest {
+  /** Montant en GNF. Leur API veut une CHAINE, la conversion est faite ici. */
+  amount_minor: number;
+  currency: string;
+  /** Le numero QUI RECOIT l'argent. */
+  account: string;
+  type_account: LengopayPayoutAccount;
+  /** Doit etre en HTTPS — ils le refusent sinon. */
+  callback_url?: string;
+}
+
+export interface LengopayPayoutResponse {
+  /** « INITIATED » en cas de succes. Le sort reel arrive par le rappel. */
+  status: string;
+  pay_id: string;
+  message: string;
+}
+
+export async function requestPayout(
+  req: LengopayPayoutRequest,
+): Promise<LengopayPayoutResponse> {
+  if (!lengopayConfigured()) throw new Error('Lengopay non configure');
+  if (req.callback_url && !req.callback_url.startsWith('https://')) {
+    // Leur doc l'exige explicitement ; autant echouer ici, clairement, plutot
+    // que de recevoir un 400 opaque.
+    throw new Error('callback_url doit etre en HTTPS');
+  }
+
+  const res = await fetchWithTimeout(`${baseUrl()}/api/v2/payout/request`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      amount: String(req.amount_minor),
+      currency: req.currency,
+      websiteid: websiteId(),
+      type_account: req.type_account,
+      account: req.account,
+      ...(req.callback_url ? { callback_url: req.callback_url } : {}),
+    }),
+  });
+
+  // 400 = requete mal formee ou parametre manquant. 401 = jeton invalide.
+  if (!res.ok) {
+    throw new Error(`Lengopay payout ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  }
+
+  const raw = await res.json() as { status?: unknown; pay_id?: string; message?: unknown };
+  const payId = typeof raw.pay_id === 'string' ? raw.pay_id : '';
+  // `pay_id` n'est present QU'EN CAS DE SUCCES. Sans lui, on ne saurait pas
+  // rattacher le rappel a la demande — c'est donc un echec, meme en HTTP 200.
+  if (!payId) {
+    throw new Error(`Lengopay payout sans pay_id: ${JSON.stringify(raw).slice(0, 300)}`);
+  }
+  return {
+    status: typeof raw.status === 'string' ? raw.status : 'INITIATED',
+    pay_id: payId,
+    message: typeof raw.message === 'string' ? raw.message : '',
+  };
+}
