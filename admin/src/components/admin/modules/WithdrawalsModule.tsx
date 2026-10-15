@@ -18,10 +18,11 @@
 //                comparaison solde / montant garde tout son sens.
 
 import { useState } from 'react';
-import { Banknote, X, Calendar, Loader2, AlertTriangle, Check } from 'lucide-react';
+import { Banknote, X, Calendar, Loader2, AlertTriangle, Check, Send } from 'lucide-react';
 import {
   useWithdrawals,
   useProcessWithdrawal,
+  usePayoutWithdrawal,
   useLengopayBalance,
   type WithdrawalRow,
 } from '@/data/queries/withdrawals';
@@ -230,6 +231,7 @@ function TreasuryStrip({
 
 function DetailPane({ request }: { request: WithdrawalRow }) {
   const process = useProcessWithdrawal();
+  const payout = usePayoutWithdrawal();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
 
@@ -387,19 +389,45 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
               <X size={15} strokeWidth={2.25} />
               Rejeter
             </button>
+            {/* VERSEMENT AUTOMATIQUE — l'argent part vers Orange Money ou MTN
+                sans que personne n'ouvre son telephone.
+
+                ⚠ Il ne marque PAS la demande payee : il LANCE le versement.
+                C'est le rappel de Lengopay, verifie aupres d'eux, qui clora.
+                D'ou « Verser » et non « Payer » — un administrateur qui croit
+                que c'est fini n'ira pas verifier.
+
+                Affiche seulement sur une demande 'approved' : c'est le seul
+                etat d'ou un versement a du sens, et le serveur le refuserait
+                de toute facon (REQUEST_NOT_PAYABLE). */}
+            {held && (
+              <button
+                onClick={() => payout.mutate({ request_id: request.id })}
+                disabled={payout.isPending || process.isPending}
+                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                style={{ flex: '1.5 1 0' }}
+              >
+                {payout.isPending ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Send size={15} strokeWidth={2.25} />
+                )}
+                Verser
+              </button>
+            )}
             <button
               onClick={() => process.mutate({ request_id: request.id, outcome: 'paid' })}
-              disabled={process.isPending || short}
+              disabled={process.isPending || payout.isPending || short}
               title={short ? 'Solde insuffisant — impossible de payer' : undefined}
               className="flex h-12 items-center justify-center gap-2 rounded-xl bg-black text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
-              style={{ flex: '1.5 1 0' }}
+              style={{ flex: held ? '1 1 0' : '1.5 1 0' }}
             >
               {process.isPending ? (
                 <Loader2 size={15} className="animate-spin" />
               ) : (
                 <Check size={15} strokeWidth={2.25} />
               )}
-              {held ? "J'ai envoyé l'argent" : 'Marquer payé'}
+              {held ? "Viré à la main" : 'Marquer payé'}
             </button>
           </>
         )}

@@ -151,3 +151,69 @@ export function useProcessWithdrawal() {
     },
   });
 }
+
+// ── VERSEMENT AUTOMATIQUE (Lengopay) ──────────────────────────────────────
+//
+// Remplace le virement a la main : l'argent part vers Orange Money ou MTN sans
+// que personne n'ouvre son telephone. Voir
+// supabase/functions/withdrawal-payout/index.ts.
+//
+// ⚠ Cette action ne marque PAS la demande payee. Elle LANCE le versement et
+// rend un pay_id. C'est le rappel de Lengopay — verifie aupres d'eux, jamais
+// cru sur parole — qui clora la demande. L'interface doit donc dire
+// « lance », pas « paye », sinon l'administrateur croira que c'est fini.
+interface PayoutWithdrawalResponse {
+  ok: true;
+  pay_id: string;
+  status: string;
+}
+
+export function usePayoutWithdrawal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { request_id: string }) => {
+      const r = await apiFetch<PayoutWithdrawalResponse>('withdrawal-payout', body);
+      if (!r.ok || !r.data) {
+        throw r.error ?? { code: 'UNKNOWN', message_fr: 'Erreur versement' };
+      }
+      return r.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['withdrawals'] });
+      toast.success('Versement lancé. Le retrait se clôturera à la confirmation de Lengopay.');
+    },
+    onError: (err: unknown) => {
+      const e = err as { code?: string; message_fr?: string };
+      switch (e.code) {
+        case 'FORBIDDEN_ADMIN':
+          toast.error('Accès admin requis');
+          return;
+        case 'REQUEST_NOT_FOUND':
+          toast.error('Demande introuvable');
+          return;
+        case 'REQUEST_NOT_PAYABLE':
+          toast.error("Cette demande n'attend pas de virement");
+          return;
+        case 'PAYOUT_ALREADY_CLAIMED':
+          // Le verrou a mordu. Ce n'est pas une panne : c'est la protection
+          // contre le double paiement qui fait son travail.
+          toast.error('Un versement est déjà parti pour cette demande');
+          return;
+        case 'DESTINATION_UNUSABLE':
+          // Le motif exact vient du serveur (opérateur non reconnu, préfixe
+          // qui ne correspond pas…) : il faut le montrer tel quel, c'est lui
+          // qui dit à l'administrateur quoi faire.
+          toast.error(e.message_fr ?? 'Destination inexploitable — virement à faire à la main');
+          return;
+        case 'INSUFFICIENT_FLOAT':
+          toast.error('La caisse Lengopay ne couvre pas ce montant. Alimente-la puis réessaie.');
+          return;
+        case 'PAYOUT_FAILED':
+          toast.error('Lengopay a refusé le versement. La demande reste à traiter.');
+          return;
+        default:
+          toast.error(e.message_fr ?? 'Erreur versement');
+      }
+    },
+  });
+}
