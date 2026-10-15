@@ -159,7 +159,7 @@ export function WithdrawalsModule() {
 }
 
 /**
- * « Disponible chez LengoPay » face au total de la file.
+ * « Caisse de versement (Pay Out) » face au total de la file.
  *
  * Trois états, et ils ne se confondent pas : on ne sait pas encore, on n'a pas
  * pu savoir, ou on sait. Le troisième seul autorise une comparaison — afficher
@@ -212,7 +212,7 @@ function TreasuryStrip({
       }
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-muted">Disponible chez LengoPay</span>
+        <span className="text-muted">Caisse de versement (Pay Out)</span>
         <span className={`font-bold tabular-nums ${short ? 'text-danger' : ''}`}>
           {loading ? '…' : unknown ? 'indisponible' : gnf(amount)}
         </span>
@@ -223,15 +223,15 @@ function TreasuryStrip({
           <span className="tabular-nums text-faint">{gnf(queueTotal)}</span>
         </div>
       )}
-      {/* LA CAISSE DE VERSEMENT, quand LengoPay la renvoie. Elle est DISTINCTE
-          de l'encaissé — ne pas les additionner. Son existence même dit que le
-          décaissement est un produit de leur plateforme, ce que leur API
-          publique ne laissait pas voir ; à zéro, elle n'a jamais été
-          approvisionnée. */}
-      {!unknown && balance?.payoutGnf !== null && balance?.payoutGnf !== undefined && (
+      {/* L'ENCAISSÉ (Pay In), pour le contexte seulement — ce n'est PAS lui qui
+          paie les vendeurs, et il ne doit jamais s'additionner au précédent.
+          Il figurait en haut jusqu'au 2026-10-15, où le manque se calculait à
+          tort dessus. Depuis, le haut porte le Pay Out, et cette ligne montre
+          l'autre caisse plutôt que de répéter la même somme. */}
+      {!unknown && balance?.amountGnf !== null && balance?.amountGnf !== undefined && (
         <div className="mt-1 flex items-center justify-between gap-2">
-          <span className="text-faint">Caisse de versement (Pay Out)</span>
-          <span className="tabular-nums text-faint">{gnf(balance.payoutGnf)}</span>
+          <span className="text-faint">Encaissé en attente (Pay In)</span>
+          <span className="tabular-nums text-faint">{gnf(balance.amountGnf)}</span>
         </div>
       )}
       {short && (
