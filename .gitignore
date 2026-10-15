@@ -82,3 +82,10 @@ __pycache__/
 
 # Apercus jetables des affiches (play-store-assets/apercu-depose.py)
 play-store-assets/apercu/
+
+.env*
+
+# Residu de `deno check` / `deno test` lances a la main dans app-mobile.
+# Le deploiement Supabase ne lit pas ce fichier (il bundle via la Management
+# API avec supabase/functions/deno.json comme carte d imports).
+app-mobile/deno.lock
