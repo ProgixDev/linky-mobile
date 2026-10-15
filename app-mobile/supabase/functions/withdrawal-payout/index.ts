@@ -102,12 +102,23 @@ Deno.serve(makePost<Body>('/v1/admin/withdrawals/payout', valid, async ({ sb, bo
   // Leur API ne dit pas ce qu'elle fait d'un versement a decouvert. On refuse
   // avant plutot que de decouvrir apres. Un solde illisible n'est PAS un
   // motif de blocage : on journalise et on continue.
+  //
+  // ⚠ C'EST `payoutGnf` QU'IL FAUT LIRE, PAS `amountGnf`.
+  // getAccountBalance() rend DEUX caisses : `amountGnf` est « Pay In »,
+  // l'argent ENCAISSE, et `payoutGnf` est « Pay Out », celle qui PAIE les
+  // vendeurs. Les confondre fait refuser un versement finançable : au
+  // 2026-10-15, Pay In valait 4 057 GNF et Pay Out 60 000 — un versement de
+  // 10 000 aurait été rejeté à tort. Premiere version de cette fonction :
+  // elle lisait amountGnf.
+  //
+  // `payoutGnf` absent ou nul = ils ne rendent pas la caisse. On ne bloque
+  // PAS sur une mesure qu'on n'a pas : on journalise et on laisse passer.
   try {
     const solde = await getAccountBalance();
-    if (solde.available && solde.amountGnf != null && solde.amountGnf < montant) {
-      await relacher(`Caisse Pay Out insuffisante : ${solde.amountGnf} < ${montant}`);
+    if (solde.available && solde.payoutGnf != null && solde.payoutGnf < montant) {
+      await relacher(`Caisse Pay Out insuffisante : ${solde.payoutGnf} < ${montant}`);
       throwApi('INSUFFICIENT_FLOAT', 409,
-        'La caisse Lengopay ne couvre pas ce montant. Alimente-la puis réessaie.');
+        'La caisse de versement Lengopay ne couvre pas ce montant. Alimente-la puis réessaie.');
     }
   } catch (e) {
     if ((e as { status?: number })?.status) throw e;   // notre propre throwApi

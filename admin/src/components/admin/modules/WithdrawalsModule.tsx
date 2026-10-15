@@ -182,8 +182,22 @@ function TreasuryStrip({
   failed: boolean;
   queueTotal: number;
 }) {
-  const unknown = loading || failed || !balance || !balance.available || balance.amountGnf === null;
-  const amount = balance?.amountGnf ?? 0;
+  // ⚠ C'EST « PAY OUT » QUI PAIE LES VENDEURS, PAS « PAY IN ».
+  //
+  // Lengopay tient DEUX caisses : `amountGnf` est l'argent ENCAISSÉ (Pay In),
+  // `payoutGnf` est celle depuis laquelle partent les virements (Pay Out). Le
+  // manque doit se calculer sur la seconde.
+  //
+  // Le 2026-10-15, cet écran annonçait « 105 943 GNF manquants » — soit
+  // 110 000 de file moins 4 057 de Pay In — alors que la caisse de versement
+  // contenait 60 000 et qu'il n'en manquait que 50 000. Un administrateur y
+  // aurait lu qu'il ne pouvait payer personne.
+  //
+  // Si Pay Out n'est pas rendu, on ne sait pas : l'encadré doit le DIRE, pas
+  // se rabattre en silence sur l'autre caisse.
+  const payout = balance?.payoutGnf ?? null;
+  const unknown = loading || failed || !balance || !balance.available || payout === null;
+  const amount = payout ?? 0;
   const short = !unknown && amount < queueTotal;
 
   return (
