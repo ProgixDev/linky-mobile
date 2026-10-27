@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { NetworkStateType, addNetworkStateListener, getNetworkStateAsync } from 'expo-network';
 import { HOME_HERO_AUTOPLAY_ENABLED } from '../../lib/flags';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { Play } from 'lucide-react-native';
+import { Play, Plus } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { haptic } from '../../lib/haptics';
@@ -212,6 +212,16 @@ export function HomeHero() {
   }, [slides.length, index]);
 
 
+  // « Publier maintenant » — REMIS le 2026-10-27 : le client l'a redemandé
+  // (« un seul écran qui défile les stats et plusieurs vidéos/images avec le
+  // bouton Publier maintenant »), après son retrait du 2026-10-26.
+  // /create ne propose que ce que le rôle permet, et invite un simple acheteur
+  // à activer un rôle : un seul point d'entrée, la règle reste au même endroit.
+  const publish = () => {
+    haptic.light();
+    router.push('/create');
+  };
+
   // On attend les pubs, pas le reste : ce sont elles qui décident du contenu.
   if (promosQuery.isLoading) {
     return (
@@ -242,6 +252,9 @@ export function HomeHero() {
             <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 6 }}>
               {t('home.heroEmptySub')}
             </Text>
+            <View style={{ marginTop: 14 }}>
+              <PublishButton onPress={publish} label={t('home.heroPublishNow')} />
+            </View>
           </View>
         </View>
       </View>
@@ -273,6 +286,12 @@ export function HomeHero() {
         )}
       </ScrollView>
 
+      {/* Le bouton ne défile PAS avec les diapositives : il reste au même
+          endroit, quelle que soit la diapositive affichée. */}
+      <View pointerEvents="box-none" style={{ position: 'absolute', right: 34, top: 14 }}>
+        <PublishButton onPress={publish} label={t('home.heroPublishNow')} />
+      </View>
+
       {slides.length > 1 && (
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 }}>
           {slides.map((s, i) => (
@@ -289,6 +308,30 @@ export function HomeHero() {
         </View>
       )}
     </View>
+  );
+}
+
+function PublishButton({ onPress, label }: { onPress: () => void; label: string }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{
+        alignSelf: 'flex-start',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 9,
+        borderRadius: 999,
+        backgroundColor: colors.accent,
+      }}
+    >
+      <Plus size={15} color="#1A1405" strokeWidth={2.5} />
+      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1A1405' }}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -410,7 +453,11 @@ function StatsSlide({ figures }: { figures: { value: number; label: string }[] }
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
       <View style={{ flex: 1, padding: 20, justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>{t('home.statsTitle')}</Text>
+        {/* Moitié de la largeur au plus : le bouton « Publier maintenant » occupe
+            le coin haut droit. */}
+        <Text style={{ fontSize: 18, fontWeight: '800', color: '#FFFFFF', maxWidth: '50%' }} numberOfLines={2}>
+          {t('home.statsTitle')}
+        </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 }}>
           {figures.map((f) => (
             <View key={f.label} style={{ width: '33.3%', paddingRight: 8 }}>
