@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -87,6 +87,16 @@ export default function MarcheRoute() {
   const roles = useAuth((s) => s.roles);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [search, setSearch] = useState('');
+  // La barre de recherche de l'accueil (client 2026-10-27, maquette) ouvre CE
+  // champ : une seule recherche dans l'app, pas deux à tenir à jour.
+  const searchInputRef = useRef<TextInput>(null);
+  const searchFocusRequest = useFilters((s) => s.searchFocusRequest);
+  useEffect(() => {
+    if (searchFocusRequest === 0) return;
+    // Le temps que l'onglet ait fini d'apparaître, sinon le clavier ne sort pas.
+    const timer = setTimeout(() => searchInputRef.current?.focus(), 250);
+    return () => clearTimeout(timer);
+  }, [searchFocusRequest]);
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Debounce the search input so typing doesn't fire a request per keystroke.
@@ -408,6 +418,7 @@ export default function MarcheRoute() {
           >
             <Search size={18} color={colors.textMuted} strokeWidth={2} />
             <TextInput
+              ref={searchInputRef}
               value={search}
               onChangeText={setSearch}
               placeholder={placeholder}

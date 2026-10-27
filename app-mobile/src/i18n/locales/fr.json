@@ -276,7 +276,12 @@
     "statsUsers": "Utilisateurs",
     "statsListings": "Annonces en ligne",
     "statsSales": "Ventes réalisées",
-    "statsBookings": "Réservations réalisées"
+    "statsBookings": "Réservations réalisées",
+    "searchPlaceholderAll": "Rechercher un article, un logement…",
+    "searchPlaceholderArticles": "Rechercher un article…",
+    "searchPlaceholderProperties": "Rechercher un logement…",
+    "statsShops": "Boutiques et agences",
+    "statsCities": "Villes"
   },
   "wallet": {
     "title": "Mon portefeuille",

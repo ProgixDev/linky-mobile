@@ -18,3 +18,4 @@ export * from './kyc';
 export * from './deliveryQuote';
 export * from './moderation';
 export * from './appStats';
+export * from './homePromos';

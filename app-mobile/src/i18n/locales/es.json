@@ -276,7 +276,12 @@
     "statsUsers": "Usuarios",
     "statsListings": "Anuncios publicados",
     "statsSales": "Ventas realizadas",
-    "statsBookings": "Reservas realizadas"
+    "statsBookings": "Reservas realizadas",
+    "searchPlaceholderAll": "Buscar artículos, viviendas…",
+    "searchPlaceholderArticles": "Buscar artículos…",
+    "searchPlaceholderProperties": "Buscar viviendas…",
+    "statsShops": "Tiendas y agencias",
+    "statsCities": "Ciudades"
   },
   "wallet": {
     "title": "Mi monedero",

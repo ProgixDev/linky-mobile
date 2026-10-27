@@ -2,6 +2,11 @@
 // « Nombre d'utilisateurs, nombre d'annonces en ligne, nombre de ventes et de
 // réservations réalisées ».
 //
+// Depuis le 2026-10-27 (le client veut ces chiffres DANS le carrousel) :
+// annonces, boutiques/agences et villes sont toujours renvoyés — vrais et
+// présentables dès maintenant. Les seuils ne gardent que utilisateurs, ventes
+// et réservations.
+//
 // ┌─ POURQUOI DES SEUILS ───────────────────────────────────────────────────┐
 // Mesuré le 2026-10-26, lendemain de la publication sur le Play Store : 20
 // comptes, dont 18 internes (le client sous trois comptes, sa sœur, le
@@ -62,13 +67,11 @@ const SYSTEM_USER_IDS = [
 // À partir de combien un chiffre cesse de desservir l'application.
 const THRESHOLDS = {
   users: 100,
-  listings: 50,
   sales: 20,
   bookings: 10,
 } as const;
 
 const EXCLUDED = [...INTERNAL_USER_IDS, ...SYSTEM_USER_IDS];
-const notIn = '(' + EXCLUDED.join(',') + ')';
 
 function valid(b: unknown): b is Record<string, never> {
   return typeof b === 'object' && b !== null;
@@ -79,30 +82,27 @@ function gate(n: number, seuil: number): number | null {
 }
 
 Deno.serve(makePost<Record<string, never>>('/v1/app/stats', valid, async ({ sb }) => {
-  const [users, products, properties, sales, bookings] = await Promise.all([
-    sb.from('users').select('id', { count: 'exact', head: true })
-      .neq('status', 'deleted').eq('is_admin', false).not('id', 'in', notIn),
-    sb.from('products').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-    sb.from('properties').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-    sb.from('orders').select('id', { count: 'exact', head: true })
-      .eq('status', 'released').not('buyer_id', 'in', notIn),
-    sb.from('bookings').select('id', { count: 'exact', head: true })
-      .in('status', ['active', 'completed']).not('tenant_id', 'in', notIn),
-  ]);
-
-  for (const r of [users, products, properties, sales, bookings]) {
-    if (r.error) {
-      console.error('[app-stats] count error:', r.error);
-      throwApi('INTERNAL_ERROR', 500, 'Statistiques indisponibles');
-    }
+  // Une seule requête (app_public_counts, migration 20261027_01) : six comptes
+  // séparés coûtaient six allers-retours, et le nombre de VILLES distinctes ne
+  // se calcule pas avec un simple count.
+  const { data, error } = await sb.rpc('app_public_counts', { p_excluded: EXCLUDED });
+  if (error || !data) {
+    console.error('[app-stats] app_public_counts error:', error);
+    throwApi('INTERNAL_ERROR', 500, 'Statistiques indisponibles');
   }
+  const c = data as Record<string, number>;
 
   return {
     body: {
-      users: gate(users.count ?? 0, THRESHOLDS.users),
-      listings: gate((products.count ?? 0) + (properties.count ?? 0), THRESHOLDS.listings),
-      sales: gate(sales.count ?? 0, THRESHOLDS.sales),
-      bookings: gate(bookings.count ?? 0, THRESHOLDS.bookings),
+      // Vrais et présentables dès aujourd'hui (19 annonces, 9 boutiques et
+      // agences, 5 villes au 2026-10-27) : toujours renvoyés.
+      listings: c.listings ?? 0,
+      shops: c.shops ?? 0,
+      cities: c.cities ?? 0,
+      // Ceux-là desservent l'application tant qu'ils sont bas : seuils.
+      users: gate(c.users ?? 0, THRESHOLDS.users),
+      sales: gate(c.sales ?? 0, THRESHOLDS.sales),
+      bookings: gate(c.bookings ?? 0, THRESHOLDS.bookings),
     },
   };
 }));

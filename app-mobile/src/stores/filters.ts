@@ -40,6 +40,11 @@ interface FiltersState {
   distanceToRoadMaxM: number;
   furnishedOnly: boolean;
   searchQuery: string;
+  /** Incrémenté par la barre de recherche de l'accueil : le Marché ouvre alors
+   *  son champ, clavier sorti. Un compteur plutôt qu'un booléen : deux appuis
+   *  successifs doivent tous deux agir. */
+  searchFocusRequest: number;
+  requestSearchFocus: () => void;
   setMarcheTab: (t: MarcheTab) => void;
   setProductCategory: (c: string) => void;
   setProductSort: (s: 'recent' | 'popular') => void;
@@ -80,6 +85,7 @@ const DEFAULTS = {
   distanceToRoadMaxM: 0,
   furnishedOnly: false,
   searchQuery: '',
+  searchFocusRequest: 0,
 };
 
 // Phase U.0 nit — used by marche's "Effacer les filtres" CTA to decide
@@ -144,6 +150,7 @@ export const useFilters = create<FiltersState>((set) => ({
   setDistanceMax: (distanceToRoadMaxM) => set({ distanceToRoadMaxM }),
   setFurnishedOnly: (furnishedOnly) => set({ furnishedOnly }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
+  requestSearchFocus: () => set((s) => ({ searchFocusRequest: s.searchFocusRequest + 1 })),
   // Phase U.0 should-fix — "Effacer les filtres" from the Immobilier tab
   // used to yank the user to Articles (DEFAULTS sets marcheTab='articles').
   // Preserve the current tab so the user stays where they were.

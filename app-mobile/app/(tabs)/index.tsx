@@ -14,6 +14,7 @@ import {
   Building2,
   Home as HomeIcon,
   Hand,
+  Search,
 } from 'lucide-react-native';
 import {
   EstateDashboard,
@@ -35,7 +36,6 @@ import { listingScope } from '../../src/lib/persona';
 import { useAuth } from '../../src/stores/auth';
 import { HeaderActions } from '../../src/components/nav/HeaderActions';
 import { HomeHero } from '../../src/components/home/HomeHero';
-import { HomeStats } from '../../src/components/home/HomeStats';
 import { HomeSectionBoundary } from '../../src/components/home/HomeSectionBoundary';
 import { CategoryGlyph, type CategoryGlyphName } from '../../src/icons/CategoryGlyph';
 import { useCreateListing } from '../../src/stores/createListing';
@@ -184,7 +184,6 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
             en dessous, ils doivent rester collés à lui. */}
         <View style={{ paddingBottom: 22 }}>
           <HomeSectionBoundary name="carrousel"><HomeHero /></HomeSectionBoundary>
-          <HomeSectionBoundary name="chiffres"><HomeStats /></HomeSectionBoundary>
         </View>
 
         {hasBoth && (
@@ -260,6 +259,11 @@ function BuyerHome() {
   }, [qc]);
 
   const firstName = (user?.display_name ?? t('home.fallbackName')).split(' ')[0];
+  const searchKey = onlyProducts
+    ? 'home.searchPlaceholderArticles'
+    : onlyProperties
+      ? 'home.searchPlaceholderProperties'
+      : 'home.searchPlaceholderAll';
   // Les trois dernieres pastilles (Location / Vente / Terrains) menent a
   // l'onglet Immobilier et les cinq premieres aux articles : une grille non
   // filtree offrirait une porte d'entree vers ce qu'on vient de masquer
@@ -350,6 +354,39 @@ function BuyerHome() {
           <HeaderActions />
         </View>
 
+        {/* BARRE DE RECHERCHE sous l'en-tête, comme sur la maquette du client
+            (2026-10-27). Ce n'est PAS un second champ de recherche : elle ouvre
+            celui du Marché, clavier sorti, sur l'onglet que le rôle autorise. */}
+        <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+          <Pressable
+            onPress={() => {
+              haptic.light();
+              const f = useFilters.getState();
+              f.setMarcheTab(onlyProperties ? 'immobilier' : 'articles');
+              f.requestSearchFocus();
+              router.push('/(tabs)/marche');
+            }}
+            accessibilityRole="search"
+            accessibilityLabel={t(searchKey)}
+            style={{
+              height: 48,
+              borderRadius: 999,
+              backgroundColor: colors.card,
+              borderWidth: 1,
+              borderColor: colors.border,
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: 18,
+              gap: 10,
+            }}
+          >
+            <Search size={18} color={colors.textMuted} strokeWidth={2} />
+            <Text style={{ fontSize: 14.5, color: colors.textFaint }} numberOfLines={1}>
+              {t(searchKey)}
+            </Text>
+          </Pressable>
+        </View>
+
         {/* Pro summary card removed from the Home (client 2026-07-30): it
             duplicated the pro workspace, which is already reachable from the
             Profil tab (combined "Espace pro" card). Frees space above the
@@ -404,7 +441,6 @@ function BuyerHome() {
           ))}
         </ScrollView>
 
-        <HomeSectionBoundary name="chiffres"><HomeStats /></HomeSectionBoundary>
 
         {/* Portefeuille et Activite RETIRES de l'accueil (client 2026-10-27 :
             « On peut retirer le wallet et les activites »). Rien ne devient

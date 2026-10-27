@@ -859,3 +859,6 @@ verify_jwt = false
 
 [functions.app-stats]
 verify_jwt = false
+
+[functions.list-home-promos]
+verify_jwt = false

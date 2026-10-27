@@ -7,8 +7,14 @@ import { useQuery } from '@tanstack/react-query';
 import { apiPost } from '../../lib/api';
 
 export interface AppStats {
+  /** Toujours renvoyés depuis le 2026-10-27 (vrais et présentables). Optionnels
+   *  ici : une app mise à jour avant le redéploiement de la fonction doit
+   *  encore lire l'ancienne réponse sans planter. */
+  listings?: number | null;
+  shops?: number;
+  cities?: number;
+  /** Null tant que leur seuil n'est pas atteint. */
   users: number | null;
-  listings: number | null;
   sales: number | null;
   bookings: number | null;
 }

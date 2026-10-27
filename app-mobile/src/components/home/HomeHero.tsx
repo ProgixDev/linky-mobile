@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, View } from 'react-native';
+import { Dimensions, Linking, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -17,12 +17,24 @@ import { priceWithFeeGnf } from '../../lib/fees';
 import { listingScope } from '../../lib/persona';
 import { useAuth } from '../../stores/auth';
 import { usePrefs } from '../../stores/prefs';
-import { useDiscoverFeed } from '../../data/queries';
+import { useAppStats, useDiscoverFeed, useHomePromos } from '../../data/queries';
+import type { AppStats, HomePromo } from '../../data/queries';
 import type { DiscoverItem } from '../../data/types';
 
 /**
- * LE CARROUSEL EN TÊTE DE L'ACCUEIL (client 2026-10-25) : « des short vidéos et
- * images avec un bouton "Publier maintenant" ». Le bouton a été RETIRÉ le
+ * LE CARROUSEL EN TÊTE DE L'ACCUEIL.
+ *
+ * 2026-10-27, le client, capture à l'appui : « c'est là que je veux qu'on
+ * remplace par des chiffres clés de l'appli et des vidéos de publicité ».
+ * Ordre des diapositives :
+ *   1. « Linky en chiffres » (app-stats) — seulement les chiffres non nuls ;
+ *   2. les vidéos de pub (home_promos, gérées côté serveur) ;
+ *   3. TANT QU'AUCUNE PUB N'EXISTE, les annonces en remplacement, pour que le
+ *      carrousel ne se réduise pas à une seule carte. Elles disparaissent
+ *      d'elles-mêmes dès la première pub ajoutée.
+ *
+ * Historique : 2026-10-25, « des short vidéos et images avec un bouton
+ * "Publier maintenant" ». Le bouton a été RETIRÉ le
  * 2026-10-26 à la demande du développeur (Achraf) ; le client l'avait demandé,
  * à lui confirmer.
  *
@@ -53,46 +65,87 @@ const DWELL_MS = 5000;
 const DWELL_VIDEO_MS = 9000;
 const ARM_DELAY_MS = 800;
 
-interface Slide {
+/** Une diapositive « image ou vidéo » : une annonce, ou une pub. */
+interface MediaSlide {
+  type: 'media';
   key: string;
-  kind: 'product' | 'property';
-  id: string;
   title: string;
-  price: string;
+  /** Le prix d'une annonce, le sous-titre d'une pub. */
+  caption: string | null;
   photo: string | null;
   video: string | null;
+  badge: 'video' | 'new' | null;
+  onOpen: (() => void) | null;
 }
 
-function toSlide(d: DiscoverItem, perMonth: string, perDay: string, gift: string): Slide {
+type Slide = MediaSlide | { type: 'stats'; key: 'stats' };
+
+function listingSlide(d: DiscoverItem, perMonth: string, perDay: string, gift: string): MediaSlide {
   if (d.kind === 'product') {
     const p = d.item;
     return {
+      type: 'media',
       key: 'p' + p.id,
-      kind: 'product',
-      id: p.id,
       title: p.title,
-      price: p.isGift ? gift : formatGNF(priceWithFeeGnf(p.priceGnf)),
+      caption: p.isGift ? gift : formatGNF(priceWithFeeGnf(p.priceGnf)),
       photo: p.photos?.[0] ?? null,
       video: p.videoUrl ?? null,
+      badge: p.videoUrl ? 'video' : 'new',
+      onOpen: () => router.push(`/product/${p.id}`),
     };
   }
   const p = d.item;
   const suffix = p.type === 'location' ? (p.perMonth ? perMonth : perDay) : '';
   return {
+    type: 'media',
     key: 'b' + p.id,
-    kind: 'property',
-    id: p.id,
     title: p.title,
-    price: formatGNF(priceWithFeeGnf(p.priceGnf)) + suffix,
+    caption: formatGNF(priceWithFeeGnf(p.priceGnf)) + suffix,
     photo: p.photos?.[0] ?? null,
     video: p.videoUrl ?? null,
+    badge: p.videoUrl ? 'video' : 'new',
+    onOpen: () => router.push(`/property/${p.id}`),
   };
+}
+
+function promoSlide(p: HomePromo): MediaSlide {
+  const link = p.linkUrl?.trim() || null;
+  let onOpen: (() => void) | null = null;
+  // Un chemin de l'app s'ouvre dans l'app ; une adresse web dans le navigateur ;
+  // sans lien, la pub se regarde simplement.
+  if (link && link.startsWith('/')) onOpen = () => router.push(link as never);
+  else if (link && /^https?:[/][/]/i.test(link)) onOpen = () => void Linking.openURL(link);
+  return {
+    type: 'media',
+    key: 'ad' + p.id,
+    title: p.title ?? '',
+    caption: p.subtitle,
+    photo: p.posterUrl,
+    video: p.videoUrl,
+    badge: p.videoUrl ? 'video' : null,
+    onOpen,
+  };
+}
+
+/** Les chiffres à montrer : uniquement ceux qui existent ET ne valent pas zéro.
+ *  « 0 vente » sur la première page desservirait l'application. */
+function statFigures(st: AppStats | undefined, t: (k: string) => string) {
+  if (!st) return [];
+  const all: { value: number | null | undefined; label: string }[] = [
+    { value: st.listings, label: t('home.statsListings') },
+    { value: st.shops, label: t('home.statsShops') },
+    { value: st.cities, label: t('home.statsCities') },
+    { value: st.users, label: t('home.statsUsers') },
+    { value: st.sales, label: t('home.statsSales') },
+    { value: st.bookings, label: t('home.statsBookings') },
+  ];
+  return all.filter((f): f is { value: number; label: string } => typeof f.value === 'number' && f.value > 0);
 }
 
 /** Les vidéos d'abord (jusqu'à trois : c'est ce que le client a demandé de
  *  voir), puis les annonces avec photo. Une annonce sans photo ni vidéo n'a
  *  rien à montrer en grand. */
-function pickSlides(items: Slide[]): Slide[] {
+function pickSlides(items: MediaSlide[]): MediaSlide[] {
   const videos = items.filter((s) => s.video);
   const photos = items.filter((s) => !s.video && s.photo);
   const out = [...videos.slice(0, MAX_VIDEOS), ...photos];
@@ -106,7 +159,9 @@ export function HomeHero() {
   const roles = useAuth((s) => s.roles);
   const scope = listingScope(roles);
   const filter = scope === 'products' ? 'products' : scope === 'properties' ? 'properties' : 'all';
-  const { data, isLoading } = useDiscoverFeed(filter);
+  const { data } = useDiscoverFeed(filter);
+  const promosQuery = useHomePromos();
+  const { data: stats } = useAppStats();
 
   const onNetworkWifi = useOnWifi(HOME_HERO_AUTOPLAY_ENABLED);
   // L'Économiseur de données l'emporte sur le wifi : quelqu'un qui l'a activé
@@ -117,13 +172,19 @@ export function HomeHero() {
   const focused = useIsFocused();
   const onWifi = !dataSaver && onNetworkWifi && focused;
 
-  const slides = useMemo(
-    () =>
-      pickSlides(
-        (data ?? []).map((d) => toSlide(d, t('home.perMonth'), t('home.perDay'), t('create.giftBadge'))),
-      ),
-    [data, t],
-  );
+  const figures = useMemo(() => statFigures(stats, t), [stats, t]);
+
+  const slides = useMemo((): Slide[] => {
+    const promos = promosQuery.data ?? [];
+    const media =
+      promos.length > 0
+        ? promos.map(promoSlide)
+        : pickSlides(
+            (data ?? []).map((d) => listingSlide(d, t('home.perMonth'), t('home.perDay'), t('create.giftBadge'))),
+          );
+    const head: Slide[] = figures.length > 0 ? [{ type: 'stats', key: 'stats' }] : [];
+    return [...head, ...media];
+  }, [promosQuery.data, data, figures.length, t]);
 
   const [index, setIndex] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -134,7 +195,8 @@ export function HomeHero() {
   // illisible.
   useEffect(() => {
     if (slides.length < 2 || dragging) return;
-    const playing = !!slides[index]?.video && onWifi;
+    const cur = slides[index];
+    const playing = cur?.type === 'media' && !!cur.video && onWifi;
     const timer = setTimeout(() => {
       const next = (index + 1) % slides.length;
       scrollRef.current?.scrollTo({ x: next * (SLIDE_W + GAP), animated: true });
@@ -150,7 +212,8 @@ export function HomeHero() {
   }, [slides.length, index]);
 
 
-  if (isLoading) {
+  // On attend les pubs, pas le reste : ce sont elles qui décident du contenu.
+  if (promosQuery.isLoading) {
     return (
       <View style={{ paddingHorizontal: 20 }}>
         <View style={{ width: SLIDE_W, height: SLIDE_H, borderRadius: 22, backgroundColor: colors.bgSunken }} />
@@ -201,9 +264,13 @@ export function HomeHero() {
           setDragging(false);
         }}
       >
-        {slides.map((s, i) => (
-          <HeroSlide key={s.key} slide={s} active={i === index} canPlay={onWifi} />
-        ))}
+        {slides.map((s, i) =>
+          s.type === 'stats' ? (
+            <StatsSlide key={s.key} figures={figures} />
+          ) : (
+            <HeroSlide key={s.key} slide={s} active={i === index} canPlay={onWifi} />
+          ),
+        )}
       </ScrollView>
 
       {slides.length > 1 && (
@@ -225,7 +292,7 @@ export function HomeHero() {
   );
 }
 
-function HeroSlide({ slide, active, canPlay }: { slide: Slide; active: boolean; canPlay: boolean }) {
+function HeroSlide({ slide, active, canPlay }: { slide: MediaSlide; active: boolean; canPlay: boolean }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   // Un lecteur n'existe QUE pour la diapositive visible, et seulement en wifi.
@@ -248,10 +315,12 @@ function HeroSlide({ slide, active, canPlay }: { slide: Slide; active: boolean; 
   return (
     <Pressable
       onPress={() => {
+        if (!slide.onOpen) return;
         haptic.light();
-        router.push(slide.kind === 'product' ? `/product/${slide.id}` : `/property/${slide.id}`);
+        slide.onOpen();
       }}
-      accessibilityLabel={`${slide.title}, ${slide.price}`}
+      disabled={!slide.onOpen}
+      accessibilityLabel={slide.caption ? `${slide.title}, ${slide.caption}` : slide.title}
       style={{
         width: SLIDE_W,
         height: SLIDE_H,
@@ -295,29 +364,72 @@ function HeroSlide({ slide, active, canPlay }: { slide: Slide; active: boolean; 
       />
 
       <View pointerEvents="none" style={{ position: 'absolute', left: 16, right: 16, bottom: 14 }}>
-        <View
-          style={{
-            alignSelf: 'flex-start',
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderRadius: 999,
-            backgroundColor: slide.video ? colors.primary : 'rgba(255,255,255,0.22)',
-            marginBottom: 6,
-          }}
-        >
-          <Text style={{ fontSize: 10, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.4 }}>
-            {slide.video ? t('home.heroVideoBadge') : t('home.heroNewBadge')}
-          </Text>
-        </View>
+        {slide.badge && (
+          <View
+            style={{
+              alignSelf: 'flex-start',
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: 999,
+              backgroundColor: slide.badge === 'video' ? colors.primary : 'rgba(255,255,255,0.22)',
+              marginBottom: 6,
+            }}
+          >
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.4 }}>
+              {slide.badge === 'video' ? t('home.heroVideoBadge') : t('home.heroNewBadge')}
+            </Text>
+          </View>
+        )}
         <Text style={{ fontSize: 17, fontWeight: '700', color: '#FFFFFF' }} numberOfLines={1}>
           {slide.title}
         </Text>
-        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.accent, marginTop: 2 }} numberOfLines={1}>
-          {slide.price}
-        </Text>
+        {!!slide.caption && (
+          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.accent, marginTop: 2 }} numberOfLines={1}>
+            {slide.caption}
+          </Text>
+        )}
       </View>
     </Pressable>
   );
+}
+
+/** « Linky en chiffres » : jusqu'à six chiffres, trois par rangée. */
+function StatsSlide({ figures }: { figures: { value: number; label: string }[] }) {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  return (
+    <View
+      accessibilityRole="summary"
+      accessibilityLabel={`${t('home.statsTitle')} : ${figures.map((f) => `${f.value} ${f.label}`).join(', ')}`}
+      style={{ width: SLIDE_W, height: SLIDE_H, borderRadius: 22, overflow: 'hidden' }}
+    >
+      <LinearGradient
+        colors={[colors.primary, '#0B4A38']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      <View style={{ flex: 1, padding: 20, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>{t('home.statsTitle')}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 }}>
+          {figures.map((f) => (
+            <View key={f.label} style={{ width: '33.3%', paddingRight: 8 }}>
+              <Text style={{ fontSize: 26, fontWeight: '800', color: '#FFFFFF' }}>{groupDigits(f.value)}</Text>
+              <Text style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.82)', marginTop: 2 }} numberOfLines={2}>
+                {f.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** 12 400 plutôt que 12400, écrit à la main : le moteur JavaScript d'Android
+ *  n'embarque pas toujours les données de langue de toLocaleString. */
+function groupDigits(n: number): string {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
 function HeroVideo({ uri }: { uri: string }) {
