@@ -14,8 +14,9 @@ import { useToast } from '../../../src/components/feedback/Toast';
 import { useOrderWithIntent } from '../../../src/data/queries/orders';
 import { useCancelPendingPayment } from '../../../src/data/queries/payments';
 import { useCart } from '../../../src/stores/cart';
+import { playUiSound } from '../../../src/lib/uiSound';
 
-const TTL_MS = 15 * 60 * 1000;
+const TTL_MS = 20 * 60 * 1000;
 
 // P1 defensive: with the one-query design (useOrderWithIntent returns
 // {order, intent} in a single payload), INVALID is structurally impossible
@@ -108,6 +109,8 @@ export default function CheckoutConfirmRoute() {
       // failure left it intact so the buyer could retry without
       // re-finding the product.
       useCart.getState().clear();
+      // « Paiement accepté » : le son de validation (client 2026-09-28).
+      playUiSound('success');
       router.replace(`/checkout/success?orderId=${order.id}`);
       return;
     }
@@ -115,6 +118,16 @@ export default function CheckoutConfirmRoute() {
       router.replace('/checkout');
     }
   }, [data, intent, stateClass, invalidExpired, order?.id]);
+
+  // « Paiement refusé » : le son d'échec, UNE fois, quand le paiement est refusé
+  // ou expire. Pas sur une annulation — c'est l'acheteur qui l'a voulue.
+  const failSoundPlayed = useRef(false);
+  useEffect(() => {
+    if ((stateClass === 'FAIL' || stateClass === 'EXPIRED') && !failSoundPlayed.current) {
+      failSoundPlayed.current = true;
+      playUiSound('failure');
+    }
+  }, [stateClass]);
 
   // M2: error screen.
   if (error) {

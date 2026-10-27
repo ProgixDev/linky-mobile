@@ -5,20 +5,14 @@ import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { WALLET_TOPUP_ENABLED } from '../../src/lib/flags';
 import {
   Bell,
   Plus,
   Store,
   ChevronRight,
-  Shirt,
-  Smartphone,
-  Sofa,
-  Car,
   Sparkles as SparklesIcon,
   Building2,
   Home as HomeIcon,
-  TreePine,
   Hand,
 } from 'lucide-react-native';
 import {
@@ -28,12 +22,10 @@ import {
   ShopDashboard,
   type ProMode,
 } from '../../src/components/dashboards/ProDashboard';
-import type { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Text } from '../../src/components/primitives/Text';
 import { Avatar } from '../../src/components/primitives/Avatar';
 import { SectionHeader } from '../../src/components/lists/SectionHeader';
-import { ShopMiniCard } from '../../src/components/lists/ShopCard';
 import { ProductCard } from '../../src/components/lists/ProductCard';
 import { PropertyCard } from '../../src/components/lists/PropertyCard';
 import { ProductCardSkeleton } from '../../src/components/primitives/Skeleton';
@@ -42,15 +34,15 @@ import { photos } from '../../src/data/photos';
 import { listingScope } from '../../src/lib/persona';
 import { useAuth } from '../../src/stores/auth';
 import { HeaderActions } from '../../src/components/nav/HeaderActions';
-import { HomeWalletCard } from '../../src/components/home/HomeWalletCard';
-import { HomeActivity } from '../../src/components/home/HomeActivity';
+import { HomeHero } from '../../src/components/home/HomeHero';
+import { HomeStats } from '../../src/components/home/HomeStats';
+import { HomeSectionBoundary } from '../../src/components/home/HomeSectionBoundary';
+import { CategoryGlyph, type CategoryGlyphName } from '../../src/icons/CategoryGlyph';
 import { useCreateListing } from '../../src/stores/createListing';
 import { useFilters } from '../../src/stores/filters';
 import {
-  useShops,
   usePopularProducts,
   useNearbyProperties,
-  useWallet,
   useMyShops,
   useMyProperties,
   useUnreadNotificationsCount,
@@ -187,6 +179,14 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
           </Pressable>
         </View>
 
+        {/* Carrousel + chiffres en tête (client 2026-10-25), AVANT les onglets
+            Boutique / Immobilier : ces onglets pilotent le tableau de bord juste
+            en dessous, ils doivent rester collés à lui. */}
+        <View style={{ paddingBottom: 22 }}>
+          <HomeSectionBoundary name="carrousel"><HomeHero /></HomeSectionBoundary>
+          <HomeSectionBoundary name="chiffres"><HomeStats /></HomeSectionBoundary>
+        </View>
+
         {hasBoth && (
           <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
             <View
@@ -216,9 +216,6 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
 
         {mode === 'shop' ? <ShopDashboard /> : <EstateDashboard />}
 
-        {/* La meme section que sur l'accueil acheteur : la cloche de cet ecran
-            charge deja le meme cache, donc elle ne coute rien ici non plus. */}
-        <HomeActivity />
       </ScrollView>
     </SafeAreaView>
   );
@@ -241,25 +238,20 @@ function BuyerHome() {
   const scope = listingScope(roles);
   const onlyProducts = scope === 'products';
   const onlyProperties = scope === 'properties';
-  const { data: shops, isLoading: shopsLoading } = useShops(3, !onlyProperties);
   const { data: products, isLoading: prodLoading } = usePopularProducts(4, !onlyProperties);
   const { data: properties, isLoading: propLoading } = useNearbyProperties(3, !onlyProducts);
-  const walletQuery = useWallet();
-  const wallet = walletQuery.data;
-  const walletReady = !walletQuery.isLoading && !walletQuery.isError && !!wallet;
 
-  // TIRER POUR METTRE A JOUR. Un tableau de bord qui ne se rafraichit qu'au
-  // remontage de l'ecran n'est pas dynamique : le vendeur qui vient d'encaisser
-  // voyait son ancien solde jusqu'a ce qu'il change d'onglet. On invalide les
-  // deux caches que cette page affiche — le portefeuille et les notifications —
-  // plutot que de tout recharger : les annonces, elles, n'ont pas bouge.
+  // TIRER POUR METTRE A JOUR. Depuis que le portefeuille et l'activite ont
+  // quitte l'accueil (client 2026-10-27), ce qui bouge ici, ce sont les annonces
+  // du carrousel, les chiffres et la pastille de la cloche.
   const qc = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ['wallet'] }),
+        qc.invalidateQueries({ queryKey: ['discover-feed'] }),
+        qc.invalidateQueries({ queryKey: ['app-stats'] }),
         qc.invalidateQueries({ queryKey: ['notifications'] }),
       ]);
     } finally {
@@ -363,132 +355,80 @@ function BuyerHome() {
             Profil tab (combined "Espace pro" card). Frees space above the
             wallet. */}
 
-        {/* Wallet hero */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
-          {/* Phase U.0 should-fix — pre-U0 a cold 3G start showed a
-              confident "0 GNF / ≈ 0 €" for seconds. Pass ready state so
-              the hero shows "—" until the wallet query resolves. */}
-          <HomeWalletCard
-            // Le TOTAL : cette carte repond a « combien ai-je ? ». Depuis la
-            // separation des caisses (2026-09-24), balanceGnf ne porte plus que
-            // la caisse vendeur — s'en contenter ici aurait fait disparaitre
-            // l'argent immobilier de l'ecran d'accueil.
-            balanceGnf={wallet?.totalGnf ?? 0}
-            // ... et les deux caisses separement, que la carte n'affiche que si
-            // l'Immo n'est pas vide. Le total seul effacait sur la premiere page
-            // la distinction que le client avait demandee.
-            sellerGnf={wallet?.balanceGnf ?? 0}
-            immoGnf={wallet?.immoGnf ?? 0}
-            // Deja charges par useWallet() pour cette page : le mois en cours et
-            // le dernier mouvement ne coutent donc aucun appel de plus.
-            movements={wallet?.movements}
-            ready={walletReady}
-            onRecharger={WALLET_TOPUP_ENABLED ? () => router.push('/wallet/recharger') : undefined}
-            onTap={() => router.push('/wallet')}
-          />
-        </View>
+        {/* « Ce type de tableau de bord pour la page d'accueil » (client
+            2026-10-25) : des vidéos courtes et des images avec « Publier
+            maintenant », puis les chiffres de l'application. En TÊTE : c'est
+            la première chose que le client veut voir. */}
+        <HomeSectionBoundary name="carrousel"><HomeHero /></HomeSectionBoundary>
+        {/* LES CATEGORIES, JUSTE SOUS LE CARROUSEL (client 2026-10-26, maquette
+            a l'appui) : une rangee de pastilles rondes, icone noire sur fond
+            blanc, SANS titre au-dessus — la rangee se lit d'elle-meme. Elle
+            defile : huit categories ne tiennent pas sur un ecran. Pour un
+            vendeur (5) ou une agence (3), elles tiennent, et se repartissent
+            sur toute la largeur. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginTop: 16 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            // De l'air au-dessus et en dessous : sans lui, Android coupe net
+            // l'ombre des pastilles au bord de la rangee.
+            paddingVertical: 6,
+            gap: 10,
+            flexGrow: 1,
+            justifyContent: CATEGORIES.length <= 5 ? 'space-between' : 'flex-start',
+          }}
+        >
+          {CATEGORIES.map((c) => (
+            <CategoryCircle
+              key={c.code}
+              glyph={c.glyph}
+              label={c.label}
+              onPress={() => {
+                // Seed the marketplace filter so the tile lands on its
+                // actual category, not an unfiltered marché. Match by the
+                // stable filter CODE (legacy FR string the store stores),
+                // never by translated label.
+                const f = useFilters.getState();
+                if (c.code === 'Location' || c.code === 'Vente' || c.code === 'Terrains') {
+                  f.setMarcheTab('immobilier');
+                  f.setPropertyType(c.code === 'Location' ? 'location' : c.code === 'Vente' ? 'vente' : 'terrain');
+                } else {
+                  f.setMarcheTab('articles');
+                  f.setProductCategory(c.code);
+                }
+                router.push('/(tabs)/marche');
+              }}
+            />
+          ))}
+        </ScrollView>
 
-        {/* Quick-action tiles removed (client ask 2026-07-06) : Scanner +
-            Retirer live in the Profil shortcuts, the Wallet tile folded into
-            the green card above, Vendre moved to the header pill. */}
+        <HomeSectionBoundary name="chiffres"><HomeStats /></HomeSectionBoundary>
 
-        {/* « Et les notifications » (client 2026-09-28). Juste sous le solde :
-            c'est la suite naturelle de « ce qui s'est passe sur mon compte ».
-            La section disparait entierement quand il n'y a rien — un encart
-            vide sur la premiere page ferait croire a un ecran casse. */}
-        <HomeActivity />
+        {/* Portefeuille et Activite RETIRES de l'accueil (client 2026-10-27 :
+            « On peut retirer le wallet et les activites »). Rien ne devient
+            introuvable : le portefeuille reste dans l'onglet Profil, l'activite
+            derriere la cloche des notifications, en haut de cet ecran. */}
 
-        {/* Categories — 4 col x 2 row grid */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 28 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-              marginBottom: 14,
-            }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>
-              {t('home.categoriesSection')}
-            </Text>
-            <Pressable onPress={() => router.push('/(tabs)/marche')}>
-              <Text
-                style={{ fontSize: 13, fontWeight: '600', color: colors.primary, letterSpacing: 0 }}
-              >
-                {t('home.seeAll')}
-              </Text>
-            </Pressable>
-          </View>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-            {CATEGORIES.map((c) => (
-              <CategoryGridTile
-                key={c.code}
-                Icon={c.Icon}
-                label={c.label}
-                tint={c.tint}
-                onPress={() => {
-                  // Seed the marketplace filter so the tile lands on its
-                  // actual category, not an unfiltered marché. Match by the
-                  // stable filter CODE (legacy FR string the store stores),
-                  // never by translated label.
-                  const f = useFilters.getState();
-                  if (c.code === 'Location' || c.code === 'Vente' || c.code === 'Terrains') {
-                    f.setMarcheTab('immobilier');
-                    f.setPropertyType(c.code === 'Location' ? 'location' : c.code === 'Vente' ? 'vente' : 'terrain');
-                  } else {
-                    f.setMarcheTab('articles');
-                    f.setProductCategory(c.code);
-                  }
-                  router.push('/(tabs)/marche');
-                }}
-              />
-            ))}
-          </View>
-        </View>
+        {/* « Boutiques mises en avant » RETIRÉE (client 2026-10-27). Elle ne
+            montrait que les boutiques VÉRIFIÉES, et il n'y en avait aucune : un
+            titre au-dessus d'une rangée vide. */}
 
-        {/* Featured shops — same swipe row as popular products : two cards
-            visible, a peek of the third, snap per card.
-            Masquees pour une agence immobiliere : separation des modes. */}
+        {/* Popular products — one horizontal swipe row : two cards visible,
+            a peek of the third invites the swipe (was a vertical 2-col grid). */}
         {!onlyProperties && (
           <View style={{ marginTop: 28 }}>
+            {/* SectionHeader porte deja sa marge : l'envelopper d'une marge de
+                plus decalait ce titre vers la droite (capture du 2026-10-27). */}
             <SectionHeader
-              title={t('home.shopsSection')}
+              title={t('home.popularSection')}
               action={t('home.seeAll')}
               onAction={() => {
                 useFilters.getState().setMarcheTab('articles');
                 router.push('/(tabs)/marche');
               }}
             />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={POPULAR_CARD_WIDTH + 12}
-              decelerationRate="fast"
-              contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
-            >
-              {shopsLoading
-                ? Array.from({ length: 3 }).map((_, i) => (
-                    <View key={i} style={{ width: POPULAR_CARD_WIDTH, height: 110, borderRadius: 16, backgroundColor: colors.bgSunken }} />
-                  ))
-                : shops?.map((s) => <ShopMiniCard key={s.id} shop={s} width={POPULAR_CARD_WIDTH} />) ?? null}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Popular products — one horizontal swipe row : two cards visible,
-            a peek of the third invites the swipe (was a vertical 2-col grid). */}
-        {!onlyProperties && (
-          <View style={{ marginTop: 28 }}>
-            <View style={{ paddingHorizontal: 20 }}>
-              <SectionHeader
-                title={t('home.popularSection')}
-                action={t('home.seeAll')}
-                onAction={() => {
-                  useFilters.getState().setMarcheTab('articles');
-                  router.push('/(tabs)/marche');
-                }}
-              />
-            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -671,107 +611,83 @@ function BuyerHome() {
 // hardcoded string used by useFilters + marche's PRODUCT_CATEGORY_DEFS for
 // backward compat) plus a labelKey resolved at render so labels flip live.
 const CATEGORY_DEFS: Array<{
-  Icon: LucideIcon;
+  glyph: CategoryGlyphName;
   code: string;
   labelKey: string;
-  tint: 'primary' | 'accent' | 'cream' | 'info' | 'mint' | 'rose' | 'lilac' | 'sand';
 }> = [
   // `code` MUST equal the value the create wizard stores on the product
   // (create/product/category.tsx) — else the tile filters to an empty Marché.
-  { Icon: Smartphone,    code: 'Électronique',      labelKey: 'create.catElectronique',   tint: 'accent' },
-  { Icon: Shirt,         code: 'Vêtements & Mode',  labelKey: 'create.catVetementsMode',  tint: 'primary' },
-  { Icon: Sofa,          code: 'Maison & Déco',     labelKey: 'create.catMaisonDeco',     tint: 'cream' },
-  { Icon: Car,           code: 'Auto & Moto',       labelKey: 'create.catAutoMoto',       tint: 'info' },
-  { Icon: SparklesIcon,  code: 'Beauté & Santé',    labelKey: 'create.catBeauteSante',    tint: 'rose' },
-  { Icon: Building2,     code: 'Location',    labelKey: 'home.catLocation',    tint: 'mint' },
-  { Icon: HomeIcon,      code: 'Vente',       labelKey: 'home.catVente',       tint: 'lilac' },
-  { Icon: TreePine,      code: 'Terrains',    labelKey: 'home.catTerrains',    tint: 'sand' },
+  { glyph: 'phone',     code: 'Électronique',      labelKey: 'create.catElectronique' },
+  { glyph: 'apparel',   code: 'Vêtements & Mode',  labelKey: 'create.catVetementsMode' },
+  { glyph: 'sofa',      code: 'Maison & Déco',     labelKey: 'create.catMaisonDeco' },
+  { glyph: 'car',       code: 'Auto & Moto',       labelKey: 'create.catAutoMoto' },
+  { glyph: 'spa',       code: 'Beauté & Santé',    labelKey: 'create.catBeauteSante' },
+  { glyph: 'key',       code: 'Location',          labelKey: 'home.catLocation' },
+  { glyph: 'house',     code: 'Vente',             labelKey: 'home.catVente' },
+  { glyph: 'landscape', code: 'Terrains',          labelKey: 'home.catTerrains' },
 ];
 
-const TINTS: Record<string, { bg: string; fg: string }> = {
-  primary: { bg: '#E8F2EE', fg: '#0F7256' },
-  accent: { bg: '#FCF1DC', fg: '#B5821C' },
-  cream: { bg: '#F1EAD9', fg: '#7A6238' },
-  info: { bg: '#E4ECF6', fg: '#2F5BBE' },
-  mint: { bg: '#E2F2EA', fg: '#198754' },
-  rose: { bg: '#FBE7E5', fg: '#B53D2F' },
-  lilac: { bg: '#ECE5F4', fg: '#634CA0' },
-  sand: { bg: '#F2EBDD', fg: '#8C6E3A' },
-};
-
-// Dark-mode variants (client 2026-07-27): the light pastel tiles jarred on
-// black. Same hue coding, but dark tinted surfaces + brighter icons. Light
-// mode stays exactly as TINTS above.
-const DARK_TINTS: Record<string, { bg: string; fg: string }> = {
-  primary: { bg: '#12271F', fg: '#54D1A8' },
-  accent: { bg: '#2A2414', fg: '#E9BA5E' },
-  cream: { bg: '#242015', fg: '#CBB184' },
-  info: { bg: '#152134', fg: '#84A9F0' },
-  mint: { bg: '#122619', fg: '#4ACB8D' },
-  rose: { bg: '#2B1815', fg: '#EC8E80' },
-  lilac: { bg: '#1E1733', fg: '#AE97E3' },
-  sand: { bg: '#252013', fg: '#CBAC78' },
-};
-
-function CategoryGridTile({
-  Icon,
+function CategoryCircle({
+  glyph,
   label,
-  tint,
   onPress,
 }: {
-  Icon: LucideIcon;
+  glyph: CategoryGlyphName;
   label: string;
-  tint: keyof typeof TINTS;
   onPress: () => void;
 }) {
   const { colors, theme } = useTheme();
-  const set = theme === 'dark' ? DARK_TINTS : TINTS;
-  const t = set[tint] ?? set.primary;
   return (
     <Pressable
       onPress={() => {
         haptic.light();
         onPress();
       }}
-      style={{
-        // PAS de flexGrow. Avec 8 pastilles — deux rangees pleines de 4 — il ne
-        // se voyait pas. Des que la grille est filtree par categorie (5 pour un
-        // vendeur, 3 pour un agent), la derniere rangee n'est plus pleine et
-        // l'element s'etire pour occuper toute la largeur : `flexBasis` cesse
-        // alors d'etre une largeur DEFINIE, la boite interieure en `width: 100%`
-        // n'a plus rien contre quoi se resoudre, et `aspectRatio: 1` en tire une
-        // hauteur enorme. C'est la pastille geante « Beaute & Sante » de la
-        // capture client du 2026-09-09.
-        // Sans grow, la largeur reste 22 % dans tous les cas : la rangee
-        // incomplete est simplement alignee a gauche, avec des pastilles de
-        // taille normale.
-        flexBasis: '22%',
-        alignItems: 'center',
-        gap: 8,
-      }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      // Largeur FIXE : les libelles longs (« Vetements & Mode ») passent sur
+      // deux lignes au lieu d'elargir la pastille. 78 et pas moins : a 64,
+      // « Electronique » etait coupe au milieu du mot (capture du 2026-10-26).
+      style={{ width: 78, alignItems: 'center', gap: 7 }}
     >
       <View
         style={{
-          width: '100%',
-          aspectRatio: 1,
-          maxWidth: 78,
-          borderRadius: 18,
-          backgroundColor: t.bg,
+          width: 56,
+          height: 56,
+          borderRadius: 999,
+          // Noir sur blanc en mode clair. En mode sombre, l'inverse : un disque
+          // blanc sur fond noir eblouirait. colors.card / colors.text suivent
+          // le theme d'eux-memes.
+          backgroundColor: colors.card,
+          // Sans bordure en clair : c'est l'ombre qui detache la pastille, comme
+          // sur la maquette. En sombre, pas d'ombre visible : la bordure la remplace.
+          borderWidth: theme === 'dark' ? 1 : 0,
+          borderColor: colors.border,
           alignItems: 'center',
           justifyContent: 'center',
+          ...(theme === 'dark'
+            ? null
+            : {
+                shadowColor: '#000000',
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 3,
+              }),
         }}
       >
-        <Icon size={24} color={t.fg} strokeWidth={1.75} />
+        <CategoryGlyph name={glyph} size={26} color={colors.text} />
       </View>
       <Text
         style={{
-          fontSize: 11.5,
+          fontSize: 11,
           fontWeight: '600',
           color: colors.text,
           letterSpacing: 0,
           textAlign: 'center',
+          lineHeight: 14,
         }}
-        numberOfLines={1}
+        numberOfLines={2}
       >
         {label}
       </Text>

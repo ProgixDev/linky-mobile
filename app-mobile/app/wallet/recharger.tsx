@@ -81,7 +81,7 @@ export default function RechargerRoute() {
       }
       // Charge succeeded. The webhook credits the wallet in ~1-3s ; invalidate
       // now and let the wallet screen's refetch-on-focus pick up the new balance.
-      show(t('wallet.recharger.successToast'), 'success');
+      show(t('wallet.recharger.successToast'), 'success', { sound: true });
       qc.invalidateQueries({ queryKey: ['wallet'] });
       if (router.canGoBack()) router.back();
       else router.replace('/wallet');

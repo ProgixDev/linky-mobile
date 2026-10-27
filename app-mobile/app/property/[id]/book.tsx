@@ -178,7 +178,7 @@ export default function BookPropertyRoute() {
         onSuccess: ({ booking_id, instant }) => {
           if (instant) {
             // Daily = instant-book: go straight to the booking to pay + sign.
-            show(t('property.bookingConfirmedPay'), 'success');
+            show(t('property.bookingConfirmedPay'), 'success', { sound: true });
             router.replace(`/bookings/${booking_id}` as never);
           } else {
             show(t('property.requestSentToOwner'), 'success');

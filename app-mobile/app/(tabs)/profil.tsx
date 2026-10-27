@@ -6,6 +6,7 @@ import {
   ChevronRight,
   MapPin,
   Bell,
+  Volume2,
   Globe2,
   Sparkles as SparklesIcon,
   CloudOff,
@@ -101,7 +102,7 @@ export default function ProfilRoute() {
   const { data: addresses } = useMyAddresses();
   const displayCity =
     addresses?.find((a) => a.is_default)?.city ?? addresses?.[0]?.city ?? user?.city ?? '';
-  const { dataSaver, setDataSaver, notifications, setNotifications, language } = usePrefs();
+  const { dataSaver, setDataSaver, notifications, setNotifications, language, uiSounds, setUiSounds } = usePrefs();
 
   // Notifications toggle must also (un)register the device's push token,
   // not just flip the MMKV flag — otherwise the OS-level subscription drifts
@@ -382,6 +383,14 @@ export default function ProfilRoute() {
               Icon={Bell}
               label={t('profil.row.notifications')}
               right={<Switch value={notifications} onChange={onToggleNotifications} />}
+            />
+            {/* Les sons joués PENDANT l'utilisation (validation, échec). Ceux des
+                notifications se règlent dans Android, canal par canal. */}
+            <Row
+              Icon={Volume2}
+              label={t('profil.row.uiSounds')}
+              sub={t('profil.row.uiSoundsSub')}
+              right={<Switch value={uiSounds} onChange={setUiSounds} />}
             />
             <Row
               Icon={Globe2}

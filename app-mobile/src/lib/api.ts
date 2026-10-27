@@ -224,6 +224,17 @@ export interface ApiCallOptions {
 export async function apiPost<T>({ path, body, authed = true, idempotencyKey }: ApiCallOptions): Promise<T> {
   if (!SUPABASE_URL || !ANON_KEY) throw new ApiError(0, { code: 'CONFIG_MISSING', message_fr: 'Configuration manquante' });
 
+  // Y AVAIT-IL UNE SESSION au depart de cet appel ? « Session perdue » ne veut
+  // dire quelque chose que si l'on en avait une. Apres une deconnexion, les
+  // ecrans encore montes relancent leurs requetes SANS jeton ; chacune recevait
+  // un 401, le rafraichissement echouait faute de jeton, et chacune declenchait
+  // onSessionLost — donc une nouvelle deconnexion et une nouvelle redirection
+  // vers l'accueil « Bienvenue », rejouee autant de fois qu'il y avait de
+  // requetes. A l'ecran : un clignotement en boucle (client 2026-10-27).
+  const hadSession =
+    authed &&
+    (!!(await secure.get(SECURE_KEYS.authToken)) || !!(await secure.get(SECURE_KEYS.refreshToken)));
+
   const buildHeaders = async (): Promise<Record<string, string>> => {
     const access = authed ? await secure.get(SECURE_KEYS.authToken) : null;
     const bearer = access ?? ANON_KEY;
@@ -299,7 +310,7 @@ export async function apiPost<T>({ path, body, authed = true, idempotencyKey }: 
         if (status === 401 || status === 403) {
           await secure.remove(SECURE_KEYS.authToken);
           await secure.remove(SECURE_KEYS.refreshToken);
-          onSessionLost?.();
+          if (hadSession) onSessionLost?.();
         }
         // Coupure reseau : on garde les jetons. Le prochain appel reessaiera.
       }
@@ -313,7 +324,7 @@ export async function apiPost<T>({ path, body, authed = true, idempotencyKey }: 
     if (res.status === 401) {
       await secure.remove(SECURE_KEYS.authToken);
       await secure.remove(SECURE_KEYS.refreshToken);
-      onSessionLost?.();
+      if (hadSession) onSessionLost?.();
     }
   }
 

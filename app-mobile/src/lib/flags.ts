@@ -21,3 +21,18 @@ export const P2P_SEND_ENABLED = false;
 // Backend twin: TOPUP_ENABLED=false in wallet-topup-card.
 // See NOTE_CLIENT_WALLET_DECISION.pdf + RECHERCHE_WALLET_MODELE_PAIEMENT.pdf.
 export const WALLET_TOPUP_ENABLED = false;
+
+// Accueil : lecture AUTOMATIQUE des vidéos du carrousel (wifi seulement).
+// COUPÉ le 2026-10-26 : la première version de l'accueil a fait passer l'app à
+// un écran gris en production, publiée sans test sur téléphone. Le lecteur
+// vidéo dans une liste horizontale est l'un des suspects natifs ; coupé, le
+// carrousel montre la photo de l'annonce avec une icône lecture. À rallumer
+// APRÈS un essai sur appareil, canal preview d'abord.
+// RALLUMÉ le 2026-10-27 avec un délai d'armement de 800 ms et l'arrêt quand
+// l'accueil n'est pas à l'écran — sur PREVIEW d'abord, essai sur téléphone.
+export const HOME_HERO_AUTOPLAY_ENABLED = true;
+
+// Sons dans l'application (validation / échec), joués par le lecteur
+// d'expo-video SANS écran vidéo — jamais testé sur appareil. Coupé pour la
+// même raison, à rallumer après un essai : provoquer une erreur et l'entendre.
+export const UI_SOUNDS_ENABLED = false;

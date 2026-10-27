@@ -170,7 +170,7 @@ export default function OrderConfirmRoute() {
                     { orderId: order.id, scanToken: token },
                     {
                       onSuccess: () => {
-                        show(t('order.confirmSuccess'), 'success');
+                        show(t('order.confirmSuccess'), 'success', { sound: true });
                         router.replace(`/order/${order.id}`);
                       },
                       onError: (e) => {

@@ -181,7 +181,7 @@ export default function BookingDetailRoute() {
       // PORTEFEUILLE : le virement est deja fait. Pas d'attente, pas de
       // sondage — on le dit, et on recharge la reservation ET le solde.
       if (res.next_step?.kind === 'paid') {
-        show(t('bookings.payFromWallet'), 'success');
+        show(t('bookings.payFromWallet'), 'success', { sound: true });
         void q.refetch();
         void wallet.refetch();
         return;

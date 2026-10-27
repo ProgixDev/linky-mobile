@@ -239,7 +239,7 @@ Deno.serve(makePost<Body>('/v1/boosts/create', valid, async ({ sb, body, req }) 
       // tarif pour la nouvelle duree affichee a l'ecran.
       if (livePi.method !== method || liveBoost.days !== body.days) {
         throwApi('PAYMENT_IN_PROGRESS', 409,
-          'Un paiement est déjà en cours pour cette annonce. Termine-le, ou attends 15 minutes avant de changer de formule.');
+          'Un paiement est déjà en cours pour cette annonce. Termine-le, ou attends 20 minutes avant de changer de formule.');
       }
       return {
         body: {

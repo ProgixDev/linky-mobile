@@ -28,39 +28,31 @@ Achetez, vendez et louez en Guinée. Paiement sécurisé, livraison suivie.
 ### Description complète *(4000 max)*
 
 ```
-Linky réunit le marché en ligne et l'immobilier de Guinée dans une seule
-application.
+Linky est la place de marché et l'application immobilière de la Guinée. Petites annonces, boutiques en ligne, location et vente de logements et de terrains : tout se fait depuis votre téléphone, à Conakry comme partout dans le pays.
 
 ACHETER EN CONFIANCE
-Parcourez des milliers d'articles publiés par des vendeurs de Conakry et de tout
-le pays. Payez par Orange Money, MTN Mobile Money, carte bancaire ou depuis
-votre portefeuille Linky. Votre argent est conservé en séquestre : le vendeur
-n'est payé qu'une fois que vous avez confirmé avoir reçu votre commande.
+Parcourez des milliers d'articles publiés par des vendeurs guinéens : téléphones, électronique, mode, chaussures, meubles, électroménager, pièces auto, produits de beauté. Payez par Orange Money, MTN Mobile Money, carte bancaire ou depuis votre portefeuille Linky. Votre argent est conservé en séquestre : le vendeur n'est payé qu'une fois que vous avez confirmé avoir reçu votre commande.
 
 VENDRE SANS VITRINE
-Ouvrez votre boutique en quelques minutes, publiez vos articles avec leurs
-photos, et suivez vos commandes. Les paiements arrivent dans votre portefeuille
-Linky, que vous retirez quand vous le souhaitez.
+Ouvrez votre boutique en ligne en quelques minutes, publiez vos articles avec leurs photos, fixez vos prix en francs guinéens et suivez vos commandes. Pas de loyer, pas de local. Les paiements arrivent dans votre portefeuille Linky, que vous retirez vers Orange Money ou MTN quand vous le souhaitez.
 
 LOUER ET ACHETER UN LOGEMENT
-Appartements, maisons, terrains : trouvez un bien à la journée, au mois ou à
-l'achat. Le contrat se signe dans l'application, le loyer part en séquestre, et
-il n'est versé au propriétaire qu'à votre emménagement. Vous pouvez annuler et
-être remboursé jusqu'à 48 heures avant la date d'entrée.
+Appartements meublés ou vides, maisons, chambres, studios, terrains et parcelles à vendre : trouvez un bien à la journée, au mois ou à l'achat. Le contrat se signe dans l'application, le loyer et la caution partent en séquestre, et ils ne sont versés au propriétaire qu'à votre emménagement. Vous pouvez annuler et être remboursé jusqu'à 48 heures avant la date d'entrée.
 
-AGENCES IMMOBILIÈRES
-Gérez vos biens, vos réservations et vos revenus locatifs depuis un tableau de
-bord séparé de votre boutique — deux métiers, deux caisses.
+AGENCES ET AGENTS IMMOBILIERS
+Gérez vos biens, vos visites, vos réservations et vos revenus locatifs depuis un tableau de bord séparé de votre boutique — deux métiers, deux caisses.
 
 LIVRAISON SUIVIE
-Choisissez le retrait en boutique ou la livraison à domicile. Quand un livreur
-Linky prend votre colis, suivez sa position sur la carte jusqu'à votre porte.
-La remise se confirme par un QR code, pour que personne ne puisse déclarer une
-livraison qui n'a pas eu lieu.
+Choisissez le retrait en boutique ou la livraison à domicile. Quand un livreur Linky prend votre colis, suivez sa position sur la carte jusqu'à votre porte. La remise se confirme par un QR code, pour que personne ne puisse déclarer une livraison qui n'a pas eu lieu.
+
+PAYER COMME VOUS AVEZ L'HABITUDE
+Orange Money, MTN Mobile Money, Kulu, Soutra Money, carte bancaire, ou paiement en espèces à la livraison. Les prix sont en francs guinéens (GNF), sans conversion ni frais cachés.
+
+POURQUOI LE SÉQUESTRE CHANGE TOUT
+Acheter en ligne en Guinée, c'est d'abord un problème de confiance : l'acheteur craint de payer sans rien recevoir, le vendeur d'envoyer sans être payé. Linky garde l'argent le temps de la transaction et ne le libère qu'à la confirmation de réception. En cas de litige, une équipe tranche.
 
 PENSÉE POUR LA GUINÉE
-Prix en francs guinéens. Interface en français. Conçue pour fonctionner sur des
-connexions lentes.
+Interface entièrement en français. Prix en francs guinéens. Conçue pour rester utilisable sur des connexions lentes, en 3G comme en bord de réseau.
 
 Des questions ? contact@linkygroup.com
 ```
@@ -979,7 +971,8 @@ un paquet inconnu.
 | Numéro de téléphone | Peut choisir | Fonctionnement + Gestion des comptes | OTP |
 | Position approximative | Peut choisir | Fonctionnement | `ACCESS_COARSE_LOCATION` |
 | Position exacte | Peut choisir | Fonctionnement | `watchPositionAsync`, envoyée toutes les 15 s |
-| Photos | Peut choisir | Fonctionnement | `kind: 'avatar'` — **uniquement** la photo de profil |
+| Photos | **Requise** | Fonctionnement + Prévention des fraudes | ⚠ corrigé 2026-10-21 : la CANDIDATURE exige « une photo de ton visage (obligatoire) » (`application-form-screen.tsx`, `id_photo_url`) — en plus de l'avatar facultatif |
+| Autres messages intégrés | Peut choisir | Fonctionnement | ajouté 2026-10-21 : texte libre ≤ 300 car. du signalement d'incident (`livreur-report-issue`), gardé dans `deliveries.notes` ; le vendeur ne reçoit que le MOTIF → non partagé |
 | ID de l'appareil | Peut choisir | Fonctionnement + **Communications du développeur** | jeton push |
 | Interactions avec l'appli | **Requise** | Fonctionnement | état en ligne / hors ligne |
 

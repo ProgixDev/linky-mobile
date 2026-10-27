@@ -9,6 +9,7 @@ export const storage = createMMKV({ id: 'linky-prefs' });
 export const STORAGE_KEYS = {
   themePreference: 'theme.preference',
   dataSaver: 'prefs.dataSaver',
+  uiSounds: 'prefs.uiSounds',
   language: 'prefs.lang',
   notificationsEnabled: 'prefs.notifications',
   privacyPersonalize: 'prefs.privacy.personalize',

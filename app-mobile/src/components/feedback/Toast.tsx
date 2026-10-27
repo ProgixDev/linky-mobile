@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { View } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
+import { playUiSound } from '../../lib/uiSound';
 
 type ToastTone = 'info' | 'success' | 'danger';
 interface ToastMsg {
@@ -10,8 +11,17 @@ interface ToastMsg {
   tone: ToastTone;
 }
 
+/** `sound` : sur un succès, joue le son de validation. Réservé aux VRAIES
+ *  validations (paiement accepté, réservation confirmée, retrait…) : sur chaque
+ *  « ajouté au panier », il deviendrait vite pénible. Une erreur, elle, a
+ *  TOUJOURS son son — « tout ce qui ne peut pas être validé » (client).
+ */
+interface ToastOptions {
+  sound?: boolean;
+}
+
 interface ToastContextValue {
-  show: (message: string, tone?: ToastTone) => void;
+  show: (message: string, tone?: ToastTone, opts?: ToastOptions) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -19,7 +29,9 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastMsg[]>([]);
 
-  const show = useCallback((message: string, tone: ToastTone = 'info') => {
+  const show = useCallback((message: string, tone: ToastTone = 'info', opts?: ToastOptions) => {
+    if (tone === 'danger') playUiSound('failure');
+    else if (tone === 'success' && opts?.sound) playUiSound('success');
     const id = Date.now() + Math.random();
     setItems((prev) => [...prev, { id, message, tone }]);
   }, []);

@@ -169,7 +169,7 @@ Deno.serve(makePost<Body>('/v1/bookings/sign-pay', valid, async ({ sb, body, req
   if (livePi && intentIsLive(livePi.created_at) && !String(livePi.rail_intent_id).startsWith('pending-init-')) {
     if (livePi.method !== method) {
       throwApi('PAYMENT_IN_PROGRESS', 409,
-        'Un paiement est déjà en cours pour cette réservation. Termine-le, ou attends 15 minutes avant de changer de moyen.');
+        'Un paiement est déjà en cours pour cette réservation. Termine-le, ou attends 20 minutes avant de changer de moyen.');
     }
     return {
       body: {

@@ -194,7 +194,7 @@ export default function RetirerRoute() {
       { amountGnf: amount, destination },
       {
         onSuccess: () => {
-          show(t('wallet.retirer.successToast'), 'success');
+          show(t('wallet.retirer.successToast'), 'success', { sound: true });
           router.back();
         },
         onError: (e) => show(toToastMessage(e, t('wallet.retirer.errorToast')), 'danger'),

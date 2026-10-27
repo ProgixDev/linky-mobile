@@ -6,6 +6,8 @@ export type Language = 'fr' | 'en' | 'es';
 
 interface PrefsState {
   dataSaver: boolean;
+  /** Sons dans l'app : validation et echec (client 2026-09-28). */
+  uiSounds: boolean;
   notifications: boolean;
   language: Language;
   // Privacy toggles — persisted so they survive an app reopen.
@@ -14,6 +16,7 @@ interface PrefsState {
   privacyAdTracking: boolean;
   privacyProfilePublic: boolean;
   setDataSaver: (v: boolean) => void;
+  setUiSounds: (v: boolean) => void;
   setNotifications: (v: boolean) => void;
   setLanguage: (v: Language) => void;
   setPrivacyPersonalize: (v: boolean) => void;
@@ -24,6 +27,7 @@ interface PrefsState {
 
 export const usePrefs = create<PrefsState>((set) => ({
   dataSaver: storage.getBoolean(STORAGE_KEYS.dataSaver) ?? false,
+  uiSounds: storage.getBoolean(STORAGE_KEYS.uiSounds) ?? true,
   notifications: storage.getBoolean(STORAGE_KEYS.notificationsEnabled) ?? true,
   // Seed from the SAME validated locale i18n booted with, so the « Langue » row
   // never claims a language different from the one rendering. INITIAL_LOCALE
@@ -38,6 +42,10 @@ export const usePrefs = create<PrefsState>((set) => ({
   setDataSaver: (v) => {
     storage.set(STORAGE_KEYS.dataSaver, v);
     set({ dataSaver: v });
+  },
+  setUiSounds: (v) => {
+    storage.set(STORAGE_KEYS.uiSounds, v);
+    set({ uiSounds: v });
   },
   setNotifications: (v) => {
     storage.set(STORAGE_KEYS.notificationsEnabled, v);

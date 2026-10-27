@@ -866,8 +866,18 @@ export const RAIL_NO_ACTION_MESSAGE =
  *
  * On ne se montre donc pas plus strict que le reste du systeme : passe ce
  * delai, l'intention est morte pour tout le monde, y compris pour la garde.
+ *
+ * ⚠ 20 MINUTES, ET CE NOMBRE DOIT RESTER EGAL A CELUI DES FONCTIONS SQL
+ * (pick_*_intents_to_poll et expire_stale_*_intents, migration 20261015_01).
+ * Porte a 20 le 2026-10-15 : Lengopay a confirme que leur transaction dure au
+ * plus 15 min, et notre fenetre valait 15 AUSSI — on raccrochait ~30 s avant
+ * leur verdict, 88 fois de suite.
+ *
+ * S'il devenait PLUS COURT que les fonctions SQL, la garde declarerait
+ * l'intention morte alors qu'elle est encore sondee : l'acheteur en ouvrirait
+ * une seconde et DEUX paiements pourraient partir pour une seule reservation.
  */
-export const INTENT_TTL_MS = 15 * 60 * 1000;
+export const INTENT_TTL_MS = 20 * 60 * 1000;
 
 /** Vrai tant que l'intention est dans sa fenetre de vie. Voir INTENT_TTL_MS. */
 export function intentIsLive(createdAt: string | null | undefined): boolean {

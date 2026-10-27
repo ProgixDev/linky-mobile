@@ -264,7 +264,19 @@
     "decouvrirSub": "Just like on social media.",
     "walletOpen": "Open wallet",
     "newListing": "New listing",
-    "newProperty": "New property"
+    "newProperty": "New property",
+    "heroPublishNow": "Post now",
+    "heroVideoBadge": "Video",
+    "heroNewBadge": "New",
+    "heroEmptyTitle": "Buy, sell and rent all across Guinea.",
+    "heroEmptySub": "Post your first listing in minutes.",
+    "perMonth": " /month",
+    "perDay": " /day",
+    "statsTitle": "Linky in numbers",
+    "statsUsers": "Users",
+    "statsListings": "Live listings",
+    "statsSales": "Completed sales",
+    "statsBookings": "Completed bookings"
   },
   "wallet": {
     "title": "My wallet",
@@ -1451,7 +1463,7 @@
     "confirmTerminalFailTitle": "Payment failed",
     "confirmTerminalFailMessage": "Something went wrong during the payment.",
     "confirmTerminalExpiredTitle": "Payment not confirmed",
-    "confirmTerminalExpiredMessage": "We didn't receive a confirmation within 15 minutes. No amount was charged.",
+    "confirmTerminalExpiredMessage": "We didn't receive a confirmation within 20 minutes. No amount was charged.",
     "confirmTerminalUserCancelTitle": "Payment cancelled",
     "confirmTerminalUserCancelMessage": "The payment was cancelled. No amount was charged.",
     "confirmTerminalErrorPrefix": "❌  {{title}}",
@@ -1726,7 +1738,9 @@
       "terms": "Terms",
       "privacyPolicy": "Privacy policy",
       "password": "Password",
-      "passwordSub": "Sign in without a code every time"
+      "passwordSub": "Sign in without a code every time",
+      "uiSounds": "App sounds",
+      "uiSoundsSub": "Confirmations and errors while you use the app"
     },
     "logout": "Sign out",
     "theme": {

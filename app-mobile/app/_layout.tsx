@@ -65,6 +65,10 @@ export default function RootLayout() {
   // un cycle avec data/queries/auth.
   useEffect(() => {
     setOnSessionLost(() => {
+      // Deja deconnecte : rien a refaire. Sans ce garde, chaque requete encore
+      // en vol au moment d'une deconnexion relancait une redirection vers
+      // « Bienvenue », et l'ecran clignotait (client 2026-10-27).
+      if (!useAuth.getState().user) return;
       void useAuth.getState().signOut();
       router.replace('/(onboarding)/welcome');
     });

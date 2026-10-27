@@ -297,7 +297,7 @@ export default function PreviewRoute() {
                 photos: state.propertyPhotos,
                 video_url: state.videoUrl ?? null,
               });
-              show(t('create.publishedSuccess'), 'success');
+              show(t('create.publishedSuccess'), 'success', { sound: true });
               reset();
               router.replace(`/property/${property.id}`);
             } catch (e: unknown) {

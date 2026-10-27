@@ -208,7 +208,7 @@ export default function BoostNewRoute() {
         return;
       }
 
-      toast.show(t('pro.boostSuccessToast'), 'success');
+      toast.show(t('pro.boostSuccessToast'), 'success', { sound: true });
       router.replace('/pro/boost');
     } catch (e) {
       if (e instanceof ApiError && e.code === 'INSUFFICIENT_FUNDS') {

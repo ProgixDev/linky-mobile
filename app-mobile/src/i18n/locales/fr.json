@@ -264,7 +264,19 @@
     "decouvrirSub": "Comme dans les réseaux sociaux.",
     "walletOpen": "Voir le portefeuille",
     "newListing": "Nouvelle annonce",
-    "newProperty": "Nouveau bien"
+    "newProperty": "Nouveau bien",
+    "heroPublishNow": "Publier maintenant",
+    "heroVideoBadge": "Vidéo",
+    "heroNewBadge": "Nouveau",
+    "heroEmptyTitle": "Achète, vends et loue partout en Guinée.",
+    "heroEmptySub": "Publie ta première annonce en quelques minutes.",
+    "perMonth": " /mois",
+    "perDay": " /jour",
+    "statsTitle": "Linky en chiffres",
+    "statsUsers": "Utilisateurs",
+    "statsListings": "Annonces en ligne",
+    "statsSales": "Ventes réalisées",
+    "statsBookings": "Réservations réalisées"
   },
   "wallet": {
     "title": "Mon portefeuille",
@@ -1451,7 +1463,7 @@
     "confirmTerminalFailTitle": "Paiement échoué",
     "confirmTerminalFailMessage": "Une erreur est survenue lors du paiement.",
     "confirmTerminalExpiredTitle": "Paiement non confirmé",
-    "confirmTerminalExpiredMessage": "On n'a pas reçu de confirmation dans les 15 minutes. Aucun débit n'a été effectué.",
+    "confirmTerminalExpiredMessage": "On n'a pas reçu de confirmation dans les 20 minutes. Aucun débit n'a été effectué.",
     "confirmTerminalUserCancelTitle": "Paiement annulé",
     "confirmTerminalUserCancelMessage": "Le paiement a été annulé. Aucun débit n'a été effectué.",
     "confirmTerminalErrorPrefix": "❌  {{title}}",
@@ -1726,7 +1738,9 @@
       "terms": "Conditions générales",
       "privacyPolicy": "Politique de confidentialité",
       "password": "Mot de passe",
-      "passwordSub": "Se connecter sans code à chaque fois"
+      "passwordSub": "Se connecter sans code à chaque fois",
+      "uiSounds": "Sons de l'application",
+      "uiSoundsSub": "Validation et échec pendant l'utilisation"
     },
     "logout": "Déconnexion",
     "theme": {

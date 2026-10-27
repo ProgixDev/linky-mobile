@@ -139,7 +139,7 @@ export default function CreatePreviewRoute() {
                 ...(state.lat != null && state.lng != null ? { shop_lat: state.lat, shop_lng: state.lng } : {}),
               };
               await createProduct.mutateAsync(body);
-              show(t('create.publishSuccess'), 'success');
+              show(t('create.publishSuccess'), 'success', { sound: true });
               reset();
               router.replace('/(tabs)/boutique');
             } catch (e: unknown) {

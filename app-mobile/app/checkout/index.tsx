@@ -937,7 +937,7 @@ export default function CheckoutRoute() {
                       // Portefeuille : debit et sequestre deja faits, rien ne
                       // peut plus echouer cote acheteur → on vide le panier.
                       useCart.getState().clear();
-                      show(t('checkout.orderCreated'), 'success');
+                      show(t('checkout.orderCreated'), 'success', { sound: true });
                       router.replace(`/checkout/success?orderId=${firstOrder.id}`);
                     } else if (res.next_step?.kind === 'webview') {
                       // Soutra Money / carte Lengopay : l'acheteur finit sur la
@@ -1017,7 +1017,7 @@ export default function CheckoutRoute() {
                     // restent dans le panier pour etre commandes ensuite.
                     if (shopId) useCart.getState().removeShop(shopId);
                     else useCart.getState().clear();
-                    show(t('checkout.orderCreated'), 'success');
+                    show(t('checkout.orderCreated'), 'success', { sound: true });
                     router.replace(`/checkout/success?orderId=${order.id}`);
                   }
                 },
