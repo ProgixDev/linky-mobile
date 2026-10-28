@@ -293,10 +293,7 @@
     "statsUsers": "Users",
     "statsListings": "Live listings",
     "statsSales": "Completed sales",
-    "statsBookings": "Completed bookings",
-    "searchPlaceholderAll": "Item or home…",
-    "searchPlaceholderArticles": "Search items…",
-    "searchPlaceholderProperties": "Search housing…"
+    "statsBookings": "Completed bookings"
   },
   "wallet": {
     "title": "My wallet",

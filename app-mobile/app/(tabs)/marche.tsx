@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -36,7 +36,7 @@ import { ErrorStateView } from '../../src/components/feedback/EmptyState';
 import { HeaderActions } from '../../src/components/nav/HeaderActions';
 import { haptic } from '../../src/lib/haptics';
 import { listingScope } from '../../src/lib/persona';
-import { requestIsFresh, useFilters, hasActiveFilters, type MarcheTab } from '../../src/stores/filters';
+import { useFilters, hasActiveFilters, type MarcheTab } from '../../src/stores/filters';
 import { useAuth } from '../../src/stores/auth';
 import { useProductsInfinite, useInfiniteProperties } from '../../src/data/queries';
 import { CityFilterChips } from '../../src/components/forms/CityFilterChips';
@@ -86,26 +86,7 @@ export default function MarcheRoute() {
   );
   const roles = useAuth((s) => s.roles);
   const [sheetOpen, setSheetOpen] = useState(false);
-  // Le bouton Filtres de l'accueil (maquette du client, 2026-10-28) ouvre CETTE
-  // feuille : les filtres ne vivent qu'à un endroit.
-  const filterSheetRequest = useFilters((s) => s.filterSheetRequest);
-  useEffect(() => {
-    if (!requestIsFresh(filterSheetRequest)) return;
-    // Même délai que la recherche : la feuille s'ouvre sur un onglet affiché.
-    const timer = setTimeout(() => setSheetOpen(true), 250);
-    return () => clearTimeout(timer);
-  }, [filterSheetRequest]);
   const [search, setSearch] = useState('');
-  // La barre de recherche de l'accueil (client 2026-10-27, maquette) ouvre CE
-  // champ : une seule recherche dans l'app, pas deux à tenir à jour.
-  const searchInputRef = useRef<TextInput>(null);
-  const searchFocusRequest = useFilters((s) => s.searchFocusRequest);
-  useEffect(() => {
-    if (!requestIsFresh(searchFocusRequest)) return;
-    // Le temps que l'onglet ait fini d'apparaître, sinon le clavier ne sort pas.
-    const timer = setTimeout(() => searchInputRef.current?.focus(), 250);
-    return () => clearTimeout(timer);
-  }, [searchFocusRequest]);
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Debounce the search input so typing doesn't fire a request per keystroke.
@@ -427,7 +408,6 @@ export default function MarcheRoute() {
           >
             <Search size={18} color={colors.textMuted} strokeWidth={2} />
             <TextInput
-              ref={searchInputRef}
               value={search}
               onChangeText={setSearch}
               placeholder={placeholder}

@@ -13,8 +13,6 @@ import {
   Building2,
   Home as HomeIcon,
   Hand,
-  Search,
-  SlidersHorizontal,
 } from 'lucide-react-native';
 import {
   EstateDashboard,
@@ -263,11 +261,6 @@ function BuyerHome() {
   }, [qc]);
 
   const firstName = (user?.display_name ?? t('home.fallbackName')).split(' ')[0];
-  const searchKey = onlyProducts
-    ? 'home.searchPlaceholderArticles'
-    : onlyProperties
-      ? 'home.searchPlaceholderProperties'
-      : 'home.searchPlaceholderAll';
   // Les trois dernieres pastilles (Location / Vente / Terrains) menent a
   // l'onglet Immobilier et les cinq premieres aux articles : une grille non
   // filtree offrirait une porte d'entree vers ce qu'on vient de masquer
@@ -358,65 +351,10 @@ function BuyerHome() {
           <HeaderActions />
         </View>
 
-        {/* BARRE DE RECHERCHE sous l'en-tête, comme sur la maquette du client
-            (2026-10-27). Ce n'est PAS un second champ de recherche : elle ouvre
-            celui du Marché, clavier sorti, sur l'onglet que le rôle autorise.
-            Le bouton rond à sa droite (maquette, 2026-10-28) ouvre de même la
-            feuille de filtres du Marché. */}
-        <View style={{ paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Pressable
-            onPress={() => {
-              haptic.light();
-              const f = useFilters.getState();
-              f.setMarcheTab(onlyProperties ? 'immobilier' : 'articles');
-              f.requestSearchFocus();
-              router.push('/(tabs)/marche');
-            }}
-            accessibilityRole="search"
-            accessibilityLabel={t(searchKey)}
-            style={{
-              flex: 1,
-              height: 48,
-              borderRadius: 999,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 18,
-              gap: 10,
-            }}
-          >
-            <Search size={18} color={colors.textMuted} strokeWidth={2} />
-            <Text style={{ flex: 1, fontSize: 14.5, color: colors.textFaint }} numberOfLines={1}>
-              {t(searchKey)}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              haptic.light();
-              const f = useFilters.getState();
-              f.setMarcheTab(onlyProperties ? 'immobilier' : 'articles');
-              f.requestFilterSheet();
-              router.push('/(tabs)/marche');
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t('marche.filtersA11y')}
-            hitSlop={4}
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 999,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <SlidersHorizontal size={18} color={colors.text} strokeWidth={2} />
-          </Pressable>
-        </View>
+        {/* Barre de recherche + bouton Filtres RETIRÉS de l'accueil (client
+            2026-10-28 : « on peut retirer ça, il renvoie sur la page annonces,
+            il y a déjà une barre de recherche là-bas »). Ils ne faisaient
+            qu'ouvrir ceux du Marché, qui restent la seule recherche de l'app. */}
 
         {/* Pro summary card removed from the Home (client 2026-07-30): it
             duplicated the pro workspace, which is already reachable from the
