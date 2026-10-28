@@ -89,3 +89,5 @@ play-store-assets/apercu/
 # Le deploiement Supabase ne lit pas ce fichier (il bundle via la Management
 # API avec supabase/functions/deno.json comme carte d imports).
 app-mobile/deno.lock
+
+.vercel
