@@ -603,12 +603,17 @@ export function HomeHero() {
 function PublishButton({ onPress, label }: { onPress: () => void; label: string }) {
   const { colors } = useTheme();
   return (
+    // Un style OBJET, jamais `style={({ pressed }) => ...}` : avec NativeWind
+    // (jsxImportSource), la forme fonction est ignoree sur Pressable. Le bouton
+    // s'affichait sans fond dore, la fleche sous le texte (capture du 2026-10-28).
+    // Le retour d'appui passe par android_ripple.
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={6}
-      style={({ pressed }) => ({
+      android_ripple={{ color: 'rgba(26,20,5,0.18)' }}
+      style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
@@ -617,8 +622,8 @@ function PublishButton({ onPress, label }: { onPress: () => void; label: string 
         paddingRight: 5,
         borderRadius: 999,
         backgroundColor: colors.accent,
-        opacity: pressed ? 0.85 : 1,
-      })}
+        overflow: 'hidden',
+      }}
     >
       <Text
         maxFontSizeMultiplier={MAX_FONT_SCALE}

@@ -109,7 +109,10 @@ export function ReportSheet({
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityLabel={t('moderation.reasons.' + r)}
-              style={({ pressed }) => ({
+              // Style OBJET : NativeWind ignore `style={({ pressed }) => ...}` sur Pressable,
+              // et le style entier sautait (constate le 2026-10-28). Appui : android_ripple.
+              android_ripple={{ color: colors.bgElev }}
+              style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 12,
@@ -122,8 +125,9 @@ export function ReportSheet({
                 // teinte de fond : sur les ecrans que vise Linky, un fond
                 // legerement colore en plein soleil ne se distingue pas.
                 borderColor: selected ? colors.primary : colors.border,
-                backgroundColor: pressed ? colors.bgElev : colors.bg,
-              })}
+                backgroundColor: colors.bg,
+                overflow: 'hidden',
+              }}
             >
               <View
                 style={{

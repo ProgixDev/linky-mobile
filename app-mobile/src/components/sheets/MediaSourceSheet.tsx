@@ -133,16 +133,20 @@ function SourceRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${hint}`}
-      style={({ pressed }) => ({
+      // Style OBJET : NativeWind ignore `style={({ pressed }) => ...}` sur Pressable,
+      // et le style entier sautait (constate le 2026-10-28). Appui : android_ripple.
+      android_ripple={{ color: colors.primarySoft }}
+      style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
         padding: 14,
         borderRadius: radii.lg,
         borderWidth: 1,
-        borderColor: pressed ? colors.primary : colors.border,
-        backgroundColor: pressed ? colors.primarySoft : colors.bg,
-      })}
+        borderColor: colors.border,
+        backgroundColor: colors.bg,
+        overflow: 'hidden',
+      }}
     >
       <View
         style={{

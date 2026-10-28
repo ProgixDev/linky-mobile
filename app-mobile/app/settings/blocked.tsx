@@ -105,15 +105,19 @@ export default function BlockedRoute() {
                   accessibilityRole="button"
                   accessibilityLabel={t('moderation.unblock')}
                   disabled={unblock.isPending}
-                  style={({ pressed }) => ({
+                  // Style OBJET : NativeWind ignore `style={({ pressed }) => ...}` sur Pressable,
+                  // et le style entier sautait (constate le 2026-10-28). Appui : android_ripple.
+                  android_ripple={{ color: colors.bgElev }}
+                  style={{
                     paddingVertical: 8,
                     paddingHorizontal: 14,
                     borderRadius: radii.pill,
                     borderWidth: 1,
                     borderColor: colors.border,
-                    backgroundColor: pressed ? colors.bgElev : 'transparent',
+                    backgroundColor: 'transparent',
                     opacity: unblock.isPending ? 0.5 : 1,
-                  })}
+                    overflow: 'hidden',
+                  }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
                     {t('moderation.unblock')}
