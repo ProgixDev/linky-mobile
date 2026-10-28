@@ -19,8 +19,8 @@ export function useHomePromos() {
       (await apiPost<{ promos: HomePromo[] }>({ path: '/list-home-promos', authed: false, body: {} })).promos,
     staleTime: 10 * 60 * 1000,
     // Une seule nouvelle tentative : sans pub, le carrousel se rabat sur les
-    // annonces ; inutile de laisser l'accueil sur un squelette pendant les
-    // trois essais par défaut.
+    // pubs Linky intégrées ; inutile de laisser l'accueil sur un squelette
+    // pendant les trois essais par défaut.
     retry: 1,
   });
 }

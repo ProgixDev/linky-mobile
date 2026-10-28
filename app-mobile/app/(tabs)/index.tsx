@@ -8,13 +8,13 @@ import { useTranslation } from 'react-i18next';
 import {
   Bell,
   Plus,
-  Store,
   ChevronRight,
   Sparkles as SparklesIcon,
   Building2,
   Home as HomeIcon,
   Hand,
   Search,
+  SlidersHorizontal,
 } from 'lucide-react-native';
 import {
   EstateDashboard,
@@ -31,7 +31,6 @@ import { ProductCard } from '../../src/components/lists/ProductCard';
 import { PropertyCard } from '../../src/components/lists/PropertyCard';
 import { ProductCardSkeleton } from '../../src/components/primitives/Skeleton';
 import { haptic } from '../../src/lib/haptics';
-import { photos } from '../../src/data/photos';
 import { listingScope } from '../../src/lib/persona';
 import { useAuth } from '../../src/stores/auth';
 import { HeaderActions } from '../../src/components/nav/HeaderActions';
@@ -43,8 +42,6 @@ import { useFilters } from '../../src/stores/filters';
 import {
   usePopularProducts,
   useNearbyProperties,
-  useMyShops,
-  useMyProperties,
   useUnreadNotificationsCount,
 } from '../../src/data/queries';
 
@@ -240,17 +237,22 @@ function BuyerHome() {
   const { data: products, isLoading: prodLoading } = usePopularProducts(4, !onlyProperties);
   const { data: properties, isLoading: propLoading } = useNearbyProperties(3, !onlyProducts);
 
-  // TIRER POUR METTRE A JOUR. Depuis que le portefeuille et l'activite ont
-  // quitte l'accueil (client 2026-10-27), ce qui bouge ici, ce sont les annonces
-  // du carrousel, les chiffres et la pastille de la cloche.
+  // TIRER POUR METTRE A JOUR. Ce qui bouge sur cet ecran : les pubs et les
+  // chiffres du carrousel, les rangees d'annonces (dont les pubs integrees du
+  // carrousel tirent aussi leurs photos) et la pastille de la cloche. C'est
+  // aussi LE geste pour voir une pub que le client vient d'ajouter sans
+  // relancer l'app : rien d'autre ne redemande home-promos (pas de rechargement
+  // au retour sur l'app, et l'onglet ne se remonte jamais).
   const qc = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ['discover-feed'] }),
+        qc.invalidateQueries({ queryKey: ['home-promos'] }),
         qc.invalidateQueries({ queryKey: ['app-stats'] }),
+        qc.invalidateQueries({ queryKey: ['products-popular'] }),
+        qc.invalidateQueries({ queryKey: ['properties-nearby'] }),
         qc.invalidateQueries({ queryKey: ['notifications'] }),
       ]);
     } finally {
@@ -356,8 +358,10 @@ function BuyerHome() {
 
         {/* BARRE DE RECHERCHE sous l'en-tête, comme sur la maquette du client
             (2026-10-27). Ce n'est PAS un second champ de recherche : elle ouvre
-            celui du Marché, clavier sorti, sur l'onglet que le rôle autorise. */}
-        <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+            celui du Marché, clavier sorti, sur l'onglet que le rôle autorise.
+            Le bouton rond à sa droite (maquette, 2026-10-28) ouvre de même la
+            feuille de filtres du Marché. */}
+        <View style={{ paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Pressable
             onPress={() => {
               haptic.light();
@@ -369,6 +373,7 @@ function BuyerHome() {
             accessibilityRole="search"
             accessibilityLabel={t(searchKey)}
             style={{
+              flex: 1,
               height: 48,
               borderRadius: 999,
               backgroundColor: colors.card,
@@ -381,9 +386,33 @@ function BuyerHome() {
             }}
           >
             <Search size={18} color={colors.textMuted} strokeWidth={2} />
-            <Text style={{ fontSize: 14.5, color: colors.textFaint }} numberOfLines={1}>
+            <Text style={{ flex: 1, fontSize: 14.5, color: colors.textFaint }} numberOfLines={1}>
               {t(searchKey)}
             </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              haptic.light();
+              const f = useFilters.getState();
+              f.setMarcheTab(onlyProperties ? 'immobilier' : 'articles');
+              f.requestFilterSheet();
+              router.push('/(tabs)/marche');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('marche.filtersA11y')}
+            hitSlop={4}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 999,
+              backgroundColor: colors.card,
+              borderWidth: 1,
+              borderColor: colors.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <SlidersHorizontal size={18} color={colors.text} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -393,9 +422,9 @@ function BuyerHome() {
             wallet. */}
 
         {/* « Ce type de tableau de bord pour la page d'accueil » (client
-            2026-10-25) : des vidéos courtes et des images avec « Publier
-            maintenant », puis les chiffres de l'application. En TÊTE : c'est
-            la première chose que le client veut voir. */}
+            2026-10-25, maquette TechHub) : UN seul écran qui fait défiler les
+            chiffres de l'application et les pubs, avec « Publier maintenant ».
+            En TÊTE : c'est la première chose que le client veut voir. */}
         <HomeSectionBoundary name="carrousel"><HomeHero /></HomeSectionBoundary>
         {/* LES CATEGORIES, JUSTE SOUS LE CARROUSEL (client 2026-10-26, maquette
             a l'appui) : une rangee de pastilles rondes, icone noire sur fond

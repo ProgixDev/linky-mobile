@@ -1,46 +1,54 @@
-// Les chiffres de l'application, pour l'accueil (client 2026-10-25) :
-// « Nombre d'utilisateurs, nombre d'annonces en ligne, nombre de ventes et de
-// réservations réalisées ».
+// Les chiffres de l'application, pour le carrousel de l'accueil. Le client
+// (2026-10-25) : « Nombre d'utilisateurs, nombre d'annonces en ligne, nombre de
+// ventes et de réservations réalisées ».
 //
-// Depuis le 2026-10-27 (le client veut ces chiffres DANS le carrousel) :
-// annonces, boutiques/agences et villes sont toujours renvoyés — vrais et
-// présentables dès maintenant. Les seuils ne gardent que utilisateurs, ventes
-// et réservations.
-//
-// ┌─ POURQUOI DES SEUILS ───────────────────────────────────────────────────┐
-// Mesuré le 2026-10-26, lendemain de la publication sur le Play Store : 20
-// comptes, dont 18 internes (le client sous trois comptes, sa sœur, le
-// développeur sous six, les comptes de revue Google, l'admin, les comptes
-// système). Afficher « 20 utilisateurs · 9 ventes » en grand sur la première
-// page desservirait la confiance — et ces chiffres ne seraient même pas vrais.
-//
-// Un compteur n'est donc renvoyé QUE s'il a atteint son seuil ; sinon il vaut
-// null et l'app ne l'affiche pas. Le bloc entier disparaît tant qu'aucun n'est
-// prêt, et apparaît de lui-même quand les chiffres deviennent parlants. Les
-// seuils vivent ICI, pas dans l'app : les baisser est un redéploiement de
-// cette fonction, pas une mise à jour de l'application.
+// ┌─ DÉCISION DU 2026-10-28 : LES COMPTES INTERNES SONT COMPTÉS ────────────┐
+// Mesuré ce jour-là, six jours après la publication sur le Play Store :
+//                     hors comptes internes    comptes internes compris
+//   utilisateurs               2                        17
+//   annonces en ligne         19                        19
+//   ventes                     0                         9
+//   réservations               0                         6
+// Choix d'Achraf pour le client, en connaissant ces chiffres : les quatre,
+// comptes internes compris, sans seuil. Les seuils (100 / 20 / 10) qui les
+// masquaient jusque-là sont levés.
+// Pour revenir aux chiffres hors comptes internes : COUNT_INTERNAL_ACCOUNTS =
+// false, puis redéployer. Aucune mise à jour de l'application n'est nécessaire.
 // └─────────────────────────────────────────────────────────────────────────┘
 //
-// ┌─ CE QUI EST COMPTÉ, ET CE QUI NE L'EST PAS ─────────────────────────────┐
-// utilisateurs  comptes non supprimés, HORS admins, comptes système et
-//               comptes internes (liste ci-dessous).
+// ┌─ CE QUI EST COMPTÉ ─────────────────────────────────────────────────────┐
+// utilisateurs  comptes non supprimés, HORS admins et comptes système (le
+//               porte-monnaie de la plateforme n'est l'utilisateur de personne).
 // annonces      articles + biens au statut 'active' : ce qui est réellement en
-//               ligne, quel que soit l'auteur — une annonce d'essai visible du
-//               public EST en ligne.
+//               ligne, quel que soit l'auteur.
 // ventes        commandes 'released' (l'argent est parti au vendeur : la vente
-//               est conclue), hors acheteurs internes. 'delivered' est un
-//               statut mort, jamais écrit.
-// réservations  'active' ou 'completed' (le locataire est entré), hors
-//               locataires internes. 'paid' n'est encore que du séquestre.
+//               est conclue). 'delivered' est un statut mort, jamais écrit.
+// réservations  'active' ou 'completed' (le locataire est entré). 'paid' n'est
+//               encore que du séquestre.
+// Toute la requête vit dans app_public_counts (migration 20261027_01).
+// └─────────────────────────────────────────────────────────────────────────┘
+//
+// ┌─ LES VERSIONS DE L'APP DÉJÀ INSTALLÉES ──────────────────────────────────┐
+// Seuls les quatre chiffres du client sont renvoyés, et un chiffre NUL vaut
+// null. Ce n'est pas qu'une question de goût, ce sont les versions en service :
+//   - celle de production (ce972d4) affiche une tuile pour toute valeur non
+//     nulle, ZÉRO COMPRIS : « 0 Ventes réalisées » en première page si un
+//     compteur retombait à 0 (comptes internes retirés, données de test
+//     effacées). Null la fait disparaître ;
+//   - celle du canal preview (85ed3e9) affichait aussi boutiques et villes : ne
+//     plus les renvoyer lui fait montrer exactement les quatre du client.
+// app_public_counts calcule encore shops et cities ; ils ne sortent plus d'ici.
 // └─────────────────────────────────────────────────────────────────────────┘
 //
 // Public, sans authentification : ce sont des agrégats, rien d'individuel.
 import { makePost } from '@shared/wrap.ts';
 import { throwApi } from '@shared/errors.ts';
 
+// Voir l'encadré ci-dessus.
+const COUNT_INTERNAL_ACCOUNTS = true;
+
 // Comptes internes, identifiés le 2026-10-26 avec reference_prod_test_identities.
-// Liste FERMÉE et datée : un nouveau compte de test créé plus tard sera compté
-// comme réel — les seuils absorbent ce bruit tant que les volumes sont faibles.
+// Liste FERMÉE et datée. Lue seulement si COUNT_INTERNAL_ACCOUNTS vaut false.
 const INTERNAL_USER_IDS = [
   '019fc6b6-9369-7ce5-b3f0-1c16db4c4a62', // Madiou Barry — abdoulayebah193@ : le client
   '019fc6b7-1dc9-7724-b488-6502c75070a8', // Abdoul — le client
@@ -59,26 +67,21 @@ const INTERNAL_USER_IDS = [
   '01a15ef3-468d-73d2-ac5b-44219057f7e0', // Livreur Démo — revue Google de Dépose
 ];
 
+// Toujours exclus : ce ne sont pas des personnes.
 const SYSTEM_USER_IDS = [
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000002',
 ];
 
-// À partir de combien un chiffre cesse de desservir l'application.
-const THRESHOLDS = {
-  users: 100,
-  sales: 20,
-  bookings: 10,
-} as const;
+const EXCLUDED = COUNT_INTERNAL_ACCOUNTS ? SYSTEM_USER_IDS : [...INTERNAL_USER_IDS, ...SYSTEM_USER_IDS];
 
-const EXCLUDED = [...INTERNAL_USER_IDS, ...SYSTEM_USER_IDS];
+/** Zéro ne se montre pas : null le cache dans toutes les versions de l'app. */
+function shown(n: number | undefined): number | null {
+  return typeof n === 'number' && n > 0 ? n : null;
+}
 
 function valid(b: unknown): b is Record<string, never> {
   return typeof b === 'object' && b !== null;
-}
-
-function gate(n: number, seuil: number): number | null {
-  return n >= seuil ? n : null;
 }
 
 Deno.serve(makePost<Record<string, never>>('/v1/app/stats', valid, async ({ sb }) => {
@@ -94,15 +97,10 @@ Deno.serve(makePost<Record<string, never>>('/v1/app/stats', valid, async ({ sb }
 
   return {
     body: {
-      // Vrais et présentables dès aujourd'hui (19 annonces, 9 boutiques et
-      // agences, 5 villes au 2026-10-27) : toujours renvoyés.
-      listings: c.listings ?? 0,
-      shops: c.shops ?? 0,
-      cities: c.cities ?? 0,
-      // Ceux-là desservent l'application tant qu'ils sont bas : seuils.
-      users: gate(c.users ?? 0, THRESHOLDS.users),
-      sales: gate(c.sales ?? 0, THRESHOLDS.sales),
-      bookings: gate(c.bookings ?? 0, THRESHOLDS.bookings),
+      users: shown(c.users),
+      listings: shown(c.listings),
+      sales: shown(c.sales),
+      bookings: shown(c.bookings),
     },
   };
 }));

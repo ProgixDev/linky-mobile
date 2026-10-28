@@ -40,11 +40,17 @@ interface FiltersState {
   distanceToRoadMaxM: number;
   furnishedOnly: boolean;
   searchQuery: string;
-  /** Incrémenté par la barre de recherche de l'accueil : le Marché ouvre alors
-   *  son champ, clavier sorti. Un compteur plutôt qu'un booléen : deux appuis
-   *  successifs doivent tous deux agir. */
+  /** Posé par la barre de recherche de l'accueil : le Marché ouvre alors son
+   *  champ, clavier sorti. L'HEURE de la demande (Date.now()), pas un booléen :
+   *  deux appuis successifs doivent tous deux agir, et le Marché ne répond qu'à
+   *  une demande FRAÎCHE (requestIsFresh) — sans quoi un Marché remonté plus
+   *  tard (reconnexion) rejouerait une vieille demande. 0 = aucune. */
   searchFocusRequest: number;
   requestSearchFocus: () => void;
+  /** Même mécanisme pour le bouton Filtres de l'accueil (maquette du client,
+   *  2026-10-28) : le Marché ouvre sa feuille de filtres. */
+  filterSheetRequest: number;
+  requestFilterSheet: () => void;
   setMarcheTab: (t: MarcheTab) => void;
   setProductCategory: (c: string) => void;
   setProductSort: (s: 'recent' | 'popular') => void;
@@ -86,7 +92,15 @@ const DEFAULTS = {
   furnishedOnly: false,
   searchQuery: '',
   searchFocusRequest: 0,
+  filterSheetRequest: 0,
 };
+
+/** Une demande de l'accueil vaut pour le Marché qui s'ouvre JUSTE APRÈS, pas
+ *  pour celui qui se remontera dans une heure. Cinq secondes : de quoi laisser
+ *  un téléphone d'entrée de gamme monter l'onglet la première fois. */
+export function requestIsFresh(at: number): boolean {
+  return at > 0 && Date.now() - at < 5000;
+}
 
 // Phase U.0 nit — used by marche's "Effacer les filtres" CTA to decide
 // whether to show "Aucun résultat / Effacer les filtres" or a truly-empty
@@ -150,7 +164,8 @@ export const useFilters = create<FiltersState>((set) => ({
   setDistanceMax: (distanceToRoadMaxM) => set({ distanceToRoadMaxM }),
   setFurnishedOnly: (furnishedOnly) => set({ furnishedOnly }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
-  requestSearchFocus: () => set((s) => ({ searchFocusRequest: s.searchFocusRequest + 1 })),
+  requestSearchFocus: () => set({ searchFocusRequest: Date.now() }),
+  requestFilterSheet: () => set({ filterSheetRequest: Date.now() }),
   // Phase U.0 should-fix — "Effacer les filtres" from the Immobilier tab
   // used to yank the user to Articles (DEFAULTS sets marcheTab='articles').
   // Preserve the current tab so the user stays where they were.
