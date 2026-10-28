@@ -2,6 +2,7 @@
 // land later without touching call sites. Keep flag bodies minimal : if a
 // flag needs branching logic, write a helper next to it instead of nesting
 // conditionals in this file.
+import * as Updates from 'expo-updates';
 
 // P2P wallet send (wallet-to-wallet money transfer between Linky accounts).
 // REMOVED 2026-07-02 by client decision: person-to-person money transfer is OUT
@@ -30,7 +31,13 @@ export const WALLET_TOPUP_ENABLED = false;
 // APRÈS un essai sur appareil, canal preview d'abord.
 // RALLUMÉ le 2026-10-27 avec un délai d'armement de 800 ms et l'arrêt quand
 // l'accueil n'est pas à l'écran — sur PREVIEW d'abord, essai sur téléphone.
-export const HOME_HERO_AUTOPLAY_ENABLED = true;
+// 2026-10-28 : ALLUME PARTOUT SAUF SUR LE CANAL PRODUCTION. Le nouvel accueil
+// part en production avant l'essai sur telephone (demande d'Achraf) : ce qu'il
+// a de NATIF et de jamais exerce la-bas (expo-network, lecteur video lance
+// seul) reste eteint chez les vrais utilisateurs, allume sur preview pour
+// l'essai. Une pub video reste lisible d'un appui, partout. Apres l'essai sur
+// appareil (wifi ET donnees) : remettre `true` et publier sur production.
+export const HOME_HERO_AUTOPLAY_ENABLED = Updates.channel !== 'production';
 
 // Sons dans l'application (validation / échec), joués par le lecteur
 // d'expo-video SANS écran vidéo — jamais testé sur appareil. Coupé pour la
