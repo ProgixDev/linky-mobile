@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
+  AccessibilityInfo,
   Animated,
   Dimensions,
   Easing,
@@ -18,7 +19,8 @@ import { useTranslation } from 'react-i18next';
 import { NetworkStateType, addNetworkStateListener, getNetworkStateAsync } from 'expo-network';
 import { HOME_HERO_AUTOPLAY_ENABLED } from '../../lib/flags';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { ArrowRight, Play } from 'lucide-react-native';
+import { ArrowRight, CalendarCheck, Play, ShoppingBag, Store, Users } from 'lucide-react-native';
+import Svg, { Circle, Defs, Ellipse, LinearGradient as SvgLinearGradient, Path, Polygon, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { haptic } from '../../lib/haptics';
@@ -138,6 +140,43 @@ const SLIDE_H = Math.max(
 const CONTENT_H = SLIDE_H - PAD - CTA_BAND;
 /** La colonne de texte d'une pub : la photo occupe le reste, à droite. */
 const AD_TEXT_W = Math.round(SLIDE_W * 0.64) - PAD;
+/**
+ * La grille de « Linky en chiffres », direction « Éditorial nuit » (maquettes
+ * rendues et départagées le 2026-10-28 : trois directions, un juge). Calculée
+ * une fois pour l'écran : chiffres de 28 à 42 dp selon la hauteur, deux
+ * colonnes séparées d'un filet doré, rien dans la bande du bouton.
+ */
+const STATS = (() => {
+  const limit = SLIDE_H - CTA_BAND;
+  const top = Math.round(PAD + 14 * FONT_SCALE + (SLIDE_W >= 340 ? 8 : 6));
+  const rowGap = SLIDE_W >= 340 ? 12 : 10;
+  const label = Math.ceil(14 * FONT_SCALE) - 4;
+  const size = Math.max(28, Math.min(42, Math.floor((limit - top - rowGap) / 2 - label)));
+  const rowH = size + label;
+  const mid = Math.round(SLIDE_W / 2);
+  const compact = SLIDE_W < 340;
+  const rosette = compact ? 23 : 27;
+  return {
+    size,
+    rowH,
+    rows: [top, top + rowH + rowGap],
+    divY: top + rowH + rowGap / 2,
+    mid,
+    colX: [PAD, mid + 14],
+    colW: [mid - 30, SLIDE_W - mid - 30],
+    // Les icônes devant les libellés, seulement s'il y a la place : à 320 dp,
+    // elles feraient passer « Réservations réalisées » sous 10,5 px.
+    icons: SLIDE_W >= 340,
+    // La marque dorée et sa rosace, en bas à droite, sur la ligne du bouton.
+    markX: SLIDE_W - (compact ? 28 : 32),
+    markY: SLIDE_H - (compact ? 35 : 38),
+    markW: compact ? 28 : 32,
+    rosette,
+    ring: rosette + (compact ? 7 : 8),
+  };
+})();
+/** Le compteur des chiffres : de 0 à la valeur, à chaque apparition. */
+const COUNT_MS = 900;
 /** Le cadre portrait d'une vidéo d'annonce, à droite, et la colonne de texte
  *  qui le borde sans le chevaucher. */
 const LISTING_MEDIA_W = Math.round(SLIDE_W * 0.46);
@@ -318,15 +357,21 @@ function openRentals() {
 
 /** Les quatre chiffres du client, dans son ordre. Un chiffre absent ou nul ne
  *  s'affiche pas : « 0 vente » sur la première page desservirait l'app. */
-function statFigures(st: AppStats | undefined, t: (k: string) => string) {
+interface StatFigure {
+  value: number;
+  label: string;
+  Icon: typeof Users;
+}
+
+function statFigures(st: AppStats | undefined, t: (k: string) => string): StatFigure[] {
   if (!st) return [];
-  const all: { value: number | null | undefined; label: string }[] = [
-    { value: st.users, label: t('home.statsUsers') },
-    { value: st.listings, label: t('home.statsListings') },
-    { value: st.sales, label: t('home.statsSales') },
-    { value: st.bookings, label: t('home.statsBookings') },
+  const all: { value: number | null | undefined; label: string; Icon: typeof Users }[] = [
+    { value: st.users, label: t('home.statsUsers'), Icon: Users },
+    { value: st.listings, label: t('home.statsListings'), Icon: Store },
+    { value: st.sales, label: t('home.statsSales'), Icon: ShoppingBag },
+    { value: st.bookings, label: t('home.statsBookings'), Icon: CalendarCheck },
   ];
-  return all.filter((f): f is { value: number; label: string } => typeof f.value === 'number' && f.value > 0);
+  return all.filter((f): f is StatFigure => typeof f.value === 'number' && f.value > 0);
 }
 
 export function HomeHero() {
@@ -502,7 +547,7 @@ export function HomeHero() {
       {slides.map((s, i) => (
         <FadeSlot key={s.key} active={i === index}>
           {s.type === 'stats' ? (
-            <StatsSlide figures={figures} />
+            <StatsSlide figures={figures} active={i === index} />
           ) : s.type === 'ad' ? (
             <AdSlide id={s.id} photo={s.photo} onOpen={s.onOpen} />
           ) : (
@@ -1007,66 +1052,293 @@ function VideoBannerSlide({
   );
 }
 
-/** « Linky en chiffres » : les quatre chiffres du client, deux par rangée. */
-function StatsSlide({ figures }: { figures: { value: number; label: string }[] }) {
+/**
+ * « Linky en chiffres », direction « Éditorial nuit » : un fond d'encre éclairé
+ * par une aurore émeraude, les quatre chiffres du client en grand, une grille
+ * dorée, la marque Linky dans sa rosace. Le client trouvait la première version
+ * « trop simple » (2026-10-28). Sombre comme les pubs qui la suivent : le
+ * carrousel reste d'une seule pièce.
+ */
+function StatsSlide({ figures, active }: { figures: StatFigure[]; active: boolean }) {
   const { colors, theme } = useTheme();
   const { t } = useTranslation();
+  // Le compteur se lance à chaque apparition — sauf si le téléphone demande
+  // moins d'animations (Accessibilité > Supprimer les animations).
+  const reduceMotion = useReduceMotion();
+  const run = active && !reduceMotion;
   return (
     <View
       accessible
       accessibilityRole="summary"
       accessibilityLabel={`${t('home.statsTitle')} : ${figures.map((f) => `${f.value} ${f.label}`).join(', ')}`}
-      style={{
-        width: SLIDE_W,
-        height: SLIDE_H,
-        borderRadius: 22,
-        overflow: 'hidden',
-        borderWidth: theme === 'dark' ? 1 : 0,
-        borderColor: colors.border,
-      }}
+      // Le fond ne change pas : rendu une fois en texture, il ne se redessine
+      // pas à chaque image du fondu enchaîné.
+      renderToHardwareTextureAndroid
+      style={{ width: SLIDE_W, height: SLIDE_H, borderRadius: 22, overflow: 'hidden', backgroundColor: INK }}
     >
-      <LinearGradient
-        colors={[colors.primary, '#0B4A38']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      <StatsBackdrop edge={theme === 'dark' ? colors.border : null} />
+      <Image
+        source={require('../../../assets/images/linky-mark.png')}
+        tintColor={colors.accent}
+        contentFit="contain"
+        style={{
+          position: 'absolute',
+          left: STATS.markX - STATS.markW / 2,
+          top: STATS.markY - (STATS.markW * 115) / 408,
+          width: STATS.markW,
+          height: (STATS.markW * 115) / 204,
+        }}
       />
-      <View style={{ position: 'absolute', top: PAD, left: PAD, right: PAD, maxHeight: CONTENT_H, overflow: 'hidden' }}>
-        {/* Or pâle (#FCF1DC) : 5,5:1 sur ce vert, contre 2,9:1 pour l'or plein. */}
-        <Eyebrow color="#FCF1DC">{t('home.statsTitle')}</Eyebrow>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 6, marginTop: 10 }}>
-          {figures.map((f) => (
-            <View key={f.label} style={{ width: '50%', paddingRight: 8 }}>
-              <Text
-                maxFontSizeMultiplier={MAX_FONT_SCALE}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
-                style={{ fontSize: 24, lineHeight: 27, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 }}
-              >
-                {groupDigits(f.value)}
-              </Text>
-              <Text
-                maxFontSizeMultiplier={MAX_FONT_SCALE}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.8}
-                style={{ fontSize: 11, lineHeight: 14, color: 'rgba(255,255,255,0.82)', letterSpacing: 0 }}
-              >
-                {f.label}
-              </Text>
-            </View>
-          ))}
+      {/* L'accroche : un losange doré, le titre, un filet doré qui s'efface. */}
+      <View
+        pointerEvents="none"
+        style={{ position: 'absolute', top: PAD, left: PAD, right: 110, flexDirection: 'row', alignItems: 'center' }}
+      >
+        <View style={{ width: 5, height: 5, marginHorizontal: 1, backgroundColor: colors.accent, transform: [{ rotate: '45deg' }] }} />
+        <View style={{ marginLeft: 8, flexShrink: 1 }}>
+          <Eyebrow>{t('home.statsTitle')}</Eyebrow>
         </View>
+        <LinearGradient
+          colors={['rgba(232,165,61,0.7)', 'rgba(232,165,61,0)']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={{ flex: 1, height: 1, marginLeft: 12 }}
+        />
       </View>
+      {figures.map((f, i) => (
+        <StatCell key={f.label} figure={f} index={i} run={run} />
+      ))}
     </View>
   );
 }
 
+/** Un chiffre et son libellé, à sa place dans la grille. */
+function StatCell({ figure, index, run }: { figure: StatFigure; index: number; run: boolean }) {
+  const { colors } = useTheme();
+  const col = index % 2;
+  const x = STATS.colX[col];
+  const y = STATS.rows[index >> 1];
+  const width = STATS.colW[col];
+  // Un léger décalage entre les quatre, dans l'ordre de lecture.
+  const shown = useCountUp(figure.value, run, index * 80);
+  const Icon = figure.Icon;
+  return (
+    <>
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+        style={{
+          position: 'absolute',
+          left: x,
+          top: y - Math.round(0.172 * STATS.size),
+          width,
+          fontSize: STATS.size,
+          lineHeight: Math.round(1.172 * STATS.size),
+          includeFontPadding: false,
+          // 700 et pas 800 : sur les vieux Android, le 800 retombe au hasard sur
+          // 700 ou 900.
+          fontWeight: '700',
+          color: '#F7F3EC',
+          letterSpacing: -0.035 * STATS.size,
+          fontVariant: ['tabular-nums'],
+        }}
+      >
+        {groupDigits(shown)}
+      </Text>
+      <View
+        style={{
+          position: 'absolute',
+          left: x,
+          top: y + STATS.size - 4,
+          width,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 5,
+        }}
+      >
+        {STATS.icons && <Icon size={14} color={colors.accent} strokeWidth={1.75} />}
+        <Text
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+          style={{ flexShrink: 1, fontSize: 12, lineHeight: 14, fontWeight: '500', color: 'rgba(252,241,220,0.82)', letterSpacing: 0 }}
+        >
+          {figure.label}
+        </Text>
+      </View>
+    </>
+  );
+}
+
+/**
+ * Le fond de la carte, en un seul dessin SVG : l'encre, l'aurore émeraude en
+ * haut à droite et son arc lumineux (trois tracés, pas des dizaines de formes :
+ * le fondu doit rester fluide sur les petits téléphones), une lueur émeraude
+ * sous le bouton, quelques étoiles, la grille dorée et la rosace de la marque.
+ * Mémorisé : le compteur ne le redessine jamais.
+ */
+const StatsBackdrop = memo(function StatsBackdrop({ edge }: { edge: string | null }) {
+  const W = SLIDE_W;
+  const H = SLIDE_H;
+  // L'arc est ancré au bord droit et resserré sur les cartes étroites : il passe
+  // toujours au-delà de la colonne de droite.
+  const k = (W / 350) ** 2;
+  const ax = (x: number) => W - (350 - x) * k;
+  const p0 = [ax(150), -0.04 * H];
+  const p1 = [ax(350), -0.01 * H];
+  const p2 = [ax(357), 0.86 * H];
+  const arc = `M${p0[0]} ${p0[1]} Q${p1[0]} ${p1[1]} ${p2[0]} ${p2[1]}`;
+  const gridTop = STATS.rows[0] + 2;
+  const gridBottom = STATS.rows[1] + STATS.rowH;
+  const { mid, divY, markX, markY, rosette, ring } = STATS;
+  // Vingt-quatre points dorés d'un seul trait : un pointillé de longueur nulle
+  // à bouts ronds.
+  const dotStep = (2 * Math.PI * rosette) / 24;
+  return (
+    <Svg width={W} height={H} style={{ position: 'absolute', top: 0, left: 0 }} pointerEvents="none">
+      <Defs>
+        <SvgLinearGradient id="lsBase" x1={0} y1={0} x2={W} y2={H} gradientUnits="userSpaceOnUse">
+          <Stop offset={0} stopColor="#0E1311" />
+          <Stop offset={0.5} stopColor="#0D1512" />
+          <Stop offset={1} stopColor="#0A1C16" />
+        </SvgLinearGradient>
+        <RadialGradient id="lsBloom" cx="50%" cy="50%" r="50%">
+          <Stop offset={0} stopColor="#3AD49E" stopOpacity={0.62} />
+          <Stop offset={0.3} stopColor="#10805F" stopOpacity={0.5} />
+          <Stop offset={0.62} stopColor="#0A5240" stopOpacity={0.22} />
+          <Stop offset={1} stopColor="#0A5240" stopOpacity={0} />
+        </RadialGradient>
+        <RadialGradient id="lsPool" cx="50%" cy="50%" r="50%">
+          <Stop offset={0} stopColor="#12855F" stopOpacity={0.6} />
+          <Stop offset={0.45} stopColor="#0A5240" stopOpacity={0.32} />
+          <Stop offset={1} stopColor="#0A5240" stopOpacity={0} />
+        </RadialGradient>
+        <SvgLinearGradient id="lsRim" x1={p0[0]} y1={p0[1]} x2={p2[0]} y2={p2[1]} gradientUnits="userSpaceOnUse">
+          <Stop offset={0} stopColor="#C9FFEC" stopOpacity={0} />
+          <Stop offset={0.3} stopColor="#C9FFEC" stopOpacity={0.55} />
+          <Stop offset={0.62} stopColor="#8AF7CF" stopOpacity={0.95} />
+          <Stop offset={0.86} stopColor="#5FE3B4" stopOpacity={0.45} />
+          <Stop offset={1} stopColor="#5FE3B4" stopOpacity={0} />
+        </SvgLinearGradient>
+        <SvgLinearGradient id="lsGlow" x1={p0[0]} y1={p0[1]} x2={p2[0]} y2={p2[1]} gradientUnits="userSpaceOnUse">
+          <Stop offset={0} stopColor="#2FBF8C" stopOpacity={0} />
+          <Stop offset={0.55} stopColor="#2FBF8C" stopOpacity={1} />
+          <Stop offset={1} stopColor="#2FBF8C" stopOpacity={0} />
+        </SvgLinearGradient>
+        <SvgLinearGradient id="lsSheen" x1={0.3 * W} y1={0} x2={0.96 * W} y2={0} gradientUnits="userSpaceOnUse">
+          <Stop offset={0} stopColor="#E8A53D" stopOpacity={0} />
+          <Stop offset={0.6} stopColor="#F3C77A" stopOpacity={0.85} />
+          <Stop offset={1} stopColor="#E8A53D" stopOpacity={0} />
+        </SvgLinearGradient>
+        <SvgLinearGradient id="lsVLine" x1={0} y1={gridTop} x2={0} y2={gridBottom} gradientUnits="userSpaceOnUse">
+          <Stop offset={0} stopColor="#E8A53D" stopOpacity={0} />
+          <Stop offset={0.5} stopColor="#E8A53D" stopOpacity={0.55} />
+          <Stop offset={1} stopColor="#E8A53D" stopOpacity={0} />
+        </SvgLinearGradient>
+        <SvgLinearGradient id="lsHLine" x1={PAD} y1={0} x2={W - PAD} y2={0} gradientUnits="userSpaceOnUse">
+          <Stop offset={0} stopColor="#E8A53D" stopOpacity={0} />
+          <Stop offset={0.5} stopColor="#E8A53D" stopOpacity={0.55} />
+          <Stop offset={1} stopColor="#E8A53D" stopOpacity={0} />
+        </SvgLinearGradient>
+        <RadialGradient id="lsHalo" cx="50%" cy="50%" r="50%">
+          <Stop offset={0} stopColor="#E8A53D" stopOpacity={0.12} />
+          <Stop offset={1} stopColor="#E8A53D" stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Rect x={0} y={0} width={W} height={H} fill="url(#lsBase)" />
+      <Ellipse cx={0.9 * W} cy={-0.18 * H} rx={0.72 * W} ry={1.05 * H} fill="url(#lsBloom)" />
+      <Ellipse cx={0.08 * W} cy={1.08 * H} rx={0.62 * W} ry={0.62 * H} fill="url(#lsPool)" />
+      <Path d={arc} fill="none" stroke="url(#lsGlow)" strokeOpacity={0.1} strokeWidth={16} strokeLinecap="round" />
+      <Path d={arc} fill="none" stroke="url(#lsGlow)" strokeOpacity={0.16} strokeWidth={6} strokeLinecap="round" />
+      <Path d={arc} fill="none" stroke="url(#lsRim)" strokeWidth={1.5} strokeLinecap="round" />
+      {STARS.map(([dx, y, r, a]) => (
+        <Circle key={`${dx}-${y}`} cx={W - dx} cy={y} r={r} fill="#FFFFFF" fillOpacity={a} />
+      ))}
+      <Rect x={0} y={0} width={W} height={1} fill="url(#lsSheen)" />
+      <Rect x={mid - 0.5} y={gridTop} width={1} height={gridBottom - gridTop} fill="url(#lsVLine)" />
+      <Rect x={PAD} y={divY - 0.5} width={W - 2 * PAD} height={1} fill="url(#lsHLine)" />
+      <Polygon points={`${mid},${divY - 3.5} ${mid + 3.5},${divY} ${mid},${divY + 3.5} ${mid - 3.5},${divY}`} fill="#E8A53D" />
+      <Circle cx={markX} cy={markY} r={ring + 6} fill="url(#lsHalo)" />
+      <Circle
+        cx={markX}
+        cy={markY}
+        r={rosette}
+        fill="none"
+        stroke="#E8A53D"
+        strokeOpacity={0.5}
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        strokeDasharray={[0.01, dotStep - 0.01]}
+      />
+      <Circle cx={markX} cy={markY} r={ring} fill="none" stroke="#E8A53D" strokeOpacity={0.22} strokeWidth={0.75} strokeDasharray={[3, 4]} />
+      {/* En mode sombre, le filet des autres diapositives : dessiné ICI, une
+          bordure de la vue passerait sous ce dessin. */}
+      {edge && <Rect x={0.5} y={0.5} width={W - 1} height={H - 1} rx={21.5} ry={21.5} fill="none" stroke={edge} strokeWidth={1} />}
+    </Svg>
+  );
+});
+
+/** Quelques étoiles, hors de toute zone de texte : [écart au bord droit, y,
+ *  rayon, opacité]. */
+const STARS: [number, number, number, number][] = [
+  [96, 9, 0.6, 0.4],
+  [74, 21, 1, 0.8],
+  [58, 6, 0.6, 0.45],
+  [40, 16, 0.7, 0.55],
+  [108, 27, 0.5, 0.3],
+  [9, 66, 0.6, 0.35],
+  [12, 98, 0.5, 0.3],
+  [7, 124, 0.5, 0.25],
+];
+
+/** Vrai quand le téléphone demande moins d'animations. */
+function useReduceMotion(): boolean {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((v) => alive && setReduce(v))
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+  return reduce;
+}
+
+/** Compte de 0 à `target` (fin ralentie) quand `run` devient vrai ; sinon la
+ *  valeur finale, tout de suite. */
+function useCountUp(target: number, run: boolean, delayMs: number): number {
+  const [value, setValue] = useState(target);
+  useEffect(() => {
+    if (!run) {
+      setValue(target);
+      return;
+    }
+    let frame = 0;
+    const start = Date.now() + delayMs;
+    const tick = () => {
+      const p = Math.min(1, Math.max(0, (Date.now() - start) / COUNT_MS));
+      setValue(Math.round(target * (1 - (1 - p) ** 3)));
+      if (p < 1) frame = requestAnimationFrame(tick);
+    };
+    setValue(0);
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, run, delayMs]);
+  return value;
+}
+
 /** 12 400 plutôt que 12400, écrit à la main : le moteur JavaScript d'Android
- *  n'embarque pas toujours les données de langue de toLocaleString. */
+ *  n'embarque pas toujours les données de langue de toLocaleString. Espace
+ *  insécable : le chiffre ne se coupe jamais en deux. */
 function groupDigits(n: number): string {
-  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
 /** Toujours muette. Sans boucle dès qu'il y a une autre diapositive : sa fin
