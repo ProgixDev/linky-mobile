@@ -130,6 +130,9 @@ export interface WithdrawalRequestItem {
   reason: string | null;
   created_at: string;
   decided_at: string | null;
+  /** Le serveur l'accepterait : validée et aucun versement parti. Absent sur
+   *  une fonction pas encore redéployée — on ne propose alors rien. */
+  cancellable?: boolean;
 }
 
 // The seller's own withdrawal requests — feeds the « Retraits » tab.
@@ -161,6 +164,25 @@ export function useWithdrawWallet() {
         body: { currency: 'GNF', amount_minor: amountGnf, destination },
       }),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wallet'] });
+      qc.invalidateQueries({ queryKey: ['my-withdrawals'] });
+    },
+  });
+}
+
+// Annule un retrait validé : la retenue revient sur le solde. Le serveur refuse
+// (PAYOUT_IN_PROGRESS) dès qu'un virement est parti ou réservé.
+export function useCancelWithdrawal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (requestId: string) =>
+      apiPost<{ withdrawal: unknown }>({
+        path: '/wallet-withdraw-cancel',
+        body: { request_id: requestId },
+      }),
+    // Succès OU refus : dans les deux cas l'état affiché est périmé (un refus
+    // veut dire que l'admin a réservé entre-temps — le bouton doit disparaître).
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['wallet'] });
       qc.invalidateQueries({ queryKey: ['my-withdrawals'] });
     },

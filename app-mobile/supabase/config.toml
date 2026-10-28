@@ -776,6 +776,12 @@ verify_jwt = false
 [functions.wallet-withdraw-request]
 verify_jwt = false
 
+[functions.wallet-withdraw-cancel]
+verify_jwt = false
+
+[functions.withdrawal-manual-reserve]
+verify_jwt = false
+
 [functions.livreur-apply]
 verify_jwt = false
 

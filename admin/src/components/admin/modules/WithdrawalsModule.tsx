@@ -18,11 +18,12 @@
 //                comparaison solde / montant garde tout son sens.
 
 import { useState } from 'react';
-import { Banknote, X, Calendar, Loader2, AlertTriangle, Check, Send } from 'lucide-react';
+import { Banknote, X, Calendar, Loader2, AlertTriangle, Check, Send, Lock, Undo2 } from 'lucide-react';
 import {
   useWithdrawals,
   useProcessWithdrawal,
   usePayoutWithdrawal,
+  useManualReservation,
   useLengopayBalance,
   type WithdrawalRow,
 } from '@/data/queries/withdrawals';
@@ -137,6 +138,20 @@ export function WithdrawalsModule() {
                           <AlertTriangle size={10} /> solde insuffisant
                         </div>
                       )}
+                      {w.payout_claimed_at && (
+                        <div
+                          className={`mt-0.5 flex items-center justify-end gap-1 text-[10px] font-bold uppercase ${
+                            w.payout_status === 'FAILED' ? 'text-danger' : 'text-accent-text'
+                          }`}
+                        >
+                          <Lock size={10} />
+                          {w.payout_status === 'MANUAL'
+                            ? 'réservée'
+                            : w.payout_status === 'FAILED'
+                              ? 'versement échoué'
+                              : 'versement en cours'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -246,6 +261,7 @@ function TreasuryStrip({
 function DetailPane({ request }: { request: WithdrawalRow }) {
   const process = useProcessWithdrawal();
   const payout = usePayoutWithdrawal();
+  const reserve = useManualReservation();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
 
@@ -254,6 +270,22 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
   /** Les fonds sont déjà sortis du solde du vendeur : il n'y a plus rien à vérifier. */
   const held = request.status === 'approved';
   const short = !held && balance < request.amount_minor;
+
+  // ── L'ÉTAT DU VIREMENT, ET LES SEULS GESTES SÛRS DANS CHAQUE ÉTAT ───────
+  // Le vendeur peut annuler une demande validée TANT QU'AUCUN virement n'est
+  // réservé (2026-10-28). D'où l'ordre imposé au virement manuel : réserver,
+  // envoyer, confirmer — jamais envoyer puis cliquer.
+  //   libre       Rejeter · Verser · Virer à la main (= réserver)
+  //   manuel      Relâcher · C'est viré
+  //   Lengopay    Marquer payé seulement : rejeter rendrait les fonds au
+  //               vendeur pendant que le versement part — il toucherait deux fois
+  //   Lengopay ✗  Rejeter · Viré à la main — la réservation reste posée, le
+  //               vendeur ne peut toujours pas annuler
+  const claimed = held && !!request.payout_claimed_at;
+  const manual = claimed && request.payout_status === 'MANUAL';
+  const lengopayFailed = claimed && !manual && request.payout_status === 'FAILED';
+  const lengopayInFlight = claimed && !manual && !lengopayFailed;
+  const busy = process.isPending || payout.isPending || reserve.isPending;
 
   return (
     <div className="flex flex-col gap-5 overflow-y-auto">
@@ -332,9 +364,10 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
           {held ? (
             <>
               Cette demande est <span className="font-bold">déjà validée</span> et les fonds sont{' '}
-              <span className="font-bold">retenus</span> sur le portefeuille du vendeur. Envoie le
-              transfert mobile money, puis confirme — aucun débit supplémentaire n&apos;aura lieu.
-              Si tu refuses, les fonds lui sont rendus.
+              <span className="font-bold">retenus</span> sur le portefeuille du vendeur. Tant
+              qu&apos;aucun virement n&apos;est réservé, <span className="font-bold">il peut
+              l&apos;annuler</span> depuis l&apos;app : « Verser » et « Virer à la main » réservent
+              la demande AVANT que l&apos;argent parte. Si tu refuses, les fonds lui sont rendus.
             </>
           ) : (
             <>
@@ -345,6 +378,46 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
           )}
         </div>
       </div>
+
+      {/* Virement réservé : ce qui se passe, et ce qu'il reste à faire */}
+      {claimed && (
+        <div
+          className={`flex items-start gap-2 rounded-2xl border p-4 text-xs font-semibold ${
+            lengopayFailed
+              ? 'border-danger/30 bg-danger/10 text-danger'
+              : 'border-line bg-accent-soft text-accent-text'
+          }`}
+        >
+          {lengopayFailed ? (
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          ) : (
+            <Lock size={14} className="mt-0.5 shrink-0" />
+          )}
+          <div>
+            {manual && (
+              <>
+                Réservée pour un virement manuel — le vendeur ne peut plus l&apos;annuler. Envoie{' '}
+                {gnf(request.amount_minor)} à{' '}
+                {request.destination ? maskDestination(request.destination) : 'la destination'}, puis
+                clique « C&apos;est viré ». Si tu n&apos;envoies finalement rien, relâche la réservation.
+              </>
+            )}
+            {lengopayInFlight && (
+              <>
+                Versement Lengopay en cours (statut {request.payout_status ?? 'INITIATED'}). La demande
+                se clôturera à leur confirmation. Ne vire rien à la main.
+              </>
+            )}
+            {lengopayFailed && (
+              <>
+                Le versement Lengopay a échoué{request.payout_error ? ` : ${request.payout_error}` : ''}.
+                La demande reste réservée, le vendeur ne peut pas l&apos;annuler. Vire à la main puis
+                confirme, ou rejette pour lui rendre ses fonds.
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Reject reason */}
       {rejecting && (
@@ -393,11 +466,53 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
               Confirmer le rejet
             </button>
           </>
+        ) : manual ? (
+          <>
+            <button
+              onClick={() => reserve.mutate({ request_id: request.id, action: 'release' })}
+              disabled={busy}
+              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-sunken text-sm font-bold text-muted hover:bg-sunken/70 disabled:opacity-50"
+            >
+              {reserve.isPending ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Undo2 size={15} strokeWidth={2.25} />
+              )}
+              Relâcher
+            </button>
+            <button
+              onClick={() => process.mutate({ request_id: request.id, outcome: 'paid' })}
+              disabled={busy}
+              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-black text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
+              style={{ flex: '1.5 1 0' }}
+            >
+              {process.isPending ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Check size={15} strokeWidth={2.25} />
+              )}
+              C&apos;est viré
+            </button>
+          </>
+        ) : lengopayInFlight ? (
+          <button
+            onClick={() => process.mutate({ request_id: request.id, outcome: 'paid' })}
+            disabled={busy}
+            title="Seulement si Lengopay confirme le versement de son côté"
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-black text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {process.isPending ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <Check size={15} strokeWidth={2.25} />
+            )}
+            Marquer payé
+          </button>
         ) : (
           <>
             <button
               onClick={() => setRejecting(true)}
-              disabled={process.isPending}
+              disabled={busy}
               className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-danger/10 text-sm font-bold text-danger ring-1 ring-danger/25 hover:bg-danger/15 disabled:opacity-50"
             >
               <X size={15} strokeWidth={2.25} />
@@ -411,13 +526,14 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
                 D'ou « Verser » et non « Payer » — un administrateur qui croit
                 que c'est fini n'ira pas verifier.
 
-                Affiche seulement sur une demande 'approved' : c'est le seul
-                etat d'ou un versement a du sens, et le serveur le refuserait
-                de toute facon (REQUEST_NOT_PAYABLE). */}
-            {held && (
+                Affiche seulement sur une demande 'approved' et pas encore
+                reservee : c'est le seul etat d'ou un versement a du sens, et
+                le serveur le refuserait de toute facon (REQUEST_NOT_PAYABLE,
+                PAYOUT_ALREADY_CLAIMED). */}
+            {held && !claimed && (
               <button
                 onClick={() => payout.mutate({ request_id: request.id })}
-                disabled={payout.isPending || process.isPending}
+                disabled={busy}
                 className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
                 style={{ flex: '1.5 1 0' }}
               >
@@ -429,20 +545,44 @@ function DetailPane({ request }: { request: WithdrawalRow }) {
                 Verser
               </button>
             )}
-            <button
-              onClick={() => process.mutate({ request_id: request.id, outcome: 'paid' })}
-              disabled={process.isPending || payout.isPending || short}
-              title={short ? 'Solde insuffisant — impossible de payer' : undefined}
-              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-black text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
-              style={{ flex: held ? '1 1 0' : '1.5 1 0' }}
-            >
-              {process.isPending ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <Check size={15} strokeWidth={2.25} />
-              )}
-              {held ? "Viré à la main" : 'Marquer payé'}
-            </button>
+            {/* VIRER À LA MAIN = RÉSERVER D'ABORD. Sur une demande libre, ce
+                bouton n'envoie rien et ne clôt rien : il pose la réservation
+                qui empêche le vendeur d'annuler. Ensuite seulement on vire, puis
+                « C'est viré ». Après un échec Lengopay la réservation est déjà
+                posée : on confirme directement. Les demandes 'pending' d'avant
+                la retenue gardent « Marquer payé » (le vendeur ne peut pas les
+                annuler). */}
+            {held && !claimed ? (
+              <button
+                onClick={() => reserve.mutate({ request_id: request.id, action: 'reserve' })}
+                disabled={busy}
+                title="Réserve la demande avant d'envoyer l'argent : le vendeur ne pourra plus l'annuler"
+                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-black text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
+                style={{ flex: '1 1 0' }}
+              >
+                {reserve.isPending ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Lock size={15} strokeWidth={2.25} />
+                )}
+                Virer à la main
+              </button>
+            ) : (
+              <button
+                onClick={() => process.mutate({ request_id: request.id, outcome: 'paid' })}
+                disabled={busy || short}
+                title={short ? 'Solde insuffisant — impossible de payer' : undefined}
+                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-black text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
+                style={{ flex: '1.5 1 0' }}
+              >
+                {process.isPending ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Check size={15} strokeWidth={2.25} />
+                )}
+                {held ? 'Viré à la main' : 'Marquer payé'}
+              </button>
+            )}
           </>
         )}
       </div>

@@ -8,7 +8,8 @@
 //             ⚠️ Depuis 20260929_08, une demande `approved` a DEJA retenu ses
 //             fonds : le solde en exclut la retenue, et la comparaison ne vaut
 //             que pour les demandes `pending` d'avant ce changement.
-//   recent  → paid / rejected requests decided in the last 7 days, newest first.
+//   recent  → paid / rejected / cancelled requests decided in the last 7 days,
+//             newest first.
 // Response : { withdrawals: WithdrawalRow[] }
 //
 // Auth : requireUser + assertAdmin (live is_admin re-check, Phase K posture).
@@ -32,6 +33,10 @@ const SELECT =
   // il faut montrer le solde, pas « une » caisse de ce vendeur.
   'id, user_id, currency, amount_minor, status, destination, reason, wallet_kind, ' +
   'created_at, decided_at, decided_by, ' +
+  // L'etat du versement : la console doit savoir si une demande est reservee
+  // (virement manuel en cours, ou versement Lengopay parti) pour ne proposer
+  // que les gestes surs — cf. withdrawal-manual-reserve.
+  'payout_claimed_at, payout_status, payout_pay_id, payout_error, ' +
   'users:users!withdrawal_requests_user_id_fkey(id, display_name, avatar_url)';
 
 interface WithdrawalRow {
@@ -63,8 +68,9 @@ Deno.serve(makePost<Body>('/v1/admin/withdrawals/list', valid, async ({ sb, body
       .order('created_at', { ascending: true });
   } else {
     const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    // 'cancelled' : annule par le vendeur lui-meme (depuis le 2026-10-28).
     query = query
-      .in('status', ['paid', 'rejected'])
+      .in('status', ['paid', 'rejected', 'cancelled'])
       .gte('decided_at', cutoff)
       .order('decided_at', { ascending: false });
   }

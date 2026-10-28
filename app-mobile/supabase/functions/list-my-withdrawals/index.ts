@@ -16,7 +16,7 @@ Deno.serve(makePost<Body>('/v1/wallet/withdrawals', valid, async ({ sb, req }) =
 
   const { data, error } = await sb
     .from('withdrawal_requests')
-    .select('id, currency, amount_minor, status, destination, reason, created_at, decided_at')
+    .select('id, currency, amount_minor, status, destination, reason, created_at, decided_at, payout_claimed_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(20);
@@ -25,5 +25,14 @@ Deno.serve(makePost<Body>('/v1/wallet/withdrawals', valid, async ({ sb, req }) =
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
 
-  return { body: { withdrawals: data ?? [] } };
+  // `cancellable` : l'app n'affiche « Annuler » que la ou la base l'accepterait
+  // (cancel_withdrawal). Ce n'est qu'un confort d'affichage — la vraie garde
+  // est le verrou en base, qui tranche si l'admin reserve entre-temps. On ne
+  // renvoie pas `payout_claimed_at` lui-meme : le vendeur n'en a pas l'usage.
+  const withdrawals = (data ?? []).map(({ payout_claimed_at, ...w }) => ({
+    ...w,
+    cancellable: w.status === 'approved' && payout_claimed_at == null,
+  }));
+
+  return { body: { withdrawals } };
 }));

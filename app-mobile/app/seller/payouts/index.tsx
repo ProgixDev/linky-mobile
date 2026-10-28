@@ -37,6 +37,7 @@ import {
   type WithdrawalRequestItem,
 } from '../../../src/data/queries/wallet';
 import { useTranslation } from 'react-i18next';
+import { CancelWithdrawalButton } from '../../../src/components/wallet/CancelWithdrawalButton';
 
 // Phase I.8 / U.0 nit — labelKey only ; row resolves with t() at render.
 // 'approved' aligns with 'pending' since V1 manual payout flow doesn't
@@ -309,16 +310,19 @@ function WithdrawalRow({ item }: { item: WithdrawalRequestItem }) {
           {item.destination ? ` · ${item.destination}` : ''}
         </Text>
       </View>
-      <Text
-        style={{
-          fontSize: 12,
-          fontWeight: '600',
-          color: palette.fg,
-          letterSpacing: 0,
-        }}
-      >
-        {dateStr}
-      </Text>
+      <View style={{ alignItems: 'flex-end', gap: 6 }}>
+        <Text
+          style={{
+            fontSize: 12,
+            fontWeight: '600',
+            color: palette.fg,
+            letterSpacing: 0,
+          }}
+        >
+          {dateStr}
+        </Text>
+        <CancelWithdrawalButton item={item} />
+      </View>
     </View>
   );
 }

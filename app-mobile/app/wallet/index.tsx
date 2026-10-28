@@ -13,6 +13,7 @@ import { formatGNF } from '../../src/lib/format';
 import { useWallet, useMyWithdrawals, type WithdrawalRequestItem } from '../../src/data/queries';
 import { Skeleton } from '../../src/components/primitives/Skeleton';
 import { ErrorStateView } from '../../src/components/feedback/EmptyState';
+import { CancelWithdrawalButton } from '../../src/components/wallet/CancelWithdrawalButton';
 import { P2P_SEND_ENABLED, WALLET_TOPUP_ENABLED } from '../../src/lib/flags';
 
 // Phase I.8 — STATUS_LABEL carries i18n keys only ; the row resolves them
@@ -202,6 +203,11 @@ export default function WalletRoute() {
                           {st.label}
                         </Text>
                       </View>
+                      {w.cancellable && (
+                        <View style={{ marginTop: 4 }}>
+                          <CancelWithdrawalButton item={w} />
+                        </View>
+                      )}
                     </View>
                   </View>
                 );

@@ -320,6 +320,16 @@
       "rejected": "Rejected",
       "cancelled": "Cancelled"
     },
+    "cancelWithdrawal": {
+      "cta": "Cancel",
+      "a11y": "Cancel the {{amount}} withdrawal",
+      "title": "Cancel this withdrawal?",
+      "body": "{{amount}} will go straight back to your Linky balance. You can request a new withdrawal anytime.",
+      "confirm": "Cancel withdrawal",
+      "keep": "No, keep it",
+      "success": "Withdrawal cancelled — {{amount}} back in your balance",
+      "error": "Couldn't cancel"
+    },
     "subtitle": "Your payments and withdrawals.",
     "balance": "Available balance",
     "rechargeButton": "Top up",

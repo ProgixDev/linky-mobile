@@ -36,6 +36,14 @@ export interface WithdrawalRow {
   decided_by: string | null;
   /** Present on scope 'pending' only — seller's current wallet balance. */
   balance_minor?: number;
+  /** Non nul = un virement est réservé : versement Lengopay parti, ou virement
+   *  manuel en cours (`payout_status = 'MANUAL'`). Le vendeur ne peut plus
+   *  annuler. Absent tant que list-withdrawals n'est pas redéployée. */
+  payout_claimed_at?: string | null;
+  /** INITIATED / SUCCESS / FAILED (Lengopay) ou MANUAL (réservation à la main). */
+  payout_status?: string | null;
+  payout_pay_id?: string | null;
+  payout_error?: string | null;
   users: WithdrawalUser | null;
 }
 
@@ -213,6 +221,59 @@ export function usePayoutWithdrawal() {
           return;
         default:
           toast.error(e.message_fr ?? 'Erreur versement');
+      }
+    },
+  });
+}
+
+// ── VIREMENT MANUEL : RÉSERVER D'ABORD ────────────────────────────────────
+//
+// Depuis le 2026-10-28 le vendeur peut annuler son retrait. Virer à la main
+// PUIS cliquer laissait une fenêtre : il voyait arriver le SMS de l'opérateur,
+// annulait, et gardait les deux. On réserve donc AVANT d'envoyer l'argent —
+// même empreinte que le versement Lengopay, l'annulation est refusée en base.
+// Voir supabase/functions/withdrawal-manual-reserve/index.ts.
+export function useManualReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { request_id: string; action: 'reserve' | 'release' }) => {
+      const r = await apiFetch<{ ok: true; withdrawal: WithdrawalRow }>('withdrawal-manual-reserve', body);
+      if (!r.ok || !r.data) {
+        throw r.error ?? { code: 'UNKNOWN', message_fr: 'Erreur réservation' };
+      }
+      return r.data;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['withdrawals'] });
+      toast.success(
+        vars.action === 'reserve'
+          ? 'Demande réservée : le vendeur ne peut plus annuler. Envoie le transfert, puis confirme.'
+          : 'Réservation relâchée. Le vendeur peut de nouveau annuler.',
+      );
+    },
+    onError: (err: unknown) => {
+      // Un refus veut presque toujours dire que l'état a bougé (le vendeur a
+      // annulé, un versement est parti) : on recharge la file dans tous les cas.
+      qc.invalidateQueries({ queryKey: ['withdrawals'] });
+      const e = err as { code?: string; message_fr?: string };
+      switch (e.code) {
+        case 'FORBIDDEN_ADMIN':
+          toast.error('Accès admin requis');
+          return;
+        case 'REQUEST_NOT_FOUND':
+          toast.error('Demande introuvable');
+          return;
+        case 'REQUEST_NOT_PAYABLE':
+          toast.error("Cette demande n'attend plus de virement — le vendeur l'a peut-être annulée. N'envoie rien.");
+          return;
+        case 'PAYOUT_ALREADY_CLAIMED':
+          toast.error('Déjà réservée, ou un versement Lengopay est parti');
+          return;
+        case 'NOT_MANUALLY_RESERVED':
+          toast.error('Aucune réservation manuelle à relâcher');
+          return;
+        default:
+          toast.error(e.message_fr ?? 'Erreur réservation');
       }
     },
   });

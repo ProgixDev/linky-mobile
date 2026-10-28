@@ -320,6 +320,16 @@
       "rejected": "Rechazado",
       "cancelled": "Cancelado"
     },
+    "cancelWithdrawal": {
+      "cta": "Cancelar",
+      "a11y": "Cancelar el retiro de {{amount}}",
+      "title": "¿Cancelar este retiro?",
+      "body": "{{amount}} volverán de inmediato a su saldo Linky. Puede solicitar un nuevo retiro cuando quiera.",
+      "confirm": "Cancelar el retiro",
+      "keep": "No, mantener",
+      "success": "Retiro cancelado — {{amount}} devueltos a su saldo",
+      "error": "No se pudo cancelar"
+    },
     "subtitle": "Sus pagos y retiros.",
     "balance": "Saldo disponible",
     "rechargeButton": "Recargar",

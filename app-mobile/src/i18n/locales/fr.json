@@ -320,6 +320,16 @@
       "rejected": "Refusé",
       "cancelled": "Annulé"
     },
+    "cancelWithdrawal": {
+      "cta": "Annuler",
+      "a11y": "Annuler le retrait de {{amount}}",
+      "title": "Annuler ce retrait ?",
+      "body": "{{amount}} reviendront tout de suite sur votre solde Linky. Vous pourrez refaire une demande quand vous voulez.",
+      "confirm": "Annuler le retrait",
+      "keep": "Non, garder",
+      "success": "Retrait annulé — {{amount}} rendus à votre solde",
+      "error": "Annulation impossible"
+    },
     "subtitle": "Vos paiements et retraits.",
     "balance": "Solde disponible",
     "rechargeButton": "Recharger",
