@@ -82,7 +82,10 @@ export default function BoutiqueRoute() {
               // deep-entry doesn't resume a stale abandoned draft.
               resetDraft();
               setKind(effectiveMode === 'shop' ? 'product' : 'property');
-              router.push(effectiveMode === 'shop' ? '/create/product/seller' : '/create/property/details');
+              // Côté immo, la PREMIÈRE étape est « Vous êtes ? » (Propriétaire /
+              // Agence), comme le choix de l'accueil. Aller droit aux détails
+              // la sautait (client 2026-10-28).
+              router.push(effectiveMode === 'shop' ? '/create/product/seller' : '/create/property/owner');
             }}
             style={{
               width: 48,

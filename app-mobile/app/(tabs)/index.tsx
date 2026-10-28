@@ -158,7 +158,9 @@ function ProHome({ isSeller, isAgent }: { isSeller: boolean; isAgent: boolean })
               // ProHome FAB doesn't resume a stale abandoned draft.
               resetDraft();
               setKind(mode === 'shop' ? 'product' : 'property');
-              router.push(mode === 'shop' ? '/create/product/seller' : '/create/property/details');
+              // Première étape de chaque tunnel, comme /create : « Vous êtes ? »
+              // côté immo (client 2026-10-28, elle était sautée ici).
+              router.push(mode === 'shop' ? '/create/product/seller' : '/create/property/owner');
             }}
             style={{
               width: 48,
