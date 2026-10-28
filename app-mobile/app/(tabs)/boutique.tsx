@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { BackHandler, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Plus, Home as HomeIcon, Building2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../src/theme/ThemeProvider';
@@ -31,6 +31,21 @@ export default function BoutiqueRoute() {
   const resetDraft = useCreateListing((s) => s.reset);
   const setKind = useCreateListing((s) => s.setKind);
   const [mode, setMode] = useState<ProMode>(isSeller ? 'shop' : 'estate');
+  // RETOUR -> PROFIL (client, 2026-10-28 : « quand tu fais retour ça te renvoie
+  // sur la page Accueil. Il faut que ça renvoie vers Profil »). Cet écran est un
+  // onglet CACHÉ du navigateur d'onglets : le retour d'Android y ramène au
+  // premier onglet, l'Accueil. On y arrive par la carte « Espace pro » du
+  // Profil : c'est là qu'il doit ramener. Seulement quand cet écran est
+  // affiché — le retour du reste de l'app ne change pas.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        router.navigate('/(tabs)/profil');
+        return true;
+      });
+      return () => sub.remove();
+    }, []),
+  );
   if (!guard.allowed) {
     return <RoleGateView required={guard.required} surfaceLabel={t('boutique.roleGateLabel')} />;
   }
