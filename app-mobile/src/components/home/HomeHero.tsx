@@ -137,9 +137,8 @@ const AD_TEXT_W = Math.round(SLIDE_W * 0.64) - PAD;
  *  qui le borde sans le chevaucher. */
 const LISTING_MEDIA_W = Math.round(SLIDE_W * 0.46);
 const LISTING_TEXT_W = SLIDE_W - LISTING_MEDIA_W - PAD - 8;
-/** Le fond sombre des pubs (l'« encre » de la charte), et le texte posé sur l'or. */
+/** Le fond sombre des pubs : l'« encre » de la charte. */
 const INK = '#0E1311';
-const ON_GOLD = '#1A1405';
 const DWELL_MS = 6000;
 /** Une vidéo LANCÉE SEULE passe à la suivante à sa fin (playToEnd) ; ces délais
  *  ne sont que des filets. Une pub dure 15 à 30 s ; une vidéo d'annonce peut
@@ -612,7 +611,7 @@ function PublishButton({ onPress, label }: { onPress: () => void; label: string 
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={6}
-      android_ripple={{ color: 'rgba(26,20,5,0.18)' }}
+      android_ripple={{ color: 'rgba(255,255,255,0.25)' }}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -625,10 +624,22 @@ function PublishButton({ onPress, label }: { onPress: () => void; label: string 
         overflow: 'hidden',
       }}
     >
+      {/* Texte BLANC sur le jaune, la fleche dans un rond blanc sur la meme
+          ligne : demande d'Achraf le 2026-10-28, comme le « SHOP NOW » de la
+          maquette. Le blanc sur l'or ne contraste qu'a 2:1 environ : une ombre
+          legere le detache en plein soleil. */}
       <Text
         maxFontSizeMultiplier={MAX_FONT_SCALE}
         numberOfLines={1}
-        style={{ fontSize: 13.5, fontWeight: '800', color: ON_GOLD, letterSpacing: 0 }}
+        style={{
+          fontSize: 13.5,
+          fontWeight: '800',
+          color: '#FFFFFF',
+          letterSpacing: 0,
+          textShadowColor: 'rgba(0,0,0,0.28)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 2,
+        }}
       >
         {label}
       </Text>
@@ -637,12 +648,12 @@ function PublishButton({ onPress, label }: { onPress: () => void; label: string 
           width: CTA_H - 10,
           height: CTA_H - 10,
           borderRadius: 999,
-          backgroundColor: ON_GOLD,
+          backgroundColor: '#FFFFFF',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <ArrowRight size={14} color={colors.accent} strokeWidth={2.5} />
+        <ArrowRight size={14} color={colors.accent} strokeWidth={2.75} />
       </View>
     </Pressable>
   );
