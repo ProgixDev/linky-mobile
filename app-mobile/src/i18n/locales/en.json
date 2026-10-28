@@ -546,6 +546,8 @@
     "kindPropertyDesc": "Apartment, house, land",
     "activateRoleTitle": "Activate a role to publish",
     "activateRoleBody": "Tap here to become a seller or real-estate agent — we'll walk you through how it works.",
+    "needsSellerRole": "Turn on the seller role first",
+    "needsAgentRole": "Turn on the real-estate agent role first",
     "stepBadge": "Step {{current}} / {{total}}",
     "stepDetailsProduct": "Listing details",
     "stepDetailsProperty": "Property details",

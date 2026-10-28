@@ -546,6 +546,8 @@
     "kindPropertyDesc": "Piso, casa, terreno",
     "activateRoleTitle": "Activa un rol para publicar",
     "activateRoleBody": "Toque aquí para convertirse en vendedor o agente inmobiliario — le explicamos cómo funciona.",
+    "needsSellerRole": "Activa primero el rol de vendedor",
+    "needsAgentRole": "Activa primero el rol de agente inmobiliario",
     "stepBadge": "Paso {{current}} / {{total}}",
     "stepDetailsProduct": "Detalles del anuncio",
     "stepDetailsProperty": "Detalles del inmueble",

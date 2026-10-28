@@ -546,6 +546,8 @@
     "kindPropertyDesc": "Appartement, maison, terrain",
     "activateRoleTitle": "Active un rôle pour publier",
     "activateRoleBody": "Touchez ici pour devenir vendeur ou agent immobilier — on vous explique comment ça marche.",
+    "needsSellerRole": "Active d'abord le rôle vendeur",
+    "needsAgentRole": "Active d'abord le rôle agent immobilier",
     "stepBadge": "Étape {{current}} / {{total}}",
     "stepDetailsProduct": "Détails de l'annonce",
     "stepDetailsProperty": "Détails du bien",

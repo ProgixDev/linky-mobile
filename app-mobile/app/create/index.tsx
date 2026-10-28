@@ -26,17 +26,24 @@ const OPTION_DEFS: TypeOption[] = [
 ];
 
 export default function CreateTypeRoute() {
-  const { colors, radii } = useTheme();
+  const { colors, theme } = useTheme();
   const { t } = useTranslation();
   const roles = useAuth((s) => s.roles);
   const setKind = useCreateListing((s) => s.setKind);
   const reset = useCreateListing((s) => s.reset);
-  const visibleOptions = useMemo(
+  // LES DEUX CHOIX, TOUJOURS (client 2026-10-28) : « renvoyer vers la page de
+  // publication de Articles + Immo ». Avant, la page ne montrait que ce que le
+  // rôle permettait — son propre compte (acheteur + agent) n'y voyait que
+  // « Bien immobilier », un simple acheteur qu'une carte « active un rôle ».
+  // Un choix dont le rôle manque reste visible, le dit, et mène à l'activation
+  // de ce rôle (/profil/devenir), qui ramène ici une fois le rôle actif.
+  const options = useMemo(
     () =>
-      OPTION_DEFS.filter((o) => roles.includes(o.requires)).map((o) => ({
+      OPTION_DEFS.map((o) => ({
         ...o,
         title: t(o.titleKey),
         desc: t(o.descKey),
+        allowed: roles.includes(o.requires),
       })),
     [roles, t],
   );
@@ -47,35 +54,22 @@ export default function CreateTypeRoute() {
         <Text variant="dispL" style={{ fontSize: 22, marginBottom: 18 }}>
           {t('create.selectKindTitle')}
         </Text>
-        {visibleOptions.length === 0 && (
-          <Pressable
-            onPress={() => router.push('/profil/devenir?role=seller' as never)}
-            style={{ marginBottom: 10 }}
-          >
-            <Card padding={16}>
-              <Text variant="titleM" style={{ fontSize: 14 }}>
-                {t('create.activateRoleTitle')}
-              </Text>
-              <Text
-                variant="micro"
-                tone="muted"
-                style={{ letterSpacing: 0, textTransform: 'none', marginTop: 4 }}
-              >
-                {t('create.activateRoleBody')}
-              </Text>
-            </Card>
-          </Pressable>
-        )}
-        {visibleOptions.map((o) => {
+        {options.map((o) => {
           const Icon = I[o.icon];
           return (
             <Pressable
               key={o.kind}
               onPress={() => {
+                if (!o.allowed) {
+                  router.push(`/profil/devenir?role=${o.requires}` as never);
+                  return;
+                }
                 reset();
                 setKind(o.kind);
                 router.push(o.kind === 'product' ? '/create/product/seller' : '/create/property/owner');
               }}
+              accessibilityRole="button"
+              accessibilityLabel={o.allowed ? o.title : `${o.title}. ${t(o.requires === 'seller' ? 'create.needsSellerRole' : 'create.needsAgentRole')}`}
               style={{ marginBottom: 10 }}
             >
               <Card padding={16}>
@@ -99,6 +93,14 @@ export default function CreateTypeRoute() {
                     <Text variant="micro" tone="muted" style={{ letterSpacing: 0, textTransform: 'none' }}>
                       {o.desc}
                     </Text>
+                    {!o.allowed && (
+                      <Text
+                        variant="micro"
+                        style={{ letterSpacing: 0, textTransform: 'none', marginTop: 4, color: theme === 'dark' ? colors.accent : colors.accentText }}
+                      >
+                        {t(o.requires === 'seller' ? 'create.needsSellerRole' : 'create.needsAgentRole')}
+                      </Text>
+                    )}
                   </View>
                   <I.chevronR size={16} color={colors.textMuted} />
                 </View>
