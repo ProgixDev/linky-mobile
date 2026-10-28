@@ -38,7 +38,8 @@ const TAB_LABEL_KEYS: Record<string, string> = {
 const TAB_ORDER = ['index', 'marche', 'decouvrir', 'messagerie', 'profil'] as const;
 
 export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarProps) {
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
+  const dark = theme === 'dark';
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   // Respect tabs hidden via `options.href: null` (e.g. role-gated Boutique tab),
@@ -59,8 +60,17 @@ export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarPro
   // The tab bar follows the app theme everywhere, including Découvrir (client
   // 2026-07-27) — it used to be force-dark on that route, which left a black
   // bar under a light-mode app.
-  const barBg = colors.bgElev;
-  const borderColor = colors.border;
+  //
+  // MODE SOMBRE PLUS LISIBLE (client 2026-10-28 : « c'est un peu sombre quand
+  // c'est en dark mode ») : la barre se fondait dans le noir — fond #121212,
+  // icônes inactives à 3,6:1, onglet actif vert foncé à 2,5:1. En sombre : un
+  // anthracite nettement plus clair que la page et un filet visible, les
+  // inactifs en gris clair (~7,5:1), l'actif en émeraude lumineux (~7,4:1) sur
+  // une pastille. Le mode clair ne change pas.
+  const barBg = dark ? '#1F2422' : colors.bgElev;
+  const borderColor = dark ? '#3A413D' : colors.border;
+  const activeColor = dark ? '#34C08C' : colors.primary;
+  const inactiveColor = dark ? '#AEBBB5' : colors.textFaint;
 
   return (
     <View
@@ -92,9 +102,6 @@ export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarPro
             navigation.navigate(route.name);
           }
         };
-
-        const activeColor = colors.primary;
-        const inactiveColor = colors.textFaint;
 
         if (isFab) {
           return (
@@ -156,8 +163,17 @@ export function BottomTabBar({ state, navigation, descriptors }: BottomTabBarPro
             accessibilityLabel={t(TAB_LABEL_KEYS[route.name] ?? 'tabs.home')}
             accessibilityState={{ selected: focused }}
           >
-            <Icon size={22} color={focused ? activeColor : inactiveColor} stroke={focused ? 2 : 1.5} />
-            <Text style={{ fontSize: 10, fontWeight: '500', color: focused ? activeColor : inactiveColor }}>
+            <View
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 3,
+                borderRadius: 999,
+                backgroundColor: dark && focused ? 'rgba(52,192,140,0.16)' : 'transparent',
+              }}
+            >
+              <Icon size={22} color={focused ? activeColor : inactiveColor} stroke={focused ? 2 : 1.5} />
+            </View>
+            <Text style={{ fontSize: 10, fontWeight: focused ? '700' : '500', color: focused ? activeColor : inactiveColor }}>
               {t(TAB_LABEL_KEYS[route.name] ?? 'tabs.home')}
             </Text>
           </Pressable>
