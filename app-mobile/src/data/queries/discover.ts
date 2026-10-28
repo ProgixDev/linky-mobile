@@ -23,6 +23,10 @@ export function useDiscoverFeed(filter: DiscoverFilter = 'all') {
       if (filter === 'properties') return items.filter((i) => i.kind === 'property');
       return items;
     },
+    // Son seul appelant est le carrousel de l'accueil (les vidéos d'annonces) :
+    // une seule nouvelle tentative, comme ses voisines (chiffres, pubs), au lieu
+    // des trois par défaut qui faisaient patienter 7 s sur un échec.
+    retry: 1,
   });
 }
 

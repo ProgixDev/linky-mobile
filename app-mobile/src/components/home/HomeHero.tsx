@@ -21,12 +21,23 @@ import { ArrowRight, Play } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Text } from '../primitives/Text';
 import { haptic } from '../../lib/haptics';
+import { formatGNF } from '../../lib/format';
+import { priceWithFeeGnf } from '../../lib/fees';
 import { canBuy, listingScope, type ListingScope } from '../../lib/persona';
 import { useAuth } from '../../stores/auth';
 import { useFilters } from '../../stores/filters';
+import { hiddenKeyOf, useHiddenListings } from '../../stores/hiddenListings';
 import { usePrefs } from '../../stores/prefs';
-import { useAppStats, useHomePromos, useNearbyProperties, usePopularProducts } from '../../data/queries';
+import {
+  useAppStats,
+  useDiscoverFeed,
+  useHomePromos,
+  useMyShopIds,
+  useNearbyProperties,
+  usePopularProducts,
+} from '../../data/queries';
 import type { AppStats, HomePromo } from '../../data/queries';
+import type { DiscoverItem } from '../../data/types';
 
 /**
  * LE CARROUSEL EN TÊTE DE L'ACCUEIL — calqué sur la maquette TechHub du client.
@@ -36,20 +47,22 @@ import type { AppStats, HomePromo } from '../../data/queries';
  *               vidéos et images avec un bouton "Publier maintenant". Aussi les
  *               statistiques : nombre d'utilisateurs, nombre d'annonces en
  *               ligne, nombre de ventes et de réservations réalisées ».
- *   2026-10-27  « c'est là que je veux qu'on REMPLACE par des chiffres clés de
- *               l'appli et des vidéos de publicité » — capture à l'appui, sur
- *               le carrousel qui montrait alors des ANNONCES ;
- *               puis « un seul écran qui diffuse/défile les stats de l'appli et
- *               plusieurs vidéos/images avec le bouton Publier maintenant ».
+ *   2026-10-27  sur une capture du carrousel, qui montrait alors des annonces :
+ *               « c'est là que je veux qu'on remplace par des chiffres clés de
+ *               l'appli et des vidéos de publicité » ; puis « un seul écran qui
+ *               diffuse/défile les stats de l'appli et plusieurs vidéos/images
+ *               avec le bouton Publier maintenant ».
  *
  * D'où, depuis le 2026-10-28 :
  *   1. « Linky en chiffres » : SES quatre chiffres, dans SON ordre (app-stats).
- *   2. Ses vidéos/images de pub (home_promos, gérées côté serveur).
- *   3. TANT QU'IL N'EN A ENVOYÉ AUCUNE : des pubs Linky intégrées, sur de vrais
- *      atouts de l'app (publier gratuitement, paiement protégé, logements).
- *      Elles s'effacent d'elles-mêmes dès la première pub ajoutée.
- *   Les ANNONCES ne passent plus ici : c'est précisément ce qu'il a demandé de
- *   remplacer. Elles ont leurs rangées juste en dessous.
+ *   2. Puis, en alternance, des IMAGES et des VIDÉOS :
+ *      - les images = ses pubs (home_promos, gérées côté serveur) ou, tant
+ *        qu'il n'en a envoyé aucune, des pubs Linky intégrées sur de vrais
+ *        atouts de l'app (publier gratuitement, paiement protégé, logements) ;
+ *      - les vidéos = les vraies vidéos des annonces (jusqu'à trois). Décision
+ *        d'Achraf le 2026-10-28, faute de vidéos de pub du client : « pour les
+ *        vidéos, on a déjà les vidéos des produits ». Ses pubs passent d'abord :
+ *        les vidéos d'annonces ne prennent que les places restantes.
  *
  * Mise en page de la maquette : accroche, titre sur deux lignes dont la seconde
  * en couleur, sous-titre, puis le bouton EN BAS À GAUCHE avec sa flèche (à la
@@ -57,30 +70,36 @@ import type { AppStats, HomePromo } from '../../data/queries';
  * Le bouton et les points ne défilent pas : ils restent posés sur la bannière,
  * quelle que soit la diapositive affichée — « un seul écran ».
  *
+ * Les vidéos d'annonces sont VERTICALES (les 11 en ligne le 2026-10-28,
+ * filmées au téléphone) : en plein cadre paysage, on n'en voyait que 30 à 40 %.
+ * Elles passent dans un cadre portrait à droite — comme l'image produit de la
+ * maquette — qui en montre 75 à 90 %.
+ *
  * ┌─ LE FORMAT D'UNE PUB (home_promos) ─────────────────────────────────────┐
- * La bannière est PAYSAGE (environ 1,6 : 1) et remplie en « cover » : une vidéo
- * verticale de réseau social n'en montrerait que le tiers du milieu. Demander :
+ * Une pub, elle, occupe toute la bannière, PAYSAGE (environ 1,6 : 1), remplie
+ * en « cover ». Demander au client :
  *   - vidéo paysage 16:10 (1280 × 800), 15 à 30 s, compressée (3G), sans son
  *     indispensable — elle est lue muette ;
- *   - TOUJOURS une affiche (poster_url, même cadrage) : c'est elle qu'on voit
- *     hors wifi, avec un bouton lecture ;
+ *   - TOUJOURS une affiche (poster_url, même cadrage ; la base l'exige depuis
+ *     la migration 20261028_01) : c'est elle qu'on voit hors wifi ;
  *   - le coin bas-gauche libre : le bouton « Publier maintenant » s'y pose.
- * Une vidéo passe à la diapositive suivante quand elle se TERMINE.
  * └─────────────────────────────────────────────────────────────────────────┘
  *
  * ┌─ LA RÈGLE DE LA 3G ─────────────────────────────────────────────────────┐
  * Une vidéo qui démarre seule sur la première page consomme le forfait de
- * quelqu'un qui n'a rien demandé. Donc, pour les vidéos de pub :
- *   - lecture automatique UNIQUEMENT en wifi (ou filaire), toujours muette ;
- *   - sur données mobiles, l'affiche et un bouton lecture : la vidéo ne se lit
- *     que si on la demande d'un appui ;
+ * quelqu'un qui n'a rien demandé. Donc :
+ *   - lecture automatique UNIQUEMENT en wifi (ou filaire), toujours muette, et
+ *     pas du tout en production tant que HOME_HERO_AUTOPLAY_ENABLED le dit ;
+ *   - sinon, l'image et un bouton lecture : la vidéo ne se lit que si on la
+ *     DEMANDE d'un appui. Un second appui ouvre l'annonce (ou le lien de la pub) ;
  *   - un seul lecteur à la fois, celui de la diapositive visible. Les autres
- *     ne chargent rien.
+ *     ne chargent rien. Quitter l'accueil arrête la vidéo demandée.
  * Un réseau encore inconnu au démarrage compte comme NON wifi : dans le doute,
  * on n'entame pas le forfait. Et l'Économiseur de données (Réglages) coupe la
  * lecture automatique partout, wifi compris — comme sur le fil Découvrir.
- * Les pubs intégrées n'ont pas de vidéo : une photo d'annonce, déjà en cache
- * puisque les rangées de l'accueil l'affichent aussi.
+ * Une vidéo passe à la diapositive suivante à SA fin. Lancée seule, une vidéo
+ * d'annonce (souvent longue) cède la place au bout de 15 s ; demandée d'un
+ * appui, elle va jusqu'au bout.
  * └─────────────────────────────────────────────────────────────────────────┘
  */
 
@@ -114,14 +133,25 @@ const SLIDE_H = Math.max(
 const CONTENT_H = SLIDE_H - PAD - CTA_BAND;
 /** La colonne de texte d'une pub : la photo occupe le reste, à droite. */
 const AD_TEXT_W = Math.round(SLIDE_W * 0.64) - PAD;
+/** Le cadre portrait d'une vidéo d'annonce, à droite, et la colonne de texte
+ *  qui le borde sans le chevaucher. */
+const LISTING_MEDIA_W = Math.round(SLIDE_W * 0.46);
+const LISTING_TEXT_W = SLIDE_W - LISTING_MEDIA_W - PAD - 8;
 /** Le fond sombre des pubs (l'« encre » de la charte), et le texte posé sur l'or. */
 const INK = '#0E1311';
 const ON_GOLD = '#1A1405';
 const DWELL_MS = 6000;
-/** Une vidéo passe à la suivante à SA fin (playToEnd). Ce délai n'est qu'un
- *  filet, si la fin n'arrive jamais (flux bloqué, vidéo trop longue). */
-const VIDEO_SAFETY_MS = 35000;
+/** Une vidéo LANCÉE SEULE passe à la suivante à sa fin (playToEnd) ; ces délais
+ *  ne sont que des filets. Une pub dure 15 à 30 s ; une vidéo d'annonce peut
+ *  durer bien plus, on ne la laisse pas confisquer le carrousel. */
+const PROMO_VIDEO_MAX_MS = 35000;
+const LISTING_VIDEO_MAX_MS = 15000;
 const ARM_DELAY_MS = 800;
+/** Jusqu'à trois vidéos d'annonces, et au plus six diapositives après les
+ *  chiffres — sauf si le client a envoyé plus de pubs : les siennes passent
+ *  toutes, les vidéos d'annonces n'ont que les places restantes. */
+const MAX_LISTING_VIDEOS = 3;
+const MAX_MEDIA = 6;
 
 // ---- Les pubs intégrées --------------------------------------------------
 
@@ -159,18 +189,110 @@ function brandAds(roles: string[], scope: ListingScope): BrandAdId[] {
   return [...publish, ...buyerSide];
 }
 
+/** Une diapositive vidéo : une annonce qui a une vidéo, ou une pub du client. */
+interface VideoSlide {
+  type: 'listing' | 'promo';
+  key: string;
+  eyebrow: string | null;
+  title: string;
+  subtitle: string | null;
+  /** Ce que lit le lecteur d'écran à la place du sous-titre : « par jour »
+   *  plutôt que « barre oblique jour ». */
+  subtitleA11y: string | null;
+  /** Le prix d'une annonce s'écrit en or, le sous-titre d'une pub en blanc. */
+  subtitleGold: boolean;
+  poster: string | null;
+  video: string | null;
+  onOpen: (() => void) | null;
+}
+
 type Slide =
   | { type: 'stats'; key: 'stats' }
   | { type: 'ad'; key: string; id: BrandAdId; photo: string | null; onOpen: (() => void) | null }
-  | { type: 'promo'; key: string; promo: HomePromo; onOpen: (() => void) | null };
+  | VideoSlide;
 
-function promoOnOpen(p: HomePromo): (() => void) | null {
+function promoSlide(p: HomePromo): VideoSlide {
   const link = p.linkUrl?.trim() || null;
   // Un chemin de l'app s'ouvre dans l'app ; une adresse web dans le navigateur ;
   // sans lien, la pub se regarde simplement.
-  if (link && link.startsWith('/')) return () => router.push(link as never);
-  if (link && /^https?:[/][/]/i.test(link)) return () => void Linking.openURL(link);
-  return null;
+  let onOpen: (() => void) | null = null;
+  if (link && link.startsWith('/')) onOpen = () => router.push(link as never);
+  else if (link && /^https?:[/][/]/i.test(link)) onOpen = () => void Linking.openURL(link);
+  const subtitle = p.subtitle?.trim() || null;
+  return {
+    type: 'promo',
+    key: 'ad' + p.id,
+    eyebrow: null,
+    title: p.title?.trim() ?? '',
+    subtitle,
+    subtitleA11y: subtitle,
+    subtitleGold: false,
+    poster: p.posterUrl,
+    video: p.videoUrl,
+    onOpen,
+  };
+}
+
+interface ListingLabels {
+  eyebrow: string;
+  perMonth: string;
+  perDay: string;
+  perMonthA11y: string;
+  perDayA11y: string;
+  gift: string;
+}
+
+/** Une annonce QUI A UNE VIDÉO, sinon null : les autres ont leurs rangées sous
+ *  le carrousel. Le prix affiché est celui que paie l'acheteur, comme partout. */
+function listingVideoSlide(d: DiscoverItem, labels: ListingLabels): VideoSlide | null {
+  if (!d.item.videoUrl) return null;
+  if (d.kind === 'product') {
+    const p = d.item;
+    const price = p.isGift ? labels.gift : formatGNF(priceWithFeeGnf(p.priceGnf));
+    return {
+      type: 'listing',
+      key: 'p' + p.id,
+      eyebrow: labels.eyebrow,
+      title: p.title,
+      subtitle: price,
+      subtitleA11y: price,
+      subtitleGold: true,
+      poster: p.photos?.[0] ?? null,
+      video: p.videoUrl ?? null,
+      onOpen: () => router.push(`/product/${p.id}`),
+    };
+  }
+  const p = d.item;
+  const price = formatGNF(priceWithFeeGnf(p.priceGnf));
+  const rent = p.type === 'location';
+  return {
+    type: 'listing',
+    key: 'b' + p.id,
+    eyebrow: labels.eyebrow,
+    title: p.title,
+    subtitle: price + (rent ? (p.perMonth ? labels.perMonth : labels.perDay) : ''),
+    subtitleA11y: price + (rent ? ' ' + (p.perMonth ? labels.perMonthA11y : labels.perDayA11y) : ''),
+    subtitleGold: true,
+    poster: p.photos?.[0] ?? null,
+    video: p.videoUrl ?? null,
+    onOpen: () => router.push(`/property/${p.id}`),
+  };
+}
+
+/** Image, vidéo, image, vidéo… : le client a demandé « plusieurs vidéos/images ».
+ *  Les IMAGES d'abord : la diapositive qui suit les chiffres ne dépend pas du
+ *  fil des vidéos, qui peut arriver plus tard. */
+function interleave<T>(a: T[], b: T[]): T[] {
+  const out: T[] = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if (i < a.length) out.push(a[i]);
+    if (i < b.length) out.push(b[i]);
+  }
+  return out;
+}
+
+function sameKeys(a: { key: string }[], b: { key: string }[]): boolean {
+  return a.length === b.length && a.every((s, i) => s.key === b[i].key);
 }
 
 function openPublish() {
@@ -205,9 +327,15 @@ export function HomeHero() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const roles = useAuth((s) => s.roles);
+  const meId = useAuth((s) => s.user?.id ?? s.authUserId ?? undefined);
   const scope = listingScope(roles);
   const promosQuery = useHomePromos();
   const statsQuery = useAppStats();
+  // Les vidéos d'annonces : le fil Découvrir, qui exclut déjà les comptes
+  // bloqués, dans la catégorie que le compte voit.
+  const { data: feed } = useDiscoverFeed(scope === 'both' ? 'all' : scope);
+  const myShopIds = useMyShopIds();
+  const hiddenKeys = useHiddenListings((s) => s.keys);
   // Les photos des pubs intégrées viennent des MÊMES requêtes que les rangées de
   // l'accueil (mêmes clés, mêmes conditions) : aucun appel de plus, et des
   // photos déjà en cache. Une vraie annonce, jamais une image inventée.
@@ -222,52 +350,105 @@ export function HomeHero() {
   // est passé sur Découvrir (qui a ses propres lecteurs) consomme pour rien.
   const focused = useIsFocused();
   const canAutoplay = !dataSaver && onNetworkWifi && focused;
-  // On attend les pubs ET les chiffres : ce sont eux qui décident de l'ordre.
-  // Des chiffres arrivés après coup s'inséreraient EN TÊTE, sous les yeux de la
-  // personne, et décaleraient la diapositive qu'elle regarde.
+  // On attend les chiffres et les pubs : ensemble, ils décident de la tête du
+  // carrousel. Des chiffres arrivés après coup s'inséreraient EN TÊTE, sous les
+  // yeux de la personne. Le fil des vidéos, lui, n'est PAS attendu (plus lourd,
+  // authentifié) : ses vidéos s'insèrent plus loin, voir `videos`. Une requête
+  // en échec ne bloque rien : isLoading retombe, sa part manque, c'est tout.
   const loading = promosQuery.isLoading || statsQuery.isLoading;
 
   const figures = useMemo(() => statFigures(statsQuery.data, t), [statsQuery.data, t]);
   const ads = useMemo(() => brandAds(roles, scope), [roles, scope]);
 
-  const slides = useMemo((): Slide[] => {
-    const head: Slide[] = figures.length > 0 ? [{ type: 'stats', key: 'stats' }] : [];
-    const promos = promosQuery.data ?? [];
-    if (promos.length > 0) {
-      return [...head, ...promos.map((p): Slide => ({ type: 'promo', key: 'ad' + p.id, promo: p, onOpen: promoOnOpen(p) }))];
+  // Les vidéos d'annonces candidates, dans l'ordre du fil.
+  const freshVideos = useMemo((): VideoSlide[] => {
+    const labels: ListingLabels = {
+      eyebrow: t('home.videoEyebrow'),
+      perMonth: t('home.perMonth'),
+      perDay: t('home.perDay'),
+      perMonthA11y: t('home.perMonthA11y'),
+      perDayA11y: t('home.perDayA11y'),
+      gift: t('create.giftBadge'),
+    };
+    const out: VideoSlide[] = [];
+    const seenSellers = new Set<string>();
+    const seenVideos = new Set<string>();
+    for (const d of feed ?? []) {
+      if (out.length >= MAX_LISTING_VIDEOS) break;
+      const video = d.item.videoUrl;
+      if (!video || seenVideos.has(video)) continue;
+      // Ce que la personne a masqué dans Découvrir ne revient pas ici.
+      if (hiddenKeys.has(hiddenKeyOf(d.kind, d.item.id))) continue;
+      // Ses propres annonces ne passent pas dans SON carrousel — même règle que
+      // les rangées de l'accueil (usePopularProducts / useNearbyProperties).
+      const own = d.kind === 'product' ? myShopIds.has(d.item.shopId) : !!meId && d.item.ownerId === meId;
+      if (own) continue;
+      // Une vidéo par vendeur : le même clip publié deux fois (deux annonces,
+      // deux fichiers identiques) occupait deux places sur trois.
+      const seller = d.kind === 'product' ? 'shop:' + d.item.shopId : 'owner:' + d.item.ownerId;
+      if (seenSellers.has(seller)) continue;
+      const slide = listingVideoSlide(d, labels);
+      if (!slide) continue;
+      seenSellers.add(seller);
+      seenVideos.add(video);
+      out.push(slide);
     }
-    const productPhotos = (products ?? []).map((p) => p.photos?.[0]).filter((u): u is string => !!u);
-    // Un logement À LOUER d'abord : c'est ce qu'annonce la pub « logements ».
-    const propertyPhotos = [...(properties ?? [])]
-      .sort((a, b) => Number(b.type === 'location') - Number(a.type === 'location'))
-      .map((p) => p.photos?.[0])
-      .filter((u): u is string => !!u);
-    const photoFor: Record<BrandAdId, string | null> = {
-      sell: productPhotos[0] ?? null,
-      protected: productPhotos[1] ?? productPhotos[0] ?? null,
-      homes: propertyPhotos[0] ?? null,
-      rentOut: propertyPhotos[1] ?? propertyPhotos[0] ?? null,
-    };
-    const onOpenFor: Record<BrandAdId, (() => void) | null> = {
-      sell: openPublish,
-      // Aucune page n'explique le séquestre dans l'app : la pub se lit, elle
-      // n'emmène nulle part plutôt que vers une page inventée.
-      protected: null,
-      homes: openRentals,
-      rentOut: openPublish,
-    };
-    return [
-      ...head,
-      ...ads.map((id): Slide => ({ type: 'ad', key: 'brand-' + id, id, photo: photoFor[id], onOpen: onOpenFor[id] })),
-    ];
-  }, [figures.length, promosQuery.data, products, properties, ads]);
+    return out;
+  }, [feed, hiddenKeys, myShopIds, meId, t]);
 
   const [index, setIndex] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const draggingRef = useRef(false);
+  const endedWhileDraggingRef = useRef(false);
   // La vidéo qu'on a demandé de lire d'un appui (hors wifi) : la clé de SA
-  // diapositive. Changer de diapositive l'arrête.
+  // diapositive. Changer de diapositive, ou quitter l'accueil, l'arrête.
   const [userPlayKey, setUserPlayKey] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Les vidéos RETENUES. Elles se placent derrière la première diapositive :
+  // on ne les ajoute (ou ne les change) que quand c'est elle qui est affichée,
+  // ou quand l'accueil n'est pas à l'écran — jamais sous les yeux de quelqu'un
+  // qui regarde la troisième.
+  const [videos, setVideos] = useState<VideoSlide[]>(freshVideos);
+  useEffect(() => {
+    if (sameKeys(videos, freshVideos)) return;
+    if (index === 0 || !focused || loading) setVideos(freshVideos);
+  }, [freshVideos, videos, index, focused, loading]);
+
+  const slides = useMemo((): Slide[] => {
+    const head: Slide[] = figures.length > 0 ? [{ type: 'stats', key: 'stats' }] : [];
+    const promos = promosQuery.data ?? [];
+    let images: Slide[];
+    if (promos.length > 0) {
+      images = promos.map(promoSlide);
+    } else {
+      const productPhotos = (products ?? []).map((p) => p.photos?.[0]).filter((u): u is string => !!u);
+      // Un logement À LOUER d'abord : c'est ce qu'annonce la pub « logements ».
+      const propertyPhotos = [...(properties ?? [])]
+        .sort((a, b) => Number(b.type === 'location') - Number(a.type === 'location'))
+        .map((p) => p.photos?.[0])
+        .filter((u): u is string => !!u);
+      const photoFor: Record<BrandAdId, string | null> = {
+        sell: productPhotos[0] ?? null,
+        protected: productPhotos[1] ?? productPhotos[0] ?? null,
+        homes: propertyPhotos[0] ?? null,
+        rentOut: propertyPhotos[1] ?? propertyPhotos[0] ?? null,
+      };
+      const onOpenFor: Record<BrandAdId, (() => void) | null> = {
+        sell: openPublish,
+        // Aucune page n'explique le séquestre dans l'app : la pub se lit, elle
+        // n'emmène nulle part plutôt que vers une page inventée.
+        protected: null,
+        homes: openRentals,
+        rentOut: openPublish,
+      };
+      images = ads.map((id): Slide => ({ type: 'ad', key: 'brand-' + id, id, photo: photoFor[id], onOpen: onOpenFor[id] }));
+    }
+    // Les pubs du client d'abord ; les vidéos d'annonces prennent les places
+    // restantes jusqu'à MAX_MEDIA.
+    const budget = Math.max(0, Math.min(MAX_LISTING_VIDEOS, MAX_MEDIA - images.length));
+    return [...head, ...interleave<Slide>(images, videos.slice(0, budget))];
+  }, [figures.length, promosQuery.data, products, properties, ads, videos]);
 
   const goTo = useCallback((i: number) => {
     scrollRef.current?.scrollTo({ x: i * (SLIDE_W + GAP), animated: true });
@@ -279,23 +460,34 @@ export function HomeHero() {
   useEffect(() => {
     setUserPlayKey(null);
   }, [curKey]);
-  const videoPlaying =
-    cur?.type === 'promo' && !!cur.promo.videoUrl && (canAutoplay || userPlayKey === cur.key);
+  // Revenir sur l'accueil ne relance pas, toute seule, une vidéo demandée avant
+  // d'en partir : hors wifi, ce serait retélécharger sans qu'on l'ait demandé.
+  useEffect(() => {
+    if (!focused) setUserPlayKey(null);
+  }, [focused]);
+  const curVideo = cur && (cur.type === 'listing' || cur.type === 'promo') && cur.video ? cur : null;
+  const userPlaying = !!curVideo && userPlayKey === curVideo.key;
+  const autoPlaying = !!curVideo && canAutoplay;
+  const dwell = autoPlaying ? (curVideo?.type === 'listing' ? LISTING_VIDEO_MAX_MS : PROMO_VIDEO_MAX_MS) : DWELL_MS;
 
   // Défilement automatique. Rien pendant le chargement (l'indice avancerait
   // derrière le squelette, et la bannière apparaîtrait avec le mauvais point
   // allumé), rien quand l'accueil n'est pas à l'écran, rien pendant que la
-  // personne fait glisser. Une vidéo qui se lit garde la main jusqu'à SA fin.
+  // personne fait glisser — ni pendant une vidéo qu'elle a DEMANDÉE : on ne
+  // coupe pas ce qu'elle a choisi de regarder, sa fin fera avancer.
   useEffect(() => {
-    if (loading || !focused || slides.length < 2 || dragging) return;
-    const timer = setTimeout(
-      () => goTo((index + 1) % slides.length),
-      videoPlaying ? VIDEO_SAFETY_MS : DWELL_MS,
-    );
+    if (loading || !focused || slides.length < 2 || dragging || userPlaying) return;
+    const timer = setTimeout(() => goTo((index + 1) % slides.length), dwell);
     return () => clearTimeout(timer);
-  }, [loading, focused, slides.length, dragging, index, videoPlaying, goTo]);
+  }, [loading, focused, slides.length, dragging, userPlaying, index, dwell, goTo]);
 
+  // La fin d'une vidéo fait avancer — sauf en plein glissement : on note, et
+  // l'avance se fait au relâcher si la personne est restée sur la même.
   const onVideoEnd = useCallback(() => {
+    if (draggingRef.current) {
+      endedWhileDraggingRef.current = true;
+      return;
+    }
     if (slides.length > 1) goTo((index + 1) % slides.length);
   }, [slides.length, index, goTo]);
 
@@ -325,26 +517,42 @@ export function HomeHero() {
         snapToInterval={SLIDE_W + GAP}
         decelerationRate="fast"
         contentContainerStyle={{ paddingHorizontal: 20, gap: GAP }}
-        onScrollBeginDrag={() => setDragging(true)}
+        onScrollBeginDrag={() => {
+          draggingRef.current = true;
+          setDragging(true);
+        }}
         onMomentumScrollEnd={(e) => {
-          const i = Math.round(e.nativeEvent.contentOffset.x / (SLIDE_W + GAP));
-          setIndex(Math.max(0, Math.min(slides.length - 1, i)));
+          const i = Math.max(0, Math.min(slides.length - 1, Math.round(e.nativeEvent.contentOffset.x / (SLIDE_W + GAP))));
+          const stayed = i === index;
+          draggingRef.current = false;
           setDragging(false);
+          if (endedWhileDraggingRef.current) {
+            endedWhileDraggingRef.current = false;
+            // La vidéo s'est terminée pendant le geste et la personne est restée
+            // dessus : l'avance qu'on avait retenue se fait maintenant.
+            if (stayed && slides.length > 1) {
+              goTo((i + 1) % slides.length);
+              return;
+            }
+          }
+          setIndex(i);
         }}
       >
         {slides.map((s, i) => {
           if (s.type === 'stats') return <StatsSlide key={s.key} figures={figures} />;
           if (s.type === 'ad') return <AdSlide key={s.key} id={s.id} photo={s.photo} onOpen={s.onOpen} />;
           return (
-            <PromoSlide
+            <VideoBannerSlide
               key={s.key}
-              promo={s.promo}
-              onOpen={s.onOpen}
+              slide={s}
               active={i === index}
               focused={focused}
               canAutoplay={canAutoplay}
-              userPlay={userPlayKey === s.key}
+              userPlay={i === index && userPlayKey === s.key}
               onUserPlay={() => setUserPlayKey(s.key)}
+              // Un appui sur la tranche d'une diapositive VOISINE l'amène à
+              // l'écran ; il ne lance rien qu'on ne voit pas.
+              onActivate={() => goTo(i)}
               onEnded={onVideoEnd}
               loop={slides.length < 2}
             />
@@ -586,38 +794,43 @@ function AdSlide({ id, photo, onOpen }: { id: BrandAdId; photo: string | null; o
   );
 }
 
-/** Une pub envoyée par le client (home_promos) : son image ou sa vidéo en
- *  plein cadre, son titre et son sous-titre à gauche. */
-function PromoSlide({
-  promo,
-  onOpen,
+/**
+ * Une diapositive vidéo. Deux mises en page :
+ *   - une ANNONCE : sa vidéo (verticale, filmée au téléphone) dans un cadre
+ *     portrait à droite, son titre et son prix à gauche ;
+ *   - une PUB du client : son image ou sa vidéo (paysage) en plein cadre, son
+ *     texte à gauche par-dessus.
+ */
+function VideoBannerSlide({
+  slide,
   active,
   focused,
   canAutoplay,
   userPlay,
   onUserPlay,
+  onActivate,
   onEnded,
   loop,
 }: {
-  promo: HomePromo;
-  onOpen: (() => void) | null;
+  slide: VideoSlide;
   active: boolean;
   focused: boolean;
   canAutoplay: boolean;
   userPlay: boolean;
   onUserPlay: () => void;
+  onActivate: () => void;
   onEnded: () => void;
   loop: boolean;
 }) {
   const { colors, theme } = useTheme();
   const { t } = useTranslation();
-  const hasVideo = !!promo.videoUrl;
+  const hasVideo = !!slide.video;
+  const inset = slide.type === 'listing';
   // La lecture AUTOMATIQUE n'existe que pour la diapositive visible, en wifi…
   const wantsAuto = hasVideo && canAutoplay && active;
   // … et seulement après qu'elle est restée visible un instant : sans ce délai,
   // chaque glissement et chaque défilement automatique créerait puis détruirait
-  // un lecteur natif. C'est l'un des scénarios suspects de l'écran gris du
-  // 2026-10-26 ; on ne lui laisse pas l'occasion de se produire.
+  // un lecteur natif.
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!wantsAuto) {
@@ -630,12 +843,14 @@ function PromoSlide({
   // Hors wifi, la vidéo se lit si on la DEMANDE d'un appui : la règle de la 3G
   // interdit la lecture qui se lance seule, pas celle qu'on réclame.
   const playHere = hasVideo && active && focused && (userPlay || (wantsAuto && armed));
-  const title = promo.title?.trim() ?? '';
-  const subtitle = promo.subtitle?.trim() ?? '';
+  const { title, subtitle, eyebrow, onOpen } = slide;
+  const hasText = !!eyebrow || !!title || !!subtitle;
 
-  // Un appui lit la vidéo tant qu'elle ne se lit pas ; ensuite, il suit le lien.
-  const onPress =
-    hasVideo && !playHere
+  // Sur une voisine : l'amener à l'écran. Sur la diapositive affichée : lire la
+  // vidéo tant qu'elle ne se lit pas, puis ouvrir l'annonce (ou le lien).
+  const onPress = !active
+    ? onActivate
+    : hasVideo && !playHere
       ? () => {
           haptic.light();
           onUserPlay();
@@ -647,8 +862,14 @@ function PromoSlide({
           }
         : null;
   const label =
-    [title, subtitle, hasVideo && !playHere ? t('home.promoPlayA11y') : null].filter(Boolean).join(', ') ||
+    [title, slide.subtitleA11y, hasVideo && !playHere ? t('home.promoPlayA11y') : null].filter(Boolean).join(', ') ||
     undefined;
+
+  const media = playHere ? (
+    <HeroVideo uri={slide.video as string} loop={loop} onEnd={onEnded} />
+  ) : slide.poster ? (
+    <Image source={{ uri: slide.poster }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={200} />
+  ) : null;
 
   return (
     <SlideFrame
@@ -665,23 +886,40 @@ function PromoSlide({
         borderColor: colors.border,
       }}
     >
-      {playHere ? (
-        <HeroVideo uri={promo.videoUrl as string} loop={loop} onEnd={onEnded} />
-      ) : promo.posterUrl ? (
-        <Image source={{ uri: promo.posterUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-      ) : null}
-
-      {/* Un fondu à gauche seulement s'il y a du texte à y poser : une pub sans
-          titre se montre telle quelle. */}
-      {(!!title || !!subtitle) && (
-        <LinearGradient
-          pointerEvents="none"
-          colors={['rgba(14,19,17,0.78)', 'rgba(14,19,17,0)']}
-          locations={[0.25, 0.75]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
+      {inset ? (
+        <>
+          <LinearGradient
+            colors={[INK, '#0A3B2E']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+          <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: LISTING_MEDIA_W }}>{media}</View>
+          {/* Le bord gauche du cadre se fond dans l'encre. */}
+          <LinearGradient
+            pointerEvents="none"
+            colors={[INK, 'rgba(14,19,17,0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ position: 'absolute', top: 0, bottom: 0, left: SLIDE_W - LISTING_MEDIA_W, width: 36 }}
+          />
+        </>
+      ) : (
+        <>
+          {media}
+          {/* Un fondu à gauche seulement s'il y a du texte à y poser : une pub
+              sans texte se montre telle quelle. */}
+          {hasText && (
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(14,19,17,0.78)', 'rgba(14,19,17,0)']}
+              locations={[0.25, 0.75]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            />
+          )}
+        </>
       )}
       {/* En bas, toujours : le bouton et les points y sont posés. */}
       <LinearGradient
@@ -691,13 +929,13 @@ function PromoSlide({
       />
 
       {/* Une vidéo qui ne se lit pas le dit : sans ce bouton, hors wifi, on ne
-          verrait qu'une affiche (ou l'encre seule) sans savoir qu'il y a mieux. */}
+          verrait qu'une image sans savoir qu'il y a mieux. */}
       {hasVideo && !playHere && (
         <View
           pointerEvents="none"
           style={{
             position: 'absolute',
-            right: PAD + 6,
+            right: inset ? Math.round(LISTING_MEDIA_W / 2) - 23 : PAD + 6,
             top: Math.round((SLIDE_H - CTA_BAND) / 2) - 8,
             width: 46,
             height: 46,
@@ -711,16 +949,31 @@ function PromoSlide({
         </View>
       )}
 
-      {(!!title || !!subtitle) && (
+      {hasText && (
         <View
           pointerEvents="none"
-          style={{ position: 'absolute', top: PAD, left: PAD, width: AD_TEXT_W, maxHeight: CONTENT_H, overflow: 'hidden' }}
+          style={{
+            position: 'absolute',
+            top: PAD,
+            left: PAD,
+            width: inset ? LISTING_TEXT_W : AD_TEXT_W,
+            maxHeight: CONTENT_H,
+            overflow: 'hidden',
+          }}
         >
+          {!!eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
           {!!title && (
             <Text
               maxFontSizeMultiplier={MAX_FONT_SCALE}
               numberOfLines={2}
-              style={{ fontSize: 20, lineHeight: 24, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 }}
+              style={{
+                fontSize: 20,
+                lineHeight: 24,
+                fontWeight: '800',
+                color: '#FFFFFF',
+                letterSpacing: -0.3,
+                marginTop: eyebrow ? 6 : 0,
+              }}
             >
               {title}
             </Text>
@@ -728,10 +981,14 @@ function PromoSlide({
           {!!subtitle && (
             <Text
               maxFontSizeMultiplier={MAX_FONT_SCALE}
-              numberOfLines={2}
+              numberOfLines={slide.subtitleGold ? 1 : 2}
               adjustsFontSizeToFit
               minimumFontScale={0.8}
-              style={{ fontSize: 12.5, lineHeight: 16, color: 'rgba(255,255,255,0.82)', marginTop: 6, letterSpacing: 0 }}
+              style={
+                slide.subtitleGold
+                  ? { fontSize: 15, lineHeight: 19, fontWeight: '800', color: colors.accent, marginTop: 4, letterSpacing: 0 }
+                  : { fontSize: 12.5, lineHeight: 16, color: 'rgba(255,255,255,0.82)', marginTop: 6, letterSpacing: 0 }
+              }
             >
               {subtitle}
             </Text>
@@ -814,13 +1071,21 @@ function HeroVideo({ uri, loop, onEnd }: { uri: string; loop: boolean; onEnd: ()
   useEffect(() => {
     player.loop = loop;
   }, [player, loop]);
+  // ⚠ AUCUN pause() au démontage. useVideoPlayer LIBÈRE le lecteur dans son
+  // propre nettoyage, qui passe AVANT celui-ci (React les exécute dans l'ordre
+  // de déclaration) ; un appel sur un lecteur libéré lève « Cannot use shared
+  // object that was already released ». Dans un nettoyage, l'erreur remonte au
+  // plus proche ErrorBoundary — et sans lui, jusqu'à la racine : c'est la cause
+  // la plus probable de l'ÉCRAN GRIS du 2026-10-26 (la vidéo de la première
+  // diapositive démarrait, le carrousel passait à la suivante, son lecteur
+  // était démonté). Reproduit et contrôlé le 2026-10-28 (relecture adverse).
+  // La libération arrête la lecture ; Découvrir, la fiche et le splash font
+  // pareil.
   useEffect(() => {
     player.play();
-    return () => {
-      player.pause();
-    };
   }, [player]);
   useEffect(() => {
+    // remove() sur un lecteur déjà libéré ne fait rien (vérifié) : sans risque.
     const sub = player.addListener('playToEnd', onEnd);
     return () => sub.remove();
   }, [player, onEnd]);

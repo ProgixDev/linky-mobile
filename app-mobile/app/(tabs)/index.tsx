@@ -237,9 +237,10 @@ function BuyerHome() {
   const { data: products, isLoading: prodLoading } = usePopularProducts(4, !onlyProperties);
   const { data: properties, isLoading: propLoading } = useNearbyProperties(3, !onlyProducts);
 
-  // TIRER POUR METTRE A JOUR. Ce qui bouge sur cet ecran : les pubs et les
-  // chiffres du carrousel, les rangees d'annonces (dont les pubs integrees du
-  // carrousel tirent aussi leurs photos) et la pastille de la cloche. C'est
+  // TIRER POUR METTRE A JOUR. Ce qui bouge sur cet ecran : les chiffres, les
+  // pubs et les videos d'annonces du carrousel (fil Decouvrir), les rangees
+  // d'annonces (dont les pubs integrees tirent aussi leurs photos) et la
+  // pastille de la cloche. C'est
   // aussi LE geste pour voir une pub que le client vient d'ajouter sans
   // relancer l'app : rien d'autre ne redemande home-promos (pas de rechargement
   // au retour sur l'app, et l'onglet ne se remonte jamais).
@@ -250,6 +251,7 @@ function BuyerHome() {
     try {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['home-promos'] }),
+        qc.invalidateQueries({ queryKey: ['discover-feed'] }),
         qc.invalidateQueries({ queryKey: ['app-stats'] }),
         qc.invalidateQueries({ queryKey: ['products-popular'] }),
         qc.invalidateQueries({ queryKey: ['properties-nearby'] }),

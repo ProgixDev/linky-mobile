@@ -13,7 +13,7 @@ import type { Product } from '../types';
 // products whose shopId belongs to the caller. Visitor (no userId) → empty set
 // → no filter applied. The shared queryKey 'my-shops' is cached across the
 // app, so this fires once per session and re-renders other consumers cheaply.
-function useMyShopIds(): Set<string> {
+export function useMyShopIds(): Set<string> {
   const userId = useAuth((s) => s.user?.id ?? s.authUserId);
   const { data: myShops } = useQuery({
     queryKey: ['my-shops'],
