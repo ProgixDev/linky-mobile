@@ -365,6 +365,8 @@
     },
     "retirer": {
       "topbar": "Withdraw",
+      "breakdown": "Seller {{seller}} · Property {{immo}}",
+      "split": "Sent as 2 transfers: {{seller}} (Seller wallet) + {{immo}} (Property wallet)",
       "balanceLabel": "Available balance",
       "amountLabel": "Amount to withdraw",
       "accessAmount": "Amount to withdraw in Guinean francs",

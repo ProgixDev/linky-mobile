@@ -66,15 +66,18 @@ Deno.serve(makePost<Body>(
   valid,
   async ({ sb, body, req }) => {
     const userId = await requireUser(req);
-    const { data, error } = await sb.rpc('request_withdrawal', {
+    // LES DEUX CAISSES (2026-10-28). Appeler `request_withdrawal` avec 'seller'
+    // en dur ignorait la caisse Immo : le client voyait 57 400 au Portefeuille
+    // et ne pouvait retirer que 18 400, et un agent sans caisse Vendeur ne
+    // pouvait rien retirer du tout. `request_withdrawal_total` prend le Vendeur
+    // d'abord, l'Immo complete, et pose UNE demande par caisse dans la meme
+    // transaction — la retenue, le rejet, l'annulation et le versement restent
+    // ceux d'une demande ordinaire.
+    const { data, error } = await sb.rpc('request_withdrawal_total', {
       p_user_id:      userId,
       p_currency:     body.currency,
       p_amount_minor: body.amount_minor,
       p_destination:  body.destination.trim(),
-      // La caisse VENDEUR : c'est celle que l'application affiche et la seule
-      // qu'un retrait vide aujourd'hui. La RPC accepte 'immo' pour le jour ou
-      // l'ecran saura la choisir.
-      p_wallet_kind:  'seller',
     });
     if (error) {
       const msg = (error as { message?: string } | null)?.message ?? '';
@@ -93,22 +96,26 @@ Deno.serve(makePost<Body>(
       }
       throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
     }
-    const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined;
-    if (!row) {
+    const rows = (Array.isArray(data) ? data : data ? [data] : []) as Record<string, unknown>[];
+    if (rows.length === 0) {
       console.error('[wallet-withdraw-request] rpc returned no row');
       throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
     }
-    // On rend les MEMES champs qu'avant : l'ecran n'a rien a reapprendre.
+    const shape = (row: Record<string, unknown>) => ({
+      id: row.id,
+      currency: row.currency,
+      amount_minor: row.amount_minor,
+      status: row.status,
+      destination: row.destination,
+      wallet_kind: row.wallet_kind,
+      created_at: row.created_at,
+    });
+    // `withdrawal` garde la forme d'avant (les binaires deja installes la
+    // lisent) ; `withdrawals` porte une ligne par caisse touchee.
     return {
       body: {
-        withdrawal: {
-          id: row.id,
-          currency: row.currency,
-          amount_minor: row.amount_minor,
-          status: row.status,
-          destination: row.destination,
-          created_at: row.created_at,
-        },
+        withdrawal: shape(rows[0]),
+        withdrawals: rows.map(shape),
       },
     };
   },

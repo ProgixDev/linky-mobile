@@ -34,7 +34,7 @@ const OPERATORS: { id: Operator; short: string; tint: string; logo: number }[] =
 
 const QUICK_AMOUNTS = [50_000, 100_000, 200_000, 500_000];
 
-// normalizeGnPhone / formatGnPhone deplaces dans src/lib/gnPhone.ts —
+// normalizeGnPhone / formatGnPhone deplaces dans src/lib/gnPhone.ts —
 // un second appelant en avait besoin le 2026-08-25.
 
 function OperatorRow({
@@ -140,7 +140,17 @@ export default function RetirerRoute() {
     }
   }, [primaryPhone?.e164]);
 
-  const balance = walletQuery.data?.balanceGnf ?? 0;
+  // LES DEUX CAISSES (client, 2026-10-28 : « il y a 57 400 mais je ne peux
+  // retirer que 18 400 »). Cet écran ne lisait que la caisse Vendeur alors que
+  // le Portefeuille montre le total — un agent sans ventes d'articles voyait
+  // « Aucun solde à retirer ». Le serveur (request_withdrawal_total) prend le
+  // Vendeur d'abord et complète avec l'Immo, une demande par caisse.
+  const sellerGnf = Math.max(walletQuery.data?.balanceGnf ?? 0, 0);
+  const immoGnf = Math.max(walletQuery.data?.immoGnf ?? 0, 0);
+  const balance = sellerGnf + immoGnf;
+  // Au-delà du Vendeur, la part Immo part en second virement : on le dit
+  // AVANT la confirmation, pas après dans l'historique.
+  const immoPart = amount > sellerGnf && sellerGnf > 0 && amount <= balance ? amount - sellerGnf : 0;
   const phoneValid = isValidGnPhone(phone);
   const exceedsBalance = amount > balance;
   const canSubmit = amount > 0 && !exceedsBalance && phoneValid && !withdraw.isPending;
@@ -243,6 +253,11 @@ export default function RetirerRoute() {
               <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primaryDeep, fontVariant: ['tabular-nums'] }}>
                 {formatGNF(balance)}
               </Text>
+              {sellerGnf > 0 && immoGnf > 0 && (
+                <Text variant="caption" tone="muted" style={{ letterSpacing: 0, marginTop: 2 }}>
+                  {t('wallet.retirer.breakdown', { seller: formatGNF(sellerGnf), immo: formatGNF(immoGnf) })}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -313,6 +328,11 @@ export default function RetirerRoute() {
               {exceedsBalance
                 ? t('wallet.retirer.insufficient', { balance: formatGNF(balance) })
                 : t('wallet.retirer.remainingAfter', { remaining: formatGNF(balance - amount) })}
+            </Text>
+          )}
+          {immoPart > 0 && (
+            <Text variant="caption" tone="muted" style={{ marginTop: 4, letterSpacing: 0 }}>
+              {t('wallet.retirer.split', { seller: formatGNF(sellerGnf), immo: formatGNF(immoPart) })}
             </Text>
           )}
 

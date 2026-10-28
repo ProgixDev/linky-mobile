@@ -365,6 +365,8 @@
     },
     "retirer": {
       "topbar": "Retirer",
+      "breakdown": "Vendeur {{seller}} · Immo {{immo}}",
+      "split": "Envoyé en 2 virements : {{seller}} (caisse Vendeur) + {{immo}} (caisse Immo)",
       "balanceLabel": "Solde disponible",
       "amountLabel": "Montant à retirer",
       "accessAmount": "Montant à retirer en francs guinéens",

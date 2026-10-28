@@ -365,6 +365,8 @@
     },
     "retirer": {
       "topbar": "Retirar",
+      "breakdown": "Vendedor {{seller}} · Inmobiliaria {{immo}}",
+      "split": "Enviado en 2 transferencias: {{seller}} (caja Vendedor) + {{immo}} (caja Inmobiliaria)",
       "balanceLabel": "Saldo disponible",
       "amountLabel": "Monto a retirar",
       "accessAmount": "Monto a retirar en francos guineanos",
