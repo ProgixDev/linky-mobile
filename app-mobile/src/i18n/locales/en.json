@@ -266,6 +266,7 @@
     "newListing": "New listing",
     "newProperty": "New property",
     "heroPublishNow": "Post now",
+    "slideA11y": "Slide {{n}} of {{total}}",
     "promoPlayA11y": "Play the video",
     "videoEyebrow": "On video",
     "perMonth": " /month",

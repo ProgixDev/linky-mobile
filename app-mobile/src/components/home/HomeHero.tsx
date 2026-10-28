@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
+  Animated,
   Dimensions,
+  Easing,
   Linking,
   PixelRatio,
   Pressable,
-  ScrollView,
   View,
   type AccessibilityRole,
   type ViewStyle,
@@ -67,8 +68,13 @@ import type { DiscoverItem } from '../../data/types';
  * Mise en page de la maquette : accroche, titre sur deux lignes dont la seconde
  * en couleur, sous-titre, puis le bouton EN BAS À GAUCHE avec sa flèche (à la
  * place de « SHOP NOW → »), et les points de défilement DANS la bannière.
- * Le bouton et les points ne défilent pas : ils restent posés sur la bannière,
- * quelle que soit la diapositive affichée — « un seul écran ».
+ * Le bouton et les points restent posés sur la bannière, quelle que soit la
+ * diapositive affichée — « un seul écran ».
+ *
+ * AUCUN DÉFILEMENT (client, 2026-10-28) : « l'une apparaît, l'autre disparaît…
+ * pas un défilement gauche-droite et droite-gauche ». Les diapositives sont
+ * EMPILÉES au même endroit et se relaient en fondu enchaîné ; un appui sur un
+ * point mène à la sienne.
  *
  * Les vidéos d'annonces sont VERTICALES (les 11 en ligne le 2026-10-28,
  * filmées au téléphone) : en plein cadre paysage, on n'en voyait que 30 à 40 %.
@@ -103,7 +109,6 @@ import type { DiscoverItem } from '../../data/types';
  * └─────────────────────────────────────────────────────────────────────────┘
  */
 
-const GAP = 12;
 const SLIDE_W = Math.min(Dimensions.get('window').width, 500) - 40;
 /** Marge intérieure d'une diapositive. */
 const PAD = 16;
@@ -140,6 +145,8 @@ const LISTING_TEXT_W = SLIDE_W - LISTING_MEDIA_W - PAD - 8;
 /** Le fond sombre des pubs : l'« encre » de la charte. */
 const INK = '#0E1311';
 const DWELL_MS = 6000;
+/** Le fondu enchaîné : l'une s'efface pendant que l'autre apparaît. */
+const FADE_MS = 700;
 /** Une vidéo LANCÉE SEULE passe à la suivante à sa fin (playToEnd) ; ces délais
  *  ne sont que des filets. Une pub dure 15 à 30 s ; une vidéo d'annonce peut
  *  durer bien plus, on ne la laisse pas confisquer le carrousel. */
@@ -396,13 +403,9 @@ export function HomeHero() {
   }, [feed, hiddenKeys, myShopIds, meId, t]);
 
   const [index, setIndex] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const draggingRef = useRef(false);
-  const endedWhileDraggingRef = useRef(false);
   // La vidéo qu'on a demandé de lire d'un appui (hors wifi) : la clé de SA
   // diapositive. Changer de diapositive, ou quitter l'accueil, l'arrête.
   const [userPlayKey, setUserPlayKey] = useState<string | null>(null);
-  const scrollRef = useRef<ScrollView>(null);
 
   // Les vidéos RETENUES. Elles se placent derrière la première diapositive :
   // on ne les ajoute (ou ne les change) que quand c'est elle qui est affichée,
@@ -449,10 +452,7 @@ export function HomeHero() {
     return [...head, ...interleave<Slide>(images, videos.slice(0, budget))];
   }, [figures.length, promosQuery.data, products, properties, ads, videos]);
 
-  const goTo = useCallback((i: number) => {
-    scrollRef.current?.scrollTo({ x: i * (SLIDE_W + GAP), animated: true });
-    setIndex(i);
-  }, []);
+  const goTo = useCallback((i: number) => setIndex(i), []);
 
   const cur = slides[index];
   const curKey = cur?.key;
@@ -469,133 +469,129 @@ export function HomeHero() {
   const autoPlaying = !!curVideo && canAutoplay;
   const dwell = autoPlaying ? (curVideo?.type === 'listing' ? LISTING_VIDEO_MAX_MS : PROMO_VIDEO_MAX_MS) : DWELL_MS;
 
-  // Défilement automatique. Rien pendant le chargement (l'indice avancerait
+  // Enchaînement automatique. Rien pendant le chargement (l'indice avancerait
   // derrière le squelette, et la bannière apparaîtrait avec le mauvais point
-  // allumé), rien quand l'accueil n'est pas à l'écran, rien pendant que la
-  // personne fait glisser — ni pendant une vidéo qu'elle a DEMANDÉE : on ne
-  // coupe pas ce qu'elle a choisi de regarder, sa fin fera avancer.
+  // allumé), rien quand l'accueil n'est pas à l'écran — ni pendant une vidéo
+  // qu'on a DEMANDÉE : on ne coupe pas ce qu'on a choisi de regarder, sa fin
+  // fera avancer.
   useEffect(() => {
-    if (loading || !focused || slides.length < 2 || dragging || userPlaying) return;
+    if (loading || !focused || slides.length < 2 || userPlaying) return;
     const timer = setTimeout(() => goTo((index + 1) % slides.length), dwell);
     return () => clearTimeout(timer);
-  }, [loading, focused, slides.length, dragging, userPlaying, index, dwell, goTo]);
+  }, [loading, focused, slides.length, userPlaying, index, dwell, goTo]);
 
-  // La fin d'une vidéo fait avancer — sauf en plein glissement : on note, et
-  // l'avance se fait au relâcher si la personne est restée sur la même.
+  // La fin d'une vidéo fait passer à la suivante.
   const onVideoEnd = useCallback(() => {
-    if (draggingRef.current) {
-      endedWhileDraggingRef.current = true;
-      return;
-    }
     if (slides.length > 1) goTo((index + 1) % slides.length);
   }, [slides.length, index, goTo]);
 
   // Si la liste rétrécit (une pub retirée, un changement de rôle), ne pas rester
   // sur un indice qui n'existe plus.
   useEffect(() => {
-    if (index >= slides.length && slides.length > 0) {
-      setIndex(0);
-      scrollRef.current?.scrollTo({ x: 0, animated: false });
-    }
+    if (index >= slides.length && slides.length > 0) setIndex(0);
   }, [slides.length, index]);
 
   if (loading) {
     return (
-      <View style={{ paddingHorizontal: 20 }}>
-        <View style={{ width: SLIDE_W, height: SLIDE_H, borderRadius: 22, backgroundColor: colors.bgSunken }} />
-      </View>
+      <View style={{ marginHorizontal: 20, width: SLIDE_W, height: SLIDE_H, borderRadius: 22, backgroundColor: colors.bgSunken }} />
     );
   }
 
   return (
-    <View>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={SLIDE_W + GAP}
-        decelerationRate="fast"
-        contentContainerStyle={{ paddingHorizontal: 20, gap: GAP }}
-        onScrollBeginDrag={() => {
-          draggingRef.current = true;
-          setDragging(true);
-        }}
-        onMomentumScrollEnd={(e) => {
-          const i = Math.max(0, Math.min(slides.length - 1, Math.round(e.nativeEvent.contentOffset.x / (SLIDE_W + GAP))));
-          const stayed = i === index;
-          draggingRef.current = false;
-          setDragging(false);
-          if (endedWhileDraggingRef.current) {
-            endedWhileDraggingRef.current = false;
-            // La vidéo s'est terminée pendant le geste et la personne est restée
-            // dessus : l'avance qu'on avait retenue se fait maintenant.
-            if (stayed && slides.length > 1) {
-              goTo((i + 1) % slides.length);
-              return;
-            }
-          }
-          setIndex(i);
-        }}
-      >
-        {slides.map((s, i) => {
-          if (s.type === 'stats') return <StatsSlide key={s.key} figures={figures} />;
-          if (s.type === 'ad') return <AdSlide key={s.key} id={s.id} photo={s.photo} onOpen={s.onOpen} />;
-          return (
+    <View style={{ marginHorizontal: 20, width: SLIDE_W, height: SLIDE_H }}>
+      {slides.map((s, i) => (
+        <FadeSlot key={s.key} active={i === index}>
+          {s.type === 'stats' ? (
+            <StatsSlide figures={figures} />
+          ) : s.type === 'ad' ? (
+            <AdSlide id={s.id} photo={s.photo} onOpen={s.onOpen} />
+          ) : (
             <VideoBannerSlide
-              key={s.key}
               slide={s}
               active={i === index}
               focused={focused}
               canAutoplay={canAutoplay}
               userPlay={i === index && userPlayKey === s.key}
               onUserPlay={() => setUserPlayKey(s.key)}
-              // Un appui sur la tranche d'une diapositive VOISINE l'amène à
-              // l'écran ; il ne lance rien qu'on ne voit pas.
-              onActivate={() => goTo(i)}
               onEnded={onVideoEnd}
               loop={slides.length < 2}
             />
-          );
-        })}
-      </ScrollView>
+          )}
+        </FadeSlot>
+      ))}
 
       {/* « Publier maintenant », EN BAS À GAUCHE comme le « SHOP NOW → » de la
-          maquette. Il ne défile pas avec les diapositives. */}
-      <View pointerEvents="box-none" style={{ position: 'absolute', left: 20 + PAD, bottom: CTA_BOTTOM }}>
+          maquette, au-dessus de toutes les diapositives. */}
+      <View pointerEvents="box-none" style={{ position: 'absolute', left: PAD, bottom: CTA_BOTTOM, zIndex: 2 }}>
         <PublishButton onPress={openPublish} label={t('home.heroPublishNow')} />
       </View>
 
-      {/* Les points DANS la bannière, sous le bouton, comme sur la maquette. Tous
-          les fonds de diapositive sont sombres en bas : le blanc s'y lit. */}
+      {/* Les points DANS la bannière, sous le bouton. Un appui sur un point fait
+          apparaître sa diapositive : c'est aussi le chemin du lecteur d'écran,
+          qui ne voit que la diapositive affichée. */}
       {slides.length > 1 && (
         <View
-          pointerEvents="none"
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
+          pointerEvents="box-none"
           style={{
             position: 'absolute',
-            left: 20,
-            width: SLIDE_W,
-            bottom: DOTS_BOTTOM,
+            left: 0,
+            right: 0,
+            bottom: DOTS_BOTTOM - 6,
             flexDirection: 'row',
             justifyContent: 'center',
-            gap: 5,
+            zIndex: 2,
           }}
         >
           {slides.map((s, i) => (
-            <View
+            <Pressable
               key={s.key}
-              style={{
-                width: i === index ? 16 : 6,
-                height: 6,
-                borderRadius: 999,
-                backgroundColor: i === index ? '#FFFFFF' : 'rgba(255,255,255,0.45)',
-              }}
-            />
+              onPress={() => goTo(i)}
+              hitSlop={4}
+              accessibilityRole="button"
+              accessibilityState={{ selected: i === index }}
+              accessibilityLabel={t('home.slideA11y', { n: i + 1, total: slides.length })}
+              style={{ paddingVertical: 6, paddingHorizontal: 2.5 }}
+            >
+              <View
+                style={{
+                  width: i === index ? 16 : 6,
+                  height: 6,
+                  borderRadius: 999,
+                  backgroundColor: i === index ? '#FFFFFF' : 'rgba(255,255,255,0.45)',
+                }}
+              />
+            </Pressable>
           ))}
         </View>
       )}
     </View>
+  );
+}
+
+/**
+ * Une diapositive EMPILÉE : elle apparaît et disparaît en fondu, sur place.
+ * Seule l'active reçoit les appuis et le lecteur d'écran ; pendant le fondu,
+ * elle passe au-dessus de celle qui s'efface.
+ */
+function FadeSlot({ active, children }: { active: boolean; children: ReactNode }) {
+  const opacity = useRef(new Animated.Value(active ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: active ? 1 : 0,
+      duration: FADE_MS,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [active, opacity]);
+  return (
+    <Animated.View
+      pointerEvents={active ? 'auto' : 'none'}
+      accessibilityElementsHidden={!active}
+      importantForAccessibility={active ? 'auto' : 'no-hide-descendants'}
+      style={{ position: 'absolute', top: 0, left: 0, width: SLIDE_W, height: SLIDE_H, opacity, zIndex: active ? 1 : 0 }}
+    >
+      {children}
+    </Animated.View>
   );
 }
 
@@ -824,7 +820,6 @@ function VideoBannerSlide({
   canAutoplay,
   userPlay,
   onUserPlay,
-  onActivate,
   onEnded,
   loop,
 }: {
@@ -834,7 +829,6 @@ function VideoBannerSlide({
   canAutoplay: boolean;
   userPlay: boolean;
   onUserPlay: () => void;
-  onActivate: () => void;
   onEnded: () => void;
   loop: boolean;
 }) {
@@ -862,11 +856,9 @@ function VideoBannerSlide({
   const { title, subtitle, eyebrow, onOpen } = slide;
   const hasText = !!eyebrow || !!title || !!subtitle;
 
-  // Sur une voisine : l'amener à l'écran. Sur la diapositive affichée : lire la
-  // vidéo tant qu'elle ne se lit pas, puis ouvrir l'annonce (ou le lien).
-  const onPress = !active
-    ? onActivate
-    : hasVideo && !playHere
+  // Lire la vidéo tant qu'elle ne se lit pas, puis ouvrir l'annonce (ou le lien).
+  const onPress =
+    hasVideo && !playHere
       ? () => {
           haptic.light();
           onUserPlay();

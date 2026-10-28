@@ -266,6 +266,7 @@
     "newListing": "Nuevo anuncio",
     "newProperty": "Nuevo inmueble",
     "heroPublishNow": "Publicar ahora",
+    "slideA11y": "Diapositiva {{n}} de {{total}}",
     "promoPlayA11y": "Reproducir el vídeo",
     "videoEyebrow": "En vídeo",
     "perMonth": " /mes",
