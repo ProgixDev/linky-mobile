@@ -19,6 +19,7 @@ import { requireUser } from '@shared/auth.ts';
 import { requireBuyerRole } from '@shared/roles.ts';
 import { notifyDetached, displayNameOf, formatGNF } from '@shared/push.ts';
 import { addMonthsClamped } from '@shared/dates.ts';
+import { intentIsLive } from '@shared/lengopay.ts';
 
 interface Body {
   property_id: string;
@@ -32,6 +33,10 @@ interface Body {
    *  une prolongation ne commence QUE la ou le bail precedent s'arrete, et ce
    *  n'est pas negociable depuis le telephone. */
   extend_booking_id?: string;
+  /** MODIFIER une reservation pas encore payee (client 2026-10-31 : « le bouton
+   *  Modifier ne renvoie pas sur le calendrier de reservation »). La nouvelle
+   *  remplace l'ancienne, qui passe en 'cancelled' — voir plus bas. */
+  replaces_booking_id?: string;
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -71,6 +76,12 @@ function valid(b: unknown): b is Body {
     if (typeof x.extend_booking_id !== 'string' || !UUID_RE.test(x.extend_booking_id)) return false;
     // On ne prolonge qu'un bail au mois, par un bail au mois.
     if (x.period !== 'month') return false;
+  }
+  if (x.replaces_booking_id !== undefined) {
+    if (typeof x.replaces_booking_id !== 'string' || !UUID_RE.test(x.replaces_booking_id)) return false;
+    // On modifie des dates de location, pas un achat ; et une prolongation ne
+    // se modifie pas (sa date de depart n'est pas choisie).
+    if (x.period === 'sale' || x.extend_booking_id !== undefined) return false;
   }
   return true;
 }
@@ -157,6 +168,68 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
       months: parent.months as number,
       status: parent.status as string,
       rent_minor: Number(parent.rent_minor),
+    };
+  }
+
+  // ── MODIFIER UNE RESERVATION PAS ENCORE PAYEE (client 2026-10-31) ────────
+  // « Le bouton Modifier ne renvoie pas sur le calendrier de reservation. »
+  // Il menait a la fiche, qui ne savait qu'annuler. Changer de dates, c'est
+  // ici : le locataire choisit de nouvelles dates, la nouvelle reservation est
+  // creee comme n'importe quelle autre (memes gardes, meme prix, meme contrat)
+  // et l'ancienne passe en 'cancelled' dans la foulee.
+  //
+  // SEULEMENT AVANT PAIEMENT. Une reservation 'paid' a son argent en sequestre :
+  // en changer les dates changerait le montant, donc un remboursement partiel
+  // ou un complement — rien de tout ca n'existe. Pour elle, la fiche reste le
+  // chemin : annuler (remboursement integral jusqu'a 48 h avant), puis
+  // reserver de nouveau.
+  //
+  // Les verifications sont faites ICI, avant toute ecriture ; l'annulation de
+  // l'ancienne n'a lieu qu'apres la derniere garde, juste avant l'insertion.
+  let replaced: { id: string; status: string; events: unknown[] } | null = null;
+  if (body.replaces_booking_id) {
+    const { data: old, error: eOld } = await sb
+      .from('bookings')
+      .select('id, tenant_id, property_id, period, status, extends_booking_id, events')
+      .eq('id', body.replaces_booking_id)
+      .maybeSingle();
+    if (eOld) { console.error('[booking-request] replaced lookup:', eOld); throwApi('INTERNAL_ERROR', 500, 'Erreur base de donnees'); }
+    if (!old) throwApi('BOOKING_NOT_FOUND', 404, 'La réservation à modifier est introuvable.');
+    if (old.tenant_id !== tenantId) throwApi('FORBIDDEN', 403, 'Action refusée.');
+    if (old.property_id !== prop.id || old.period !== body.period) {
+      throwApi('REPLACE_MISMATCH', 400, 'Cette réservation ne porte pas sur ce logement.');
+    }
+    if (old.extends_booking_id) {
+      throwApi('REPLACE_NOT_EDITABLE', 409, 'Une prolongation ne se modifie pas : annule-la depuis sa fiche, puis refais-la.');
+    }
+    if (old.status === 'paid') {
+      throwApi('REPLACE_ALREADY_PAID', 409,
+        "Cette réservation est déjà payée : pour changer de dates, annule-la depuis sa fiche (jusqu'à 48 h avant l'arrivée, remboursement intégral), puis réserve de nouveau.");
+    }
+    if (old.status !== 'requested' && old.status !== 'accepted') {
+      throwApi('REPLACE_NOT_EDITABLE', 409, 'Cette réservation ne peut plus être modifiée.');
+    }
+    // UN PAIEMENT EN VOL INTERDIT LA MODIFICATION — meme garde que
+    // booking-cancel, pour la meme raison : le locataire a pu valider son USSD,
+    // l'argent est parti, et confirm_booking_payment ne retrouverait plus
+    // qu'une reservation annulee. Debite, sans trace.
+    const { data: livePi, error: ePi } = await sb
+      .from('payment_intents')
+      .select('id, rail_intent_id, created_at')
+      .eq('booking_id', old.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (ePi) { console.error('[booking-request] replaced intents:', ePi); throwApi('INTERNAL_ERROR', 500, 'Erreur base de donnees'); }
+    if (livePi && intentIsLive(livePi.created_at) && !String(livePi.rail_intent_id).startsWith('pending-init-')) {
+      throwApi('PAYMENT_IN_PROGRESS', 409,
+        'Un paiement est en cours sur cette réservation. Attends son issue avant de la modifier — si tu as déjà validé sur ton téléphone, elle va être confirmée.');
+    }
+    replaced = {
+      id: old.id as string,
+      status: old.status as string,
+      events: Array.isArray(old.events) ? old.events : [],
     };
   }
 
@@ -498,6 +571,28 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
   const instant = body.period === 'day';
   const nowIso = new Date().toISOString();
 
+  // L'ANCIENNE PART ICI, apres la derniere garde : une demande refusee plus
+  // haut (dates prises, sejour minimum...) laisse la reservation d'origine
+  // intacte. La mise a jour est CONDITIONNELLE : si le cron vient de la passer
+  // 'paid', elle ne touche rien et l'on s'arrete sans rien creer.
+  if (replaced) {
+    const { data: gone, error: eGone } = await sb
+      .from('bookings')
+      .update({
+        status: 'cancelled',
+        events: [...replaced.events, { at: nowIso, label: 'Réservation modifiée par le locataire : remplacée par de nouvelles dates' }],
+        updated_at: nowIso,
+      })
+      .eq('id', replaced.id)
+      .in('status', ['requested', 'accepted'])
+      .select('id')
+      .maybeSingle();
+    if (eGone) { console.error('[booking-request] cancel replaced:', eGone); throwApi('INTERNAL_ERROR', 500, 'Erreur base de données'); }
+    if (!gone) {
+      throwApi('STATUS_CHANGED', 409, "Ta réservation vient de changer d'état. Rouvre-la pour voir où elle en est.");
+    }
+  }
+
   const { data: created, error: eIns } = await sb
     .from('bookings')
     .insert({
@@ -529,17 +624,31 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
       landlord_signed_at: instant ? nowIso : null,
       events: [{
         at: nowIso,
-        label: instant
-          ? 'Réservation confirmée — en attente du paiement'
-          : body.period === 'sale' ? 'Demande d\'achat envoyée'
-            : parentLease ? 'Demande de prolongation envoyée'
-            : 'Demande de réservation envoyée',
+        label: replaced
+          ? instant
+            ? 'Réservation modifiée (nouvelles dates) — en attente du paiement'
+            : 'Réservation modifiée (nouvelles dates) — demande envoyée'
+          : instant
+            ? 'Réservation confirmée — en attente du paiement'
+            : body.period === 'sale' ? 'Demande d\'achat envoyée'
+              : parentLease ? 'Demande de prolongation envoyée'
+              : 'Demande de réservation envoyée',
       }],
     })
     .select('id')
     .single();
   if (eIns || !created) {
     console.error('[booking-request] insert error:', eIns);
+    // L'ancienne a deja ete annulee : on la remet comme elle etait. Rien d'autre
+    // ne touche une reservation 'cancelled', le retour est donc sans course.
+    if (replaced) {
+      const { error: eBack } = await sb
+        .from('bookings')
+        .update({ status: replaced.status, events: replaced.events, updated_at: new Date().toISOString() })
+        .eq('id', replaced.id)
+        .eq('status', 'cancelled');
+      if (eBack) console.error('[booking-request] restore replaced FAILED:', replaced.id, eBack);
+    }
     throwApi('INTERNAL_ERROR', 500, 'Erreur base de données');
   }
 
@@ -547,14 +656,18 @@ Deno.serve(makePost<Body>('/v1/bookings/request', valid, async ({ sb, body, req 
     userIds: [prop.owner_id as string],
     category: 'booking',
     decision: !instant,
-    title: instant
-      ? 'Nouvelle réservation'
-      : body.period === 'sale' ? 'Nouvelle demande d\'achat' : 'Nouvelle demande de réservation',
-    body: instant
-      ? `${tenantName} a réservé « ${prop.title} » (${formatGNF(total)}) — paiement en cours.`
-      : body.period === 'sale'
-        ? `${tenantName} veut acheter « ${prop.title} » (${formatGNF(total)}).`
-        : `${tenantName} veut louer « ${prop.title} » (${formatGNF(total)}).`,
+    title: replaced
+      ? 'Réservation modifiée'
+      : instant
+        ? 'Nouvelle réservation'
+        : body.period === 'sale' ? 'Nouvelle demande d\'achat' : 'Nouvelle demande de réservation',
+    body: replaced
+      ? `${tenantName} a changé les dates de sa réservation pour « ${prop.title} » (${formatGNF(total)}).`
+      : instant
+        ? `${tenantName} a réservé « ${prop.title} » (${formatGNF(total)}) — paiement en cours.`
+        : body.period === 'sale'
+          ? `${tenantName} veut acheter « ${prop.title} » (${formatGNF(total)}).`
+          : `${tenantName} veut louer « ${prop.title} » (${formatGNF(total)}).`,
     iconHint: 'check',
     deeplink: `/agent/leases/${created.id}`,
     refType: 'booking',

@@ -74,18 +74,21 @@ export default function BookingsRoute() {
   // Modifier ma reservation [...] du statut En attente jusqu'a la confirmation
   // de l'amenagement »).
   //
-  // CE QU'IL Y A DERRIERE, POUR QUE L'ETIQUETTE NE MENTE PAS : l'ecran de
-  // detail permet d'annuler — la demande tant qu'elle n'est pas payee, et le
-  // sejour paye jusqu'a 48 h avant l'emmenagement, avec remboursement integral.
-  // « Modifier », ici, veut donc dire « annuler et reprendre d'autres dates »,
-  // ce qui est la seule modification qui existe aujourd'hui. Le jour ou un vrai
-  // changement de dates sera possible, il se posera au meme endroit.
+  // LE VRAI CHANGEMENT DE DATES EST ARRIVE (client 2026-10-31 : « le bouton
+  // Modifier ne renvoie pas sur le calendrier de reservation »). Tant que rien
+  // n'est paye, « Modifier » ouvre le calendrier sur les dates actuelles ; la
+  // nouvelle reservation remplace l'ancienne (booking-request,
+  // replaces_booking_id).
   //
-  // Toucher la carte mene deja au detail ; ce bouton n'y ajoute pas un chemin,
-  // il REND VISIBLE ce qu'on peut faire a ce stade — la ou l'ancien bouton
-  // proposait au contraire quelque chose qui n'etait pas encore permis.
+  // UNE FOIS PAYEE, la fiche reste le chemin : changer les dates changerait le
+  // montant deja en sequestre, et ni complement ni remboursement partiel
+  // n'existent. La fiche permet d'annuler — remboursement integral jusqu'a
+  // 48 h avant l'emmenagement — puis de reserver de nouveau. Meme chose pour
+  // une demande d'achat et pour une prolongation, dont la date ne se choisit pas.
   const manageHandler = (b: Booking) => {
     if (!['requested', 'accepted', 'paid'].includes(b.status)) return undefined;
+    const datesEditable = b.status !== 'paid' && b.period !== 'sale' && !b.extendsBookingId;
+    if (datesEditable) return () => router.push(`/property/${b.propertyId}/book?replace=${b.id}` as never);
     return () => router.push(`/bookings/${b.id}` as never);
   };
 

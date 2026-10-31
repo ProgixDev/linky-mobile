@@ -46,7 +46,11 @@ export default function BookPropertyRoute() {
   // reservation »). Dans ce mode, la date de depart n'est PAS choisie : elle
   // est la fin du bail en cours. L'ecran l'affiche verrouillee, et le serveur
   // la recalcule de son cote — il ignore celle qu'on lui envoie.
-  const { id, extend } = useLocalSearchParams<{ id: string; extend?: string }>();
+  // `replace` = la reservation PAS ENCORE PAYEE que l'on modifie (client
+  // 2026-10-31 : « le bouton Modifier ne renvoie pas sur le calendrier de
+  // reservation »). Le calendrier s'ouvre sur ses dates ; a la validation, le
+  // serveur cree la nouvelle et annule l'ancienne.
+  const { id, extend, replace } = useLocalSearchParams<{ id: string; extend?: string; replace?: string }>();
   const { colors, radii } = useTheme();
   const { data: prop, isLoading, isError, refetch } = useProperty(id);
   const request = useRequestBooking();
@@ -74,6 +78,23 @@ export default function BookPropertyRoute() {
   useEffect(() => {
     if (extendStart && startDate !== extendStart) setStartDate(extendStart);
   }, [extendStart, startDate]);
+
+  // MODIFIER : on part des dates actuelles, une seule fois. Sauf si elles sont
+  // deja passees — le serveur les refuserait, autant laisser choisir.
+  const isReplace = !!replace && !extend;
+  const replacedBooking = isReplace
+    ? (myBookings.data ?? []).find((b) => b.id === replace) ?? null
+    : null;
+  const [prefilled, setPrefilled] = useState(false);
+  useEffect(() => {
+    if (prefilled || !replacedBooking) return;
+    setPrefilled(true);
+    setNote(replacedBooking.note ?? '');
+    if (replacedBooking.startDate < new Date().toISOString().slice(0, 10)) return;
+    setStartDate(replacedBooking.startDate);
+    if (replacedBooking.period === 'day') setEndDate(replacedBooking.endDate);
+    else if (replacedBooking.months) setMonths(replacedBooking.months);
+  }, [prefilled, replacedBooking]);
 
   const period: 'day' | 'month' = prop?.perMonth ? 'month' : 'day';
   const rent = prop?.priceGnf ?? 0;
@@ -172,6 +193,7 @@ export default function BookPropertyRoute() {
         startDate,
         ...(period === 'day' ? { endDate: endDate! } : { months }),
         ...(extend ? { extendBookingId: extend } : {}),
+        ...(isReplace ? { replacesBookingId: replace } : {}),
         note,
       },
       {
@@ -192,7 +214,10 @@ export default function BookPropertyRoute() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <TopBar title={isExtension ? t('property.extendLease') : t('property.bookThisHome')} back />
+      <TopBar
+        title={isExtension ? t('property.extendLease') : isReplace ? t('property.editMyBooking') : t('property.bookThisHome')}
+        back
+      />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -406,6 +431,12 @@ export default function BookPropertyRoute() {
             </TrustStrip>
           )}
 
+          {isReplace && (
+            <TrustStrip tone="accent">
+              <Text style={{ color: colors.accentText, fontSize: 11.5 }}>{t('property.replaceNote')}</Text>
+            </TrustStrip>
+          )}
+
           <TrustStrip tone="primary">
             <Text style={{ color: colors.primaryDeep, fontSize: 11.5 }}>
               <Text style={{ fontWeight: '700' }}>{t('property.securePayment')} </Text>
@@ -418,7 +449,11 @@ export default function BookPropertyRoute() {
           <Button
             size="lg"
             block
-            label={ready ? t('property.sendRequestWithAmount', { montant: formatGNF(total) }) : t('property.sendRequest')}
+            label={
+              isReplace
+                ? ready ? t('property.saveNewDatesWithAmount', { montant: formatGNF(total) }) : t('property.saveNewDates')
+                : ready ? t('property.sendRequestWithAmount', { montant: formatGNF(total) }) : t('property.sendRequest')
+            }
             disabled={!ready || request.isPending}
             loading={request.isPending}
             onPress={submit}

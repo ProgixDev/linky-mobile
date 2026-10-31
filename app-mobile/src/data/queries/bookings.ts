@@ -15,6 +15,9 @@ export interface RequestBookingInput {
    *  date de debut (la fin du bail parent) : startDate n'est alors qu'un
    *  affichage. */
   extendBookingId?: string;
+  /** Reservation pas encore payee que celle-ci REMPLACE (bouton « Modifier ») :
+   *  le serveur annule l'ancienne une fois la nouvelle validee. */
+  replacesBookingId?: string;
 }
 
 export interface PropertyAvailability {
@@ -80,6 +83,7 @@ export function useRequestBooking() {
           ...(input.months ? { months: input.months } : {}),
           ...(input.note?.trim() ? { note: input.note.trim() } : {}),
           ...(input.extendBookingId ? { extend_booking_id: input.extendBookingId } : {}),
+          ...(input.replacesBookingId ? { replaces_booking_id: input.replacesBookingId } : {}),
         },
       });
     },
