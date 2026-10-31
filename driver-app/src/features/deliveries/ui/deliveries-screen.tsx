@@ -68,7 +68,14 @@ function LoadingList() {
  * case — loading, empty, error, and (on a failed refresh with cache) the cached
  * list flagged as possibly stale. See spec 001.
  */
-export function DeliveriesScreen({ headerRight }: { headerRight?: ReactNode } = {}) {
+export function DeliveriesScreen({
+  headerRight,
+  headerBelow,
+}: {
+  headerRight?: ReactNode;
+  /** Rendered under the title row (the route composes the wallet card here). */
+  headerBelow?: ReactNode;
+} = {}) {
   const items = useDeliveriesStore((s) => s.items);
   const status = useDeliveriesStore((s) => s.status);
   const load = useDeliveriesStore((s) => s.load);
@@ -120,6 +127,8 @@ export function DeliveriesScreen({ headerRight }: { headerRight?: ReactNode } = 
         </View>
         {headerRight ? <View className="pl-2">{headerRight}</View> : null}
       </View>
+
+      {headerBelow}
 
       <TextField
         testID="deliveries-search"

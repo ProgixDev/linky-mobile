@@ -14,7 +14,15 @@
  */
 
 /** Static routes a deep link is allowed to resolve to. Keep in sync with `src/app/`. */
-const ALLOWED_ROUTES = ['/', '/sign-in', '/account', '/notifications', '/not-found'] as const;
+const ALLOWED_ROUTES = [
+  '/',
+  '/sign-in',
+  '/account',
+  '/notifications',
+  '/not-found',
+  // « Retrait effectué / refusé » (process-withdrawal, app 'driver') ouvre le portefeuille.
+  '/wallet',
+] as const;
 
 /**
  * Dynamic route `/delivery/<id>` (the new-delivery push deeplink). The id is a

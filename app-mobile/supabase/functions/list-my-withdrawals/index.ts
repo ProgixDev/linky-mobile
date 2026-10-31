@@ -18,6 +18,9 @@ Deno.serve(makePost<Body>('/v1/wallet/withdrawals', valid, async ({ sb, req }) =
     .from('withdrawal_requests')
     .select('id, currency, amount_minor, status, destination, reason, created_at, decided_at, payout_claimed_at')
     .eq('user_id', userId)
+    // Les retraits de la caisse LIVREUR se suivent dans Dépose (livreur-wallet),
+    // pas dans le portefeuille Linky (migration 20261031_01).
+    .in('wallet_kind', ['seller', 'immo'])
     .order('created_at', { ascending: false })
     .limit(20);
   if (error) {

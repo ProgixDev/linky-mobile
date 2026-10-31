@@ -53,6 +53,7 @@ interface WithdrawalRow {
   created_at: string;
   decided_at: string | null;
   decided_by: string | null;
+  wallet_kind?: string | null;
 }
 
 Deno.serve(makePost<Body>('/v1/admin/withdrawals/process', valid, async ({ sb, body, req }) => {
@@ -92,6 +93,9 @@ Deno.serve(makePost<Body>('/v1/admin/withdrawals/process', valid, async ({ sb, b
   // from the REQUEST row ; operator label from its destination when present.
   const amount = formatGNF(Number(row.amount_minor));
   const operator = (row.destination ?? '').trim() || 'mobile money';
+  // Un retrait de la caisse LIVREUR se suit dans Dépose : c'est la qu'il doit
+  // sonner, et la que /wallet mene (migration 20261031_01).
+  const app = row.wallet_kind === 'livreur' ? 'driver' : 'marketplace';
   if (body.outcome === 'paid') {
     notifyDetached(sb, {
       userIds: [row.user_id],
@@ -100,6 +104,7 @@ Deno.serve(makePost<Body>('/v1/admin/withdrawals/process', valid, async ({ sb, b
       body: `${amount} envoyé sur ton compte ${operator}.`,
       iconHint: 'check',
       deeplink: '/wallet',
+      app,
     });
   } else {
     notifyDetached(sb, {
@@ -109,6 +114,7 @@ Deno.serve(makePost<Body>('/v1/admin/withdrawals/process', valid, async ({ sb, b
       body: `Ton retrait de ${amount} n'a pas été effectué : ${row.reason ?? 'voir le support'}. Ton solde reste inchangé.`,
       iconHint: 'shield',
       deeplink: '/wallet',
+      app,
     });
   }
 
